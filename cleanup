@@ -1,0 +1,16 @@
+#!/bin/bash
+
+echo "Removing all links of the pattern foo-ethX"
+
+for f in `ip link show | egrep -o '(\w+-eth\w+)' ` ; do  
+  cmd="ip link del $f"
+  echo $smd
+  $cmd
+done
+
+echo "Removing excess controllers/ofprotocols/ofdatapaths/pings"
+killall -9 controller ofprotocol ofdatapath ping 2> /dev/null
+
+echo "Removing vconn junk in /tmp"
+rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log
+
