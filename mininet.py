@@ -752,6 +752,7 @@ def init():
 if __name__ == '__main__':
    init()
    results = {}
+   exit( 1 )
    print "*** Testing Mininet with kernel and user datapath"
    for datapath in [ 'kernel', 'user' ]:
       k = datapath == 'kernel'
