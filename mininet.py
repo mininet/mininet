@@ -237,14 +237,14 @@ class Controller( Node ):
       OpenFlow controller."""
    def __init__( self, name, kernel=True ):
       Node.__init__( self, name, inNamespace=( not kernel ) )
-   def start( self, cprog='controller', cargs='ptcp:' ):
-      "Start <cprog cargs> on controller, logging to /tmp/cN.log"
+   def start( self, controller='controller', args='ptcp:' ):
+      "Start <controller> <args> on controller, logging to /tmp/cN.log"
       cout = '/tmp/' + self.name + '.log'
-      self.cmdPrint( cprog + ' ' + cargs + 
+      self.cmdPrint( controller + ' ' + args + 
          ' 1> ' + cout + ' 2> ' + cout + ' &' )
-   def stop( self, cprog='controller' ):
+   def stop( self, controller='controller' ):
       "Stop controller cprog on controller"
-      self.cmd( "kill %" + cprog )  
+      self.cmd( "kill %" + controller )  
          
 class Switch( Node ):
    """A Switch is a Node that is running (or has execed)
@@ -453,7 +453,7 @@ class Network( object ):
       configHosts( hosts, self.startAddr )
       print "*** Starting reference controller"
       controller.start()
-      print "*** Starting switches"
+      print "*** Starting", len( switches ), "switches"
       for switch in switches:
          switch.start( controller )
       print "*** Running test"
@@ -479,7 +479,7 @@ def defaultNames( snames=None, hnames=None, dpnames=None ):
 # Tree network
 
 class TreeNet( Network ):
-   "A tree-structured network of the given depth and fanout"
+   "A tree-structured network with the specified depth and fanout"
    def __init__( self, depth, fanout, kernel=True):
       self.depth, self.fanout = depth, fanout
       Network.__init__( self, kernel )
@@ -519,7 +519,6 @@ class GridNet( Network ):
    "An N x M grid/mesh network of switches, with hosts at the edges."
    def __init__( self, n, m, kernel=True, linear=False ):
       self.n, self.m, self.linear = n, m, linear and m == 1
-      print "m=",m
       Network.__init__( self, kernel )
    def makeNet( self, controller ):
       snames, hnames, dpnames = defaultNames()
@@ -553,9 +552,7 @@ class GridNet( Network ):
          hosts += [ h1, h2 ]
          print h1.name, h2.name, ; flush()
       # Return here if we're using this to make a linear network
-      if self.linear: 
-         print "returning linear network"
-         return switches, hosts
+      if self.linear: return switches, hosts
       # Hook up columns
       for x in range( 0, n ):
          previous = None
@@ -587,7 +584,7 @@ def parsePing( pingOutput ):
       exit( 1 )
    sent, received  = int( m.group( 1 ) ), int( m.group( 2 ) )
    return sent, received
-
+   
 def pingTest( controllers=[], switches=[], hosts=[], verbose=False ):
    "Test that each host can reach every other host."
    packets = 0 ; lost = 0
@@ -615,25 +612,39 @@ def pingTest( controllers=[], switches=[], hosts=[], verbose=False ):
    return ploss
 
 def pingTestVerbose( controllers, switches, hosts ):
-   return pingTest( controllers, switches, hosts, verbose=True )
-   
-def iperf( hosts ):
+   return "%d %% packet loss" % \
+      pingTest( controllers, switches, hosts, verbose=True )
+ 
+def parseIperf( iperfOutput ):
+   "Parse iperf output and return bandwidth."
+   r = r'([\d\.]+ \w+/sec)'
+   m = re.search( r, iperfOutput )
+   return m.group( 1 ) if m is not None else "could not parse iperf output"
+    
+def iperf( hosts, verbose=False ):
    "Run iperf between two hosts."
    assert len( hosts ) == 2
    host1, host2 = hosts[ 0 ], hosts[ 1 ]
    # dumpNodes( [ host1, host2 ] )
-   host1.cmdPrint( 'killall -9 iperf') # XXX shouldn't be global killall
-   host1.cmdPrint( 'iperf -s &' )
-   host2.cmdPrint( 'iperf -t 5 -c ' + host1.IP() )
-   host1.cmdPrint( 'kill -9 %iperf' )
- 
-def iperfTest( controllers, switches, hosts ):
+   host1.cmd( 'killall -9 iperf') # XXX shouldn't be global killall
+   server = host1.cmd( 'iperf -s &' )
+   if verbose: print server ; flush()
+   client = host2.cmd( 'iperf -t 5 -c ' + host1.IP() )
+   if verbose: print client ; flush()
+   server = host1.cmd( 'kill -9 %iperf' )
+   if verbose: print server; flush()
+   return [ parseIperf( server ), parseIperf( client ) ]
+   
+def iperfTest( controllers, switches, hosts, verbose=False ):
    "Simple iperf test between two hosts."
+   if verbose: print "*** Starting ping test"   
    h0, hN = hosts[ 0 ], hosts[ -1 ]
    print "*** iperfTest: Testing bandwidth between", 
    print h0.name, "and", hN.name
-   return iperf( [ h0, hN] )
-   
+   result = iperf( [ h0, hN], verbose )
+   print "*** result:", result
+   return result
+
 # Simple CLI
 
 class Cli( object ):
@@ -736,7 +747,15 @@ def init():
 
 if __name__ == '__main__':
    init()
-   for kernel in [ False, True ]:
-      TreeNet( depth=2, fanout=2, kernel=kernel).run( pingTestVerbose )
-      LinearNet( switchCount=10, kernel=kernel ).run( iperfTest)
+   results = {}
+   print "*** Testing Mininet with kernel and user datapath"
+   for datapath in [ 'kernel', 'user' ]:
+      k = datapath == 'kernel'
+      # results += [ TreeNet( depth=2, fanout=2, kernel=k ).
+      #   run( pingTestVerbose ) ]
+      results[ datapath ] = []
+      for switchCount in range( 1, 4 ):
+         results[ datapath ]  += [ ( switchCount,
+            LinearNet( switchCount, k).run( iperfTest ) ) ]
       # GridNet( 2, 2 ).run( Cli )
+   print "*** Test results:", results
