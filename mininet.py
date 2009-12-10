@@ -85,7 +85,8 @@ def checkRun( cmd ):
    
 def quietRun( cmd ):
    "Run a command, routing stderr to stdout, and return the output."
-   popen = Popen( cmd.split( ' '), stdout=PIPE, stderr=STDOUT)
+   if isinstance( cmd, str ): cmd = cmd.split( ' ' )
+   popen = Popen( cmd, stdout=PIPE, stderr=STDOUT)
    # We can't use Popen.communicate() because it uses 
    # select(), which can't handle
    # high file descriptor numbers! poll() can, however.
@@ -722,12 +723,18 @@ def init():
    # Perhaps we should do so automatically!
    if os.getuid() != 0: 
       print "*** Mininet must run as root."; exit( 1 )
+   # Check for kernel modules
+   tun = quietRun( [ 'sh', '-c', 'lsmod | grep tun' ] )
+   ofdatapath = quietRun( [ 'sh', '-c', 'lsmod | grep ofdatapath' ] )
+   if tun == '': 
+      print "*** tun not found: user datapath not supported"
+   if ofdatapath == '':
+      print "*** ofdatapath not found: kernel datapath not supported"
    fixLimits()
-   
+
 if __name__ == '__main__':
    init()
-   # for kernel in [ False, True ]:
-   #   TreeNet( depth=3, fanout=4, kernel=kernel).run( pingTest )
-   TreeNet( depth=2, fanout=32).run( Cli )
-   # LinearNet( switchCount=100 ).run( iperfTest)
-   # GridNet( 2, 2 ).run( Cli )
+   for kernel in [ False, True ]:
+      TreeNet( depth=2, fanout=2).run( pingTestVerbose )
+      LinearNet( switchCount=10 ).run( iperfTest)
+      # GridNet( 2, 2 ).run( Cli )
