@@ -12,7 +12,7 @@ echo "Removing excess controllers/ofprotocols/ofdatapaths/pings"
 killall -9 controller ofprotocol ofdatapath ping 2> /dev/null
 
 echo "Removing excess kernel datapath processes"
-ps ax | grep 'dp[0-9]' | awk '{print $1;}' | xargs kill
+ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/' | xargs -l1 echo dpctl deldp 
 
 echo "Removing vconn junk in /tmp"
 rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log

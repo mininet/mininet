@@ -429,6 +429,17 @@ class Network( object ):
    "Network topology (and test driver) base class."
    def __init__( self, kernel=True, startAddr=( 192, 168, 123, 1) ):
       self.kernel, self.startAddr = kernel, startAddr
+      # Check for kernel modules
+      tun = quietRun( [ 'sh', '-c', 'lsmod | grep tun' ] )
+      ofdatapath = quietRun( [ 'sh', '-c', 'lsmod | grep ofdatapath' ] )
+      if tun == '' and not kernel: 
+         print "*** Error: kernel module tun not loaded:",
+         print " user datapath not supported"
+         exit( 1 )
+      if ofdatapath == '' and kernel:
+         print "*** Error: ofdatapath not loaded:",
+         print " kernel datapath not supported"
+         exit( 1 )
    # In progress: we probably want to decouple creating/starting/stopping
    # the network and running tests, since we might wish to run
    # multiple tests on the same network. It's not clear if the network
@@ -736,13 +747,6 @@ def init():
    # Perhaps we should do so automatically!
    if os.getuid() != 0: 
       print "*** Mininet must run as root."; exit( 1 )
-   # Check for kernel modules
-   tun = quietRun( [ 'sh', '-c', 'lsmod | grep tun' ] )
-   ofdatapath = quietRun( [ 'sh', '-c', 'lsmod | grep ofdatapath' ] )
-   if tun == '': 
-      print "*** tun not found: user datapath not supported"
-   if ofdatapath == '':
-      print "*** ofdatapath not found: kernel datapath not supported"
    fixLimits()
 
 if __name__ == '__main__':
