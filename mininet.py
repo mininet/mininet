@@ -407,7 +407,7 @@ def configRoutedControlNetwork( controller, switches,
       while not switch.intfIsUp( switch.intfs[ 0 ] ):
          print "*** Waiting for ", switch.intfs[ 0 ], "to come up"
          sleep( 1 )
-   if pingTest( [ switch, controller ] ) != 0:
+   if pingTest( hosts=[ switch, controller ] ) != 0:
       print "*** Error: control network test failed"
       exit( 1 )
 
@@ -444,7 +444,7 @@ class Network( object ):
       print "*** Creating controller"
       controller = Controller( 'c0', kernel )
       print "*** Creating network"
-      switches, hosts = self.makeNet()
+      switches, hosts = self.makeNet( controller )
       print
       if not kernel:
          print "*** Configuring control network"
@@ -457,13 +457,14 @@ class Network( object ):
       for switch in switches:
          switch.start( controller )
       print "*** Running test"
-      test( [ controller ], switches, hosts )
+      result = test( [ controller ], switches, hosts )
       print "*** Stopping controller"
       controller.stop()
       print "*** Stopping switches"
       for switch in switches:
          switch.stop()
       print "*** Test complete"
+      return result
    def interact( self ):
       "Create a network and run our simple CLI."
       self.run( self, Cli )
@@ -482,7 +483,7 @@ class TreeNet( Network ):
    def __init__( self, depth, fanout, kernel=True):
       self.depth, self.fanout = depth, fanout
       Network.__init__( self, kernel )
-   def treeNet( self, depth, fanout, kernel=True, snames=None,
+   def treeNet( self, controller, depth, fanout, kernel=True, snames=None,
       hnames=None, dpnames=None ):
       """Return a tree network of the given depth and fanout as a triple:
          ( root, switches, hosts ), using the given switch, host and
@@ -501,26 +502,26 @@ class TreeNet( Network ):
       print switch.name, ; flush()
       switches, hosts = [ switch ], []
       for i in range( 0, fanout ):
-         child, slist, hlist = self.treeNet( 
+         child, slist, hlist = self.treeNet( controller, 
             depth - 1, fanout, kernel, snames, hnames, dpnames )
          createLink( switch, child )
          switches += slist
          hosts += hlist
       return switch, switches, hosts
-   def makeNet( self ):
-      root, switches, hosts = self.treeNet( 
+   def makeNet( self, controller ):
+      root, switches, hosts = self.treeNet( controller,
          self.depth, self.fanout, self.kernel)
       return switches, hosts
    
 # Grid network
 
 class GridNet( Network ):
-   "An n x m grid/mesh network of switches, with hosts at the edges."
+   "An N x M grid/mesh network of switches, with hosts at the edges."
    def __init__( self, n, m, kernel=True, linear=False ):
       self.n, self.m, self.linear = n, m, linear and m == 1
       print "m=",m
       Network.__init__( self, kernel )
-   def makeNet( self ):
+   def makeNet( self, controller ):
       snames, hnames, dpnames = defaultNames()
       n, m = self.n, self.m
       hosts = []
@@ -587,7 +588,7 @@ def parsePing( pingOutput ):
    sent, received  = int( m.group( 1 ) ), int( m.group( 2 ) )
    return sent, received
 
-def pingTest( controllers, switches, hosts, verbose=False ):
+def pingTest( controllers=[], switches=[], hosts=[], verbose=False ):
    "Test that each host can reach every other host."
    packets = 0 ; lost = 0
    for node in hosts:
@@ -719,6 +720,7 @@ def fixLimits():
    setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
 
 def init():
+   "Initialize Mininet."
    # Note: this script must be run as root 
    # Perhaps we should do so automatically!
    if os.getuid() != 0: 
@@ -735,6 +737,6 @@ def init():
 if __name__ == '__main__':
    init()
    for kernel in [ False, True ]:
-      TreeNet( depth=2, fanout=2).run( pingTestVerbose )
-      LinearNet( switchCount=10 ).run( iperfTest)
+      TreeNet( depth=2, fanout=2, kernel=kernel).run( pingTestVerbose )
+      LinearNet( switchCount=10, kernel=kernel ).run( iperfTest)
       # GridNet( 2, 2 ).run( Cli )
