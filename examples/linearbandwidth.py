@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 """
-Test bandwidth on linear networks of varying size, using both
-the kernel and user datapaths.
+Test bandwidth (using iperf) on linear networks of varying size, 
+using both kernel and user datapaths.
 
 Each network looks like:
 
@@ -11,7 +11,6 @@ h0 <-> s0 <-> s1 .. sN <-> h1
 Note: by default, the reference controller only supports 16
 switches, so this test WILL NOT WORK unless you have recompiled
 your controller to support a 100 switches (or more.)
-
 """
    
 from mininet import init, LinearNet, iperfTest
@@ -36,7 +35,7 @@ def linearBandwidthTest():
       print "*** Linear network results for", datapath, "datapath:"
       print
       result = results[ datapath ]  
-      print "SwitchCount\tiPerf results"
+      print "SwitchCount\tiperf Results"
       for switchCount, bandwidth in result:
          print switchCount, '\t\t', 
          print bandwidth[ 0 ], 'server, ', bandwidth[ 1 ], 'client'

@@ -1,4 +1,5 @@
 Preliminary Mininet Installation/Configuration Notes
+---
 
 - Mininet is not currently 'installed.' If you want to install it,
   so that you can 'import mininet', place it somewhere in your
@@ -17,7 +18,10 @@ Preliminary Mininet Installation/Configuration Notes
   does; Ubuntu doesn't. If your kernel doesn't support it, you will need
   to build and install a kernel that does!
 
-- To run the iPerf test, you need to install iperf:
+- Mininet should probably be run either on a machine with
+  no other important processes, or on a virtual machine
+  
+- To run the iperf test, you need to install iperf:
 
     sudo aptitude/yum install iperf
 
@@ -30,7 +34,7 @@ Preliminary Mininet Installation/Configuration Notes
   Consult the appropriate example file for details.
   
 - To switch to the most recent OpenFlow 0.8.9 release branch (the most
-  recent one with NOX support):
+  recent one with full NOX support):
 
   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
 
@@ -41,11 +45,11 @@ Preliminary Mininet Installation/Configuration Notes
     insmod /home/openflow/openflow/datapath/linux-2.6/ofdatapath.ko 
     modprobe tun
 
-- The default OpenFlow controller (controller(8)) only supports 16
-  switches! If you wish to run a network with more than 16 switches,
-  please recompile controller(8) with larger limits, or use a different
-  controller such as nox. (At the moment, unfortunately, it's not
-  easy to do so without modifying mininet.py. This will be improved
+- The reference OpenFlow controller (controller(8)) only supports 16
+  switches by default! If you wish to run a network with more than 16
+  switches, please recompile controller(8) with larger limits, or use a
+  different controller such as nox. (At the moment, unfortunately, it's
+  not easy to do so without modifying mininet.py. This will be improved
   upon, and an example provided, in the future.)
   
 - For scalable configurations, you might need to increase some of your
@@ -75,5 +79,6 @@ Preliminary Mininet Installation/Configuration Notes
     # Mininet: increase routing table size
     net.ipv4.route.max_size=32768
 
+---
 
 

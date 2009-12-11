@@ -21,25 +21,25 @@ creation of OpenFlow networks of varying sizes and topologies.
 In order to run Mininet, you must have:
 
 * A Linux 2.6.26 or greater kernel compiled with network namespace support
-  enabled. (Debian 5.0 or greater should work.)
+  enabled. (Debian 5.0 or greater should work)
 
 * The OpenFlow reference implementation (either the user or kernel
   datapath may be used, and the tun or ofdatapath kernel modules must be
   loaded, respectively)
 
-* Python, Bash, Ping, iPerf, etc.
+* Python, bash, ping, iperf, etc.
 
 * Root privileges (required for network device access)
 
 * The netns program (included as netns.c), or an equivalent program
-  of the same name, installed in an appropriate path location.
+  of the same name, installed in an appropriate path location
   
-* mininet.py installed in an appropriate Python path location.
+* mininet.py installed in an appropriate Python path location
 
 Currently mininet includes:
 
 - A simple node infrastructure (Host, Switch, Controller classes) for
-  creating virtual OpenFlow networks.
+  creating virtual OpenFlow networks
 	
 - A simple network infrastructure (class Network and its descendants
   TreeNet, GridNet and LinearNet) for creating scalable topologies and
@@ -52,7 +52,7 @@ Currently mininet includes:
 
 - A 'cleanup' script to get rid of junk (interfaces, processes, etc.)
   which might be left around by mininet. Try this if things stop
-  working.
+  working!
   
 - Examples (in examples/ directory) to help you get started.
 

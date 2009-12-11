@@ -18,15 +18,15 @@ Each host has:
 Hosts have a network interface which is configured via ifconfig/ip
 link/etc. with data network IP addresses (e.g. 192.168.123.2 )
 
-This version supports both the kernel or user space datapaths
+This version supports both the kernel and user space datapaths
 from the OpenFlow reference implementation.
 
 In kernel datapath mode, the controller and switches are simply
 processes in the root namespace.
 
-Kernel OpenFlow datapaths are instantiated using dpctl(8), and are attached
-to the one side of a veth pair; the other side resides in the host
-namespace. In this mode, switch processes can simply connect to the
+Kernel OpenFlow datapaths are instantiated using dpctl(8), and are
+attached to the one side of a veth pair; the other side resides in the
+host namespace. In this mode, switch processes can simply connect to the
 controller via the loopback interface.
 
 In user datapath mode, the controller and switches are full-service
@@ -35,8 +35,8 @@ interfaces and IP addresses on a control network (e.g. 10.0.123.1,
 currently routed although it could be bridged.)
 
 In addition to a management interface, user mode switches also have
-several switch interfaces, halves of veth pairs whose other halves reside
-in the host nodes that the switches are connected to.
+several switch interfaces, halves of veth pairs whose other halves
+reside in the host nodes that the switches are connected to.
 
 Naming:
    Host nodes are named h1-hN
@@ -61,6 +61,7 @@ rlantz@cs.stanford.edu
 
 History:
 11/19/09 Initial revision (user datapath only)
+11/19/09 Mininet demo at OpenFlow SWAI meeting
 12/08/09 Kernel datapath support complete
 12/09/09 Moved controller and switch routines into classes
 12/12/09 Added subdivided network driver workflow
@@ -788,24 +789,21 @@ def fixLimits():
 
 def init():
    "Initialize Mininet."
-   # Note: this script must be run as root 
-   # Perhaps we should do so automatically!
    if os.getuid() != 0: 
+      # Note: this script must be run as root 
+      # Perhaps we should do so automatically!
       print "*** Mininet must run as root."; exit( 1 )
    fixLimits()
 
 if __name__ == '__main__':
    init()
    results = {}
-   exit( 1 )
+   print "*** Welcome to Mininet!"
+   print "*** Look in examples/ for more examples\n"
    print "*** Testing Mininet with kernel and user datapath"
    for datapath in [ 'kernel', 'user' ]:
       k = datapath == 'kernel'
-      # results += [ TreeNet( depth=2, fanout=2, kernel=k ).
-      #   run( pingTestVerbose ) ]
-      results[ datapath ] = []
-      for switchCount in range( 1, 4 ):
-         results[ datapath ]  += [ ( switchCount,
-            LinearNet( switchCount, k).run( iperfTest ) ) ]
-      # GridNet( 2, 2 ).run( Cli )
+      network = TreeNet( depth=2, fanout=4, kernel=k)
+      result = network.run( pingTestVerbose )
+      results[ datapath ] = result
    print "*** Test results:", results
