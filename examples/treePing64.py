@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
-"""Create a tree network of depth 4 and fanout 2, and 
-   test connectivity using pingTest."""
+"Create a 64-node tree network, and test connectivity using pingTest."
    
 from mininet import init, TreeNet, pingTestVerbose
 
