@@ -9,9 +9,12 @@ from mininet import init, TreeNet, Cli, quietRun
 def makeXterm( node, title ):
    "Run screen on a node, and hook up an xterm."
    node.cmdPrint( 'screen -dmS ' + node.name )
-   cmd = 'xterm -title ' + title + ':' + node.name
-   cmd += ' -e screen -D -RR -S ' + node.name
-   return Popen( cmd.split( ' ' ) )
+   title += ': ' + node.name
+   if not node.inNamespace:
+      title += ' (root ns)'
+   cmd = [ 'xterm', '-title', title ]
+   cmd += [ '-e', 'screen', '-D', '-RR', '-S', node.name ]
+   return Popen( cmd )
 
 def makeXterms( nodes, title ):
    terms = []
@@ -31,7 +34,7 @@ def xterms( controllers, switches, hosts ):
    
 def treeXterms():
    print "Running xterms on", os.environ[ 'DISPLAY' ]
-   network = TreeNet( depth=2, fanout=4, kernel=True )
+   network = TreeNet( depth=2, fanout=2, kernel=True )
    network.run( xterms )
       
 if __name__ == '__main__':

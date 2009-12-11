@@ -445,15 +445,12 @@ class Network( object ):
          print "*** Error: ofdatapath not loaded:",
          print " kernel datapath not supported"
          exit( 1 )
-   # In progress: we probably want to decouple creating/starting/stopping
-   # the network and running tests, since we might wish to run
-   # multiple tests on the same network. It's not clear if the network
-   # should always be started/stopped for each test or not. Probably
-   # not...
-   def run( self, test ):
+      # Create network, but don't start things up yet!
+      self.prepareNet()
+   def prepareNet( self ):
       """Create a network by calling makeNet as follows: 
          (switches, hosts ) = makeNet()
-         and then run test( controller, switches, hosts ) on it."""
+         Create a controller here as well."""
       kernel = self.kernel
       if kernel: print "*** Using kernel datapath"
       else: print "*** Using user datapath"
@@ -467,21 +464,39 @@ class Network( object ):
          configRoutedControlNetwork( controller, switches )
       print "*** Configuring hosts"
       configHosts( hosts, self.startAddr )
+      self.controllers = [ controller ]
+      self.switches = switches
+      self.hosts = hosts
+   def start( self ):
+      "Start controller and switches"
       print "*** Starting reference controller"
-      controller.start()
-      print "*** Starting", len( switches ), "switches"
-      for switch in switches:
-         switch.start( controller )
-      print "*** Running test"
-      result = test( [ controller ], switches, hosts )
+      for controller in self.controllers:
+         controller.start()
+      print "*** Starting", len( self.switches ), "switches"
+      for switch in self.switches:
+         switch.start( self.controllers[ 0 ] )
+   def stop( self ):
+      "Stop the controller(s), switches and hosts"
       print "*** Stopping controller"
-      controller.stop(); controller.terminate()
+      for controller in self.controllers:
+         controller.stop(); controller.terminate()
       print "*** Stopping switches"
-      for switch in switches:
+      for switch in self.switches:
          switch.stop() ; switch.terminate()
       print "*** Stopping hosts"
-      for host in hosts: host.terminate()
+      for host in self.hosts: 
+         host.terminate()
       print "*** Test complete"
+   def runTest( self, test ):
+      "Run a given test, called as test( controllers, switches, hosts)"
+      return test( self.controllers, self.switches, self.hosts )
+   def run( self, test ):
+      """Perform a complete start/test/stop cycle; test is of the form
+         test( controllers, switches, hosts )"""
+      self.start()
+      print "*** Running test"
+      result = self.runTest( test )
+      self.stop()
       return result
    def interact( self ):
       "Create a network and run our simple CLI."
