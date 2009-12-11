@@ -24,12 +24,12 @@ In order to run Mininet, you must have:
   datapath may be used, and the tun or ofdatapath kernel modules must be
   loaded, respectively)
 
-* Python, Bash, etc.
+* Python, Bash, Ping, iPerf, etc.
 
-* Root privilieges (required for network device access)
+* Root privileges (required for network device access)
 
-* The netns program or equivalent (included as netns.c) installed
-  in an appropriate path location.
+* The netns program (included as netns.c), or an equivalent program called
+  'netns', installed in an appropriate path location.
   
 * mininet.py installed in an appropriate Python path location.
 
@@ -41,41 +41,15 @@ Currently mininet includes:
 - A simple network infrastructure (class Network and its descendants
   TreeNet, GridNet and LinearNet) for creating scalable topologies and
   running experiments (using someNetwork.run( test ) )
-	
+  
 - Some simple tests which can be run using someNetwork.run( test )
 	
 - A simple command-line interface which may be invoked on a network using
   .run( Cli )
 	
 - Examples (in examples/ directory) to help you get started.
-	
-Notes and Advice:
 
-For scalable configurations, you may need to increase some of your kernel
-limits. For example, you could add something like the following to
-/etc/sysctl.conf:
-
-# OpenFlow: get rid of ipv6
-net.ipv6.conf.all.disable_ipv6 = 1
-net.ipv6.conf.default.disable_ipv6 = 1
-
-# Mininet: Increase open file limit
-fs.file-max = 100000
-
-# Mininet: increase network buffer space
-net.core.wmem_max = 16777216
-net.core.rmem_max = 16777216
-net.ipv4.tcp_rmem = 10240 87380 16777216
-net.ipv4.tcp_rmem = 10240 87380 16777216
-net.core.netdev_max_backlog = 5000
-
-# Mininet: increase arp cache size
-net.ipv4.neigh.default.gc_thresh1 = 4096 
-net.ipv4.neigh.default.gc_thresh2 = 8192 
-net.ipv4.neigh.default.gc_thresh3 = 16384
-
-# Mininet .... and increase routing table size
-net.ipv4.route.max_size=32768
+Some preliminary installation notes are included in the INSTALL file.
 
 ---
 Bob Lantz

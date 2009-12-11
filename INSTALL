@@ -1,11 +1,15 @@
-Preliminary Installation Notes
+Preliminary Mininet Installation/Configuration Notes
 
+- Mininet is not currently 'installed.' If you want to install it,
+  so that you can 'import mininet', place it somewhere in your
+  python path.
+  
 - A functional netns binary is required to run mininet, but currently you
   have to compile it and install it yourself from the included .c file:
 
   to make it: make netns (or cc -o netns netns.c)
-  to test it: ./netns /bin/echo 
-  to 'install' a link to it:
+  to test it: ./netns /sbin/ifconfig -a 
+  to 'install' a link to it, you could do something like:
     sudo ln -s /home/openflow/mininet/netns /usr/local/bin/netns
 
   Installation is simplest with a distribution that includes a kernel
@@ -17,7 +21,7 @@ Preliminary Installation Notes
 
     sudo aptitude/yum install iperf
 
-  We assume you already have ping installed.
+  We assume you already have ping installed. ;-)
   
 - You may need other packages to run the examples, e.g.
 
