@@ -7,6 +7,11 @@ the kernel and user datapaths.
 Each network looks like:
 
 h0 <-> s0 <-> s1 .. sN <-> h1
+
+Note: by default, the reference controller only supports 16
+switches, so this test WILL NOT WORK unless you have recompiled
+your controller to support a 100 switches (or more.)
+
 """
    
 from mininet import init, LinearNet, iperfTest

@@ -482,7 +482,9 @@ class Network( object ):
          controller.stop(); controller.terminate()
       print "*** Stopping switches"
       for switch in self.switches:
+         print switch.name, ; flush()
          switch.stop() ; switch.terminate()
+      print
       print "*** Stopping hosts"
       for host in self.hosts: 
          host.terminate()

@@ -1,25 +1,28 @@
 #!/usr/bin/python
 
-"Create a 64-node tree network, and test connectivity using pingTest."
+"Create a 64-node tree network, and test connectivity using ping."
    
 from mininet import init, TreeNet, pingTestVerbose
 
-def bigTreePing64():
+def treePing64():
    results = {}
-
-   print "*** Testing Mininet with kernel and user datapath"
+   datapaths = [ 'kernel', 'user' ]
    
-   for datapath in [ 'kernel', 'user' ]:
+   print "*** Testing Mininet with kernel and user datapaths"
+   
+   for datapath in datapaths:
       k = datapath == 'kernel'
-      results[ datapath ] = []
-      for switchCount in range( 1, 4 ):
-         network = TreeNet( depth=3, fanout=4, kernel=k )
-         testResult = network.run( pingTestVerbose )
-         results[ datapath ] += testResult
-         
-   print "*** Test results:", results
-      
+      network = TreeNet( depth=2, fanout=8, kernel=k )
+      result = network.run( pingTestVerbose )
+      results[ datapath ] = result
+   
+   print  
+   print "*** TreeNet ping results:"
+   for datapath in datapaths:
+      print "%s:" % datapath, results[ datapath ]
+   print
+   
 if __name__ == '__main__':
    init()
-   bigTreePing64()
+   treePing64()
 

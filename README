@@ -15,6 +15,9 @@ datapath) are created as processes in separate network namespaces. This
 allows a complete OpenFlow network to be simulated on top of a single
 Linux kernel.
 
+Mininet provides a set of Python classes and functions which enable
+creation of OpenFlow networks of varying sizes and topologies.
+
 In order to run Mininet, you must have:
 
 * A Linux 2.6.26 or greater kernel compiled with network namespace support
