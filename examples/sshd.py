@@ -1,6 +1,13 @@
 #!/usr/bin/python
 
-"Create a network and start sshd on the hosts."
+"""Create a network and start sshd(8) on the hosts.
+   This is probably overkill - rshd(8) would be
+   perfectly adequate, considering that the openflow
+   network is private to the machine it's running on.
+   It would also be lighter weight/faster.
+   Nonetheless, most people already have sshd installed,
+   and it's a good demo to show that mininet makes a
+   'real', usable network! """
 
 from mininet import init, Node, createLink, TreeNet, Cli
 
@@ -14,8 +21,7 @@ def nets( hosts ):
    return nets.keys()
    
 def addRoutes( node, nets, intf ):
-   """Add routes from node to nets through intf, assuming
-      a 24-bit netmask."""
+   "Add routes from node to nets through intf."
    for net in nets:
       node.cmdPrint( 'route add -net ' + net + ' dev ' + intf )
 

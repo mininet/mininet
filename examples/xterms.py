@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
-"Create a network and run an xterm (connected via screen) on each host."
+"""
+Create a network and run an xterm (connected via screen(1) ) on each host.
+Requires xterm(1) and GNU screen(1).
+"""
 
 import os
 from subprocess import Popen
@@ -16,6 +19,12 @@ def makeXterm( node, title ):
    cmd += [ '-e', 'screen', '-D', '-RR', '-S', node.name ]
    return Popen( cmd )
 
+def cleanUpScreens():
+   "Remove moldy old screen sessions."
+   # XXX We need to implement this - otherwise those darned
+   # screen sessions will just accumulate
+   pass
+   
 def makeXterms( nodes, title ):
    terms = []
    for node in nodes:
@@ -28,15 +37,14 @@ def xterms( controllers, switches, hosts ):
    terms += makeXterms( controllers, 'controller' )
    terms += makeXterms( switches, 'switch' )
    terms += makeXterms( hosts, 'host' )
-   # Wait for completion
+   # Wait for xterms to exit
    for term in terms:
       os.waitpid( term.pid, 0 )
    
-def treeXterms():
-   print "Running xterms on", os.environ[ 'DISPLAY' ]
-   network = TreeNet( depth=2, fanout=2, kernel=True )
-   network.run( xterms )
-      
 if __name__ == '__main__':
    init()
-   treeXterms()
+   print "Running xterms on", os.environ[ 'DISPLAY' ]
+   cleanUpScreens()
+   network = TreeNet( depth=2, fanout=2, kernel=True )
+   network.run( xterms )
+   cleanUpScreens()

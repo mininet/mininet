@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 """
-Test bandwidth on a linear network of varying size, using both
+Test bandwidth on linear networks of varying size, using both
 the kernel and user datapaths.
 
-The network looks like:
+Each network looks like:
 
 h0 <-> s0 <-> s1 .. sN <-> h1
 """
