@@ -1,6 +1,6 @@
 
-	Mininet: A Simple Virtual Testbed for OpenFlow
-						aka
+    Mininet: A Simple Virtual Testbed for OpenFlow
+                        aka
 How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 
 (Extremely Experimental Development Version 0.1, December 2009)
@@ -10,40 +10,44 @@ How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 Mininet creates simple OpenFlow test networks by using process-based
 virtualization and network namespaces.
 
-Simulated hosts (as well as switches and controllers with the user datapath)
-are created as processes in separate network namespaces. This allows a
-complete OpenFlow network to be simulated on top of a single Linux kernel.
+Simulated hosts (as well as switches and controllers with the user
+datapath) are created as processes in separate network namespaces. This
+allows a complete OpenFlow network to be simulated on top of a single
+Linux kernel.
 
 In order to run Mininet, you must have:
 
 * A Linux 2.6.26 or greater kernel compiled with network namespace support
-  enabled. (Debian-testing should work.)
+  enabled. (Debian 5.0 or greater should work.)
 
-* The OpenFlow reference implementation (either the user or kernel datapath
-  may be used, and the tun or ofdatapath kernel modules must be loaded,
-  respectively)
+* The OpenFlow reference implementation (either the user or kernel
+  datapath may be used, and the tun or ofdatapath kernel modules must be
+  loaded, respectively)
 
 * Python, Bash, etc.
 
 * Root privilieges (required for network device access)
 
-* The netns program or equivalent (included as netns.c)
+* The netns program or equivalent (included as netns.c) installed
+  in an appropriate path location.
+  
+* mininet.py installed in an appropriate Python path location.
 
 Currently mininet includes:
 
-	A simple node infrastructure (Host, Switch, Controller classes) for
-	creating virtual OpenFlow networks.
+- A simple node infrastructure (Host, Switch, Controller classes) for
+  creating virtual OpenFlow networks.
 	
-	A simple network infrastructure (class Network and its descendants
-	TreeNet, GridNet and LinearNet) for creating scalable topologies and
-	running experiments (using someNetwork.run( test ) )
+- A simple network infrastructure (class Network and its descendants
+  TreeNet, GridNet and LinearNet) for creating scalable topologies and
+  running experiments (using someNetwork.run( test ) )
 	
-	Some simple tests which can be run by someNetwork.run( test )
+- Some simple tests which can be run using someNetwork.run( test )
 	
-	A simple command-line interface which may be invoked on a network
-	using .run( Cli )
+- A simple command-line interface which may be invoked on a network using
+  .run( Cli )
 	
-	Examples (in examples/ directory) to help you get started.
+- Examples (in examples/ directory) to help you get started.
 	
 Notes and Advice:
 

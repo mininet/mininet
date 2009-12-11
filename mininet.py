@@ -126,10 +126,16 @@ class Node( object ):
       self.ips = {}
       self.connection = {}
       self.waiting = False
+      self.execed = False
+   def cleanup( self ):
+      # Help python collect its garbage
+      self.shell = None
    # Subshell I/O, commands and control
    def read( self, max ): return os.read( self.stdout.fileno(), max )
    def write( self, data ): os.write( self.stdin.fileno(), data )
-   def terminate( self ): os.kill( self.pid, signal.SIGKILL )
+   def terminate( self ):
+      self.cleanup()
+      os.kill( self.pid, signal.SIGKILL )
    def waitReadable( self ): self.pollOut.poll()
    def sendCmd( self, cmd ):
       """Send a command, followed by a command to echo a sentinel,
@@ -251,7 +257,6 @@ class Switch( Node ):
       an OpenFlow switch."""
    def __init__( self, name, datapath=None ):
       self.dp = datapath
-      self.execed = False
       Node.__init__( self, name, inNamespace=( datapath == None ) )
    def startUserDatapath( self, controller ):
       """Start OpenFlow reference user datapath, 
@@ -470,10 +475,12 @@ class Network( object ):
       print "*** Running test"
       result = test( [ controller ], switches, hosts )
       print "*** Stopping controller"
-      controller.stop()
+      controller.stop(); controller.terminate()
       print "*** Stopping switches"
       for switch in switches:
-         switch.stop()
+         switch.stop() ; switch.terminate()
+      print "*** Stopping hosts"
+      for host in hosts: host.terminate()
       print "*** Test complete"
       return result
    def interact( self ):
