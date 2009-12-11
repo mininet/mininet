@@ -14,7 +14,7 @@ def makeXterm( node, title ):
    node.cmdPrint( 'screen -dmS ' + node.name )
    title += ': ' + node.name
    if not node.inNamespace:
-      title += ' (root ns)'
+      title += ' (root namespace)'
    cmd = [ 'xterm', '-title', title ]
    cmd += [ '-e', 'screen', '-D', '-RR', '-S', node.name ]
    return Popen( cmd )
