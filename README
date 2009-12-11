@@ -31,8 +31,8 @@ In order to run Mininet, you must have:
 
 * Root privileges (required for network device access)
 
-* The netns program (included as netns.c), or an equivalent program called
-  'netns', installed in an appropriate path location.
+* The netns program (included as netns.c), or an equivalent program
+  of the same name, installed in an appropriate path location.
   
 * mininet.py installed in an appropriate Python path location.
 
@@ -43,7 +43,7 @@ Currently mininet includes:
 	
 - A simple network infrastructure (class Network and its descendants
   TreeNet, GridNet and LinearNet) for creating scalable topologies and
-  running experiments (using someNetwork.run( test ) )
+  running experiments (e.g. TreeNet(2,3).run(pingTest) )
   
 - Some simple tests which can be run using someNetwork.run( test )
 	

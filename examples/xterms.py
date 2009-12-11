@@ -20,9 +20,10 @@ def makeXterm( node, title ):
    return Popen( cmd )
 
 def cleanUpScreens():
-   "Remove moldy old screen sessions."
+   "Remove moldy old screen sessions."      
    # XXX We need to implement this - otherwise those darned
    # screen sessions will just accumulate
+   output = quietRun( 'screen -ls' )
    pass
    
 def makeXterms( nodes, title ):

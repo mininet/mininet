@@ -3,13 +3,8 @@
 """
 Mininet: A simple networking testbed for OpenFlow!
 
-Mininet creates simple OpenFlow test networks by using
+Mininet creates scalable OpenFlow test networks by using
 process-based virtualization and network namespaces. 
-
-This file supports use of either the kernel or user space datapath
-from the OpenFlow reference implementation. Up to 32 switches are
-supported using the kernel datapath, and 512 (or more) switches are
-supported via the user datapath.
 
 Simulated hosts are created as processes in separate network
 namespaces. This allows a complete OpenFlow network to be simulated on
@@ -22,6 +17,9 @@ Each host has:
    
 Hosts have a network interface which is configured via ifconfig/ip
 link/etc. with data network IP addresses (e.g. 192.168.123.2 )
+
+This version supports both the kernel or user space datapaths
+from the OpenFlow reference implementation.
 
 In kernel datapath mode, the controller and switches are simply
 processes in the root namespace.
@@ -48,15 +46,15 @@ Naming:
 Thoughts/TBD:
 
    It should be straightforward to add a function to read
-   OpenFlowVMS  spec files, but I haven't done so yet.
+   OpenFlowVMS spec files, but I haven't done so yet.
    For the moment, specifying configurations and tests in Python
-   is straightforward and concise.
-   Soon, we'll want to split the various subsystems (core,
+   is straightforward and relatively concise.
+   Soon, we may want to split the various subsystems (core,
    cli, tests, etc.) into multiple modules.
-   We may be able to get better performance by using the kernel
-   datapath (using its multiple datapath feature on multiple 
-   interfaces.) This would eliminate the ofdatapath user processes.
-   OpenVSwitch would still run at user level.
+   We don't support nox nicely just yet - you have to hack this file
+   or subclass things aggressively.
+   We'd like to support OpenVSwitch as well as the reference
+   implementation.
    
 Bob Lantz
 rlantz@cs.stanford.edu
@@ -65,6 +63,7 @@ History:
 11/19/09 Initial revision (user datapath only)
 12/08/09 Kernel datapath support complete
 12/09/09 Moved controller and switch routines into classes
+12/12/09 Added subdivided network driver workflow
 """
 
 from subprocess import call, check_call, Popen, PIPE, STDOUT
@@ -289,7 +288,13 @@ class Switch( Node ):
    def stopKernelDatapath( self ):
       "Terminate a switch using OpenFlow reference kernel datapath."
       quietRun( 'dpctl deldp ' + self.dp )
-      for intf in self.intfs: quietRun( 'ip link del ' + intf )
+      # In theory the interfaces should go away after we shut down.
+      # However, this takes time, so we're better off to remove them
+      # explicitly so that we won't get errors if we run before they
+      # have been removed by the kernel. Unfortunately this is very slow.
+      for intf in self.intfs:
+         quietRun( 'ip link del ' + intf )
+         sys.stdout.write( '.' ) ; flush()
       self.terminate()
    def start( self, controller ): 
       if self.dp is None: self.startUserDatapath( controller )
@@ -435,14 +440,13 @@ class Network( object ):
    def __init__( self, kernel=True, startAddr=( 192, 168, 123, 1) ):
       self.kernel, self.startAddr = kernel, startAddr
       # Check for kernel modules
-      tun = quietRun( [ 'sh', '-c', 'lsmod | grep tun' ] )
-      ofdatapath = quietRun( [ 'sh', '-c', 'lsmod | grep ofdatapath' ] )
-      if tun == '' and not kernel: 
+      modules = quietRun( 'lsmod' )
+      if not kernel and 'tun' not in modules:
          print "*** Error: kernel module tun not loaded:",
          print " user datapath not supported"
          exit( 1 )
-      if ofdatapath == '' and kernel:
-         print "*** Error: ofdatapath not loaded:",
+      if kernel and 'ofdatapath' not in modules:
+         print "*** Error: kernel module ofdatapath not loaded:",
          print " kernel datapath not supported"
          exit( 1 )
       # Create network, but don't start things up yet!
@@ -551,7 +555,9 @@ class TreeNet( Network ):
 # Grid network
 
 class GridNet( Network ):
-   "An N x M grid/mesh network of switches, with hosts at the edges."
+   """An N x M grid/mesh network of switches, with hosts at the edges.
+      This class also demonstrates creating a somewhat complicated
+      topology."""
    def __init__( self, n, m, kernel=True, linear=False ):
       self.n, self.m, self.linear = n, m, linear and m == 1
       Network.__init__( self, kernel )
@@ -711,7 +717,7 @@ class Cli( object ):
       print
       print "Interactive commands are not really supported yet,"
       print "so please limit commands to ones that do not"
-      print "require user interaction, and that will terminate"
+      print "require user interaction and will terminate"
       print "after a reasonable amount of time."
    def nodes( self, args ):
       "List available nodes"
@@ -725,7 +731,7 @@ class Cli( object ):
       for switch in self.switches:
          print switch.name, "<->",
          for intf in switch.intfs:
-            node, rintf = switch.connection[ intf ]
+            node, remoteIntf = switch.connection[ intf ]
             print node.name,
          print
    def iperf( self, args ):
