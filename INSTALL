@@ -41,6 +41,13 @@ Preliminary Mininet Installation/Configuration Notes
     insmod /home/openflow/openflow/datapath/linux-2.6/ofdatapath.ko 
     modprobe tun
 
+- The default OpenFlow controller (controller(8)) only supports 16
+  switches! If you wish to run a network with more than 16 switches,
+  please recompile controller(8) with larger limits, or use a different
+  controller such as nox. (At the moment, unfortunately, it's not
+  easy to do so without modifying mininet.py. This will be improved
+  upon, and an example provided, in the future.)
+  
 - For scalable configurations, you might need to increase some of your
   kernel limits. For example, you could add something like the following
   to /etc/sysctl.conf (modified as necessary for your desired 

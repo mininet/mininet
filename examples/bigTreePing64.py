@@ -3,7 +3,7 @@
 """Create a tree network of depth 4 and fanout 2, and 
    test connectivity using pingTest."""
    
-from mininet import init, TreeNet, iperfTest
+from mininet import init, TreeNet, pingTestVerbose
 
 def bigTreePing64():
    results = {}
@@ -14,13 +14,13 @@ def bigTreePing64():
       k = datapath == 'kernel'
       results[ datapath ] = []
       for switchCount in range( 1, 4 ):
-         network = TreeNet( depth=4, fanout=4, kernel=k )
-         testResult = network.run( pingTest )
+         network = TreeNet( depth=3, fanout=4, kernel=k )
+         testResult = network.run( pingTestVerbose )
          results[ datapath ] += testResult
          
    print "*** Test results:", results
       
 if __name__ == '__main__':
    init()
-   linearBandwidthTest()
+   bigTreePing64()
 

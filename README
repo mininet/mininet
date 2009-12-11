@@ -46,10 +46,17 @@ Currently mininet includes:
 	
 - A simple command-line interface which may be invoked on a network using
   .run( Cli )
-	
+
+- A 'cleanup' script to get rid of junk (interfaces, processes, etc.)
+  which might be left around by mininet. Try this if things stop
+  working.
+  
 - Examples (in examples/ directory) to help you get started.
 
-Some preliminary installation notes are included in the INSTALL file.
+Batteries are not included (yet!) 
+
+However, some preliminary installation notes are included in the INSTALL
+file. Good luck!
 
 ---
 Bob Lantz

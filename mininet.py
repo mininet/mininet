@@ -695,7 +695,22 @@ class Cli( object ):
    # Commands
    def help( self, args ):
       "Semi-useful help for CLI"
-      print "available commands are:", self.cmds
+      print "Available commands are:", self.cmds
+      print
+      print "You may also send a command to a node using:"
+      print "  <node> command {args}"
+      print "For example:"
+      print "  mininet> h0 ifconfig"
+      print
+      print "The interpreter automatically substitutes IP addresses"
+      print "for node names, so commands like"
+      print "  mininet> h0 ping -c1 h1"
+      print "should work."
+      print
+      print "Interactive commands are not really supported yet,"
+      print "so please limit commands to ones that do not"
+      print "require user interaction, and that will terminate"
+      print "after a reasonable amount of time."
    def nodes( self, args ):
       "List available nodes"
       print "available nodes are:", [ node.name for node in self.nodelist]
