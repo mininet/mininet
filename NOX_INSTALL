@@ -1,0 +1,25 @@
+NOX Install on deb testing:
+
+Install deps:
+ sudo apt-get install autoconf automake g++ libtool python  python-twisted swig  libxerces-c2-dev libssl-dev make python-dev libboost-filesystem1.38-dev libboost1.38-dev libboost-test1.38-dev
+
+Get NOX repo:
+ git clone git://noxrepo.org/nox
+ cd nox
+
+If you don't need all the libraries, just the coreapps (faster build):
+ ./boot.sh --apps-core
+If you do need all the libraries:
+ ./boot.sh
+
+Build
+ mkdir build/
+ cd build/
+ ../configure --with-python=yes
+
+Run w/pyswitch:
+ cd src
+ ./nox_core -i ptcp: pyswitch
+
+Kill (not name to kill is different than name to load):
+ sudo killall lt-nox_core
