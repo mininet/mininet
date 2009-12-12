@@ -796,6 +796,10 @@ def init():
       # Note: this script must be run as root 
       # Perhaps we should do so automatically!
       print "*** Mininet must run as root."; exit( 1 )
+   # If which produces no output, then netns is not in the path.
+   # May want to loosen this to handle netns in the current dir.
+   if not quietRun(['which', 'netns']):
+       raise Exception("Could not find netns; see INSTALL")
    fixLimits()
 
 if __name__ == '__main__':
