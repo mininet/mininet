@@ -247,13 +247,13 @@ class Controller( Node ):
    def start( self, controller='controller', args='ptcp:' ):
       "Start <controller> <args> on controller, logging to /tmp/cN.log"
       cout = '/tmp/' + self.name + '.log'
-      self.cmdPrint( 'exec ' + controller + ' ' + args + 
+      self.cmdPrint( controller + ' ' + args + 
          ' 1> ' + cout + ' 2> ' + cout + ' &' )
-      self.execed = True
+      self.execed = False # XXX Until I fix it
    def stop( self, controller='controller' ):
       "Stop controller cprog on controller"
+      self.cmd( "kill %" + controller )  
       self.terminate()
-      # self.cmd( "kill %" + controller )  
          
 class Switch( Node ):
    """A Switch is a Node that is running (or has execed)
@@ -286,9 +286,9 @@ class Switch( Node ):
       self.cmdPrint( 'dpctl adddp ' + self.dp )
       self.cmdPrint( 'dpctl addif ' + self.dp + ' ' + ' '.join( self.intfs ) )
       # Become protocol daemon
-      self.cmdPrint( 'exec ofprotocol' +
+      self.cmdPrint( 'ofprotocol' +
          ' ' + self.dp + ' tcp:127.0.0.1 1> ' + ofplog + ' 2>' + ofplog + ' &' )
-      self.execed = True
+      self.execed = False # XXX until I fix it
    def stopKernelDatapath( self ):
       "Terminate a switch using OpenFlow reference kernel datapath."
       quietRun( 'dpctl deldp ' + self.dp )
@@ -299,7 +299,7 @@ class Switch( Node ):
       for intf in self.intfs:
          quietRun( 'ip link del ' + intf )
          sys.stdout.write( '.' ) ; flush()
-      self.terminate()
+      self.cmd( 'kill %ofprotocol')
    def start( self, controller ): 
       if self.dp is None: self.startUserDatapath( controller )
       else: self.startKernelDatapath( controller )
