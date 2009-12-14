@@ -199,7 +199,7 @@ class Node( object ):
       return intfName
    def setIP( self, intf, ip, bits ):
       "Set an interface's IP address."
-      result = self.cmdPrint( [ 'ifconfig', intf, ip + bits, 'up' ] )
+      result = self.cmd( [ 'ifconfig', intf, ip + bits, 'up' ] )
       self.ips[ intf ] = ip
       return result
    def setHostRoute( self, ip, intf ):
