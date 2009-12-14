@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Create a network and start sshd(8) on the hosts.
+Create a network and start sshd(8) on each host.
 
 While something like rshd(8) would be lighter and faster,
 (and perfectly adequate on an in-machine network)
@@ -36,15 +36,10 @@ def connectToRootNS( network, switch ):
    for net in routes:
       root.cmdPrint( 'route add -net ' + net + ' dev ' + intf )
 
-def startServers( network, server ):
-   "Start network, and servers on each host."
+def sshd( network ):
+   "Start a network, connect it to root ns, and run sshd on all hosts."
    connectToRootNS( network, network.switches[ 0 ] )
-   for host in network.hosts: host.cmdPrint( server )
-
-if __name__ == '__main__':
-   init()
-   network = TreeNet( depth=1, fanout=4, kernel=True )
-   startServers( network, '/usr/sbin/sshd' )
+   for host in network.hosts: host.cmd( 'sshd -D &' )
    print
    print "*** Hosts are running sshd at the following addresses:"
    print
@@ -52,4 +47,10 @@ if __name__ == '__main__':
    print
    print "*** Press return to shut down network: ",
    readline()
+   for host in network.hosts: host.cmd( 'kill %sshd')
    network.stop()
+   
+if __name__ == '__main__':
+   init()
+   network = TreeNet( depth=1, fanout=4, kernel=True )
+   sshd( network )

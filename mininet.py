@@ -136,6 +136,7 @@ class Node( object ):
    def terminate( self ):
       self.cleanup()
       os.kill( self.pid, signal.SIGKILL )
+   def stop( self ): self.terminate()
    def waitReadable( self ): self.pollOut.poll()
    def sendCmd( self, cmd ):
       """Send a command, followed by a command to echo a sentinel,
@@ -198,7 +199,7 @@ class Node( object ):
       return intfName
    def setIP( self, intf, ip, bits ):
       "Set an interface's IP address."
-      result = self.cmd( [ 'ifconfig', intf, ip + bits, 'up' ] )
+      result = self.cmdPrint( [ 'ifconfig', intf, ip + bits, 'up' ] )
       self.ips[ intf ] = ip
       return result
    def setHostRoute( self, ip, intf ):
@@ -246,11 +247,13 @@ class Controller( Node ):
    def start( self, controller='controller', args='ptcp:' ):
       "Start <controller> <args> on controller, logging to /tmp/cN.log"
       cout = '/tmp/' + self.name + '.log'
-      self.cmdPrint( controller + ' ' + args + 
+      self.cmdPrint( 'exec ' + controller + ' ' + args + 
          ' 1> ' + cout + ' 2> ' + cout + ' &' )
+      self.execed = True
    def stop( self, controller='controller' ):
       "Stop controller cprog on controller"
-      self.cmd( "kill %" + controller )  
+      self.terminate()
+      # self.cmd( "kill %" + controller )  
          
 class Switch( Node ):
    """A Switch is a Node that is running (or has execed)

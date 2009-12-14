@@ -21,7 +21,7 @@ creation of OpenFlow networks of varying sizes and topologies.
 In order to run Mininet, you must have:
 
 * A Linux 2.6.26 or greater kernel compiled with network namespace support
-  enabled. (Debian 5.0 or greater should work)
+  enabled. (debian-testing seems to have such a kernel.)
 
 * The OpenFlow reference implementation (either the user or kernel
   datapath may be used, and the tun or ofdatapath kernel modules must be
@@ -48,11 +48,16 @@ Currently mininet includes:
 - Some simple tests which can be run using someNetwork.run( test )
 	
 - A simple command-line interface which may be invoked on a network using
-  .run( Cli )
+  .run( Cli ). It provides useful diagnostic commands, as well as the
+  ability to send a command to a node. For example,
+  
+  mininet> h11 ifconfig -a
+  
+  tells host h11 to run the command 'ifconfig -a'
 
-- A 'cleanup' script to get rid of junk (interfaces, processes, etc.)
-  which might be left around by mininet. Try this if things stop
-  working!
+- A 'cleanup' script to get rid of junk (interfaces, processes, files in
+  /tmp, etc.) which might be left around by mininet. Try this if things
+  stop working!
   
 - Examples (in examples/ directory) to help you get started.
 

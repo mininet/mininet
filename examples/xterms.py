@@ -7,15 +7,18 @@ host. Requires xterm(1) and GNU screen(1).
 
 import os, re
 from subprocess import Popen
-from mininet import init, TreeNet, Cli, quietRun
+from mininet import init, TreeNet, quietRun
 
 def makeXterm( node, title ):
    "Run screen on a node, and hook up an xterm."
-   node.cmdPrint( 'screen -dmS ' + node.name )
    title += ': ' + node.name
    if not node.inNamespace: title += ' (root)'
-   cmd = [ 'xterm', '-title', title ]
-   cmd += [ '-e', 'screen', '-D', '-RR', '-S', node.name ]
+   cmd = [ 'xterm', '-title', title, '-e' ]
+   if not node.execed:
+      node.cmdPrint( 'screen -dmS ' + node.name )
+      cmd += [ 'screen', '-D', '-RR', '-S', node.name ]
+   else:
+      cmd += [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
    return Popen( cmd )
 
 def cleanUpScreens():
@@ -28,16 +31,11 @@ def cleanUpScreens():
          quietRun( 'screen -S ' + m.group( 1 ) + ' -X kill' )
    
 def makeXterms( nodes, title ):
-   terms = []
-   for node in nodes:
-      if not node.execed:
-         terms += [ makeXterm( node, title ) ]
-   return terms
+   return [ makeXterm( node, title) for node in nodes]
 
 def xterms( controllers, switches, hosts ):
    cleanUpScreens()
-   terms = []
-   terms += makeXterms( controllers, 'controller' )
+   terms = makeXterms( controllers, 'controller' )
    terms += makeXterms( switches, 'switch' )
    terms += makeXterms( hosts, 'host' )
    # Wait for xterms to exit
