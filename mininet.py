@@ -242,12 +242,18 @@ class Host( Node ):
 class Controller( Node ):
    """A Controller is a Node that is running (or has execed) an 
       OpenFlow controller."""
-   def __init__( self, name, kernel=True ):
+   def __init__( self, name, kernel=True, controller='controller',
+      cargs='ptcp:', cdir=None ):
+      self.controller = controller
+      self.cargs = cargs
+      self.cdir = cdir
       Node.__init__( self, name, inNamespace=( not kernel ) )
-   def start( self, controller='controller', args='ptcp:' ):
+   def start( self ):
       "Start <controller> <args> on controller, logging to /tmp/cN.log"
       cout = '/tmp/' + self.name + '.log'
-      self.cmdPrint( controller + ' ' + args + 
+      if self.cdir is not None:
+         self.cmdPrint( 'cd ' + self.cdir )
+      self.cmdPrint( self.controller + ' ' + self.cargs + 
          ' 1> ' + cout + ' 2> ' + cout + ' &' )
       self.execed = False # XXX Until I fix it
    def stop( self, controller='controller' ):
@@ -394,10 +400,10 @@ def nameGen( prefix ):
 # Note: Instead of routing, we could bridge or use "in-band" control
    
 def configRoutedControlNetwork( controller, switches, 
-   startAddr=( 10, 123, 0, 1 ) ):
+   ipGen=ipGen, ipStart=( 10, 123, 0, 1 ) ):
    """Configure a routed control network on controller and switches,
       for use with the user datapath."""
-   ips = apply( ipGen, startAddr )
+   ips = ipGen( ipStart )
    cip = ips.next()
    print controller.name, '<->',
    for switch in switches:
@@ -426,9 +432,8 @@ def configRoutedControlNetwork( controller, switches,
       print "*** Error: control network test failed"
       exit( 1 )
 
-def configHosts( hosts, ( a, b, c, d ) ):
+def configHosts( hosts, ips ):
    "Configure a set of hosts, starting at IP address a.b.c.d"
-   ips = ipGen( a, b, c, d )
    for host in hosts:
       hintf = host.intfs[ 0 ]
       host.setIP( hintf, ips.next(), '/24' )
@@ -442,8 +447,15 @@ def configHosts( hosts, ( a, b, c, d ) ):
 
 class Network( object ):
    "Network topology (and test driver) base class."
-   def __init__( self, kernel=True, startAddr=( 192, 168, 123, 1) ):
-      self.kernel, self.startAddr = kernel, startAddr
+   def __init__( self,
+      kernel=True, 
+      Controller=Controller, Switch=Switch, 
+      hostIpGen=ipGen, hostIpStart=( 192, 168, 123, 1 ) ):
+      print "NETWORK: Controller=", Controller
+      self.kernel = kernel
+      self.Controller = Controller
+      self.Switch = Switch
+      self.hostIps = apply( hostIpGen, hostIpStart )
       # Check for kernel modules
       modules = quietRun( 'lsmod' )
       if not kernel and 'tun' not in modules:
@@ -456,6 +468,11 @@ class Network( object ):
          exit( 1 )
       # Create network, but don't start things up yet!
       self.prepareNet()
+   def configureControlNetwork( self ):
+      configureRoutedControlNetwork( self.controllers[ 0 ],
+         self.switches)
+   def configHosts( self ):
+      configHosts( self.hosts, self.hostIps )
    def prepareNet( self ):
       """Create a network by calling makeNet as follows: 
          (switches, hosts ) = makeNet()
@@ -464,21 +481,19 @@ class Network( object ):
       if kernel: print "*** Using kernel datapath"
       else: print "*** Using user datapath"
       print "*** Creating controller"
-      controller = Controller( 'c0', kernel )
+      self.controller = self.Controller( 'c0', kernel=kernel )
+      self.controllers = [ self.controller ]
       print "*** Creating network"
-      switches, hosts = self.makeNet( controller )
+      self.switches, self.hosts = self.makeNet( self.controller )
       print
       if not kernel:
          print "*** Configuring control network"
-         configRoutedControlNetwork( controller, switches )
+         self.configureControlNetwork()
       print "*** Configuring hosts"
-      configHosts( hosts, self.startAddr )
-      self.controllers = [ controller ]
-      self.switches = switches
-      self.hosts = hosts
+      self.configHosts()
    def start( self ):
       "Start controller and switches"
-      print "*** Starting reference controller"
+      print "*** Starting controller"
       for controller in self.controllers:
          controller.start()
       print "*** Starting", len( self.switches ), "switches"
@@ -524,9 +539,9 @@ def defaultNames( snames=None, hnames=None, dpnames=None ):
 
 class TreeNet( Network ):
    "A tree-structured network with the specified depth and fanout"
-   def __init__( self, depth, fanout, kernel=True):
+   def __init__( self, depth, fanout, **kwargs):
       self.depth, self.fanout = depth, fanout
-      Network.__init__( self, kernel )
+      Network.__init__( self, **kwargs )
    def treeNet( self, controller, depth, fanout, kernel=True, snames=None,
       hnames=None, dpnames=None ):
       """Return a tree network of the given depth and fanout as a triple:
@@ -563,9 +578,9 @@ class GridNet( Network ):
    """An N x M grid/mesh network of switches, with hosts at the edges.
       This class also demonstrates creating a somewhat complicated
       topology."""
-   def __init__( self, n, m, kernel=True, linear=False ):
+   def __init__( self, n, m, kernel=True, linear=False, **kwargs ):
       self.n, self.m, self.linear = n, m, linear and m == 1
-      Network.__init__( self, kernel )
+      Network.__init__( self, kernel, **kwargs )
    def makeNet( self, controller ):
       snames, hnames, dpnames = defaultNames()
       n, m = self.n, self.m

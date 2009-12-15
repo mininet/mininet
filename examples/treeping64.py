@@ -6,9 +6,9 @@ from mininet import init, TreeNet, pingTestVerbose
 
 def treePing64():
    results = {}
-   datapaths = [ 'kernel', 'user' ]
+   datapaths = [ 'user', 'kernel' ]
    
-   print "*** Testing Mininet with kernel and user datapaths"
+   print "*** Testing Mininet with user and kernel datapaths"
    
    for datapath in datapaths:
       k = datapath == 'kernel'

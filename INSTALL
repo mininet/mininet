@@ -1,6 +1,8 @@
 Preliminary Mininet Installation/Configuration Notes
 ---
 
+- This is not (yet) a 'release'; things may be broken.
+
 - Mininet is not currently 'installed.' If you want to install it,
   so that you can 'import mininet', place it somewhere in your
   python path.

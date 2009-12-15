@@ -24,6 +24,9 @@ ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/' | xargs -l1 echo dpctl deldp
 echo "Removing junk in /tmp"
 rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log
 
+echo "Killing nox"
+killall lt-nox_core
+
 echo "Removing old screen sessions"
 screen -ls | egrep -o '[0-9]+\.[hsc][0-9]+' | sed 's/\.[hsc][0-9]*//g' | kill -9
 
