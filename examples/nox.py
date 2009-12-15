@@ -2,7 +2,6 @@
 
 "Instantiate a Tree network and use NOX as the controller."
 
-import time
 from mininet import init, Controller, TreeNet, Cli
 
 class NoxController( Controller ):

@@ -578,9 +578,9 @@ class GridNet( Network ):
    """An N x M grid/mesh network of switches, with hosts at the edges.
       This class also demonstrates creating a somewhat complicated
       topology."""
-   def __init__( self, n, m, kernel=True, linear=False, **kwargs ):
+   def __init__( self, n, m, linear=False, **kwargs ):
       self.n, self.m, self.linear = n, m, linear and m == 1
-      Network.__init__( self, kernel, **kwargs )
+      Network.__init__( self, **kwargs )
    def makeNet( self, controller ):
       snames, hnames, dpnames = defaultNames()
       n, m = self.n, self.m
