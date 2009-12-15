@@ -2,7 +2,7 @@
 
 "Instantiate a Grid network and use NOX as the controller."
 
-from mininet import init, Controller, GridNet, Cli
+from mininet.mininet import init, Controller, GridNet, Cli
 
 class NoxController( Controller ):
    def __init__( self, name, **kwargs ):

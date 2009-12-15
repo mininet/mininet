@@ -2,7 +2,7 @@
 
 "Create a 64-node tree network, and test connectivity using ping."
    
-from mininet import init, TreeNet, pingTestVerbose
+from mininet.mininet import init, TreeNet, pingTestVerbose
 
 def treePing64():
    results = {}

@@ -6,7 +6,7 @@ This is more complicated than using the higher-level classes,
 but it exposes the configuration details and allows customization.
 """
 
-from mininet import init, Node, createLink
+from mininet.mininet import init, Node, createLink
 
 def scratchNet( cname='controller', cargs='ptcp:'):
    # Create Network

@@ -5,14 +5,14 @@
 import ripcord
 from ripcord.topo import FatTreeTopo
 
-from mininet import init, Controller, Network, Host, nameGen, Cli
-from mininet import createLink, flush
+from mininet.mininet import init, Controller, Network, Host, nameGen, Cli
+from mininet.mininet import createLink, flush
 
 class NoxController( Controller ):
-   def __init__( self, name, kernel=False **kwargs ):
+   def __init__( self, name, kernel=False, **kwargs ):
       Controller.__init__( self, name, kernel=kernel,
          controller='nox_core', 
-         cargs='-v --libdir=/usr/local/lib -i ptcp: routing', 
+         cargs='-v --libdir=/usr/local/lib -i ptcp:', 
          cdir='/usr/local/bin', **kwargs)
    
 class FatTree( Network ):

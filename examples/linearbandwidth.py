@@ -15,8 +15,8 @@ switches, so this test WILL NOT WORK unless you have recompiled
 your controller to support 100 switches (or more.)
 """
    
-from mininet import init, Network, defaultNames, Host, Switch
-from mininet import createLink, flush, iperf, pingTestVerbose, Cli
+from mininet.mininet import init, Network, defaultNames, Host, Switch
+from mininet.mininet import createLink, flush, iperf, pingTestVerbose, Cli
 
 class LinearNet( Network ):
    def __init__( self, switchCount, **kwargs ):

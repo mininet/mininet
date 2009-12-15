@@ -2,7 +2,7 @@
 
 "Instantiate a Tree network and use NOX as the controller."
 
-from mininet import init, Controller, TreeNet, Cli
+from mininet.mininet import init, Controller, TreeNet, Cli
 
 class NoxController( Controller ):
    def __init__( self, name, **kwargs ):

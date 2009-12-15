@@ -2,7 +2,7 @@
 
 "Create a tree network and run the CLI on it."
 
-from mininet import init, TreeNet, Cli
+from mininet.mininet import init, TreeNet, Cli
 
 if __name__ == '__main__':
    init()

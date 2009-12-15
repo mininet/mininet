@@ -7,7 +7,7 @@ host. Requires xterm(1) and GNU screen(1).
 
 import os, re
 from subprocess import Popen
-from mininet import init, TreeNet, quietRun
+from mininet.mininet import init, TreeNet, quietRun
 
 def makeXterm( node, title ):
    "Run screen on a node, and hook up an xterm."

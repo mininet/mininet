@@ -8,7 +8,7 @@ but it exposes the configuration details and allows customization.
 This version uses the user datapath.
 """
 
-from mininet import init, Node, createLink
+from mininet.mininet import init, Node, createLink
 
 def scratchNetUser( cname='controller', cargs='ptcp:'):
    # Create Network

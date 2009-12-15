@@ -2,7 +2,7 @@
 
 "Run multiple tests on a network."
    
-from mininet import init, TreeNet, pingTestVerbose, iperfTest, Cli
+from mininet.mininet import init, TreeNet, pingTestVerbose, iperfTest, Cli
 
 if __name__ == '__main__':
    init()

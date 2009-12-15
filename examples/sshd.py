@@ -11,7 +11,7 @@ unchanged on mininet and hardware.
 """
 
 import sys ; readline = sys.stdin.readline
-from mininet import init, Node, createLink, TreeNet, Cli
+from mininet.mininet import init, Node, createLink, TreeNet, Cli
 
 def nets( hosts ):
    "Return list of networks (/24) for hosts."

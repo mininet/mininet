@@ -7,7 +7,7 @@ to adjust them, e.g. by adding entries to /etc/sysctl.conf
 and running sysctl -p.
 """
    
-from mininet import init, TreeNet, Cli
+from mininet.mininet import init, TreeNet, Cli
 
 if __name__ == '__main__':
    init()
