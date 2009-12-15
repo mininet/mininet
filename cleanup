@@ -26,6 +26,7 @@ rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log
 
 echo "Killing nox"
 killall lt-nox_core
+killall nox_core
 
 echo "Removing old screen sessions"
 screen -ls | egrep -o '[0-9]+\.[hsc][0-9]+' | sed 's/\.[hsc][0-9]*//g' | kill -9

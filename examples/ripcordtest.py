@@ -9,10 +9,10 @@ from mininet import init, Controller, Network, Host, nameGen, Cli
 from mininet import createLink, flush
 
 class NoxController( Controller ):
-   "A customized Controller that uses NOX."
-   def __init__( self, name, **kwargs ):
-      Controller.__init__( self, name, 
-         controller='nox_core', cargs='-i ptcp pyswitch', 
+   def __init__( self, name, kernel=False **kwargs ):
+      Controller.__init__( self, name, kernel=kernel,
+         controller='nox_core', 
+         cargs='-v --libdir=/usr/local/lib -i ptcp: routing', 
          cdir='/usr/local/bin', **kwargs)
    
 class FatTree( Network ):
