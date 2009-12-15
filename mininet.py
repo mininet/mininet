@@ -451,7 +451,6 @@ class Network( object ):
       kernel=True, 
       Controller=Controller, Switch=Switch, 
       hostIpGen=ipGen, hostIpStart=( 192, 168, 123, 1 ) ):
-      print "NETWORK: Controller=", Controller
       self.kernel = kernel
       self.Controller = Controller
       self.Switch = Switch
