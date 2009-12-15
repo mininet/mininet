@@ -400,11 +400,9 @@ def nameGen( prefix ):
 # For the user datapath, we create an explicit control network.
 # Note: Instead of routing, we could bridge or use "in-band" control
    
-def configRoutedControlNetwork( controller, switches, 
-   ipGen=ipGen, ipStart=( 10, 123, 0, 1 ) ):
+def configureRoutedControlNetwork( controller, switches, ips):
    """Configure a routed control network on controller and switches,
       for use with the user datapath."""
-   ips = ipGen( ipStart )
    cip = ips.next()
    print controller.name, '<->',
    for switch in switches:
@@ -468,9 +466,11 @@ class Network( object ):
          exit( 1 )
       # Create network, but don't start things up yet!
       self.prepareNet()
-   def configureControlNetwork( self ):
+   def configureControlNetwork( self,
+      ipGen=ipGen, ipStart = (10, 0, 123, 1 ) ):
+      ips = apply( ipGen, ipStart )
       configureRoutedControlNetwork( self.controllers[ 0 ],
-         self.switches)
+         self.switches, ips = ips)
    def configHosts( self ):
       configHosts( self.hosts, self.hostIps )
    def prepareNet( self ):
