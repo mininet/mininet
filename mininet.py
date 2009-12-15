@@ -65,6 +65,7 @@ History:
 12/08/09 Kernel datapath support complete
 12/09/09 Moved controller and switch routines into classes
 12/12/09 Added subdivided network driver workflow
+12/13/09 Added support for custom controller and switch classes
 """
 
 from subprocess import call, check_call, Popen, PIPE, STDOUT
@@ -754,7 +755,6 @@ class Cli( object ):
             print node.name,
          print
    def iperf( self, args ):
-      print "iperf: got args", args
       if len( args ) != 2:
          print "usage: iperf <h1> <h2>"
          return
@@ -762,7 +762,7 @@ class Cli( object ):
          if host not in self.nodemap:
             print "iperf: cannot find host:", host
             return
-      iperf( [ self.nodemap[ h ] for h in args ] )
+      iperf( [ self.nodemap[ h ] for h in args ], verbose=True )
    # Interpreter
    def run( self ):
       "Read and execute commands."
@@ -813,8 +813,8 @@ def init():
       print "*** Mininet must run as root."; exit( 1 )
    # If which produces no output, then netns is not in the path.
    # May want to loosen this to handle netns in the current dir.
-   if not quietRun(['which', 'netns']):
-       raise Exception("Could not find netns; see INSTALL")
+   if not quietRun( [ 'which', 'netns' ] ):
+       raise Exception( "Could not find netns; see INSTALL" )
    fixLimits()
 
 if __name__ == '__main__':

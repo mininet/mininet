@@ -50,7 +50,7 @@ class FatTree( Network ):
          for neighbor in graph.neighbors( miniToGraph[ switch ] ):
             miniNeighbor = graphToMini[ neighbor ]
             if miniNeighbor not in currentNeighbors:
-               print ".", ; flush()
+               print '.', ; flush()
                createLink( switch, graphToMini[ neighbor ] )
       print
       return switches, hosts

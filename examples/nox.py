@@ -7,7 +7,8 @@ from mininet import init, Controller, TreeNet, Cli
 class NoxController( Controller ):
    def __init__( self, name, **kwargs ):
       Controller.__init__( self, name, 
-         controller='nox_core', cargs='-i ptcp pyswitch', 
+         controller='nox_core',
+         cargs='--libdir=/usr/local/lib -i ptcp: pyswitch', 
          cdir='/usr/local/bin', **kwargs)
    
 if __name__ == '__main__':
