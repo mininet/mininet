@@ -306,7 +306,8 @@ class Switch( Node ):
    def stop( self ):
       if self.dp is None: self.stopUserDatapath()
       else: self.stopKernelDatapath()
-   # Handle non-interaction if we've execed
+      # Handle non-interaction if we've execed
+      self.terminate()
    def sendCmd( self, cmd ):
       if not self.execed: return Node.sendCmd( self, cmd )
       else: print "*** Error:", self.name, "has execed and cannot accept commands"
