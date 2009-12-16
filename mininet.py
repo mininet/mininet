@@ -277,7 +277,7 @@ class Switch( Node ):
       self.cmdPrint( 'ofdatapath -i ' + ','.join( intfs ) +
        ' ptcp: 1> ' + ofdlog + ' 2> '+ ofdlog + ' &' )
       self.cmdPrint( 'ofprotocol tcp:' + controller.IP() +
-         ' tcp:localhost 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+         ' tcp:localhost --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
    def stopUserDatapath( self ):
       "Stop OpenFlow reference user datapath."
       self.cmd( "kill %ofdatapath" )
@@ -291,9 +291,10 @@ class Switch( Node ):
       quietRun( 'dpctl deldp ' + self.dp )
       self.cmdPrint( 'dpctl adddp ' + self.dp )
       self.cmdPrint( 'dpctl addif ' + self.dp + ' ' + ' '.join( self.intfs ) )
-      # Become protocol daemon
+      # Run protocol daemon
       self.cmdPrint( 'ofprotocol' +
-         ' ' + self.dp + ' tcp:127.0.0.1 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+         ' ' + self.dp + ' tcp:127.0.0.1 ' + 
+         ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
       self.execed = False # XXX until I fix it
    def stopKernelDatapath( self ):
       "Terminate a switch using OpenFlow reference kernel datapath."
@@ -361,7 +362,9 @@ def retry( n, fn, *args):
       sleep( 1 )
       print "*** retrying..."; flush()
       tries += 1
-   if tries >= n: exit( 1 )
+   if tries >= n: 
+      print "*** giving up"
+      exit( 1 )
    
 def createLink( node1, node2 ):
    "Create a link node1-intf1 <---> node2-intf2."
@@ -526,17 +529,18 @@ class Network( object ):
          switch.start( self.controllers[ 0 ] )
    def stop( self ):
       "Stop the controller(s), switches and hosts"
-      print "*** Stopping controller"
-      for controller in self.controllers:
-         controller.stop(); controller.terminate()
+      print "*** Stopping hosts"
+      for host in self.hosts: 
+         host.terminate()
       print "*** Stopping switches"
       for switch in self.switches:
          print switch.name, ; flush()
          switch.stop() ; switch.terminate()
       print
-      print "*** Stopping hosts"
-      for host in self.hosts: 
-         host.terminate()
+      print "*** Stopping controller"
+      for controller in self.controllers:
+         controller.stop(); controller.terminate()
+      print
       print "*** Test complete"
    def runTest( self, test ):
       "Run a given test, called as test( controllers, switches, hosts)"
