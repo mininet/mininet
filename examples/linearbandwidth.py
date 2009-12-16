@@ -26,7 +26,7 @@ def linearBandwidthTest():
       results[ datapath ] = []
       for switchCount in switchCounts: 
          print "*** Creating linear network of size", switchCount
-         network = LinearNet( switchCount, k)
+         network = LinearNet( switchCount, kernel=k)
          bandwidth = network.run( iperfTest )
          results[ datapath ] += [ ( switchCount, bandwidth ) ]
          

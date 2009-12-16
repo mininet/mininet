@@ -13,5 +13,5 @@ class NoxController( Controller ):
    
 if __name__ == '__main__':
    init()   
-   network = GridNet( 2, 2, kernel=True, Controller=NoxController)
+   network = GridNet( 2, 2, kernel=True, Controller=NoxController )
    network.run( Cli )

@@ -50,9 +50,8 @@ Thoughts/TBD:
    For the moment, specifying configurations and tests in Python
    is straightforward and relatively concise.
    Soon, we may want to split the various subsystems (core,
-   cli, tests, etc.) into multiple modules.
-   We don't support nox nicely just yet - you have to hack this file
-   or subclass things aggressively.
+   topology/network, cli, tests, etc.) into multiple modules.
+   Currently nox support is in nox.py.
    We'd like to support OpenVSwitch as well as the reference
    implementation.
    
@@ -396,10 +395,27 @@ def nameGen( prefix ):
    i = 0
    while True: yield prefix + `i`; i += 1
       
-# Control network support
-# For the user datapath, we create an explicit control network.
-# Note: Instead of routing, we could bridge or use "in-band" control
-   
+# Control network support:
+#
+# Create an explicit control network. Currently this is only
+# used by the user datapath configuration.
+#
+# Notes:
+#
+# 1. If the controller and switches are in the same (e.g. root)
+#    namespace, they can just use the loopback connection.
+#    We may wish to do this for the user datapath as well as the
+#    kernel datapath.
+#
+# 2. If we can get unix domain sockets to work, we can use them
+#    instead of an explicit control network.
+#
+# 3. Instead of routing, we could bridge or use "in-band" control.
+#
+# 4. Even if we dispense with this in general, it could still be
+#    useful for people who wish to simulate a separate control
+#    network (since real networks may need one!)
+
 def configureRoutedControlNetwork( controller, switches, ips):
    """Configure a routed control network on controller and switches,
       for use with the user datapath."""
@@ -542,7 +558,7 @@ class TreeNet( Network ):
    def __init__( self, depth, fanout, **kwargs):
       self.depth, self.fanout = depth, fanout
       Network.__init__( self, **kwargs )
-   def treeNet( self, controller, depth, fanout, kernel=True, snames=None,
+   def treeNet( self, controller, depth, fanout, snames=None,
       hnames=None, dpnames=None ):
       """Return a tree network of the given depth and fanout as a triple:
          ( root, switches, hosts ), using the given switch, host and
@@ -555,21 +571,21 @@ class TreeNet( Network ):
          host = Host( hnames.next() )
          print host.name, ; flush()
          return host, [], [ host ]
-      dp = dpnames.next() if kernel else None
+      dp = dpnames.next() if self.kernel else None
       switch = Switch( snames.next(), dp )
-      if not kernel: createLink( switch, controller )
+      if not self.kernel: createLink( switch, controller )
       print switch.name, ; flush()
       switches, hosts = [ switch ], []
       for i in range( 0, fanout ):
          child, slist, hlist = self.treeNet( controller, 
-            depth - 1, fanout, kernel, snames, hnames, dpnames )
+            depth - 1, fanout, snames, hnames, dpnames )
          createLink( switch, child )
          switches += slist
          hosts += hlist
       return switch, switches, hosts
    def makeNet( self, controller ):
       root, switches, hosts = self.treeNet( controller,
-         self.depth, self.fanout, self.kernel)
+         self.depth, self.fanout )
       return switches, hosts
    
 # Grid network
@@ -630,9 +646,10 @@ class GridNet( Network ):
       return switches, hosts
 
 class LinearNet( GridNet ):
-   def __init__( self, switchCount, kernel=True ):
+   "A network consisting of two hosts connected by a string of switches."
+   def __init__( self, switchCount, **kwargs ):
       self.switchCount = switchCount
-      GridNet.__init__( self, switchCount, 1, linear=True )
+      GridNet.__init__( self, switchCount, 1, linear=True, **kwargs )
       
 # Tests
 

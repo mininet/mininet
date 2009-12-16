@@ -3,15 +3,19 @@
 """
 Build a simple network from scratch, using mininet primitives.
 This is more complicated than using the higher-level classes,
-but it exposes the configuration details and allows cusomization.
+but it exposes the configuration details and allows customization.
 
 This version uses the user datapath.
 """
 
 from mininet import init, Node, createLink
 
-def scratchNet( cname='controller', cargs='ptcp:'):
+def scratchNetUser( cname='controller', cargs='ptcp:'):
    # Create Network
+   # It's not strictly necessary for the controller and switches
+   # to be in separate namespaces. For performance, they probably
+   # should be in the root namespace. However, it's interesting to
+   # see how they could work even if they are in separate namespaces.
    controller = Node( 'c0' )
    switch = Node( 's0')
    h0 = Node( 'h0' )
@@ -40,4 +44,4 @@ def scratchNet( cname='controller', cargs='ptcp:'):
    
 if __name__ == '__main__':
    init()   
-   scratchNet()
+   scratchNetUser()

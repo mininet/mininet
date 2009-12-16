@@ -13,5 +13,5 @@ class NoxController( Controller ):
    
 if __name__ == '__main__':
    init()   
-   network = TreeNet( depth=2, fanout=4, kernel=True, Controller=NoxController)
+   network = TreeNet( depth=2, fanout=4, kernel=True, Controller=NoxController )
    network.run( Cli )
