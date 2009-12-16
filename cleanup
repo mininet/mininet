@@ -30,7 +30,6 @@ def cleanUpScreens():
 def cleanup():
    print "*** Removing all links of the pattern foo-ethX"
    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
-   print links
    for link in links: 
       if link != '': sh( "ip link del " + link )
 
