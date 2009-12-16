@@ -30,6 +30,7 @@ def cleanUpScreens():
 def cleanup():
    print "*** Removing all links of the pattern foo-ethX"
    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+   print links
    for link in links: 
       if link != '': sh( "ip link del " + link )
 
@@ -43,7 +44,7 @@ def cleanup():
    print "*** Removing excess kernel datapaths"
    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).split( '\n')
    for dp in dps: 
-      if dp != '': sh( 'ip link del ' + link )
+      if dp != '': sh( 'dpctl deldp ' + dp )
 
    print "*** Removing junk from /tmp"
    sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
