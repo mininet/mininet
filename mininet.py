@@ -357,11 +357,11 @@ def moveIntf( intf, node ):
 def retry( n, fn, *args):
    "Try something N times before giving up."
    tries = 0
-   while not apply( fn, args ) and tries < 3:
+   while not apply( fn, args ) and tries < n:
       sleep( 1 )
       print "*** retrying..."; flush()
       tries += 1
-   if tries > 3: exit( 1 )
+   if tries >= n: exit( 1 )
    
 def createLink( node1, node2 ):
    "Create a link node1-intf1 <---> node2-intf2."
