@@ -31,7 +31,7 @@ def cleanup():
    print "*** Removing all links of the pattern foo-ethX"
    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
    for link in links: 
-      if link: sh( "ip link del " + link )
+      if link != '': sh( "ip link del " + link )
 
    print "*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
    zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core'
@@ -43,7 +43,7 @@ def cleanup():
    print "*** Removing excess kernel datapaths"
    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).split( '\n')
    for dp in dps: 
-      if dp: sh( 'ip link del ' + link )
+      if dp != '': sh( 'ip link del ' + link )
 
    print "*** Removing junk from /tmp"
    sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )

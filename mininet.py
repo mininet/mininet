@@ -346,21 +346,30 @@ def makeIntfPair( intf1, intf2 ):
 def moveIntf( intf, node ):
    "Move intf to node."
    cmd = 'ip link set ' + intf + ' netns ' + `node.pid`
-   checkRun( cmd )
+   quietRun( cmd )
    links = node.cmd( 'ip link show' )
    if not intf in links:
       print "*** Error: moveIntf:", intf, "not successfully moved to",
       print node.name,":"
-      exit( 1 )
-   return
+      return False
+   return True
+
+def retry( n, fn, *args):
+   "Try something N times before giving up."
+   tries = 0
+   while not apply( fn, args ) and tries < 3:
+      sleep( 1 )
+      print "*** retrying..."; flush()
+      tries += 1
+   if tries > 3: exit( 1 )
    
 def createLink( node1, node2 ):
    "Create a link node1-intf1 <---> node2-intf2."
    intf1 = node1.newIntf()
    intf2 = node2.newIntf()
    makeIntfPair( intf1, intf2 )
-   if node1.inNamespace: moveIntf( intf1, node1 )
-   if node2.inNamespace: moveIntf( intf2, node2 )
+   if node1.inNamespace: retry( 3, moveIntf, intf1, node1 )
+   if node2.inNamespace: retry( 3, moveIntf, intf2, node2 )
    node1.connection[ intf1 ] = ( node2, intf2 )
    node2.connection[ intf2 ] = ( node1, intf1 )
    return intf1, intf2
