@@ -632,7 +632,7 @@ class GridNet( Network ):
 class LinearNet( GridNet ):
    def __init__( self, switchCount, kernel=True ):
       self.switchCount = switchCount
-      GridNet.__init__( self, switchCount, 1, kernel, linear=True )
+      GridNet.__init__( self, switchCount, 1, linear=True )
       
 # Tests
 
