@@ -344,14 +344,15 @@ def makeIntfPair( intf1, intf2 ):
    cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
    return checkRun( cmd )
    
-def moveIntf( intf, node ):
+def moveIntf( intf, node, print_error = False ):
    "Move intf to node."
    cmd = 'ip link set ' + intf + ' netns ' + `node.pid`
    quietRun( cmd )
    links = node.cmd( 'ip link show' )
    if not intf in links:
-      print "*** Error: moveIntf:", intf, "not successfully moved to",
-      print node.name,":"
+      if print_error:
+          print "*** Error: moveIntf:", intf, "not successfully moved to",
+          print node.name,":"
       return False
    return True
 
@@ -360,10 +361,9 @@ def retry( n, retry_delay, fn, *args):
    tries = 0
    while not apply( fn, args ) and tries < n:
       sleep( retry_delay )
-      print "*** retrying..."; flush()
       tries += 1
    if tries >= n: 
-      print "*** giving up"
+      print "*** gave up after %i retries" % tries; flush()
       exit( 1 )
    
 def createLink( node1, node2 ):
