@@ -539,7 +539,7 @@ class Network( object ):
       print
       print "*** Stopping controller"
       for controller in self.controllers:
-         controller.stop(); controller.terminate()
+         controller.stop();
       print
       print "*** Test complete"
    def runTest( self, test ):
