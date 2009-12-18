@@ -83,6 +83,6 @@ def linearBandwidthTest( lengths ):
 if __name__ == '__main__':
    init()
    print "*** Running linearBandwidthTest"
-   linearBandwidthTest( [ 1, 10, 20, 40, 80, 100 ] )
+   linearBandwidthTest( [ 1, 10, 20, 40, 60, 80, 100 ] )
 
    
