@@ -105,6 +105,8 @@ def quietRun( cmd ):
 class Node( object ):
    """A virtual network node is simply a shell in a network namespace.
       We communicate with it using pipes."""
+   inToNode = {}
+   outToNode = {}
    def __init__( self, name, inNamespace=True ):
       self.name = name
       closeFds = False # speed vs. memory use
@@ -118,8 +120,11 @@ class Node( object ):
       self.stdout = self.shell.stdout
       self.pollOut = select.poll() 
       self.pollOut.register( self.stdout )
-      outToNode[ self.stdout ] = self
-      inToNode[ self.stdin ] = self
+      # Maintain mapping between file descriptors and nodes
+      # This could be useful for monitoring multiple nodes
+      # using select.poll()
+      self.outToNode[ self.stdout.fileno() ] = self
+      self.inToNode[ self.stdin.fileno() ] = self
       self.pid = self.shell.pid
       self.intfCount = 0
       self.intfs = []
@@ -127,6 +132,9 @@ class Node( object ):
       self.connection = {}
       self.waiting = False
       self.execed = False
+   def fdToNode( self, f ):
+      node = self.outToNode.get( f )
+      return node or self.inToNode.get( f )
    def cleanup( self ):
       # Help python collect its garbage
       self.shell = None
@@ -134,8 +142,8 @@ class Node( object ):
    def read( self, max ): return os.read( self.stdout.fileno(), max )
    def write( self, data ): os.write( self.stdin.fileno(), data )
    def terminate( self ):
-      self.cleanup()
       os.kill( self.pid, signal.SIGKILL )
+      self.cleanup()
    def stop( self ): self.terminate()
    def waitReadable( self ): self.pollOut.poll()
    def sendCmd( self, cmd ):
@@ -211,29 +219,19 @@ class Node( object ):
       return self.cmd( 'route add default ' + intf )
    def IP( self ):
       "Return IP address of first interface"
-      return self.ips[ self.intfs[ 0 ] ]
+      if len( self.intfs ) > 0:
+         return self.ips.get( self.intfs[ 0 ], None )
    def intfIsUp( self, intf ):
       "Check if one of our interfaces is up."
       return 'UP' in self.cmd( 'ifconfig ' + self.intfs[ 0 ] )
    # Other methods  
    def __str__( self ): 
       result = self.name
-      result += ": IP=" + self.IP() + " intfs=" + self.intfs
-      result += " waiting=", self.waiting
+      result += ": IP=" + self.IP() + " intfs=" + ','.join( self.intfs )
+      result += " waiting=" +  `self.waiting`
       return result
 
-# Maintain mapping between i/o pipes and nodes
-# This could be useful for monitoring multiple nodes
-# using select.poll()
 
-inToNode = {}
-outToNode = {}
-def outputs(): return outToNode.keys()
-def nodes(): return outToNode.values()
-def inputs(): return [ node.stdin for node in nodes() ]
-def nodeFromFile( f ):
-   node = outToNode.get( f )
-   return node or inToNode.get( f )
 
 class Host( Node ):
    """A host is simply a Node."""
@@ -303,18 +301,16 @@ class Switch( Node ):
       # However, this takes time, so we're better off to remove them
       # explicitly so that we won't get errors if we run before they
       # have been removed by the kernel. Unfortunately this is very slow.
+      self.cmd( 'kill %ofprotocol')
       for intf in self.intfs:
          quietRun( 'ip link del ' + intf )
          sys.stdout.write( '.' ) ; flush()
-      self.cmd( 'kill %ofprotocol')
    def start( self, controller ): 
       if self.dp is None: self.startUserDatapath( controller )
       else: self.startKernelDatapath( controller )
    def stop( self ):
       if self.dp is None: self.stopUserDatapath()
       else: self.stopKernelDatapath()
-      # Handle non-interaction if we've execed
-      self.terminate()
    def sendCmd( self, cmd ):
       if not self.execed: return Node.sendCmd( self, cmd )
       else: print "*** Error:", self.name, "has execed and cannot accept commands"
@@ -455,9 +451,9 @@ def configureRoutedControlNetwork( controller, switches, ips):
       while not switch.intfIsUp( switch.intfs[ 0 ] ):
          print "*** Waiting for ", switch.intfs[ 0 ], "to come up"
          sleep( 1 )
-   if pingTest( hosts=[ switch, controller ] ) != 0:
-      print "*** Error: control network test failed"
-      exit( 1 )
+      if pingTest( hosts=[ switch, controller ] ) != 0:
+         print "*** Error: control network test failed"
+         exit( 1 )
 
 def configHosts( hosts, ips ):
    "Configure a set of hosts, starting at IP address a.b.c.d"
@@ -535,7 +531,7 @@ class Network( object ):
       print "*** Stopping switches"
       for switch in self.switches:
          print switch.name, ; flush()
-         switch.stop() ; switch.terminate()
+         switch.stop()
       print
       print "*** Stopping controller"
       for controller in self.controllers:
@@ -716,7 +712,6 @@ def iperf( hosts, verbose=False ):
    "Run iperf between two hosts."
    assert len( hosts ) == 2
    host1, host2 = hosts[ 0 ], hosts[ 1 ]
-   # dumpNodes( [ host1, host2 ] )
    host1.cmd( 'killall -9 iperf') # XXX shouldn't be global killall
    server = host1.cmd( 'iperf -s &' )
    if verbose: print server ; flush()
