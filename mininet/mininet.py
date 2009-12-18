@@ -73,6 +73,8 @@ import os, re, signal, sys, select
 flush = sys.stdout.flush
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 
+DATAPATHS = ['user', 'kernel']
+
 # Utility routines to make it easier to run commands
 
 def run( cmd ):
