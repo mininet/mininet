@@ -241,7 +241,7 @@ class Controller( Node ):
    """A Controller is a Node that is running (or has execed) an 
       OpenFlow controller."""
    def __init__( self, name, kernel=True, controller='controller',
-      cargs='ptcp:', cdir=None ):
+      cargs='-v ptcp:', cdir=None ):
       self.controller = controller
       self.cargs = cargs
       self.cdir = cdir
