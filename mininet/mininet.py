@@ -73,7 +73,44 @@ import os, re, signal, sys, select
 flush = sys.stdout.flush
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 
+import logging
+import sys
+
+from logging_mod import StreamHandlerNoNewline
+
 DATAPATHS = ['user', 'kernel']
+
+LEVELS = {'debug': logging.DEBUG,
+          'info': logging.INFO,
+          'warning': logging.WARNING,
+          'error': logging.ERROR,
+          'critical': logging.CRITICAL}
+
+# change this to get printouts when running unit tests
+LOG_LEVEL_DEFAULT = logging.WARNING
+
+#default: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_MSG_FORMAT = "%(message)s"
+
+lg = None
+
+def setup_logging(loglevel):
+
+    global lg
+
+    # create logger
+    lg = logging.getLogger("mininet")
+    lg.setLevel(loglevel)
+    # create console handler and set level to debug
+    ch = StreamHandlerNoNewline()
+    ch.setLevel(loglevel)
+    # create formatter
+    formatter = logging.Formatter(LOG_MSG_FORMAT)
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    # add ch to lg
+    lg.addHandler(ch)
+
 
 # Utility routines to make it easier to run commands
 
@@ -193,9 +230,9 @@ class Node( object ):
       return self.waitOutput()
    def cmdPrint( self, cmd ):
       "Call cmd, printing the command and output"
-      print "***", self.name, ":", cmd
+      lg.info("*** %s : %s", self.name, cmd)
       result = self.cmd( cmd )
-      print result,
+      lg.info("%s\n", result)
       return result
    # Interface management, configuration, and routing
    def intfName( self, n):
@@ -306,7 +343,7 @@ class Switch( Node ):
       self.cmd( 'kill %ofprotocol')
       for intf in self.intfs:
          quietRun( 'ip link del ' + intf )
-         sys.stdout.write( '.' ) ; flush()
+         lg.info('.')
    def start( self, controller ): 
       if self.dp is None: self.startUserDatapath( controller )
       else: self.startKernelDatapath( controller )
@@ -314,8 +351,11 @@ class Switch( Node ):
       if self.dp is None: self.stopUserDatapath()
       else: self.stopKernelDatapath()
    def sendCmd( self, cmd ):
-      if not self.execed: return Node.sendCmd( self, cmd )
-      else: print "*** Error:", self.name, "has execed and cannot accept commands"
+      if not self.execed:
+          return Node.sendCmd( self, cmd )
+      else:
+          lg.error("*** Error: %s has execed and cannot accept commands" %
+                 self.name)
    def monitor( self ):
       if not self.execed: return Node.monitor( self )
       else: return True, ''
@@ -351,8 +391,8 @@ def moveIntf( intf, node, print_error = False ):
    links = node.cmd( 'ip link show' )
    if not intf in links:
       if print_error:
-          print "*** Error: moveIntf:", intf, "not successfully moved to",
-          print node.name,":"
+          lg.error("*** Error: moveIntf: % not successfully moved to %s:\n" %
+                  (intf, node.name))
       return False
    return True
 
@@ -363,7 +403,7 @@ def retry( n, retry_delay, fn, *args):
       sleep( retry_delay )
       tries += 1
    if tries >= n: 
-      print "*** gave up after %i retries" % tries; flush()
+      lg.error("*** gave up after %i retries\n" % tries)
       exit( 1 )
    
 def createLink( node1, node2 ):
@@ -388,10 +428,10 @@ def createNodes( name, count ):
 def dumpNodes( nodes ):
    "Dump ifconfig of each node."
    for node in nodes:
-      print "*** Dumping node", node.name
-      print node.cmd( 'ip link show' )
-      print node.cmd( 'route' )
-   
+      lg.info("*** Dumping node %s\n" % node.name)
+      lg.info("%s\n" % node.cmd( 'ip link show' ))
+      lg.info("%s\n" % node.cmd( 'route' ))
+
 def ipGen( A, B, c, d ):
    "Generate next IP class B IP address, starting at A.B.c.d"
    while True:
@@ -432,48 +472,49 @@ def configureRoutedControlNetwork( controller, switches, ips):
    """Configure a routed control network on controller and switches,
       for use with the user datapath."""
    cip = ips.next()
-   print controller.name, '<->',
+   lg.info("%s <-> " % controller.name)
    for switch in switches:
-      print switch.name, ; flush()
+      lg.info("%s " % switch.name)
       sip = ips.next()
       sintf = switch.intfs[ 0 ]
       node, cintf = switch.connection[ sintf ]
       if node != controller:
-         print "*** Error: switch", switch.name, 
-         print "not connected to correct controller"
+         lg.error("*** Error: switch %s not connected to correct controller" %
+                  switch.name)
          exit( 1 )
       controller.setIP( cintf, cip,  '/24' )
       switch.setIP( sintf, sip, '/24' )
       controller.setHostRoute( sip, cintf )
       switch.setHostRoute( cip, sintf )
-   print
-   print "*** Testing control network"
+   lg.info("\n")
+   lg.info("*** Testing control network\n")
    while not controller.intfIsUp( controller.intfs[ 0 ] ):
-      print "*** Waiting for ", controller.intfs[ 0 ], "to come up"
+      lg.info("*** Waiting for %s to come up\n", controller.intfs[ 0 ])
       sleep( 1 )
    for switch in switches:
       while not switch.intfIsUp( switch.intfs[ 0 ] ):
-         print "*** Waiting for ", switch.intfs[ 0 ], "to come up"
+         lg.info("*** Waiting for %s to come up\n" % switch.intfs[ 0 ])
          sleep( 1 )
       if pingTest( hosts=[ switch, controller ] ) != 0:
-         print "*** Error: control network test failed"
+         lg.error("*** Error: control network test failed\n")
          exit( 1 )
+   lg.info("\n")
 
 def configHosts( hosts, ips ):
-   "Configure a set of hosts, starting at IP address a.b.c.d"
+   """Configure a set of hosts, starting at IP address a.b.c.d"""
    for host in hosts:
       hintf = host.intfs[ 0 ]
       host.setIP( hintf, ips.next(), '/24' )
       host.setDefaultRoute( hintf )
       # You're low priority, dude!
       quietRun( 'renice +18 -p ' + `host.pid` )
-      print host.name, ; flush()
-   print
- 
+      lg.info("%s ", host.name)
+   lg.info("\n")
+
 # Test driver and topologies
 
 class Network( object ):
-   "Network topology (and test driver) base class."
+   """Network topology (and test driver) base class."""
    def __init__( self,
       kernel=True, 
       Controller=Controller, Switch=Switch, 
@@ -485,12 +526,12 @@ class Network( object ):
       # Check for kernel modules
       modules = quietRun( 'lsmod' )
       if not kernel and 'tun' not in modules:
-         print "*** Error: kernel module tun not loaded:",
-         print " user datapath not supported"
+         lg.error("*** Error: kernel module tun not loaded:\n")
+         lg.error(" user datapath not supported\n")
          exit( 1 )
       if kernel and 'ofdatapath' not in modules:
-         print "*** Error: kernel module ofdatapath not loaded:",
-         print " kernel datapath not supported"
+         lg.error("*** Error: kernel module ofdatapath not loaded:\n")
+         lg.error(" kernel datapath not supported\n")
          exit( 1 )
       # Create network, but don't start things up yet!
       self.prepareNet()
@@ -506,50 +547,51 @@ class Network( object ):
          (switches, hosts ) = makeNet()
          Create a controller here as well."""
       kernel = self.kernel
-      if kernel: print "*** Using kernel datapath"
-      else: print "*** Using user datapath"
-      print "*** Creating controller"
+      if kernel:
+          lg.info("*** Using kernel datapath\n")
+      else:
+          lg.info("*** Using user datapath\n")
+      lg.info("*** Creating controller\n")
       self.controller = self.Controller( 'c0', kernel=kernel )
       self.controllers = [ self.controller ]
-      print "*** Creating network"
+      lg.info("*** Creating network\n")
       self.switches, self.hosts = self.makeNet( self.controller )
-      print
+      lg.info("\n")
       if not kernel:
-         print "*** Configuring control network"
+         lg.info("*** Configuring control network\n")
          self.configureControlNetwork()
-      print "*** Configuring hosts"
+      lg.info("*** Configuring hosts\n")
       self.configHosts()
    def start( self ):
-      "Start controller and switches"
-      print "*** Starting controller"
+      """Start controller and switches\n"""
+      lg.info("*** Starting controller\n")
       for controller in self.controllers:
          controller.start()
-      print "*** Starting", len( self.switches ), "switches"
+      lg.info("*** Starting %s switches" % len(self.switches))
       for switch in self.switches:
          switch.start( self.controllers[ 0 ] )
    def stop( self ):
-      "Stop the controller(s), switches and hosts"
-      print "*** Stopping hosts"
+      """Stop the controller(s), switches and hosts\n"""
+      lg.info("*** Stopping hosts\n")
       for host in self.hosts: 
          host.terminate()
-      print "*** Stopping switches"
+      lg.info("*** Stopping switches\n")
       for switch in self.switches:
-         print switch.name, ; flush()
+         lg.info("%s" % switch.name)
          switch.stop()
-      print
-      print "*** Stopping controller"
+      lg.info("\n")
+      lg.info("*** Stopping controller\n")
       for controller in self.controllers:
          controller.stop();
-      print
-      print "*** Test complete"
+      lg.info("*** Test complete\n")
    def runTest( self, test ):
-      "Run a given test, called as test( controllers, switches, hosts)"
+      """Run a given test, called as test( controllers, switches, hosts)"""
       return test( self.controllers, self.switches, self.hosts )
    def run( self, test ):
       """Perform a complete start/test/stop cycle; test is of the form
          test( controllers, switches, hosts )"""
       self.start()
-      print "*** Running test"
+      lg.info("*** Running test\n")
       result = self.runTest( test )
       self.stop()
       return result
@@ -582,12 +624,12 @@ class TreeNet( Network ):
       snames, hnames, dpnames = defaultNames( snames, hnames, dpnames )
       if ( depth == 0 ):
          host = Host( hnames.next() )
-         print host.name, ; flush()
+         lg.info("%s " % host.name)
          return host, [], [ host ]
       dp = dpnames.next() if self.kernel else None
       switch = Switch( snames.next(), dp )
       if not self.kernel: createLink( switch, controller )
-      print switch.name, ; flush()
+      lg.info("%s " % switch.name)
       switches, hosts = [ switch ], []
       for i in range( 0, fanout ):
          child, slist, hlist = self.treeNet( controller, 
@@ -599,6 +641,7 @@ class TreeNet( Network ):
    def makeNet( self, controller ):
       root, switches, hosts = self.treeNet( controller,
          self.depth, self.fanout )
+      lg.info("\n")
       return switches, hosts
    
 # Grid network
@@ -618,7 +661,7 @@ class GridNet( Network ):
       kernel = self.kernel
       rows = []
       if not self.linear:
-         print "*** gridNet: creating", n, "x", m, "grid of switches" ; flush()
+         lg.info("*** gridNet: creating", n, "x", m, "grid of switches")
       for y in range( 0, m ):
          row = []
          for x in range( 0, n ):
@@ -627,7 +670,7 @@ class GridNet( Network ):
             if not kernel: createLink( switch, controller )
             row.append( switch )
             switches += [ switch ]
-            print switch.name, ; flush()
+            lg.info("%s " % switch.name)
          rows += [ row ]
       # Hook up rows
       for row in rows:
@@ -640,7 +683,7 @@ class GridNet( Network ):
          createLink( h1, row[ 0 ] )
          createLink( h2, row[ -1 ] )
          hosts += [ h1, h2 ]
-         print h1.name, h2.name, ; flush()
+         lg.info("%s %s" % (h1.name, h2.name))
       # Return here if we're using this to make a linear network
       if self.linear: return switches, hosts
       # Hook up columns
@@ -655,7 +698,7 @@ class GridNet( Network ):
          createLink( h1, rows[ 0 ][ x ] )
          createLink( h2, rows[ -1 ][ x ] )
          hosts += [ h1, h2 ]
-         print h1.name, h2.name, ; flush()
+         lg.info("%s %s" % (h1.name, h2.name))
       return switches, hosts
 
 class LinearNet( GridNet ):
@@ -671,7 +714,7 @@ def parsePing( pingOutput ):
    r = r'(\d+) packets transmitted, (\d+) received'
    m = re.search( r, pingOutput )
    if m == None:
-      print "*** Error: could not parse ping output:", pingOutput
+      lg.error("*** Error: could not parse ping output: %s\n" % pingOutput)
       exit( 1 )
    sent, received  = int( m.group( 1 ) ), int( m.group( 2 ) )
    return sent, received
@@ -680,25 +723,26 @@ def pingTest( controllers=[], switches=[], hosts=[], verbose=False ):
    "Test that each host can reach every other host."
    packets = 0 ; lost = 0
    for node in hosts:
-      if verbose: 
-         print node.name, "->", ; flush()
+      if verbose:
+         lg.info("%s -> " % node.name)
       for dest in hosts: 
          if node != dest:
             result = node.cmd( 'ping -c1 ' + dest.IP() )
             sent, received = parsePing( result )
             packets += sent
             if received > sent:
-               print "*** Error: received too many packets"
-               print result
+               lg.error("*** Error: received too many packets")
+               lg.error("%s" % result)
                node.cmdPrint( 'route' )
                exit( 1 )
             lost += sent - received
             if verbose: 
-               print ( dest.name if received else "X" ), ; flush()
-      if verbose: print
+               lg.info(("%s " % dest.name) if received else "X ")
+      if verbose:
+          lg.info("\n")
    ploss = 100 * lost/packets
    if verbose:
-      print "%d%% packet loss (%d/%d lost)" % ( ploss, lost, packets )
+      lg.info("%d%% packet loss (%d/%d lost)\n" % ( ploss, lost, packets ))
       flush()
    return ploss
 
@@ -718,21 +762,25 @@ def iperf( hosts, verbose=False ):
    host1, host2 = hosts[ 0 ], hosts[ 1 ]
    host1.cmd( 'killall -9 iperf') # XXX shouldn't be global killall
    server = host1.cmd( 'iperf -s &' )
-   if verbose: print server ; flush()
+   if verbose:
+       lg.info("%s" % server)
    client = host2.cmd( 'iperf -t 5 -c ' + host1.IP() )
-   if verbose: print client ; flush()
+   if verbose:
+       lg.info("%s" % client)
    server = host1.cmd( 'kill -9 %iperf' )
-   if verbose: print server; flush()
+   if verbose:
+       lg.info("%s" % server)
    return [ parseIperf( server ), parseIperf( client ) ]
    
 def iperfTest( controllers, switches, hosts, verbose=False ):
    "Simple iperf test between two hosts."
-   if verbose: print "*** Starting ping test"   
+   if verbose: 
+       lg.info("*** Starting ping test\n")
    h0, hN = hosts[ 0 ], hosts[ -1 ]
-   print "*** iperfTest: Testing bandwidth between", 
-   print h0.name, "and", hN.name
+   lg.info("*** iperfTest: Testing bandwidth between")
+   lg.info("%s and %s\n" % (h0.name, hN.name))
    result = iperf( [ h0, hN], verbose )
-   print "*** result:", result
+   lg.info("*** result: %s\n" % result)
    return result
 
 # Simple CLI
@@ -752,25 +800,26 @@ class Cli( object ):
    # Commands
    def help( self, args ):
       "Semi-useful help for CLI"
-      print "Available commands are:", self.cmds
-      print
-      print "You may also send a command to a node using:"
-      print "  <node> command {args}"
-      print "For example:"
-      print "  mininet> h0 ifconfig"
-      print
-      print "The interpreter automatically substitutes IP addresses"
-      print "for node names, so commands like"
-      print "  mininet> h0 ping -c1 h1"
-      print "should work."
-      print
-      print "Interactive commands are not really supported yet,"
-      print "so please limit commands to ones that do not"
-      print "require user interaction and will terminate"
-      print "after a reasonable amount of time."
+      help_str = "Available commands are:" + str(self.cmds) + "\n" + \
+                 "You may also send a command to a node using:" + \
+                 "  <node> command {args}" + \
+                 "For example:" + \
+                 "  mininet> h0 ifconfig" + \
+                 "\n" + \
+                 "The interpreter automatically substitutes IP addresses" + \
+                 "for node names, so commands like" + \
+                 "  mininet> h0 ping -c1 h1" + \
+                 "should work." + \
+                 "\n" + \
+                 "Interactive commands are not really supported yet," + \
+                 "so please limit commands to ones that do not" + \
+                 "require user interaction and will terminate" + \
+                 "after a reasonable amount of time."
+      print(help_str)
+
    def nodes( self, args ):
       "List available nodes"
-      print "available nodes are:", [ node.name for node in self.nodelist]
+      lg.info("available nodes are:\n", [ node.name for node in self.nodelist])
    def sh( self, args ):
       "Run an external shell command"
       call( [ 'sh', '-c' ] + args )
@@ -778,26 +827,25 @@ class Cli( object ):
       pingTest( self.controllers, self.switches, self.hosts, verbose=True )
    def net( self, args ):
       for switch in self.switches:
-         print switch.name, "<->",
+         lg.info("%s <-> ", switch.name)
          for intf in switch.intfs:
             node, remoteIntf = switch.connection[ intf ]
-            print node.name,
-         print
+            lg.info("%s" % node.name)
    def iperf( self, args ):
       if len( args ) != 2:
-         print "usage: iperf <h1> <h2>"
+         lg.error("usage: iperf <h1> <h2>")
          return
       for host in args:
          if host not in self.nodemap:
-            print "iperf: cannot find host:", host
+            lg.error("iperf: cannot find host: %s" % host)
             return
       iperf( [ self.nodemap[ h ] for h in args ], verbose=True )
    # Interpreter
    def run( self ):
       "Read and execute commands."
-      print "*** cli: starting"
+      lg.info("*** cli: starting")
       while True:
-         print "mininet> ", ; flush()
+         lg.info("mininet> ")
          input = sys.stdin.readline()
          if input == '': break
          if input[ -1 ] == '\n': input = input[ : -1 ]
@@ -814,20 +862,20 @@ class Cli( object ):
             rest = ' '.join( rest )
             # Interactive commands don't work yet, and
             # there are still issues with control-c
-            print "***", node.name, ": running", rest
+            lg.error("*** %s: running %s\n" % (node.name, rest))
             node.sendCmd( rest )
             while True:
                try:
                   done, data = node.monitor()
-                  print data,
+                  lg.info("%s\n" % data)
                   if done: break
                except KeyboardInterrupt: node.sendInt()
-            print
          elif first == '': pass
          elif first in [ 'exit', 'quit' ]: break
          elif first == '?': self.help( rest )
-         else: print "cli: unknown node or command: <", first, ">"
-      print "*** cli: exiting"
+         else:
+            lg.error("cli: unknown node or command: < %s >\n" % first)
+      lg.info("*** cli: exiting")
    
 def fixLimits():
    "Fix ridiculously small resource limits."
@@ -847,14 +895,24 @@ def init():
    fixLimits()
 
 if __name__ == '__main__':
+   level = logging.INFO
+   if len(sys.argv) > 1:
+      level_name = sys.argv[1]
+      level = LEVELS.get(level_name, level)
+   setup_logging(level)
+   #lg.basicConfig(level = level, format = LOG_MSG_FORMAT)
+
    init()
    results = {}
-   print "*** Welcome to Mininet!"
-   print "*** Look in examples/ for more examples\n"
-   print "*** Testing Mininet with kernel and user datapath"
+   lg.info("*** Welcome to Mininet!\n")
+   lg.info("*** Look in examples/ for more examples\n\n")
+   lg.info("*** Testing Mininet with kernel and user datapath\n")
    for datapath in [ 'kernel', 'user' ]:
       k = datapath == 'kernel'
       network = TreeNet( depth=2, fanout=4, kernel=k)
       result = network.run( pingTestVerbose )
       results[ datapath ] = result
-   print "*** Test results:", results
+   lg.info("*** Test results: %s\n", results)
+else:
+   setup_logging(LOG_LEVEL_DEFAULT)
+   #lg.basicConfig(level = LOG_LEVEL_DEFAULT, format = LOG_MSG_FORMAT)
