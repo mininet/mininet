@@ -230,9 +230,9 @@ class Node( object ):
       return self.waitOutput()
    def cmdPrint( self, cmd ):
       "Call cmd, printing the command and output"
-      lg.info("*** %s : %s", self.name, cmd)
+      #lg.info("*** %s : %s", self.name, cmd)
       result = self.cmd( cmd )
-      lg.info("%s\n", result)
+      #lg.info("%s\n", result)
       return result
    # Interface management, configuration, and routing
    def intfName( self, n):
