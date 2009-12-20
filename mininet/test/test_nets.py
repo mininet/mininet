@@ -7,7 +7,7 @@ Test creation and all-pairs ping for each included mininet topo type.
 from time import sleep
 import unittest
 
-from mininet.mininet import init, TreeNet, LinearNet, pingTest, DATAPATHS
+from mininet.net import init, TreeNet, LinearNet, pingTest, DATAPATHS
 
 class testMinimal(unittest.TestCase):
     '''For each datapath type, test ping with a minimal topology.

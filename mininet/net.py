@@ -67,80 +67,19 @@ History:
 12/13/09 Added support for custom controller and switch classes
 """
 
-from subprocess import call, check_call, Popen, PIPE, STDOUT
+from subprocess import call, Popen, PIPE, STDOUT
 from time import sleep
 import os, re, signal, sys, select
 flush = sys.stdout.flush
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 
-import logging
-import sys
-
-from logging_mod import StreamHandlerNoNewline
+from mininet.logging_mod import lg, set_loglevel
+from mininet.util import run, checkRun, quietRun, makeIntfPair, moveIntf
+from mininet.util import createLink
 
 DATAPATHS = ['user', 'kernel']
 
-LEVELS = {'debug': logging.DEBUG,
-          'info': logging.INFO,
-          'warning': logging.WARNING,
-          'error': logging.ERROR,
-          'critical': logging.CRITICAL}
 
-# change this to get printouts when running unit tests
-LOG_LEVEL_DEFAULT = logging.WARNING
-
-#default: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-LOG_MSG_FORMAT = "%(message)s"
-
-lg = None
-
-def setup_logging(loglevel):
-
-    global lg
-
-    # create logger
-    lg = logging.getLogger("mininet")
-    lg.setLevel(loglevel)
-    # create console handler and set level to debug
-    ch = StreamHandlerNoNewline()
-    ch.setLevel(loglevel)
-    # create formatter
-    formatter = logging.Formatter(LOG_MSG_FORMAT)
-    # add formatter to ch
-    ch.setFormatter(formatter)
-    # add ch to lg
-    lg.addHandler(ch)
-
-
-# Utility routines to make it easier to run commands
-
-def run( cmd ):
-   "Simple interface to subprocess.call()"
-   return call( cmd.split( ' ' ) )
-
-def checkRun( cmd ):
-   "Simple interface to subprocess.check_call()"
-   check_call( cmd.split( ' ' ) )
-   
-def quietRun( cmd ):
-   "Run a command, routing stderr to stdout, and return the output."
-   if isinstance( cmd, str ): cmd = cmd.split( ' ' )
-   popen = Popen( cmd, stdout=PIPE, stderr=STDOUT)
-   # We can't use Popen.communicate() because it uses 
-   # select(), which can't handle
-   # high file descriptor numbers! poll() can, however.
-   output = ''
-   readable = select.poll()
-   readable.register( popen.stdout )
-   while True:
-      while readable.poll(): 
-         data = popen.stdout.read( 1024 )
-         if len( data ) == 0: break
-         output += data
-      popen.poll()
-      if popen.returncode != None: break
-   return output
-   
 class Node( object ):
    """A virtual network node is simply a shell in a network namespace.
       We communicate with it using pipes."""
@@ -361,69 +300,7 @@ class Switch( Node ):
    def monitor( self ):
       if not self.execed: return Node.monitor( self )
       else: return True, ''
-         
-# Interface management
-# 
-# Interfaces are managed as strings which are simply the
-# interface names, of the form "nodeN-ethM".
-#
-# To connect nodes, we create a pair of veth interfaces, and then place them
-# in the pair of nodes that we want to communicate. We then update the node's
-# list of interfaces and connectivity map.
-#
-# For the kernel datapath, switch interfaces
-# live in the root namespace and thus do not have to be
-# explicitly moved.
 
-MOVEINTF_DELAY = 0.0001
-
-def makeIntfPair( intf1, intf2 ):
-   "Make a veth pair of intf1 and intf2."
-   # Delete any old interfaces with the same names
-   quietRun( 'ip link del ' + intf1 )
-   quietRun( 'ip link del ' + intf2 )
-   # Create new pair
-   cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-   return checkRun( cmd )
-   
-def moveIntf( intf, node, print_error = False ):
-   "Move intf to node."
-   cmd = 'ip link set ' + intf + ' netns ' + `node.pid`
-   quietRun( cmd )
-   links = node.cmd( 'ip link show' )
-   if not intf in links:
-      if print_error:
-          lg.error("*** Error: moveIntf: % not successfully moved to %s:\n" %
-                  (intf, node.name))
-      return False
-   return True
-
-def retry( n, retry_delay, fn, *args):
-   '''Try something N times before giving up.
-
-   @param n number of times to retry
-   @param retry_delay seconds wait this long between tries
-   @param fn function to call
-   @param args args to apply to function call
-   '''
-   tries = 0
-   while not apply( fn, args ) and tries < n:
-      sleep( retry_delay )
-      tries += 1
-   if tries >= n: 
-      lg.error("*** gave up after %i retries\n" % tries)
-      exit( 1 )
-   
-def createLink( node1, node2 ):
-   "Create a link node1-intf1 <---> node2-intf2."
-   intf1 = node1.newIntf()
-   intf2 = node2.newIntf()
-   makeIntfPair( intf1, intf2 )
-   if node1.inNamespace: retry( 3, MOVEINTF_DELAY, moveIntf, intf1, node1 )
-   if node2.inNamespace: retry( 3, MOVEINTF_DELAY, moveIntf, intf2, node2 )
-   node1.connection[ intf1 ] = ( node2, intf2 )
-   node2.connection[ intf2 ] = ( node1, intf1 )
-   return intf1, intf2
 
 # Handy utilities
  
@@ -506,7 +383,6 @@ def configureRoutedControlNetwork( controller, switches, ips):
       if pingTest( hosts=[ switch, controller ] ) != 0:
          lg.error("*** Error: control network test failed\n")
          exit( 1 )
-   lg.info("\n")
 
 def configHosts( hosts, ips ):
    """Configure a set of hosts, starting at IP address a.b.c.d"""
@@ -578,6 +454,7 @@ class Network( object ):
       lg.info("*** Starting %s switches" % len(self.switches))
       for switch in self.switches:
          switch.start( self.controllers[ 0 ] )
+      lg.info("\n")
    def stop( self ):
       """Stop the controller(s), switches and hosts\n"""
       lg.info("*** Stopping hosts\n")
@@ -649,7 +526,6 @@ class TreeNet( Network ):
    def makeNet( self, controller ):
       root, switches, hosts = self.treeNet( controller,
          self.depth, self.fanout )
-      lg.info("\n")
       return switches, hosts
    
 # Grid network
@@ -903,12 +779,10 @@ def init():
    fixLimits()
 
 if __name__ == '__main__':
-   level = logging.INFO
    if len(sys.argv) > 1:
-      level_name = sys.argv[1]
-      level = LEVELS.get(level_name, level)
-   setup_logging(level)
-   #lg.basicConfig(level = level, format = LOG_MSG_FORMAT)
+      set_loglevel(sys.argv[1])
+   else:
+      set_loglevel('info')
 
    init()
    results = {}
@@ -921,6 +795,3 @@ if __name__ == '__main__':
       result = network.run( pingTestVerbose )
       results[ datapath ] = result
    lg.info("*** Test results: %s\n", results)
-else:
-   setup_logging(LOG_LEVEL_DEFAULT)
-   #lg.basicConfig(level = LOG_LEVEL_DEFAULT, format = LOG_MSG_FORMAT)

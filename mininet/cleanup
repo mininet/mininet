@@ -12,7 +12,7 @@ irreplaceable!
 from subprocess import Popen, PIPE
 import re
 
-from mininet import quietRun
+from mininet.util import quietRun
 
 def sh( cmd ): 
    "Print a command and send it to the shell"

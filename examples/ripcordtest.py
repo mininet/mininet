@@ -11,44 +11,12 @@ from subprocess import call
 import sys
 from time import sleep
 
-from mininet.mininet import Switch, Controller, Host, lg
-from mininet.mininet import init, quietRun, checkRun, retry, MOVEINTF_DELAY
-
 from ripcord.topo import FatTreeTopo
 
-def make_veth_pair(intf1, intf2):
-    '''Create a veth pair connecting intf1 and intf2.
-
-    @param intf1 string, interface name
-    @param intf2 string, interface name
-    '''
-    # Delete any old interfaces with the same names
-    quietRun('ip link del ' + intf1)
-    quietRun('ip link del ' + intf2)
-    # Create new pair
-    cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    #lg.info('running command: %s\n' % cmd)
-    return checkRun(cmd)
-
-
-def move_intf(intf, node):
-    '''Move interface to node.
-
-    @param intf string interface name
-    @param node Node object
-
-    @return success boolean, did operation complete?
-    '''
-    cmd = 'ip link set ' + intf + ' netns ' + repr(node.pid)
-    #lg.info('running command: %s\n' % cmd)
-    quietRun(cmd)
-    #lg.info(' output: %s\n' % output)
-    links = node.cmd('ip link show')
-    if not intf in links:
-        lg.error('*** Error: move_intf: % not successfully moved to %s:\n' %
-                 (intf, node.name))
-        return False
-    return True
+from mininet.net import Switch, Controller, Host, init
+from mininet.logging_mod import lg, set_loglevel
+from mininet.util import make_veth_pair, move_intf, retry, quietRun
+from mininet.util import MOVEINTF_DELAY
 
 
 class Mininet(object):
@@ -506,6 +474,7 @@ class ControllerParams(object):
 
 
 if __name__ == '__main__':
+    set_loglevel('info')
     init()
     controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
     mn = Mininet(FatTreeTopo(4), Switch, Host, NOXController,
