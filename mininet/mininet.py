@@ -166,7 +166,7 @@ class Node( object ):
       self.inToNode[ self.stdin.fileno() ] = self
       self.pid = self.shell.pid
       self.intfCount = 0
-      self.intfs = []
+      self.intfs = [] # list of interface names, as strings
       self.ips = {}
       self.connection = {}
       self.waiting = False
