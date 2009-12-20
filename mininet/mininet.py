@@ -851,7 +851,7 @@ class Cli( object ):
    # Interpreter
    def run( self ):
       "Read and execute commands."
-      lg.info("*** cli: starting")
+      lg.info("*** cli: starting\n")
       while True:
          lg.info("mininet> ")
          input = sys.stdin.readline()
@@ -883,7 +883,7 @@ class Cli( object ):
          elif first == '?': self.help( rest )
          else:
             lg.error("cli: unknown node or command: < %s >\n" % first)
-      lg.info("*** cli: exiting")
+      lg.info("*** cli: exiting\n")
    
 def fixLimits():
    "Fix ridiculously small resource limits."
