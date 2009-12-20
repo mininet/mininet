@@ -13,7 +13,8 @@ from time import sleep
 
 from ripcord.topo import FatTreeTopo
 
-from mininet.net import Switch, Controller, Host, init
+from mininet.net import init
+from mininet.node import Switch, Controller, Host
 from mininet.logging_mod import lg, set_loglevel
 from mininet.util import make_veth_pair, move_intf, retry, quietRun
 from mininet.util import MOVEINTF_DELAY
