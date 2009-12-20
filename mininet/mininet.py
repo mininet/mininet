@@ -265,8 +265,10 @@ class Node( object ):
       return 'UP' in self.cmd( 'ifconfig ' + self.intfs[ 0 ] )
    # Other methods  
    def __str__( self ): 
-      result = self.name
-      result += ": IP=" + self.IP() + " intfs=" + ','.join( self.intfs )
+      result = self.name + ":"
+      if self.IP():
+          result += " IP=" + self.IP()
+      result += " intfs=" + ','.join( self.intfs )
       result += " waiting=" +  `self.waiting`
       return result
 
