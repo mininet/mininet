@@ -303,12 +303,6 @@ class Switch( Node ):
 
 
 # Handy utilities
- 
-def createNodes( name, count ):
-   "Create and return a list of nodes."
-   nodes = [ Node( name + `i` ) for i in range( 0, count ) ]
-   # print "*** CreateNodes: created:", nodes
-   return nodes
      
 def dumpNodes( nodes ):
    "Dump ifconfig of each node."
