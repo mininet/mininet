@@ -399,7 +399,13 @@ def moveIntf( intf, node, print_error = False ):
    return True
 
 def retry( n, retry_delay, fn, *args):
-   "Try something N times before giving up."
+   '''Try something N times before giving up.
+
+   @param n number of times to retry
+   @param retry_delay seconds wait this long between tries
+   @param fn function to call
+   @param args args to apply to function call
+   '''
    tries = 0
    while not apply( fn, args ) and tries < n:
       sleep( retry_delay )
