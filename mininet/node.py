@@ -336,3 +336,35 @@ class Switch(Node):
             return Node.monitor(self)
         else:
             return True, ''
+
+
+class NOXController(Controller):
+    '''Controller to run a NOX application.'''
+    def __init__(self, name, nox_args = None, **kwargs):
+        '''Init.
+
+        @param name name to give controller
+        @param nox_args list of args to use with NOX
+        '''
+        if not nox_args:
+            nox_args = ['packetdump']
+        nox_core_dir = os.environ['NOX_CORE_DIR']
+        if not nox_core_dir:
+            raise Exception('please set NOX_CORE_DIR env var\n')
+        Controller.__init__(self, name,
+            controller = nox_core_dir + '/nox_core',
+            cargs = '--libdir=/usr/local/lib -v -i ptcp: ' + \
+                    ' '.join(nox_args),
+            cdir = nox_core_dir, **kwargs)
+
+
+class ControllerParams(object):
+    '''Container for controller IP parameters.'''
+    def __init__(self, ip, subnet_size):
+        '''Init.
+
+        @param ip integer, controller IP
+        @param subnet_size integer, ex 8 for slash-8, covering 17M
+        '''
+        self.ip = ip
+        self.subnet_size = subnet_size
