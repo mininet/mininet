@@ -2,6 +2,7 @@
 '''Utility functions for Mininet.'''
 
 from time import sleep
+from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 
@@ -167,3 +168,9 @@ def createLink(node1, node2):
     node1.connection[intf1] = (node2, intf2)
     node2.connection[intf2] = (node1, intf1)
     return intf1, intf2
+
+
+def fixLimits():
+    '''Fix ridiculously small resource limits.'''
+    setrlimit( RLIMIT_NPROC, (4096, 8192))
+    setrlimit( RLIMIT_NOFILE, (16384, 32768))

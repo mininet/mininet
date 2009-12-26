@@ -71,12 +71,11 @@ from subprocess import call, Popen, PIPE, STDOUT
 from time import sleep
 import os, re, signal, sys, select
 flush = sys.stdout.flush
-from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 
 from mininet.logging_mod import lg, set_loglevel
 from mininet.node import Node, Host, Controller, Switch
 from mininet.util import run, checkRun, quietRun, makeIntfPair, moveIntf
-from mininet.util import createLink
+from mininet.util import createLink, setLimits
 
 DATAPATHS = ['user', 'kernel']
 
@@ -532,11 +531,7 @@ class Cli( object ):
          else:
             lg.error("cli: unknown node or command: < %s >\n" % first)
       lg.info("*** cli: exiting\n")
-   
-def fixLimits():
-   "Fix ridiculously small resource limits."
-   setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
-   setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
+
 
 def init():
    "Initialize Mininet."
