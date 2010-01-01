@@ -292,14 +292,16 @@ class UserSwitch(Switch):
 
 class KernelSwitch(Switch):
 
-    def __init__(self, name, datapath = None):
+    def __init__(self, name, dp = None, dpid = None):
         '''Init.
 
         @param name
-        @param datapath string, datapath name
+        @param dp netlink id (0, 1, 2, ...)
+        @param dpid datapath ID as unsigned int; random value if None
         '''
-        self.dp = datapath
-        Node.__init__(self, name, inNamespace = (datapath == None))
+        Node.__init__(self, name, inNamespace = False)
+        self.dp = dp
+        self.dpid = dpid
 
     def start(self, ignore):
         '''Start up reference kernel datapath.'''
@@ -307,18 +309,22 @@ class KernelSwitch(Switch):
         quietRun('ifconfig lo up')
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
-        quietRun('dpctl deldp ' + self.dp)
-        self.cmdPrint('dpctl adddp ' + self.dp)
-        self.cmdPrint('dpctl addif ' + self.dp + ' ' + ' '.join(self.intfs))
+        quietRun('dpctl deldp nl:%i' % self.dp)
+        self.cmdPrint('dpctl adddp nl:%i' % self.dp)
+        if self.dpid:
+            intf = 'of%i' % self.dp
+            mac_str = macColonHex(self.dpid)
+            self.cmd(['ifconfig', intf, 'hw', 'ether', mac_str])
+        self.cmdPrint('dpctl addif nl:' + str(self.dp) + ' ' +
+                      ' '.join(self.intfs))
         # Run protocol daemon
-        self.cmdPrint('ofprotocol' +
-                      ' ' + self.dp + ' tcp:127.0.0.1 ' +
+        self.cmdPrint('ofprotocol nl:' + str(self.dp) + ' tcp:127.0.0.1 ' +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
         self.execed = False # XXX until I fix it
 
     def stop(self):
         '''Terminate reference kernel datapath.'''
-        quietRun('dpctl deldp ' + self.dp)
+        quietRun('dpctl deldp nl:%i' % self.dp)
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off to remove them
         # explicitly so that we won't get errors if we run before they

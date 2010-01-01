@@ -53,6 +53,7 @@ import sys
 from time import sleep
 
 from mininet.logging_mod import lg
+from mininet.node import KernelSwitch
 from mininet.util import quietRun, fixLimits
 from mininet.util import make_veth_pair, move_intf, retry, MOVEINTF_DELAY
 from mininet.xterm import cleanUpScreens, makeXterms
@@ -79,7 +80,7 @@ class Mininet(object):
 
     def __init__(self, topo, switch, host, controller, cparams,
                  build = True, xterms = False, cleanup = False,
-                 in_namespace = False, switch_is_kernel = True,
+                 in_namespace = False,
                  auto_set_macs = False, auto_static_arp = False):
         '''Create Mininet object.
 
@@ -92,7 +93,6 @@ class Mininet(object):
         @param xterms if build now, spawn xterms?
         @param cleanup if build now, cleanup before creating?
         @param in_namespace spawn switches and hosts in their own namespace?
-        @param switch_is_kernel is the switch kernel-based?
         @param auto_set_macs set MAC addrs to DPIDs?
         @param auto_static_arp set all-pairs static MAC addrs?
         '''
@@ -105,7 +105,6 @@ class Mininet(object):
         self.controllers = {} # controller name to Controller objects
         self.dps = 0 # number of created kernel datapaths
         self.in_namespace = in_namespace
-        self.switch_is_kernel = switch_is_kernel
         self.xterms = xterms
         self.cleanup = cleanup
         self.auto_set_macs = auto_set_macs
@@ -130,12 +129,17 @@ class Mininet(object):
         #lg.info('%s ' % host.name)
 
     def _add_switch(self, dpid):
-        '''
+        '''Add switch.
+
         @param dpid DPID of switch to add
         '''
         sw = None
-        if self.switch_is_kernel:
-            sw = self.switch('s_' + self.topo.name(dpid), 'nl:' + str(self.dps))
+        sw_dpid = None
+        if self.auto_set_macs:
+            sw_dpid = dpid
+        if self.switch is KernelSwitch:
+            sw = self.switch('s_' + self.topo.name(dpid), dp = self.dps,
+                             dpid = sw_dpid)
             self.dps += 1
         else:
             sw = self.switch('s_' + self.topo.name(dpid))

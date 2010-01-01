@@ -324,11 +324,11 @@ class SingleSwitchTopo(Topo):
 
         self.k = k
 
-        self._add_node(0, Node())
-        hosts = range(1, k + 1)
+        self._add_node(1, Node())
+        hosts = range(2, k + 2)
         for h in hosts:
             self._add_node(h, Node(is_switch = False))
-            self._add_edge(h, 0, Edge())
+            self._add_edge(h, 1, Edge())
 
         if enable_all:
             self.enable_all()
@@ -347,14 +347,14 @@ class LinearTopo(Topo):
 
         self.k = k
 
-        switches = range(0, k)
+        switches = range(1, k + 1)
         for s in switches:
             h = s + k
             self._add_node(s, Node())
             self._add_node(h, Node(is_switch = False))
             self._add_edge(s, h, Edge())
         for s in switches:
-            if s != k - 1:
+            if s != k:
                 self._add_edge(s, s + 1, Edge())
 
         if enable_all:

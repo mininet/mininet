@@ -100,7 +100,7 @@ class MininetRunner(object):
         opts.add_option('--xterms', '-x', action = 'store_true',
                         default = False, help = 'spawn xterms for each node')
         opts.add_option('--mac', action = 'store_true',
-                        default = False, help = 'set host MACs equal to DPIDs')
+                        default = False, help = 'set MACs equal to DPIDs')
         opts.add_option('--arp', action = 'store_true',
                         default = False, help = 'set all-pairs ARP entries')
         opts.add_option('--verbosity', '-v', type = 'choice',

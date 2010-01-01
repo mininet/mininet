@@ -177,17 +177,29 @@ def fixLimits():
     setrlimit( RLIMIT_NPROC, (4096, 8192))
     setrlimit( RLIMIT_NOFILE, (16384, 32768))
 
+
+def _colonHex(val, bytes):
+    '''Generate colon-hex string.
+
+    @param val input as unsigned int
+    @param bytes number of bytes to convert
+    @return ch_str colon-hex string
+    '''
+    pieces = []
+    for i in range (bytes - 1, -1, -1):
+        pieces.append('%02x' % (((0xff << (i * 8)) & val) >> (i * 8)))
+    ch_str = ':'.join(pieces)
+    return ch_str
+
+
 def macColonHex(mac):
     '''Generate MAC colon-hex string from unsigned int.
 
     @param mac MAC address as unsigned int
     @return mac_str MAC colon-hex string
     '''
-    mac_pieces = []
-    for i in range (5, -1, -1):
-        mac_pieces.append('%02x' % (((0xff << (i * 8)) & mac) >> (i * 8)))
-    mac_str = ':'.join(mac_pieces)
-    return mac_str
+    return _colonHex(mac, 6)
+
 
 def ipStr(ip):
     '''Generate IP address string
