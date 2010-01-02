@@ -324,7 +324,7 @@ class Mininet(object):
         '''Perform a complete start/test/stop cycle.'''
         self.start()
         lg.info('*** Running test\n')
-        result = test(self, **params)
+        result = getattr(self, test)(**params)
         self.stop()
         return result
 
@@ -340,11 +340,10 @@ class Mininet(object):
         sent, received = int(m.group(1)), int(m.group(2))
         return sent, received
 
-    def ping_test(self, hosts = None, verbose = False):
+    def ping(self, hosts = None):
         '''Ping between all specified hosts.
 
         @param hosts list of host DPIDs
-        @param verbose verbose printing
         @return ploss packet loss percentage
         '''
         #self.start()
@@ -354,10 +353,10 @@ class Mininet(object):
         ploss = None
         if not hosts:
             hosts = self.topo.hosts()
+        lg.info('*** Ping: testing ping reachability\n')
         for node_dpid in hosts:
             node = self.nodes[node_dpid]
-            if verbose:
-                lg.info('%s -> ' % node.name)
+            lg.info('%s -> ' % node.name)
             for dest_dpid in hosts:
                 dest = self.nodes[dest_dpid]
                 if node != dest:
@@ -370,26 +369,79 @@ class Mininet(object):
                         node.cmdPrint('route')
                         exit( 1 )
                     lost += sent - received
-                    if verbose:
-                        lg.info(('%s ' % dest.name) if received else 'X ')
-            if verbose:
-                lg.info('\n')
+                    lg.info(('%s ' % dest.name) if received else 'X ')
+            lg.info('\n')
             ploss = 100 * lost / packets
-        if verbose:
-            lg.info('%d%% packet loss (%d/%d lost)\n' % (ploss, lost, packets))
-            #flush()
-        #self.stop()
+        lg.info("*** Results: %i%% dropped (%d/%d lost)\n" %
+                (ploss, lost, packets))
         return ploss
+
+    def ping_all(self):
+        '''Ping between all hosts.'''
+        self.ping()
+
+    def ping_pair(self):
+        '''Ping between first two hosts, useful for testing.'''
+        hosts_sorted = sorted(self.topo.hosts())
+        hosts = [hosts_sorted[0], hosts_sorted[1]]
+        self.ping(hosts = hosts)
+
+    @staticmethod
+    def _parseIperf(iperfOutput):
+        '''Parse iperf output and return bandwidth.
+
+        @param iperfOutput string
+        @return result string
+        '''
+        r = r'([\d\.]+ \w+/sec)'
+        m = re.search(r, iperfOutput)
+        if m:
+            return m.group(1)
+        else:
+            raise Exception('could not parse iperf output')
+
+    def iperf(self, hosts = None, verbose = False):
+        '''Run iperf between two hosts.
+
+        @param hosts list of host DPIDs; if None, uses opposite hosts
+        @param verbose verbose printing
+        @return results two-element array of server and client speeds
+        '''
+        if not hosts:
+            hosts_sorted = sorted(self.topo.hosts())
+            hosts = [hosts_sorted[0], hosts_sorted[-1]]
+        else:
+            assert len(hosts) == 2
+        host0 = self.nodes[hosts[0]]
+        host1 = self.nodes[hosts[1]]
+        lg.info('*** Iperf: testing bandwidth between ')
+        lg.info("%s and %s\n" % (host0.name, host1.name))
+        host0.cmd('killall -9 iperf')
+        server = host0.cmd('iperf -s &')
+        if verbose:
+            lg.info('%s\n' % server)
+        client = host1.cmd('iperf -t 5 -c ' + host0.IP())
+        if verbose:
+            lg.info('%s\n' % client)
+        server = host0.cmd('killall -9 iperf')
+        if verbose:
+            lg.info('%s\n' % server)
+        result = [self._parseIperf(server), self._parseIperf(client)]
+        lg.info('*** Results: %s\n' % result)
+        return result
 
     def interact(self):
         '''Start network and run our simple CLI.'''
-        self.run(MininetCLI)
+        self.start()
+        result = MininetCLI(self)
+        self.stop()
+        return result
 
 
 class MininetCLI(object):
     '''Simple command-line interface to talk to nodes.'''
     cmds = ['?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit', \
-            'ping_pair'] #'iperf'
+            'ping_pair', 'iperf']
 
     def __init__(self, mininet):
         self.mn = mininet
@@ -438,17 +490,19 @@ class MininetCLI(object):
 
     def sh(self, args):
         '''Run an external shell command'''
-        call( [ 'sh', '-c' ] + args )
+        call(['sh', '-c'] + args)
 
     def ping_all(self, args):
         '''Ping between all hosts.'''
-        self.mn.ping_test(verbose = True)
+        self.mn.ping_all()
 
     def ping_pair(self, args):
         '''Ping between first two hosts, useful for testing.'''
-        hosts_unsorted = sorted(self.mn.topo.hosts())
-        hosts = [hosts_unsorted[0], hosts_unsorted[1]]
-        self.mn.ping_test(hosts = hosts, verbose = True)
+        self.mn.ping_pair()
+
+    def iperf(self, args):
+        '''Simple iperf test between two hosts.'''
+        self.mn.iperf()
 
     def run(self):
         '''Read and execute commands.'''

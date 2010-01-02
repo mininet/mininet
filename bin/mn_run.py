@@ -117,29 +117,17 @@ class MininetRunner(object):
         controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
         mn = Mininet(topo, switch, host, controller, controller_params)
 
-        if self.options.test != 'build':
-    
-            if self.options.test == 'cli':
+        test = self.options.test
+        if test != 'build':
+            if test == 'cli':
                 mn.interact()
-            elif self.options.test == 'ping_all':
-                mn.start()
-                dropped = mn.ping_test(verbose = True)
-                lg.info("*** Test results: %i%% dropped\n", dropped)
-                mn.stop()
-            elif self.options.test == 'ping_pair':
-                mn.start()
-                hosts_unsorted = sorted(mn.topo.hosts())
-                hosts = [hosts_unsorted[0], hosts_unsorted[1]]
-                dropped = mn.ping_test(hosts = hosts, verbose = True)
-                lg.info("*** Test results: %i%% dropped\n", dropped)
             elif test == 'all':
                 mn.start()
                 mn.ping()
                 mn.iperf()
                 mn.stop()
             else:
-                raise NotImplementedError('unknown test: %s' %
-                                          self.options.test)
+                mn.run(test)
 
         elapsed = float(time.time() - start)
         print ('completed in %0.3f seconds' % elapsed)
