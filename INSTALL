@@ -63,10 +63,6 @@ Preliminary Mininet Installation/Configuration Notes
   to /etc/sysctl.conf (modified as necessary for your desired 
   configuration):
 
-    # OpenFlow: get rid of ipv6
-    net.ipv6.conf.all.disable_ipv6 = 1
-    net.ipv6.conf.default.disable_ipv6 = 1
-
     # Mininet: Increase open file limit
     fs.file-max = 100000
 
@@ -84,6 +80,10 @@ Preliminary Mininet Installation/Configuration Notes
 
     # Mininet: increase routing table size
     net.ipv4.route.max_size=32768
+
+  To save the config change, run:
+
+    sysctl -p
 
 ---
 

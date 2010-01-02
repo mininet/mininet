@@ -12,6 +12,7 @@ from ripcord.topo import FatTreeTopo
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import Switch, Host, Controller, ControllerParams
+from mininet.node import NOXController
 from mininet.topo import TreeTopo
 
 # built in topologies, created only when run
@@ -19,6 +20,7 @@ TOPO_DEF = 'minimal'
 TOPOS = {'minimal' :  (lambda: TreeTopo(depth = 2, fanout = 2)),
          'tree16' :   (lambda: TreeTopo(depth = 3, fanout = 4)),
          'tree64' :   (lambda: TreeTopo(depth = 4, fanout = 4)),
+         'tree1024' : (lambda: TreeTopo(depth = 3, fanout = 32)),
          'fattree4' : (lambda: FatTreeTopo(k = 4)),
          'fattree6' : (lambda: FatTreeTopo(k = 6))}
 
@@ -29,11 +31,11 @@ HOST_DEF = 'process'
 HOSTS = {'process' : Host}
 
 CONTROLLER_DEF = 'ref'
-CONTROLLERS = {'ref' : Controller}
+CONTROLLERS = {'ref' : Controller,
+               'nox' : NOXController}
 
 # optional tests to run
-TESTS = ['cli', 'build', 'ping_all', 'ping_pair']
-
+TESTS = ['cli', 'build', 'ping_all', 'ping_pair', 'iperf', 'all']
 
 def add_dict_option(opts, choices_dict, default, name, help_str = None):
     '''Convenience function to add choices dicts to OptionParser.
@@ -97,6 +99,11 @@ class MininetRunner(object):
         # validate environment setup
         init()
 
+        # check for invalid combinations
+        if 'fattree' in self.options.topo and self.options.controller == 'ref':
+            raise Exception('multipath topos require multipath-capable '
+                            'controller.')
+
     def begin(self):
         '''Create and run mininet.'''
 
@@ -125,6 +132,10 @@ class MininetRunner(object):
                 hosts = [hosts_unsorted[0], hosts_unsorted[1]]
                 dropped = mn.ping_test(hosts = hosts, verbose = True)
                 lg.info("*** Test results: %i%% dropped\n", dropped)
+            elif test == 'all':
+                mn.start()
+                mn.ping()
+                mn.iperf()
                 mn.stop()
             else:
                 raise NotImplementedError('unknown test: %s' %
