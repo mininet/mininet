@@ -437,7 +437,7 @@ class Mininet(object):
             raise Exception('could not parse iperf output')
 
     def iperf(self, hosts = None, l4_type = 'TCP', udp_bw = '10M',
-              verbose = True):
+              verbose = False):
         '''Run iperf between two hosts.
 
         @param hosts list of host DPIDs; if None, uses opposite hosts
