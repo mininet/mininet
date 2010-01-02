@@ -11,8 +11,7 @@ from ripcord.topo import FatTreeTopo
 
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
-from mininet.node import Switch, Host, Controller, ControllerParams
-from mininet.node import NOXController
+from mininet.node import Switch, Host, Controller, ControllerParams, NOX
 from mininet.topo import TreeTopo
 
 # built in topologies, created only when run
@@ -32,7 +31,8 @@ HOSTS = {'process' : Host}
 
 CONTROLLER_DEF = 'ref'
 CONTROLLERS = {'ref' : Controller,
-               'nox' : NOXController}
+               'nox_dump' : lambda a, b: NOX(a, b, 'packetdump'),
+               'nox_pysw' : lambda a, b: NOX(a, b, 'pyswitch')}
 
 # optional tests to run
 TESTS = ['cli', 'build', 'ping_all', 'ping_pair', 'iperf', 'all']

@@ -160,7 +160,7 @@ class Mininet(object):
 
         @param controller Controller class
         '''
-        controller = self.controller('c0', kernel = self.kernel)
+        controller = self.controller('c0', not self.kernel)
         self.controllers['c0'] = controller
 
     # Control network support:

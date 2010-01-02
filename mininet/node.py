@@ -215,12 +215,12 @@ class Controller(Node):
     '''A Controller is a Node that is running (or has execed) an
       OpenFlow controller.'''
 
-    def __init__(self, name, kernel=True, controller='controller',
-                 cargs='-v ptcp:', cdir=None):
+    def __init__(self, name, inNamespace = False, controller = 'controller',
+                 cargs = '-v ptcp:', cdir = None):
         self.controller = controller
         self.cargs = cargs
         self.cdir = cdir
-        Node.__init__(self, name, inNamespace=(not kernel))
+        Node.__init__(self, name, inNamespace = inNamespace)
 
     def start(self):
         '''Start <controller> <args> on controller.
@@ -338,14 +338,16 @@ class Switch(Node):
             return True, ''
 
 
-class NOXController(Controller):
+class NOX(Controller):
     '''Controller to run a NOX application.'''
-    def __init__(self, name, nox_args = None, **kwargs):
+    def __init__(self, name, inNamespace = False, nox_args = None, **kwargs):
         '''Init.
 
         @param name name to give controller
-        @param nox_args list of args to use with NOX
+        @param nox_args list of args, or single arg, to pass to NOX
         '''
+        if type(nox_args) != list:
+            nox_args = [nox_args]
         if not nox_args:
             nox_args = ['packetdump']
         nox_core_dir = os.environ['NOX_CORE_DIR']
