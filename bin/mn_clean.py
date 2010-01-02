@@ -15,6 +15,7 @@ from subprocess import Popen, PIPE
 import re
 
 from mininet.util import quietRun
+from mininet.xterm import cleanUpScreens
 
 def sh( cmd ): 
    "Print a command and send it to the shell"
@@ -22,14 +23,6 @@ def sh( cmd ):
    return Popen( [ '/bin/sh', '-c', cmd ], 
       stdout=PIPE ).communicate()[ 0 ]
 
-def cleanUpScreens():
-   "Remove moldy old screen sessions."      
-   r = r'(\d+.[hsc]\d+)'
-   output = sh( 'screen -ls' ).split( '\n' )
-   for line in output:
-      m = re.search( r, line )
-      if m is not None:
-         quietRun( 'screen -S ' + m.group( 1 ) + ' -X kill' )
  
 def cleanup():
    """Clean up junk which might be left over from old runs;

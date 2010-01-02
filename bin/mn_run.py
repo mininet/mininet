@@ -85,7 +85,7 @@ class MininetRunner(object):
         opts.add_option('--test', type = 'choice', choices = TESTS,
                         default = TESTS[0],
                         help = '[' + ' '.join(TESTS) + ']')
-        opts.add_option('--xterm', '-x', action = 'store_true',
+        opts.add_option('--xterms', '-x', action = 'store_true',
                         default = False, help = 'spawn xterms for each node')
         opts.add_option('--verbosity', '-v', type = 'choice',
                         choices = LEVELS.keys(), default = 'info',
@@ -117,7 +117,9 @@ class MininetRunner(object):
         controller = CONTROLLERS[self.options.controller]
 
         controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
-        mn = Mininet(topo, switch, host, controller, controller_params)
+        xterms = self.options.xterms
+        mn = Mininet(topo, switch, host, controller, controller_params,
+                     xterms = xterms)
 
         test = self.options.test
         if test != 'build':

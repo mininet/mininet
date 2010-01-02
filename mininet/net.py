@@ -47,6 +47,7 @@ Naming:
 """
 import os
 import re
+import signal
 from subprocess import call
 import sys
 from time import sleep
@@ -54,6 +55,7 @@ from time import sleep
 from mininet.logging_mod import lg
 from mininet.util import quietRun, fixLimits
 from mininet.util import make_veth_pair, move_intf, retry, MOVEINTF_DELAY
+from mininet.xterm import cleanUpScreens, makeXterms
 
 DATAPATHS = ['kernel'] #['user', 'kernel']
 
@@ -100,6 +102,8 @@ class Mininet(object):
         self.dps = 0 # number of created kernel datapaths
         self.in_namespace = in_namespace
         self.switch_is_kernel = switch_is_kernel
+
+        self.terms = [] # list of spawned xterm processes
 
         self.kernel = True #temporary!
 
@@ -286,7 +290,30 @@ class Mininet(object):
         self._config_hosts()
 
         if xterms:
-            pass # build xterms
+            self.start_xterms()
+
+    def switch_nodes(self):
+        '''Return switch nodes.'''
+        return [self.nodes[dpid] for dpid in self.topo.switches()]
+
+    def host_nodes(self):
+        '''Return host nodes.'''
+        return [self.nodes[dpid] for dpid in self.topo.hosts()]
+
+    def start_xterms(self):
+        '''Start an xterm for each node in the topo.'''
+        lg.info("*** Running xterms on %s\n" % os.environ['DISPLAY'])
+        cleanUpScreens()
+        self.terms += makeXterms(self.controllers.values(), 'controller')
+        self.terms += makeXterms(self.switch_nodes(), 'switch')
+        self.terms += makeXterms(self.host_nodes(), 'host')
+
+    def stop_xterms(self):
+        '''Kill each xterm.'''
+        # Kill xterms
+        for term in self.terms:
+            os.kill(term.pid, signal.SIGKILL)
+        cleanUpScreens()
 
     def start(self):
         '''Start controller and switches\n'''
@@ -303,6 +330,9 @@ class Mininet(object):
 
     def stop(self):
         '''Stop the controller(s), switches and hosts\n'''
+        if self.terms:
+            lg.info('*** Stopping %i terms\n' % len(self.terms))
+            self.stop_xterms()
         lg.info('*** Stopping %i hosts\n' % len(self.topo.hosts()))
         for host_dpid in self.topo.hosts():
             host = self.nodes[host_dpid]
