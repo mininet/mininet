@@ -2,26 +2,34 @@
 '''Setuptools params'''
 
 from setuptools import setup, find_packages
+from os.path import join
+
+scripts = [join('bin', filename) for filename in
+            ['mn_run.py', 'mn_clean.py']]
+
+modname = distname = 'mininet'
 
 setup(
-    name='mininet',
+    name=distname,
     version='0.0.0',
-    description='The OpenFlow-based data center network',
+    description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
     packages=find_packages(exclude='test'),
     long_description="""\
 Insert longer description here.
       """,
-      classifiers=[
+    classifiers=[
           "License :: OSI Approved :: GNU General Public License (GPL)",
           "Programming Language :: Python",
           "Development Status :: 4 - Beta",
           "Intended Audience :: Developers",
           "Topic :: Internet",
-      ],
-      keywords='networking protocol Internet OpenFlow',
-      license='GPL',
-      install_requires=[
+    ],
+    keywords='networking protocol Internet OpenFlow',
+    license='GPL',
+    install_requires=[
         'setuptools'
-      ])
+    ],
+    scripts=scripts,
+    package_dir={modname:''})

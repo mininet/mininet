@@ -1,6 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+"""Mininet Cleanup
 
-"""
+@author Bob Lantz (rlantz@cs.stanford.edu)
+
 Unfortunately, Mininet and OpenFlow don't always clean up
 properly after themselves. Until they do (or until cleanup
 functionality is integrated into the python code), this

@@ -1,7 +1,8 @@
 #!/usr/bin/python
+"""Mininet: A simple networking testbed for OpenFlow!
 
-"""
-Mininet: A simple networking testbed for OpenFlow!
+@author Bob Lantz (rlantz@cs.stanford.edu)
+@author Brandon Heller (brandonh@stanford.edu)
 
 Mininet creates scalable OpenFlow test networks by using
 process-based virtualization and network namespaces. 
@@ -16,7 +17,7 @@ Each host has:
    A parent shell (and possibly some child processes) in a namespace
    
 Hosts have a network interface which is configured via ifconfig/ip
-link/etc. with data network IP addresses (e.g. 192.168.123.2 )
+link/etc.
 
 This version supports both the kernel and user space datapaths
 from the OpenFlow reference implementation.
@@ -43,40 +44,14 @@ Naming:
    Switch nodes are named s0-sN
    Interfaces are named {nodename}-eth0 .. {nodename}-ethN,
 
-Thoughts/TBD:
-
-   It should be straightforward to add a function to read
-   OpenFlowVMS spec files, but I haven't done so yet.
-   For the moment, specifying configurations and tests in Python
-   is straightforward and relatively concise.
-   Soon, we may want to split the various subsystems (core,
-   topology/network, cli, tests, etc.) into multiple modules.
-   Currently nox support is in nox.py.
-   We'd like to support OpenVSwitch as well as the reference
-   implementation.
-   
-Bob Lantz
-rlantz@cs.stanford.edu
-
-History:
-11/19/09 Initial revision (user datapath only)
-11/19/09 Mininet demo at OpenFlow SWAI meeting
-12/08/09 Kernel datapath support complete
-12/09/09 Moved controller and switch routines into classes
-12/12/09 Added subdivided network driver workflow
-12/13/09 Added support for custom controller and switch classes
 """
 import os
 import re
 from subprocess import call
 import sys
 from time import sleep
-#flush = sys.stdout.flush
-#import os, re, signal, sys, select
 
-from mininet.logging_mod import lg, set_loglevel
-from mininet.node import Host, Controller, Switch, ControllerParams
-from mininet.topo import TreeTopo
+from mininet.logging_mod import lg
 from mininet.util import quietRun, fixLimits
 from mininet.util import make_veth_pair, move_intf, retry, MOVEINTF_DELAY
 
@@ -518,27 +493,3 @@ class MininetCLI(object):
                 lg.error('CLI: unknown node or command: < %s >\n' % first)
             #lg.info('*** CLI: command complete\n')
         return 'exited by user command'
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        set_loglevel(sys.argv[1])
-    else:
-        set_loglevel('info')
-
-    init()
-    results = {}
-    lg.info("*** Welcome to Mininet!\n")
-    lg.info("*** Look in examples/ for more examples\n\n")
-    lg.info("*** Testing Mininet with kernel and user datapath\n")
-    for datapath in DATAPATHS:
-        k = datapath == 'kernel'
-        controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
-        mn = Mininet(TreeTopo(), Switch, Host, Controller,
-                         controller_params)
-        mn.start()
-        dropped = mn.ping_test()
-        results[datapath] = "%i%% dropped" % dropped
-        mn.stop()
-
-    lg.info("*** Test results: %s\n", results)
