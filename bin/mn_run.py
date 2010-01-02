@@ -37,7 +37,7 @@ CONTROLLERS = {'ref' : Controller,
                'none' :     lambda a, b: None}
 
 # optional tests to run
-TESTS = ['cli', 'build', 'ping_all', 'ping_pair', 'iperf', 'all']
+TESTS = ['cli', 'build', 'ping_all', 'ping_pair', 'iperf', 'all', 'iperf_udp']
 
 def add_dict_option(opts, choices_dict, default, name, help_str = None):
     '''Convenience function to add choices dicts to OptionParser.

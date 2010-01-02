@@ -436,10 +436,12 @@ class Mininet(object):
         else:
             raise Exception('could not parse iperf output')
 
-    def iperf(self, hosts = None, verbose = False):
+    def iperf(self, hosts = None, l4_type = 'TCP', udp_bw = '10M',
+              verbose = True):
         '''Run iperf between two hosts.
 
         @param hosts list of host DPIDs; if None, uses opposite hosts
+        @param l4_type string, one of [TCP, UDP]
         @param verbose verbose printing
         @return results two-element array of server and client speeds
         '''
@@ -450,21 +452,34 @@ class Mininet(object):
             assert len(hosts) == 2
         host0 = self.nodes[hosts[0]]
         host1 = self.nodes[hosts[1]]
-        lg.info('*** Iperf: testing bandwidth between ')
+        lg.info('*** Iperf: testing ' + l4_type + ' bandwidth between ')
         lg.info("%s and %s\n" % (host0.name, host1.name))
         host0.cmd('killall -9 iperf')
-        server = host0.cmd('iperf -s &')
+        iperf_args = 'iperf '
+        bw_args = ''
+        if l4_type == 'UDP':
+            iperf_args += '-u '
+            bw_args = '-b ' + udp_bw + ' '
+        elif l4_type != 'TCP':
+            raise Exception('Unexpected l4 type: %s' % l4_type)
+        server = host0.cmd(iperf_args + '-s &')
         if verbose:
             lg.info('%s\n' % server)
-        client = host1.cmd('iperf -t 5 -c ' + host0.IP())
+        client = host1.cmd(iperf_args + '-t 5 -c ' + host0.IP() + ' ' + bw_args)
         if verbose:
             lg.info('%s\n' % client)
         server = host0.cmd('killall -9 iperf')
         if verbose:
             lg.info('%s\n' % server)
         result = [self._parseIperf(server), self._parseIperf(client)]
+        if l4_type == 'UDP':
+            result.insert(0, udp_bw)
         lg.info('*** Results: %s\n' % result)
         return result
+
+    def iperf_udp(self, udp_bw = '10M'):
+        '''Run iperf UDP test.'''
+        return self.iperf(l4_type = 'UDP', udp_bw = udp_bw)
 
     def interact(self):
         '''Start network and run our simple CLI.'''
@@ -477,7 +492,7 @@ class Mininet(object):
 class MininetCLI(object):
     '''Simple command-line interface to talk to nodes.'''
     cmds = ['?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit', \
-            'ping_pair', 'iperf']
+            'ping_pair', 'iperf', 'iperf_udp']
 
     def __init__(self, mininet):
         self.mn = mininet
@@ -538,8 +553,13 @@ class MininetCLI(object):
         self.mn.ping_pair()
 
     def iperf(self, args):
-        '''Simple iperf test between two hosts.'''
+        '''Simple iperf TCP test between two hosts.'''
         self.mn.iperf()
+
+    def iperf_udp(self, args):
+        '''Simple iperf UDP test between two hosts.'''
+        udp_bw = args[0] if len(args) else '10M'
+        self.mn.iperf_udp(udp_bw)
 
     def run(self):
         '''Read and execute commands.'''
