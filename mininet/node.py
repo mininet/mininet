@@ -211,6 +211,102 @@ class Host(Node):
     pass
 
 
+class Switch(Node):
+    '''A Switch is a Node that is running (or has execed)
+       an OpenFlow switch.'''
+
+    def sendCmd(self, cmd):
+        '''Send command to Node.
+
+        @param cmd string
+        '''
+        if not self.execed:
+            return Node.sendCmd(self, cmd)
+        else:
+            lg.error('*** Error: %s has execed and cannot accept commands' %
+                     self.name)
+
+    def monitor(self):
+        '''Monitor node.'''
+        if not self.execed:
+            return Node.monitor(self)
+        else:
+            return True, ''
+
+class UserSwitch(Switch):
+
+    def __init__(self, name):
+        '''Init.
+
+        @param name
+        '''
+        Node.__init__(self, name, inNamespace = True)
+
+    def start(self, controllers):
+        '''Start OpenFlow reference user datapath.
+
+        Log to /tmp/sN-{ofd,ofp}.log.
+
+        @param controllers dict of controller names to objects
+        '''
+        if 'c0' not in controller:
+            raise Exception('User datapath start() requires controller c0')
+        controller = controllers['c0']
+        ofdlog = '/tmp/' + self.name + '-ofd.log'
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        self.cmd('ifconfig lo up')
+        intfs = self.intfs[1:] # 0 is mgmt interface
+        self.cmdPrint('ofdatapath -i ' + ','.join(intfs) +
+                      ' ptcp: 1> ' + ofdlog + ' 2> ' + ofdlog + ' &')
+        self.cmdPrint('ofprotocol tcp:' + controller.IP() +
+                      ' tcp:localhost --fail=closed 1> ' + ofplog + ' 2>' +
+                      ofplog + ' &')
+
+    def stop(self):
+        '''Stop OpenFlow reference user datapath.'''
+        self.cmd('kill %ofdatapath')
+        self.cmd('kill %ofprotocol')
+
+
+class KernelSwitch(Switch):
+
+    def __init__(self, name, datapath = None):
+        '''Init.
+
+        @param name
+        @param datapath string, datapath name
+        '''
+        self.dp = datapath
+        Node.__init__(self, name, inNamespace = (datapath == None))
+
+    def start(self, ignore):
+        '''Start up reference kernel datapath.'''
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        quietRun('ifconfig lo up')
+        # Delete local datapath if it exists;
+        # then create a new one monitoring the given interfaces
+        quietRun('dpctl deldp ' + self.dp)
+        self.cmdPrint('dpctl adddp ' + self.dp)
+        self.cmdPrint('dpctl addif ' + self.dp + ' ' + ' '.join(self.intfs))
+        # Run protocol daemon
+        self.cmdPrint('ofprotocol' +
+                      ' ' + self.dp + ' tcp:127.0.0.1 ' +
+                      ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
+        self.execed = False # XXX until I fix it
+
+    def stop(self):
+        '''Terminate reference kernel datapath.'''
+        quietRun('dpctl deldp ' + self.dp)
+        # In theory the interfaces should go away after we shut down.
+        # However, this takes time, so we're better off to remove them
+        # explicitly so that we won't get errors if we run before they
+        # have been removed by the kernel. Unfortunately this is very slow.
+        self.cmd('kill %ofprotocol')
+        for intf in self.intfs:
+            quietRun('ip link del ' + intf)
+            lg.info('.')
+
+
 class Controller(Node):
     '''A Controller is a Node that is running (or has execed) an
       OpenFlow controller.'''
@@ -240,105 +336,16 @@ class Controller(Node):
         self.terminate()
 
 
-class Switch(Node):
-    '''A Switch is a Node that is running (or has execed)
-       an OpenFlow switch.'''
-
-    def __init__(self, name, datapath = None):
+class ControllerParams(object):
+    '''Container for controller IP parameters.'''
+    def __init__(self, ip, subnet_size):
         '''Init.
 
-        @param name
-        @param datapath string, datapath name
+        @param ip integer, controller IP
+        @param subnet_size integer, ex 8 for slash-8, covering 17M
         '''
-        self.dp = datapath
-        Node.__init__(self, name, inNamespace = (datapath == None))
-
-    def _startUserDatapath(self, controllers):
-        '''Start OpenFlow reference user datapath.
-
-        Log to /tmp/sN-{ofd,ofp}.log.
-
-        @param controllers dict of controller names to objects
-        '''
-        if 'c0' not in controller:
-            raise Exception('User datapath start() requires controller c0')
-        controller = controllers['c0']
-        ofdlog = '/tmp/' + self.name + '-ofd.log'
-        ofplog = '/tmp/' + self.name + '-ofp.log'
-        self.cmd('ifconfig lo up')
-        intfs = self.intfs[1:] # 0 is mgmt interface
-        self.cmdPrint('ofdatapath -i ' + ','.join(intfs) +
-                      ' ptcp: 1> ' + ofdlog + ' 2> ' + ofdlog + ' &')
-        self.cmdPrint('ofprotocol tcp:' + controller.IP() +
-                      ' tcp:localhost --fail=closed 1> ' + ofplog + ' 2>' +
-                      ofplog + ' &')
-
-    def _stopUserDatapath(self):
-        '''Stop OpenFlow reference user datapath.'''
-        self.cmd('kill %ofdatapath')
-        self.cmd('kill %ofprotocol')
-
-    def _startKernelDatapath(self):
-        '''Start up reference kernel datapath.'''
-        ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun('ifconfig lo up')
-        # Delete local datapath if it exists;
-        # then create a new one monitoring the given interfaces
-        quietRun('dpctl deldp ' + self.dp)
-        self.cmdPrint('dpctl adddp ' + self.dp)
-        self.cmdPrint('dpctl addif ' + self.dp + ' ' + ' '.join(self.intfs))
-        # Run protocol daemon
-        self.cmdPrint('ofprotocol' +
-                      ' ' + self.dp + ' tcp:127.0.0.1 ' +
-                      ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
-        self.execed = False # XXX until I fix it
-
-    def _stopKernelDatapath(self):
-        '''Terminate reference kernel datapath.'''
-        quietRun('dpctl deldp ' + self.dp)
-        # In theory the interfaces should go away after we shut down.
-        # However, this takes time, so we're better off to remove them
-        # explicitly so that we won't get errors if we run before they
-        # have been removed by the kernel. Unfortunately this is very slow.
-        self.cmd('kill %ofprotocol')
-        for intf in self.intfs:
-            quietRun('ip link del ' + intf)
-            lg.info('.')
-
-    def start(self, controllers):
-        '''Start datapath.
-
-        @param controllers dict of controller names to objects
-        '''
-        if self.dp is None:
-            self._startUserDatapath(controllers)
-        else:
-            self._startKernelDatapath()
-
-    def stop(self):
-        '''Stop datapath.'''
-        if self.dp is None:
-            self._stopUserDatapath()
-        else:
-            self._stopKernelDatapath()
-
-    def sendCmd(self, cmd):
-        '''Send command to Node.
-
-        @param cmd string
-        '''
-        if not self.execed:
-            return Node.sendCmd(self, cmd)
-        else:
-            lg.error('*** Error: %s has execed and cannot accept commands' %
-                     self.name)
-
-    def monitor(self):
-        '''Monitor node.'''
-        if not self.execed:
-            return Node.monitor(self)
-        else:
-            return True, ''
+        self.ip = ip
+        self.subnet_size = subnet_size
 
 
 class NOX(Controller):
@@ -361,15 +368,3 @@ class NOX(Controller):
             cargs = '--libdir=/usr/local/lib -v -i ptcp: ' + \
                     ' '.join(nox_args),
             cdir = nox_core_dir, **kwargs)
-
-
-class ControllerParams(object):
-    '''Container for controller IP parameters.'''
-    def __init__(self, ip, subnet_size):
-        '''Init.
-
-        @param ip integer, controller IP
-        @param subnet_size integer, ex 8 for slash-8, covering 17M
-        '''
-        self.ip = ip
-        self.subnet_size = subnet_size

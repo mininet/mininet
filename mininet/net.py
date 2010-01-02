@@ -377,14 +377,20 @@ class Mininet(object):
         return ploss
 
     def ping_all(self):
-        '''Ping between all hosts.'''
-        self.ping()
+        '''Ping between all hosts.
+
+        @return ploss packet loss percentage
+        '''
+        return self.ping()
 
     def ping_pair(self):
-        '''Ping between first two hosts, useful for testing.'''
+        '''Ping between first two hosts, useful for testing.
+
+        @return ploss packet loss percentage
+        '''
         hosts_sorted = sorted(self.topo.hosts())
         hosts = [hosts_sorted[0], hosts_sorted[1]]
-        self.ping(hosts = hosts)
+        return self.ping(hosts = hosts)
 
     @staticmethod
     def _parseIperf(iperfOutput):

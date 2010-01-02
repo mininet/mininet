@@ -11,7 +11,7 @@ from ripcord.topo import FatTreeTopo
 
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
-from mininet.node import Switch, Host, Controller, ControllerParams, NOX
+from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.topo import TreeTopo
 
 # built in topologies, created only when run
@@ -24,7 +24,7 @@ TOPOS = {'minimal' :  (lambda: TreeTopo(depth = 2, fanout = 2)),
          'fattree6' : (lambda: FatTreeTopo(k = 6))}
 
 SWITCH_DEF = 'kernel'
-SWITCHES = {'kernel' : Switch}
+SWITCHES = {'kernel' : KernelSwitch}
 
 HOST_DEF = 'process'
 HOSTS = {'process' : Host}
