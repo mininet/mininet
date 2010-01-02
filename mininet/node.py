@@ -253,13 +253,16 @@ class Switch(Node):
         self.dp = datapath
         Node.__init__(self, name, inNamespace = (datapath == None))
 
-    def _startUserDatapath(self, controller):
+    def _startUserDatapath(self, controllers):
         '''Start OpenFlow reference user datapath.
 
         Log to /tmp/sN-{ofd,ofp}.log.
 
-        @param controller Controller object.
+        @param controllers dict of controller names to objects
         '''
+        if 'c0' not in controller:
+            raise Exception('User datapath start() requires controller c0')
+        controller = controllers['c0']
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd('ifconfig lo up')
@@ -302,13 +305,13 @@ class Switch(Node):
             quietRun('ip link del ' + intf)
             lg.info('.')
 
-    def start(self, controller):
+    def start(self, controllers):
         '''Start datapath.
 
-        @param controller Controller object
+        @param controllers dict of controller names to objects
         '''
         if self.dp is None:
-            self._startUserDatapath(controller)
+            self._startUserDatapath(controllers)
         else:
             self._startKernelDatapath()
 

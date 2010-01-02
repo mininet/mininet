@@ -161,7 +161,8 @@ class Mininet(object):
         @param controller Controller class
         '''
         controller = self.controller('c0', not self.kernel)
-        self.controllers['c0'] = controller
+        if controller: # allow controller-less setups
+            self.controllers['c0'] = controller
 
     # Control network support:
     #
@@ -290,15 +291,14 @@ class Mininet(object):
     def start(self):
         '''Start controller and switches\n'''
         lg.info('*** Starting controller\n')
-        self.controllers['c0'].start()
-        #for controller in self.controllers:
-        #    controller.start()
+        for cname, cnode in self.controllers.iteritems():
+            cnode.start()
         lg.info('*** Starting %s switches\n' % len(self.topo.switches()))
         for switch_dpid in self.topo.switches():
             switch = self.nodes[switch_dpid]
             #lg.info('switch = %s' % switch)
             lg.info('0x%x ' % switch_dpid)
-            switch.start(self.controllers['c0'])
+            switch.start(self.controllers)
         lg.info('\n')
 
     def stop(self):
@@ -316,8 +316,8 @@ class Mininet(object):
             switch.stop()
         lg.info('\n')
         lg.info('*** Stopping controller\n')
-        #for controller in self.controllers.iteriterms():
-        self.controllers['c0'].stop()
+        for cname, cnode in self.controllers.iteritems():
+            cnode.stop()
         lg.info('*** Test complete\n')
 
     def run(self, test, **params):
@@ -448,7 +448,8 @@ class MininetCLI(object):
         self.nodemap = {} # map names to Node objects
         for node in self.mn.nodes.values():
             self.nodemap[node.name] = node
-        self.nodemap['c0'] = self.mn.controllers['c0']
+        for cname, cnode in self.mn.controllers.iteritems():
+            self.nodemap[cname] = cnode
         self.nodelist = self.nodemap.values()
         self.run()
 
