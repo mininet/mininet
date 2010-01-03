@@ -7,25 +7,33 @@
 from optparse import OptionParser
 import time
 
-from ripcord.topo import FatTreeTopo, SingleSwitchTopo, LinearTopo
+try:
+    from ripcord.dctopo import TreeTopo, FatTreeTopo, VL2Topo
+    USE_RIPCORD = True
+except ImportError:
+    USE_RIPCORD = False
 
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
-from mininet.topo import TreeTopo
+from mininet.topo import SingleSwitchTopo, LinearTopo
 
 # built in topologies, created only when run
 TOPO_DEF = 'minimal'
-TOPOS = {'minimal' :  (lambda: SingleSwitchTopo(k = 2)),
+TOPOS = {'minimal' :   (lambda: SingleSwitchTopo(k = 2)),
+         'single4' :   (lambda: SingleSwitchTopo(k = 4)),
+         'single100' : (lambda: SingleSwitchTopo(k = 100)),
+         'linear2' :   (lambda: LinearTopo(k = 2)),
+         'linear100' : (lambda: LinearTopo(k = 100))}
+if USE_RIPCORD:
+    TOPOS_RIPCORD = {
          'tree16' :   (lambda: TreeTopo(depth = 3, fanout = 4)),
          'tree64' :   (lambda: TreeTopo(depth = 4, fanout = 4)),
          'tree1024' : (lambda: TreeTopo(depth = 3, fanout = 32)),
          'fattree4' : (lambda: FatTreeTopo(k = 4)),
          'fattree6' : (lambda: FatTreeTopo(k = 6)),
-         'single4' :  (lambda: SingleSwitchTopo(k = 4)),
-         'single100' : (lambda: SingleSwitchTopo(k = 100)),
-         'linear2' :  (lambda: LinearTopo(k = 2)),
-         'linear100' : (lambda: LinearTopo(k = 100))}
+         'vl2'      : (lambda: VL2Topo(da = 4, di = 4))}
+    TOPOS.update(TOPOS_RIPCORD)
 
 SWITCH_DEF = 'kernel'
 SWITCHES = {'kernel' : KernelSwitch}
@@ -106,7 +114,8 @@ class MininetRunner(object):
         init()
 
         # check for invalid combinations
-        if 'fattree' in self.options.topo and self.options.controller == 'ref':
+        if self.options.controller == 'ref' and \
+            (('fattree' in self.options.topo) or ('vl2' in self.options.topo)):
             raise Exception('multipath topos require multipath-capable '
                             'controller.')
 

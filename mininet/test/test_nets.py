@@ -7,15 +7,13 @@ Test creation and all-pairs ping for each included mininet topo type.
 from time import sleep
 import unittest
 
-from ripcord.topo import SingleSwitchTopo, LinearTopo
-
 from mininet.net import init, Mininet
-from mininet.node import KernelSwitch, Host, ControllerParams
-from mininet.node import Controller
-from mininet.topo import TreeTopo
+from mininet.node import KernelSwitch, Host, Controller, ControllerParams
+from mininet.topo import SingleSwitchTopo, LinearTopo
 
 # temporary, until user-space side is tested
 SWITCHES = {'kernel' : KernelSwitch}
+
 
 class testSingleSwitch(unittest.TestCase):
     '''For each datapath type, test ping with single switch topologies.'''
@@ -50,21 +48,6 @@ class testLinear(unittest.TestCase):
         for switch in SWITCHES.values():
             controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
             mn = Mininet(LinearTopo(k = 5), switch, Host, Controller,
-                         controller_params)
-            dropped = mn.run('ping')
-            self.assertEqual(dropped, 0)
-
-
-class testTree(unittest.TestCase):
-    '''For each datapath type, test all-pairs ping with TreeNet.'''
-
-    def testTree9(self):
-        '''Ping test with both datapaths on 9-host topology'''
-        init()
-        for switch in SWITCHES.values():
-            controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
-            tree_topo = TreeTopo(depth = 3, fanout = 3)
-            mn = Mininet(tree_topo, switch, Host, Controller,
                          controller_params)
             dropped = mn.run('ping')
             self.assertEqual(dropped, 0)

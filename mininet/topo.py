@@ -1,96 +1,259 @@
 #!/usr/bin/env python
-'''Starter topologies for Mininet.'''
+'''@package topo
 
-from ripcord.topo import Topo, StructuredNodeSpec, StructuredNode, Edge
-from ripcord.topo import StructuredTopo, StructuredEdgeSpec, NodeID
+Network topology creation.
 
-class TreeTopo(StructuredTopo):
-    '''Tree-structured network.'''
+@author Brandon Heller (brandonh@stanford.edu)
 
-    class TreeNodeID(NodeID):
-        '''Tree-specific node.'''
+This package includes code to represent network topologies.
 
-        def __init__(self, layer = 0, index = 0, dpid = None):
-            '''Create TreeNodeID object from custom params.
+A Topo object can be a topology database for NOX, can represent a physical
+setup for testing, and can even be emulated with the Mininet package.
+'''
 
-            Either (layer, index) or dpid must be passed in.
+from networkx import Graph
 
-            @param layer layer
-            @param index index within layer
-            @param dpid optional dpid
-            '''
-            if dpid:
-                self.layer = (dpid & 0xff0000) >> 16
-                self.index = (dpid & 0xffff)
-                self.dpid = dpid
-            else:
-                self.layer = layer
-                self.index = index
-                self.dpid = (layer << 16) + index
 
-        def __str__(self):
-            return "(%i_%i)" % (self.layer, self.index)
+class NodeID(object):
+    '''Topo node identifier.'''
 
-        def name_str(self):
-            return "%i_%i" % (self.layer, self.index)
-
-        def ip_str(self):
-            # add 1; can't have IP addr ending in 0
-            index_hi = (self.index & 0xff00) >> 8
-            index_lo = self.index & 0xff
-            return "10.%i.%i.%i" % (self.layer, index_hi, index_lo)
-
-    def __init__(self, depth = 2, fanout = 2, speed = 1.0, enable_all = True):
+    def __init__(self, dpid = None):
         '''Init.
 
-        @param depth number of levels, including host level
-        @param fanout
+        @param dpid dpid
         '''
-        node_specs = []
-        core = StructuredNodeSpec(0, fanout, None, speed, type_str = 'core')
-        node_specs.append(core)
-        for i in range(1, depth - 1):
-            node = StructuredNodeSpec(1, fanout, speed, speed,
-                                      type_str = 'layer' + str(i))
-            node_specs.append(node)
-        host = StructuredNodeSpec(1, 0, speed, None, type_str = 'host')
-        node_specs.append(host)
-        edge_specs = [StructuredEdgeSpec(speed)] * (depth - 1)
-        super(TreeTopo, self).__init__(node_specs, edge_specs)
+        # DPID-compatible hashable identifier: opaque 64-bit unsigned int
+        self.dpid = dpid
 
-        self.depth = depth
-        self.fanout = fanout
-        self.id_gen = TreeTopo.TreeNodeID
+    def __str__(self):
+        '''String conversion.
 
-        # create root
-        root_id = self.id_gen(0, 0).dpid
-        self._add_node(root_id, StructuredNode(0))
-        last_layer_ids = [root_id]
+        @return str dpid as string
+        '''
+        return str(self.dpid)
 
-        # create lower layers
-        for i in range(1, depth):
-            current_layer_ids = []
-            # start index at 1, as we can't have IP addresses ending in 0
-            index = 1
-            for last_id in last_layer_ids:
-                for j in range(fanout):
-                    is_switch = (i < depth - 1)
-                    node = StructuredNode(i, is_switch = is_switch)
-                    node_id = self.id_gen(i, index).dpid
-                    current_layer_ids.append(node_id)
-                    self._add_node(node_id, node)
-                    self._add_edge(last_id, node_id, Edge())
-                    index += 1
-            last_layer_ids = current_layer_ids
+    def name_str(self):
+        '''Name conversion.
 
-        if enable_all:
-            self.enable_all()
+        @return name name as string
+        '''
+        return str(self.dpid)
+
+    def ip_str(self):
+        '''Name conversion.
+
+        @return ip ip as string
+        '''
+        hi = (self.dpid & 0xff0000) >> 16
+        mid = (self.dpid & 0xff00) >> 8
+        lo = self.dpid & 0xff
+        return "10.%i.%i.%i" % (hi, mid, lo)
+
+
+class Node(object):
+    '''Node-specific vertex metadata for a Topo object.'''
+
+    def __init__(self, connected = False, admin_on = True,
+                 power_on = True, fault = False, is_switch = True):
+        '''Init.
+
+        @param connected actively connected to controller
+        @param admin_on administratively on or off
+        @param power_on powered on or off
+        @param fault fault seen on node
+        @param is_switch switch or host
+        '''
+        self.connected = connected
+        self.admin_on = admin_on
+        self.power_on = power_on
+        self.fault = fault
+        self.is_switch = is_switch
+
+
+class Edge(object):
+    '''Edge-specific metadata for a StructuredTopo graph.'''
+
+    def __init__(self, admin_on = True, power_on = True, fault = False):
+        '''Init.
+
+        @param admin_on administratively on or off; defaults to True
+        @param power_on powered on or off; defaults to True
+        @param fault fault seen on edge; defaults to False
+        '''
+        self.admin_on = admin_on
+        self.power_on = power_on
+        self.fault = fault
+
+
+class Topo(object):
+    '''Data center network representation for structured multi-trees.'''
+    def __init__(self):
+        '''Create Topo object.
+
+        '''
+        self.g = Graph()
+        self.node_info = {} # dpids hash to Node objects
+        self.edge_info = {} # (src_dpid, dst_dpid) tuples hash to Edge objects
+        self.ports = {} # ports[src][dst] is port on src that connects to dst
+        self.id_gen = NodeID # class used to generate dpid
+
+    def _add_node(self, dpid, node):
+        '''Add Node to graph.
+
+        @param dpid dpid
+        @param node Node object
+        '''
+        self.g.add_node(dpid)
+        self.node_info[dpid] = node
+
+    def _add_edge(self, src, dst, edge):
+        '''Add edge (Node, Node) to graph.
+
+        @param src src dpid
+        @param dst dst dpid
+        @param edge Edge object
+        '''
+        src, dst = tuple(sorted([src, dst]))
+        self.g.add_edge(src, dst)
+        self.edge_info[(src, dst)] = edge
+        self._add_port(src, dst)
+
+    def _add_port(self, src, dst):
+        '''Generate port mapping for new edge.
+
+        @param src source switch DPID
+        @param dst destination switch DPID
+        '''
+        if src not in self.ports:
+            self.ports[src] = {}
+        if dst not in self.ports[src]:
+            self.ports[src][dst] = len(self.ports[src]) # num outlinks
+
+        if dst not in self.ports:
+            self.ports[dst] = {}
+        if src not in self.ports[dst]:
+            self.ports[dst][src] = len(self.ports[dst]) # num outlinks
+
+    def node_enabled(self, dpid):
+        '''Is node connected, admin on, powered on, and fault-free?
+
+        @param dpid dpid
+
+        @return bool node is enabled
+        '''
+        ni = self.node_info[dpid]
+        return ni.connected and ni.admin_on and ni.power_on and not ni.fault
+
+    def nodes_enabled(self, dpids, enabled = True):
+        '''Return subset of enabled nodes
+
+        @param dpids list of dpids
+        @param enabled only return enabled nodes?
+
+        @return dpids filtered list of dpids
+        '''
+        if enabled:
+            return [n for n in dpids if self.node_enabled(n)]
+        else:
+            return dpids
+
+    def nodes(self, enabled = True):
+        '''Return graph nodes.
+
+        @param enabled only return enabled nodes?
+
+        @return dpids list of dpids
+        '''
+        return self.nodes_enabled(self.g.nodes(), enabled)
+
+    def nodes_str(self, dpids):
+        '''Return string of custom-encoded nodes.
+
+        @param dpids list of dpids
+
+        @return str string
+        '''
+        return [str(self.id_gen(dpid = dpid)) for dpid in dpids]
+
+    def switches(self, enabled = True):
+        '''Return switches.
+
+        @param enabled only return enabled nodes?
+
+        @return dpids list of dpids
+        '''
+        def is_switch(n):
+            '''Returns true if node is a switch.'''
+            return self.node_info[n].is_switch
+
+        nodes = [n for n in self.g.nodes() if is_switch(n)]
+        return self.nodes_enabled(nodes, enabled)
+
+    def hosts(self, enabled = True):
+        '''Return hosts.
+
+        @param enabled only return enabled nodes?
+
+        @return dpids list of dpids
+        '''
+        def is_host(n):
+            '''Returns true if node is a host.'''
+            return not self.node_info[n].is_switch
+
+        nodes = [n for n in self.g.nodes() if is_host(n)]
+        return self.nodes_enabled(nodes, enabled)
+
+    def edge_enabled(self, edge):
+        '''Is edge admin on, powered on, and fault-free?
+
+        @param edge (src, dst) dpid tuple
+
+        @return bool edge is enabled
+        '''
+        src, dst = edge
+        src, dst = tuple(sorted([src, dst]))
+        ei = self.edge_info[tuple(sorted([src, dst]))]
+        return ei.admin_on and ei.power_on and not ei.fault
+
+    def edges_enabled(self, edges, enabled = True):
+        '''Return subset of enabled edges
+
+        @param edges list of edges
+        @param enabled only return enabled edges?
+
+        @return edges filtered list of edges
+        '''
+        if enabled:
+            return [e for e in edges if self.edge_enabled(e)]
+        else:
+            return edges
+
+    def edges(self, enabled = True):
+        '''Return edges.
+
+        @param enabled only return enabled edges?
+
+        @return edges list of dpid pairs
+        '''
+        return self.edges_enabled(self.g.edges(), enabled)
+
+    def edges_str(self, dpid_pairs):
+        '''Return string of custom-encoded node pairs.
+
+        @param dpid_pairs list of dpid pairs (src, dst)
+
+        @return str string
+        '''
+        edges = []
+        for pair in dpid_pairs:
+            src, dst = pair
+            src = str(self.id_gen(dpid = src))
+            dst = str(self.id_gen(dpid = dst))
+            edges.append((src, dst))
+        return edges
 
     def port(self, src, dst):
-        '''Get port number
-
-        Note that the topological significance of DPIDs enables
-        this function to be implemented statelessly.
+        '''Get port number.
 
         @param src source switch DPID
         @param dst destination switch DPID
@@ -98,25 +261,38 @@ class TreeTopo(StructuredTopo):
             src_port: port on source switch leading to the destination switch
             dst_port: port on destination switch leading to the source switch
         '''
+        if src in self.ports and dst in self.ports[src]:
+            assert dst in self.ports and src in self.ports[dst]
+            return (self.ports[src][dst], self.ports[dst][src])
 
-        src_layer = self.node_info[src].layer
-        dst_layer = self.node_info[dst].layer
+    def enable_edges(self):
+        '''Enable all edges in the network graph.
 
-        src_id = self.id_gen(dpid = src)
-        dst_id = self.id_gen(dpid = dst)
+        Set admin on, power on, and fault off.
+        '''
+        for e in self.g.edges():
+            src, dst = e
+            ei = self.edge_info[tuple(sorted([src, dst]))]
+            ei.admin_on = True
+            ei.power_on = True
+            ei.fault = False
 
-        lower = None
-        higher = None
-        if src_layer == dst_layer - 1: # src is higher
-            src_port = ((dst_id.index - 1) % self.fanout) + 1
-            dst_port = 0
-        elif dst_layer == src_layer - 1:
-            src_port = 0
-            dst_port = ((src_id.index - 1) % self.fanout) + 1
-        else:
-            raise Exception("Could not find port leading to given dst switch")
+    def enable_nodes(self):
+        '''Enable all nodes in the network graph.
 
-        return (src_port, dst_port)
+        Set connected on, admin on, power on, and fault off.
+        '''
+        for node in self.g.nodes():
+            ni = self.node_info[node]
+            ni.connected = True
+            ni.admin_on = True
+            ni.power_on = True
+            ni.fault = False
+
+    def enable_all(self):
+        '''Enable all nodes and edges in the network graph.'''
+        self.enable_nodes()
+        self.enable_edges()
 
     def name(self, dpid):
         '''Get string name of node ID.
@@ -133,3 +309,53 @@ class TreeTopo(StructuredTopo):
         @return ip_str
         '''
         return self.id_gen(dpid = dpid).ip_str()
+
+
+class SingleSwitchTopo(Topo):
+    '''Single switch connected to k hosts.'''
+
+    def __init__(self, k = 2, enable_all = True):
+        '''Init.
+
+        @param k number of hosts
+        @param enable_all enables all nodes and switches?
+        '''
+        super(SingleSwitchTopo, self).__init__()
+
+        self.k = k
+
+        self._add_node(0, Node())
+        hosts = range(1, k + 1)
+        for h in hosts:
+            self._add_node(h, Node(is_switch = False))
+            self._add_edge(h, 0, Edge())
+
+        if enable_all:
+            self.enable_all()
+
+
+class LinearTopo(Topo):
+    '''Linear topology of k switches, with one host per switch.'''
+
+    def __init__(self, k = 2, enable_all = True):
+        '''Init.
+
+        @param k number of switches (and hosts too)
+        @param enable_all enables all nodes and switches?
+        '''
+        super(LinearTopo, self).__init__()
+
+        self.k = k
+
+        switches = range(0, k)
+        for s in switches:
+            h = s + k
+            self._add_node(s, Node())
+            self._add_node(h, Node(is_switch = False))
+            self._add_edge(s, h, Edge())
+        for s in switches:
+            if s != k - 1:
+                self._add_edge(s, s + 1, Edge())
+
+        if enable_all:
+            self.enable_all()
