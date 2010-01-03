@@ -6,7 +6,7 @@ import os, signal, sys, select
 flush = sys.stdout.flush
 
 from mininet.logging_mod import lg
-from mininet.util import quietRun
+from mininet.util import quietRun, macColonHex, ipStr
 
 class Node(object):
     '''A virtual network node is simply a shell in a network namespace.
@@ -159,6 +159,28 @@ class Node(object):
         self.intfCount += 1
         self.intfs += [intfName]
         return intfName
+
+    def setMAC(self, intf, mac):
+        '''Set the MAC address for an interface.
+
+        @param mac MAC address as unsigned int
+        '''
+        mac_str = macColonHex(mac)
+        result = self.cmd(['ifconfig', intf, 'down'])
+        result += self.cmd(['ifconfig', intf, 'hw', 'ether', mac_str])
+        result += self.cmd(['ifconfig', intf, 'up'])
+        return result
+
+    def setARP(self, ip, mac):
+        '''Add an ARP entry.
+
+        @param ip IP address as unsigned int
+        @param mac MAC address as unsigned int
+        '''
+        ip_str = ipStr(ip)
+        mac_str = macColonHex(mac)
+        result = self.cmd(['arp', '-s', ip_str, mac_str])
+        return result
 
     def setIP(self, intf, ip, bits):
         '''Set the IP address for an interface.

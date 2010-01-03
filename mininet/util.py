@@ -176,3 +176,25 @@ def fixLimits():
     '''Fix ridiculously small resource limits.'''
     setrlimit( RLIMIT_NPROC, (4096, 8192))
     setrlimit( RLIMIT_NOFILE, (16384, 32768))
+
+def macColonHex(mac):
+    '''Generate MAC colon-hex string from unsigned int.
+
+    @param mac MAC address as unsigned int
+    @return mac_str MAC colon-hex string
+    '''
+    mac_pieces = []
+    for i in range (5, -1, -1):
+        mac_pieces.append('%02x' % (((0xff << (i * 8)) & mac) >> (i * 8)))
+    mac_str = ':'.join(mac_pieces)
+    return mac_str
+
+def ipStr(ip):
+    '''Generate IP address string
+
+    @return ip addr string
+    '''
+    hi = (ip & 0xff0000) >> 16
+    mid = (ip & 0xff00) >> 8
+    lo = ip & 0xff
+    return "10.%i.%i.%i" % (hi, mid, lo)

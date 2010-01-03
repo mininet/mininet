@@ -79,7 +79,8 @@ class Mininet(object):
 
     def __init__(self, topo, switch, host, controller, cparams,
                  build = True, xterms = False, cleanup = False,
-                 in_namespace = False, switch_is_kernel = True):
+                 in_namespace = False, switch_is_kernel = True,
+                 auto_set_macs = False, auto_static_arp = False):
         '''Create Mininet object.
 
         @param topo Topo object
@@ -91,6 +92,9 @@ class Mininet(object):
         @param xterms if build now, spawn xterms?
         @param cleanup if build now, cleanup before creating?
         @param in_namespace spawn switches and hosts in their own namespace?
+        @param switch_is_kernel is the switch kernel-based?
+        @param auto_set_macs set MAC addrs to DPIDs?
+        @param auto_static_arp set all-pairs static MAC addrs?
         '''
         self.topo = topo
         self.switch = switch
@@ -102,13 +106,17 @@ class Mininet(object):
         self.dps = 0 # number of created kernel datapaths
         self.in_namespace = in_namespace
         self.switch_is_kernel = switch_is_kernel
+        self.xterms = xterms
+        self.cleanup = cleanup
+        self.auto_set_macs = auto_set_macs
+        self.auto_static_arp = auto_static_arp
 
         self.terms = [] # list of spawned xterm processes
 
         self.kernel = True #temporary!
 
         if build:
-            self.build(xterms, cleanup)
+            self.build()
 
     def _add_host(self, dpid):
         '''Add host.
@@ -249,15 +257,12 @@ class Mininet(object):
             lg.info('%s ', host.name)
         lg.info('\n')
 
-    def build(self, xterms, cleanup):
+    def build(self):
         '''Build mininet.
 
         At the end of this function, everything should be connected and up.
-
-        @param xterms spawn xterms on build?
-        @param cleanup cleanup before creating?
         '''
-        if cleanup:
+        if self.cleanup:
             pass # cleanup
         # validate topo?
         kernel = self.kernel
@@ -289,8 +294,12 @@ class Mininet(object):
         lg.info('*** Configuring hosts\n')
         self._config_hosts()
 
-        if xterms:
+        if self.xterms:
             self.start_xterms()
+        if self.auto_set_macs:
+            self.set_macs()
+        if self.auto_static_arp:
+            self.static_arp()
 
     def switch_nodes(self):
         '''Return switch nodes.'''
@@ -314,6 +323,23 @@ class Mininet(object):
         for term in self.terms:
             os.kill(term.pid, signal.SIGKILL)
         cleanUpScreens()
+
+    def set_macs(self):
+        '''Set MAC addrs to correspond to datapath IDs on hosts.
+
+        Assume that the host only has one interface.
+        '''
+        for dpid in self.topo.hosts():
+            host_node = self.nodes[dpid]
+            host_node.setMAC(host_node.intfs[0], dpid)
+
+    def static_arp(self):
+        '''Add all-pairs ARP entries to remove the need to handle broadcast.'''
+        for src in self.topo.hosts():
+            src_node = self.nodes[src]
+            for dst in self.topo.hosts():
+                if src != dst:
+                    src_node.setARP(dst, dst)
 
     def start(self):
         '''Start controller and switches\n'''

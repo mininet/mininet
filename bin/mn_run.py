@@ -99,6 +99,10 @@ class MininetRunner(object):
                         help = '[' + ' '.join(TESTS) + ']')
         opts.add_option('--xterms', '-x', action = 'store_true',
                         default = False, help = 'spawn xterms for each node')
+        opts.add_option('--mac', action = 'store_true',
+                        default = False, help = 'set host MACs equal to DPIDs')
+        opts.add_option('--arp', action = 'store_true',
+                        default = False, help = 'set all-pairs ARP entries')
         opts.add_option('--verbosity', '-v', type = 'choice',
                         choices = LEVELS.keys(), default = 'info',
                         help = '[' + ' '.join(LEVELS.keys()) + ']')
@@ -131,8 +135,11 @@ class MininetRunner(object):
 
         controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
         xterms = self.options.xterms
+        mac = self.options.mac
+        arp = self.options.arp
         mn = Mininet(topo, switch, host, controller, controller_params,
-                     xterms = xterms)
+                     xterms = xterms, auto_set_macs = mac,
+                     auto_static_arp = arp)
 
         test = self.options.test
         if test != 'build':
