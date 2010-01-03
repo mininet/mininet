@@ -7,7 +7,7 @@
 from optparse import OptionParser
 import time
 
-from ripcord.topo import FatTreeTopo
+from ripcord.topo import FatTreeTopo, SingleSwitchTopo, LinearTopo
 
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
@@ -16,12 +16,16 @@ from mininet.topo import TreeTopo
 
 # built in topologies, created only when run
 TOPO_DEF = 'minimal'
-TOPOS = {'minimal' :  (lambda: TreeTopo(depth = 2, fanout = 2)),
+TOPOS = {'minimal' :  (lambda: SingleSwitchTopo(k = 2)),
          'tree16' :   (lambda: TreeTopo(depth = 3, fanout = 4)),
          'tree64' :   (lambda: TreeTopo(depth = 4, fanout = 4)),
          'tree1024' : (lambda: TreeTopo(depth = 3, fanout = 32)),
          'fattree4' : (lambda: FatTreeTopo(k = 4)),
-         'fattree6' : (lambda: FatTreeTopo(k = 6))}
+         'fattree6' : (lambda: FatTreeTopo(k = 6)),
+         'single4' :  (lambda: SingleSwitchTopo(k = 4)),
+         'single100' : (lambda: SingleSwitchTopo(k = 100)),
+         'linear2' :  (lambda: LinearTopo(k = 2)),
+         'linear100' : (lambda: LinearTopo(k = 100))}
 
 SWITCH_DEF = 'kernel'
 SWITCHES = {'kernel' : KernelSwitch}

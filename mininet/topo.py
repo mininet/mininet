@@ -87,9 +87,9 @@ class TreeTopo(StructuredTopo):
             self.enable_all()
 
     def port(self, src, dst):
-        '''Get port number (optional)
+        '''Get port number
 
-        Note that the topological significance of DPIDs in FatTreeTopo enables
+        Note that the topological significance of DPIDs enables
         this function to be implemented statelessly.
 
         @param src source switch DPID
