@@ -80,7 +80,7 @@ def move_intf(intf, node):
     #lg.info(' output: %s\n' % output)
     links = node.cmd('ip link show')
     if not intf in links:
-        lg.error('*** Error: move_intf: % not successfully moved to %s:\n' %
+        lg.error('*** Error: move_intf: %s not successfully moved to %s:\n' %
                  (intf, node.name))
         return False
     return True
@@ -152,6 +152,8 @@ def retry(n, retry_delay, fn, *args):
 # delay between interface move checks in seconds
 MOVEINTF_DELAY = 0.0001
 
+CREATE_LINK_RETRIES = 10
+
 def createLink(node1, node2):
     '''Create a link between nodes, making an interface for each.
 
@@ -162,9 +164,9 @@ def createLink(node1, node2):
     intf2 = node2.newIntf()
     makeIntfPair(intf1, intf2)
     if node1.inNamespace:
-        retry(3, MOVEINTF_DELAY, moveIntf, intf1, node1)
+        retry(CREATE_LINK_RETRIES, MOVEINTF_DELAY, moveIntf, intf1, node1)
     if node2.inNamespace:
-        retry(3, MOVEINTF_DELAY, moveIntf, intf2, node2)
+        retry(CREATE_LINK_RETRIES, MOVEINTF_DELAY, moveIntf, intf2, node2)
     node1.connection[intf1] = (node2, intf2)
     node2.connection[intf2] = (node1, intf1)
     return intf1, intf2
