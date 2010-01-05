@@ -16,6 +16,7 @@ except ImportError:
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
+from mininet.node import RemoteController
 from mininet.topo import SingleSwitchTopo, LinearTopo
 
 # built in topologies, created only when run
@@ -46,6 +47,7 @@ CONTROLLER_DEF = 'ref'
 CONTROLLERS = {'ref' : Controller,
                'nox_dump' : lambda a, b: NOX(a, b, 'packetdump'),
                'nox_pysw' : lambda a, b: NOX(a, b, 'pyswitch'),
+               'remote' : lambda a, b: None,
                'none' :     lambda a, b: None}
 
 # optional tests to run
@@ -106,6 +108,12 @@ class MininetRunner(object):
         opts.add_option('--verbosity', '-v', type = 'choice',
                         choices = LEVELS.keys(), default = 'info',
                         help = '[' + ' '.join(LEVELS.keys()) + ']')
+        opts.add_option('--ip', type = 'string',
+                        help = '[ip address as a dotted decimal string for a'
+                        'remote controller]')
+        opts.add_option('--port', type = 'string',
+                        help = '[port integer for a listening remote'
+                        ' controller]')
         self.options = opts.parse_args()[0]
 
     def setup(self):
@@ -132,6 +140,10 @@ class MininetRunner(object):
         switch = SWITCHES[self.options.switch]
         host = HOSTS[self.options.host]
         controller = CONTROLLERS[self.options.controller]
+        if self.options.controller == 'remote':
+            controller = lambda a, b: RemoteController(a, b,
+                             ip_address = self.options.ip,
+                             port = self.options.port)
 
         controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
         xterms = self.options.xterms

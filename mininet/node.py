@@ -3,6 +3,7 @@
 
 from subprocess import Popen, PIPE, STDOUT
 import os, signal, sys, select
+
 flush = sys.stdout.flush
 
 from mininet.logging_mod import lg
@@ -36,7 +37,7 @@ class Node(object):
         self.pid = self.shell.pid
         self.intfCount = 0
         self.intfs = [] # list of interface names, as strings
-        self.ips = {}
+        self.ips = {} # dict of interfaces to ip addresses as strings
         self.connection = {}
         self.waiting = False
         self.execed = False
@@ -186,7 +187,7 @@ class Node(object):
         '''Set the IP address for an interface.
 
         @param intf string, interface name
-        @param ip IP address as integer
+        @param ip IP address as a string
         @param bits
         '''
         result = self.cmd(['ifconfig', intf, ip + bits, 'up'])
@@ -303,7 +304,7 @@ class KernelSwitch(Switch):
         self.dp = dp
         self.dpid = dpid
 
-    def start(self, ignore):
+    def start(self, controllers):
         '''Start up reference kernel datapath.'''
         ofplog = '/tmp/' + self.name + '-ofp.log'
         quietRun('ifconfig lo up')
@@ -318,7 +319,8 @@ class KernelSwitch(Switch):
         self.cmdPrint('dpctl addif nl:' + str(self.dp) + ' ' +
                       ' '.join(self.intfs))
         # Run protocol daemon
-        self.cmdPrint('ofprotocol nl:' + str(self.dp) + ' tcp:127.0.0.1 ' +
+        self.cmdPrint('ofprotocol nl:' + str(self.dp) + ' tcp:' +
+                      controllers['c0'].IP()+':'+str(controllers['c0'].port) +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
         self.execed = False # XXX until I fix it
 
@@ -340,10 +342,13 @@ class Controller(Node):
       OpenFlow controller.'''
 
     def __init__(self, name, inNamespace = False, controller = 'controller',
-                 cargs = '-v ptcp:', cdir = None):
+                 cargs = '-v ptcp:', cdir = None, ip_address="127.0.0.1",
+                 port = 6633):
         self.controller = controller
         self.cargs = cargs
         self.cdir = cdir
+        self.ip_address = ip_address
+        self.port = port
         Node.__init__(self, name, inNamespace = inNamespace)
 
     def start(self):
@@ -362,6 +367,10 @@ class Controller(Node):
         '''Stop controller.'''
         self.cmd('kill %' + self.controller)
         self.terminate()
+
+    def IP(self):
+        '''Return IP address of the Controller'''
+        return self.ip_address
 
 
 class ControllerParams(object):
@@ -396,3 +405,25 @@ class NOX(Controller):
             cargs = '--libdir=/usr/local/lib -v -i ptcp: ' + \
                     ' '.join(nox_args),
             cdir = nox_core_dir, **kwargs)
+
+class RemoteController(Controller):
+    '''Controller running remotely.'''
+    def __init__(self, name, inNamespace = False, ip_address = None, port = 6633):
+        '''Init.
+
+        @param name name to give controller
+        @param ip_address the IP address where the remote controller is
+            listening
+        @param port the port where the remote controller is listening
+        '''
+        if not ip_address:
+            raise Exception('please set ip_address\n')
+        Controller.__init__(self, name, ip_address = ip_address, port = port)
+
+    def start(self):
+        '''Overridden to do nothing.'''
+        return
+
+    def stop(self):
+        '''Overridden to do nothing.'''
+        return
