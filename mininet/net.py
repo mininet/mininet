@@ -522,7 +522,7 @@ class Mininet(object):
 class MininetCLI(object):
     '''Simple command-line interface to talk to nodes.'''
     cmds = ['?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit', \
-            'ping_pair', 'iperf', 'iperf_udp']
+            'ping_pair', 'iperf', 'iperf_udp', 'intfs']
 
     def __init__(self, mininet):
         self.mn = mininet
@@ -561,7 +561,7 @@ class MininetCLI(object):
                 ' '.join([node.name for node in sorted(self.nodelist)]))
 
     def net(self, args):
-        '''List network connection.'''
+        '''List network connections.'''
         for switch_dpid in self.mn.topo.switches():
             switch = self.mn.nodes[switch_dpid]
             lg.info('%s <->', switch.name)
@@ -590,6 +590,11 @@ class MininetCLI(object):
         '''Simple iperf UDP test between two hosts.'''
         udp_bw = args[0] if len(args) else '10M'
         self.mn.iperf_udp(udp_bw)
+
+    def intfs(self, args):
+        '''List interfaces.'''
+        for dpid, node in self.mn.nodes.iteritems():
+            lg.info('%s: %s\n' % (node.name, ' '.join(node.intfs)))
 
     def run(self):
         '''Read and execute commands.'''
