@@ -522,7 +522,7 @@ class Mininet(object):
 class MininetCLI(object):
     '''Simple command-line interface to talk to nodes.'''
     cmds = ['?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit', \
-            'ping_pair', 'iperf', 'iperf_udp', 'intfs']
+            'ping_pair', 'iperf', 'iperf_udp', 'intfs', 'dump']
 
     def __init__(self, mininet):
         self.mn = mininet
@@ -595,6 +595,11 @@ class MininetCLI(object):
         '''List interfaces.'''
         for dpid, node in self.mn.nodes.iteritems():
             lg.info('%s: %s\n' % (node.name, ' '.join(node.intfs)))
+
+    def dump(self, args):
+        '''Dump node info.'''
+        for dpid, node in self.mn.nodes.iteritems():
+            lg.info('%s\n' % node)
 
     def run(self):
         '''Read and execute commands.'''
