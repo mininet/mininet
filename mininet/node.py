@@ -320,7 +320,8 @@ class KernelSwitch(Switch):
                       ' '.join(self.intfs))
         # Run protocol daemon
         self.cmdPrint('ofprotocol nl:' + str(self.dp) + ' tcp:' +
-                      controllers['c0'].IP()+':'+str(controllers['c0'].port) +
+                      controllers['c0'].IP() + ':' +
+                      str(controllers['c0'].port) +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
         self.execed = False # XXX until I fix it
 
@@ -406,9 +407,11 @@ class NOX(Controller):
                     ' '.join(nox_args),
             cdir = nox_core_dir, **kwargs)
 
+
 class RemoteController(Controller):
-    '''Controller running remotely.'''
-    def __init__(self, name, inNamespace = False, ip_address = None, port = 6633):
+    '''Controller running outside of Mininet's control.'''
+    def __init__(self, name, inNamespace = False, ip_address = '127.0.0.1',
+                 port = 6633):
         '''Init.
 
         @param name name to give controller
@@ -416,8 +419,6 @@ class RemoteController(Controller):
             listening
         @param port the port where the remote controller is listening
         '''
-        if not ip_address:
-            raise Exception('please set ip_address\n')
         Controller.__init__(self, name, ip_address = ip_address, port = port)
 
     def start(self):

@@ -108,10 +108,10 @@ class MininetRunner(object):
         opts.add_option('--verbosity', '-v', type = 'choice',
                         choices = LEVELS.keys(), default = 'info',
                         help = '[' + ' '.join(LEVELS.keys()) + ']')
-        opts.add_option('--ip', type = 'string',
+        opts.add_option('--ip', type = 'string', default = '127.0.0.1',
                         help = '[ip address as a dotted decimal string for a'
                         'remote controller]')
-        opts.add_option('--port', type = 'string',
+        opts.add_option('--port', type = 'string', default = 6633,
                         help = '[port integer for a listening remote'
                         ' controller]')
         self.options = opts.parse_args()[0]
