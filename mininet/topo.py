@@ -334,6 +334,39 @@ class SingleSwitchTopo(Topo):
             self.enable_all()
 
 
+class SingleSwitchReversedTopo(SingleSwitchTopo):
+    '''Single switch connected to k hosts, with reversed ports.
+
+    The lowest-numbered host is connected to the highest-numbered port.
+
+    Useful to verify that Mininet properly handles custom port numberings.
+    '''
+
+    def port(self, src, dst):
+        '''Get port number.
+
+        @param src source switch DPID
+        @param dst destination switch DPID
+        @return tuple (src_port, dst_port):
+            src_port: port on source switch leading to the destination switch
+            dst_port: port on destination switch leading to the source switch
+        '''
+        if src == 1:
+            if dst in range(2, self.k + 2):
+                dst_index = dst - 2
+                highest = self.k - 1
+                return (highest - dst_index, 0)
+            else:
+                raise Exception('unexpected dst: %i' % dst)
+        elif src in range(2, self.k + 2):
+            if dst == 1:
+                raise Exception('unexpected dst: %i' % dst)
+            else:
+                src_index = src - 2
+                highest = self.k - 1
+                return (0, highest - src_index)
+
+
 class LinearTopo(Topo):
     '''Linear topology of k switches, with one host per switch.'''
 

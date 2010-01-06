@@ -17,11 +17,12 @@ from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController
-from mininet.topo import SingleSwitchTopo, LinearTopo
+from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 
 # built in topologies, created only when run
 TOPO_DEF = 'minimal'
 TOPOS = {'minimal' :   (lambda: SingleSwitchTopo(k = 2)),
+         'reversed' :  (lambda: SingleSwitchReversedTopo(k = 2)),
          'single4' :   (lambda: SingleSwitchTopo(k = 4)),
          'single100' : (lambda: SingleSwitchTopo(k = 100)),
          'linear2' :   (lambda: LinearTopo(k = 2)),
