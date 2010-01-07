@@ -259,13 +259,17 @@ class Switch(Node):
             return True, ''
 
 class UserSwitch(Switch):
+    '''User-space switch.
+
+    Currently only works in the root namespace.
+    '''
 
     def __init__(self, name):
         '''Init.
 
         @param name
         '''
-        Node.__init__(self, name, inNamespace = True)
+        Node.__init__(self, name, inNamespace = False)
 
     def start(self, controllers):
         '''Start OpenFlow reference user datapath.
@@ -274,17 +278,17 @@ class UserSwitch(Switch):
 
         @param controllers dict of controller names to objects
         '''
-        if 'c0' not in controller:
+        if 'c0' not in controllers:
             raise Exception('User datapath start() requires controller c0')
         controller = controllers['c0']
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd('ifconfig lo up')
-        intfs = self.intfs[1:] # 0 is mgmt interface
-        self.cmdPrint('ofdatapath -i ' + ','.join(intfs) +
-                      ' ptcp: 1> ' + ofdlog + ' 2> ' + ofdlog + ' &')
-        self.cmdPrint('ofprotocol tcp:' + controller.IP() +
-                      ' tcp:localhost --fail=closed 1> ' + ofplog + ' 2>' +
+        intfs = self.intfs
+        self.cmdPrint('ofdatapath -i ' + ','.join(intfs) + ' punix:/tmp/' +
+                      self.name + ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &')
+        self.cmdPrint('ofprotocol unix:/tmp/' + self.name + ' tcp:' +
+                      controller.IP() + ' --fail=closed 1> ' + ofplog + ' 2>' +
                       ofplog + ' &')
 
     def stop(self):

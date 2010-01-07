@@ -92,7 +92,7 @@ class Mininet(object):
         @param now build now?
         @param xterms if build now, spawn xterms?
         @param cleanup if build now, cleanup before creating?
-        @param in_namespace spawn switches and hosts in their own namespace?
+        @param in_namespace spawn switches and controller in net namespaces?
         @param auto_set_macs set MAC addrs to DPIDs?
         @param auto_static_arp set all-pairs static MAC addrs?
         '''
@@ -111,8 +111,6 @@ class Mininet(object):
         self.auto_static_arp = auto_static_arp
 
         self.terms = [] # list of spawned xterm processes
-
-        self.kernel = True #temporary!
 
         if build:
             self.build()
@@ -178,7 +176,7 @@ class Mininet(object):
 
         @param controller Controller class
         '''
-        controller = self.controller('c0', not self.kernel)
+        controller = self.controller('c0', self.in_namespace)
         if controller: # allow controller-less setups
             self.controllers['c0'] = controller
 
@@ -271,11 +269,6 @@ class Mininet(object):
         if self.cleanup:
             pass # cleanup
         # validate topo?
-        kernel = self.kernel
-        if kernel:
-            lg.info('*** Using kernel datapath\n')
-        else:
-            lg.info('*** Using user datapath\n')
         lg.info('*** Adding controller\n')
         self._add_controller(self.controller)
         lg.info('*** Creating network\n')
@@ -287,13 +280,13 @@ class Mininet(object):
         for switch in sorted(self.topo.switches()):
             self._add_switch(switch)
             lg.info('0x%x ' % switch)
-        lg.info('\n*** Adding edges: ')
+        lg.info('\n*** Adding edges:\n')
         for src, dst in sorted(self.topo.edges()):
             self._add_link(src, dst)
             lg.info('(0x%x, 0x%x) ' % (src, dst))
         lg.info('\n')
 
-        if not kernel:
+        if self.in_namespace:
             lg.info('*** Configuring control network\n')
             self._configureControlNetwork()
 

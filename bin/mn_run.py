@@ -16,7 +16,7 @@ except ImportError:
 from mininet.logging_mod import lg, set_loglevel, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
-from mininet.node import RemoteController
+from mininet.node import RemoteController, UserSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 
 # built in topologies, created only when run
@@ -38,7 +38,8 @@ if USE_RIPCORD:
     TOPOS.update(TOPOS_RIPCORD)
 
 SWITCH_DEF = 'kernel'
-SWITCHES = {'kernel' : KernelSwitch}
+SWITCHES = {'kernel' : KernelSwitch,
+            'user' : UserSwitch}
 
 HOST_DEF = 'process'
 HOSTS = {'process' : Host}
@@ -115,6 +116,8 @@ class MininetRunner(object):
         opts.add_option('--port', type = 'string', default = 6633,
                         help = '[port integer for a listening remote'
                         ' controller]')
+        opts.add_option('--in_namespace', action = 'store_true',
+                        default = False, help = 'sw and ctrl in namespace?')
         self.options = opts.parse_args()[0]
 
     def setup(self):
@@ -147,10 +150,12 @@ class MininetRunner(object):
                              port = self.options.port)
 
         controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
+        in_namespace = self.options.in_namespace
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
         mn = Mininet(topo, switch, host, controller, controller_params,
+                     in_namespace = in_namespace,
                      xterms = xterms, auto_set_macs = mac,
                      auto_static_arp = arp)
 
