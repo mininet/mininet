@@ -159,6 +159,8 @@ class Mininet(object):
         make_veth_pair(src_intf, dst_intf)
         src_node.intfs.append(src_intf)
         dst_node.intfs.append(dst_intf)
+        src_node.ports[src_port] = src_intf
+        dst_node.ports[dst_port] = dst_intf
         #lg.info('\n')
         #lg.info('added intf %s to src node %x\n' % (src_intf, src))
         #lg.info('added intf %s to dst node %x\n' % (dst_intf, dst))

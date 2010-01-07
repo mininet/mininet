@@ -41,6 +41,8 @@ class Node(object):
         self.connection = {}
         self.waiting = False
         self.execed = False
+        self.ports = {} # dict of ints to interface strings
+                        # replace with Port object, eventually
 
     def fdToNode(self, f):
         '''Insert docstring.
@@ -316,8 +318,12 @@ class KernelSwitch(Switch):
             intf = 'of%i' % self.dp
             mac_str = macColonHex(self.dpid)
             self.cmd(['ifconfig', intf, 'hw', 'ether', mac_str])
-        self.cmdPrint('dpctl addif nl:' + str(self.dp) + ' ' +
-                      ' '.join(self.intfs))
+
+        if len(self.ports) != max(self.ports.keys()) + 1:
+            raise Exception('only contiguous, zero-indexed port ranges'
+                            'supported: %s' % self.ports)
+        intfs = [self.ports[port] for port in self.ports.keys()]
+        self.cmdPrint('dpctl addif nl:' + str(self.dp) + ' ' + ' '.join(intfs))
         # Run protocol daemon
         self.cmdPrint('ofprotocol nl:' + str(self.dp) + ' tcp:' +
                       controllers['c0'].IP() + ':' +
