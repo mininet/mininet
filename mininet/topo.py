@@ -11,7 +11,7 @@ A Topo object can be a topology database for NOX, can represent a physical
 setup for testing, and can even be emulated with the Mininet package.
 '''
 
-from networkx import Graph
+from networkx.classes.graph import Graph
 
 
 class NodeID(object):
@@ -87,6 +87,7 @@ class Edge(object):
 
 class Topo(object):
     '''Data center network representation for structured multi-trees.'''
+
     def __init__(self):
         '''Create Topo object.
 
@@ -182,6 +183,7 @@ class Topo(object):
 
         @return dpids list of dpids
         '''
+
         def is_switch(n):
             '''Returns true if node is a switch.'''
             return self.node_info[n].is_switch
@@ -196,6 +198,7 @@ class Topo(object):
 
         @return dpids list of dpids
         '''
+
         def is_host(n):
             '''Returns true if node is a host.'''
             return not self.node_info[n].is_switch

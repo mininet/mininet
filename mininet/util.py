@@ -99,6 +99,7 @@ def move_intf(intf, node):
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
+
 def makeIntfPair(intf1, intf2):
     '''Make a veth pair.
 
@@ -111,7 +112,7 @@ def makeIntfPair(intf1, intf2):
     quietRun('ip link del ' + intf2)
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    return checkRun( cmd )
+    return checkRun(cmd)
 
 
 def moveIntf(intf, node, print_error = False):
@@ -132,7 +133,7 @@ def moveIntf(intf, node, print_error = False):
     return True
 
 
-def retry(n, retry_delay, fn, *args):
+def retry(n, retry_delay, fn, *args, **keywords):
     '''Try something N times before giving up.
 
     @param n number of times to retry
@@ -141,18 +142,19 @@ def retry(n, retry_delay, fn, *args):
     @param args args to apply to function call
     '''
     tries = 0
-    while not apply(fn, args) and tries < n:
+    while not fn(*args, **keywords) and tries < n:
         sleep(retry_delay)
         tries += 1
     if tries >= n:
         lg.error("*** gave up after %i retries\n" % tries)
-        exit( 1 )
+        exit(1)
 
 
 # delay between interface move checks in seconds
 MOVEINTF_DELAY = 0.0001
 
 CREATE_LINK_RETRIES = 10
+
 
 def createLink(node1, node2):
     '''Create a link between nodes, making an interface for each.
@@ -174,8 +176,8 @@ def createLink(node1, node2):
 
 def fixLimits():
     '''Fix ridiculously small resource limits.'''
-    setrlimit( RLIMIT_NPROC, (4096, 8192))
-    setrlimit( RLIMIT_NOFILE, (16384, 32768))
+    setrlimit(RLIMIT_NPROC, (4096, 8192))
+    setrlimit(RLIMIT_NOFILE, (16384, 32768))
 
 
 def _colonHex(val, bytes):
@@ -186,7 +188,7 @@ def _colonHex(val, bytes):
     @return ch_str colon-hex string
     '''
     pieces = []
-    for i in range (bytes - 1, -1, -1):
+    for i in range(bytes - 1, -1, -1):
         pieces.append('%02x' % (((0xff << (i * 8)) & val) >> (i * 8)))
     ch_str = ':'.join(pieces)
     return ch_str

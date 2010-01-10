@@ -5,7 +5,7 @@
 @author Brandon Heller (brandonh@stanford.edu)
 
 Mininet creates scalable OpenFlow test networks by using
-process-based virtualization and network namespaces. 
+process-based virtualization and network namespaces.
 
 Simulated hosts are created as processes in separate network
 namespaces. This allows a complete OpenFlow network to be simulated on
@@ -15,7 +15,7 @@ Each host has:
    A virtual console (pipes to a shell)
    A virtual interfaces (half of a veth pair)
    A parent shell (and possibly some child processes) in a namespace
-   
+
 Hosts have a network interface which is configured via ifconfig/ip
 link/etc.
 
@@ -210,7 +210,7 @@ class Mininet(object):
 
         For use with the user datapath only right now.
 
-        @todo(brandonh) Test this code and verify that user-space works!
+        @todo(brandonh) Test this code!
         '''
         # params were: controller, switches, ips
 
@@ -242,12 +242,12 @@ class Mininet(object):
             while not switch.intfIsUp(switch.intfs[0]):
                 lg.info('*** Waiting for %s to come up\n' % switch.intfs[0])
                 sleep(1)
-            if self.ping_test(hosts=[switch, controller]) != 0:
+            if self.ping(hosts = [switch, controller]) != 0:
                 lg.error('*** Error: control network test failed\n')
                 exit(1)
         lg.info('\n')
 
-    def _config_hosts( self ):
+    def _config_hosts(self):
         '''Configure a set of hosts.'''
         # params were: hosts, ips
         for host_dpid in self.topo.hosts():
@@ -343,7 +343,7 @@ class Mininet(object):
     def start(self):
         '''Start controller and switches\n'''
         lg.info('*** Starting controller\n')
-        for cname, cnode in self.controllers.iteritems():
+        for cnode in self.controllers.values():
             cnode.start()
         lg.info('*** Starting %s switches\n' % len(self.topo.switches()))
         for switch_dpid in self.topo.switches():
@@ -371,7 +371,7 @@ class Mininet(object):
             switch.stop()
         lg.info('\n')
         lg.info('*** Stopping controller\n')
-        for cname, cnode in self.controllers.iteritems():
+        for cnode in self.controllers.values():
             cnode.stop()
         lg.info('*** Test complete\n')
 
@@ -387,7 +387,7 @@ class Mininet(object):
     def _parse_ping(pingOutput):
         '''Parse ping output and return packets sent, received.'''
         r = r'(\d+) packets transmitted, (\d+) received'
-        m = re.search( r, pingOutput )
+        m = re.search(r, pingOutput)
         if m == None:
             lg.error('*** Error: could not parse ping output: %s\n' %
                      pingOutput)
@@ -422,7 +422,7 @@ class Mininet(object):
                         lg.error('*** Error: received too many packets')
                         lg.error('%s' % result)
                         node.cmdPrint('route')
-                        exit( 1 )
+                        exit(1)
                     lost += sent - received
                     lg.info(('%s ' % dest.name) if received else 'X ')
             lg.info('\n')
@@ -490,7 +490,8 @@ class Mininet(object):
         server = host0.cmd(iperf_args + '-s &')
         if verbose:
             lg.info('%s\n' % server)
-        client = host1.cmd(iperf_args + '-t 5 -c ' + host0.IP() + ' ' + bw_args)
+        client = host1.cmd(iperf_args + '-t 5 -c ' + host0.IP() + ' ' +
+                           bw_args)
         if verbose:
             lg.info('%s\n' % client)
         server = host0.cmd('killall -9 iperf')
@@ -529,6 +530,10 @@ class MininetCLI(object):
         self.nodelist = self.nodemap.values()
         self.run()
 
+    # Disable pylint "Unused argument: 'arg's'" messages.
+    # Each CLI function needs the same interface.
+    # pylint: disable-msg=W0613
+
     # Commands
     def help(self, args):
         '''Semi-useful help for CLI.'''
@@ -561,7 +566,7 @@ class MininetCLI(object):
             switch = self.mn.nodes[switch_dpid]
             lg.info('%s <->', switch.name)
             for intf in switch.intfs:
-                node, remoteIntf = switch.connection[intf]
+                node = switch.connection[intf]
                 lg.info(' %s' % node.name)
             lg.info('\n')
 
@@ -588,25 +593,28 @@ class MininetCLI(object):
 
     def intfs(self, args):
         '''List interfaces.'''
-        for dpid, node in self.mn.nodes.iteritems():
+        for node in self.mn.nodes.values():
             lg.info('%s: %s\n' % (node.name, ' '.join(node.intfs)))
 
     def dump(self, args):
         '''Dump node info.'''
-        for dpid, node in self.mn.nodes.iteritems():
+        for node in self.mn.nodes.values():
             lg.info('%s\n' % node)
+
+    # Re-enable pylint "Unused argument: 'arg's'" messages.
+    # pylint: enable-msg=W0613
 
     def run(self):
         '''Read and execute commands.'''
         lg.warn('*** Starting CLI:\n')
         while True:
             lg.warn('mininet> ')
-            input = sys.stdin.readline()
-            if input == '':
+            input_line = sys.stdin.readline()
+            if input_line == '':
                 break
-            if input[-1] == '\n':
-                input = input[:-1]
-            cmd = input.split(' ')
+            if input_line[-1] == '\n':
+                input_line = input_line[:-1]
+            cmd = input_line.split(' ')
             first = cmd[0]
             rest = cmd[1:]
             if first in self.cmds and hasattr(self, first):
@@ -634,7 +642,7 @@ class MininetCLI(object):
             elif first in ['exit', 'quit']:
                 break
             elif first == '?':
-                self.help( rest )
+                self.help(rest)
             else:
                 lg.error('CLI: unknown node or command: < %s >\n' % first)
             #lg.info('*** CLI: command complete\n')

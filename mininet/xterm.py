@@ -6,11 +6,11 @@ Utility functions to run an xterm (connected via screen(1)) on each host.
 Requires xterm(1) and GNU screen(1).
 """
 
-import os
 import re
 from subprocess import Popen
 
 from mininet.util import quietRun
+
 
 def makeXterm(node, title):
     '''Run screen on a node, and hook up an xterm.

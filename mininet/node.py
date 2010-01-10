@@ -2,12 +2,16 @@
 '''Node objects for Mininet.'''
 
 from subprocess import Popen, PIPE, STDOUT
-import os, signal, sys, select
+import os
+import signal
+import sys
+import select
 
 flush = sys.stdout.flush
 
 from mininet.logging_mod import lg
 from mininet.util import quietRun, macColonHex, ipStr
+
 
 class Node(object):
     '''A virtual network node is simply a shell in a network namespace.
@@ -116,7 +120,7 @@ class Node(object):
 
     def waitOutput(self):
         '''Wait for a command to complete.
-        
+
         Completion is signaled by a sentinel character, ASCII(127) appearing in
         the output stream.  Wait for the sentinel and return the output,
         including trailing newline.
@@ -129,7 +133,8 @@ class Node(object):
             if len(data) > 0  and data[-1] == chr(0177):
                 output += data[:-1]
                 break
-            else: output += data
+            else:
+                output += data
         self.waiting = False
         return output
 
@@ -143,7 +148,7 @@ class Node(object):
 
     def cmdPrint(self, cmd):
         '''Call cmd and printing its output
-        
+
         @param cmd string
         '''
         #lg.info('*** %s : %s', self.name, cmd)
@@ -215,7 +220,7 @@ class Node(object):
     def IP(self):
         '''Return IP address of first interface'''
         if len(self.intfs) > 0:
-            return self.ips.get(self.intfs[ 0 ], None)
+            return self.ips.get(self.intfs[0], None)
 
     def intfIsUp(self):
         '''Check if one of our interfaces is up.'''
@@ -258,6 +263,7 @@ class Switch(Node):
         else:
             return True, ''
 
+
 class UserSwitch(Switch):
     '''User-space switch.
 
@@ -269,7 +275,7 @@ class UserSwitch(Switch):
 
         @param name
         '''
-        Node.__init__(self, name, inNamespace = False)
+        Switch.__init__(self, name, inNamespace = False)
 
     def start(self, controllers):
         '''Start OpenFlow reference user datapath.
@@ -298,6 +304,12 @@ class UserSwitch(Switch):
 
 
 class KernelSwitch(Switch):
+    '''Kernel-space switch.
+
+    Much faster than user-space!
+
+    Currently only works in the root namespace.
+    '''
 
     def __init__(self, name, dp = None, dpid = None):
         '''Init.
@@ -306,7 +318,7 @@ class KernelSwitch(Switch):
         @param dp netlink id (0, 1, 2, ...)
         @param dpid datapath ID as unsigned int; random value if None
         '''
-        Node.__init__(self, name, inNamespace = False)
+        Switch.__init__(self, name, inNamespace = False)
         self.dp = dp
         self.dpid = dpid
 
@@ -333,7 +345,7 @@ class KernelSwitch(Switch):
                       controllers['c0'].IP() + ':' +
                       str(controllers['c0'].port) +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
-        self.execed = False # XXX until I fix it
+        self.execed = False
 
     def stop(self):
         '''Terminate reference kernel datapath.'''
@@ -372,7 +384,7 @@ class Controller(Node):
             self.cmdPrint('cd ' + self.cdir)
         self.cmdPrint(self.controller + ' ' + self.cargs +
             ' 1> ' + cout + ' 2> ' + cout + ' &')
-        self.execed = False # XXX Until I fix it
+        self.execed = False
 
     def stop(self):
         '''Stop controller.'''
@@ -386,6 +398,7 @@ class Controller(Node):
 
 class ControllerParams(object):
     '''Container for controller IP parameters.'''
+
     def __init__(self, ip, subnet_size):
         '''Init.
 
@@ -398,6 +411,7 @@ class ControllerParams(object):
 
 class NOX(Controller):
     '''Controller to run a NOX application.'''
+
     def __init__(self, name, inNamespace = False, nox_args = None, **kwargs):
         '''Init.
 
@@ -420,6 +434,7 @@ class NOX(Controller):
 
 class RemoteController(Controller):
     '''Controller running outside of Mininet's control.'''
+
     def __init__(self, name, inNamespace = False, ip_address = '127.0.0.1',
                  port = 6633):
         '''Init.

@@ -1,6 +1,7 @@
 '''Logging functions for Mininet.'''
 
 import logging
+from logging import Logger
 import types
 
 LEVELS = {'debug': logging.DEBUG,
@@ -14,7 +15,6 @@ LOG_LEVEL_DEFAULT = logging.WARNING
 
 #default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOG_MSG_FORMAT = '%(message)s'
-
 
 
 # Modified from python2.5/__init__.py
@@ -53,31 +53,52 @@ class StreamHandlerNoNewline(logging.StreamHandler):
             self.handleError(record)
 
 
-def set_loglevel(level_name = None):
-    '''Setup loglevel.
+class Singleton(type):
+    '''Singleton pattern from Wikipedia
 
-    @param level_name level name from LEVELS
+    See http://en.wikipedia.org/wiki/Singleton_pattern#Python
+
+    Intended to be used as a __metaclass_ param, as shown for the class below.
+
+    Changed cls first args to mcs to satsify pylint.
     '''
-    level = LOG_LEVEL_DEFAULT
-    if level_name != None:
-        if level_name not in LEVELS:
-            raise Exception('unknown loglevel seen in set_loglevel')
-        else:
-            level = LEVELS.get(level_name, level)
 
-    lg.setLevel(level)
-    if len(lg.handlers) != 1:
-        raise Exception('lg.handlers length not zero in logging_mod')
-    lg.handlers[0].setLevel(level)
+    def __init__(mcs, name, bases, dict_):
+        super(Singleton, mcs).__init__(name, bases, dict_)
+        mcs.instance = None
+
+    def __call__(mcs, *args, **kw):
+        if mcs.instance is None:
+            mcs.instance = super(Singleton, mcs).__call__(*args, **kw)
+            return mcs.instance
 
 
-def _setup_logging():
-    '''Setup logging for Mininet.'''
-    global lg
+class MininetLogger(Logger, object):
+    '''Mininet-specific logger
 
-    # create logger if first time
-    if 'lg' not in globals():
-        lg = logging.getLogger('mininet')
+    Enable each mininet .py file to with one import:
+
+       from mininet.logging_mod import lg
+
+    ...get a default logger that doesn't require one newline per logging call.
+
+    Inherit from object to ensure that we have at least one new-style base
+    class, and can then use the __metaclass__ directive, to prevent this error:
+
+      TypeError: Error when calling the metaclass bases
+       a new-style class can't have only classic bases
+
+    If Python2.5/logging/__init__.py defined Filterer as a new-style class,
+    via Filterer(object): rather than Filterer, we wouldn't need this.
+
+    Use singleton pattern to ensure only one logger is ever created.
+    '''
+    __metaclass__ = Singleton
+
+    def __init__(self):
+
+        Logger.__init__(self, "mininet")
+
         # create console handler
         ch = StreamHandlerNoNewline()
         # create formatter
@@ -85,15 +106,26 @@ def _setup_logging():
         # add formatter to ch
         ch.setFormatter(formatter)
         # add ch to lg
-        lg.addHandler(ch)
-    else:
-        raise Exception('setup_logging called twice')
+        self.addHandler(ch)
 
-    set_loglevel()
+        self.set_loglevel()
+
+    def set_loglevel(self, levelname = None):
+        '''Setup loglevel.
+
+        Convenience function to support lowercase names.
+
+        @param level_name level name from LEVELS
+        '''
+        level = LOG_LEVEL_DEFAULT
+        if levelname != None:
+            if levelname not in LEVELS:
+                raise Exception('unknown loglevel seen in set_loglevel')
+            else:
+                level = LEVELS.get(levelname, level)
+
+        self.setLevel(level)
+        self.handlers[0].setLevel(level)
 
 
-# There has to be some better way to ensure we only ever have one logging
-# variable.  If this check isn't in, the order in which imports occur can
-# affect whether a program runs, because the variable lg may get rebound.
-if 'lg' not in globals():
-    _setup_logging()
+lg = MininetLogger()

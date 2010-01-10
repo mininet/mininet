@@ -4,7 +4,6 @@
 Test creation and all-pairs ping for each included mininet topo type.
 '''
 
-from time import sleep
 import unittest
 
 from mininet.net import init, Mininet
@@ -12,7 +11,7 @@ from mininet.node import KernelSwitch, Host, Controller, ControllerParams
 from mininet.topo import SingleSwitchTopo, LinearTopo
 
 # temporary, until user-space side is tested
-SWITCHES = {'kernel' : KernelSwitch}
+SWITCHES = {'kernel': KernelSwitch}
 
 
 class testSingleSwitch(unittest.TestCase):
