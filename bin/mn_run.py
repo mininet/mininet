@@ -16,7 +16,7 @@ except ImportError:
 from mininet.logging_mod import lg, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
-from mininet.node import RemoteController, UserSwitch
+from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 
 # built in topologies, created only when run
@@ -39,7 +39,8 @@ if USE_RIPCORD:
 
 SWITCH_DEF = 'kernel'
 SWITCHES = {'kernel': KernelSwitch,
-            'user': UserSwitch}
+            'user': UserSwitch,
+            'ovsk': OVSKernelSwitch}
 
 HOST_DEF = 'process'
 HOSTS = {'process': Host}

@@ -306,8 +306,6 @@ class UserSwitch(Switch):
 class KernelSwitch(Switch):
     '''Kernel-space switch.
 
-    Much faster than user-space!
-
     Currently only works in the root namespace.
     '''
 
@@ -348,13 +346,68 @@ class KernelSwitch(Switch):
         self.execed = False
 
     def stop(self):
-        '''Terminate reference kernel datapath.'''
+        '''Terminate kernel datapath.'''
         quietRun('dpctl deldp nl:%i' % self.dp)
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off to remove them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow.
         self.cmd('kill %ofprotocol')
+        for intf in self.intfs:
+            quietRun('ip link del ' + intf)
+            lg.info('.')
+
+
+class OVSKernelSwitch(Switch):
+    '''Open VSwitch kernel-space switch.
+
+    Currently only works in the root namespace.
+    '''
+
+    def __init__(self, name, dp = None, dpid = None):
+        '''Init.
+
+        @param name
+        @param dp netlink id (0, 1, 2, ...)
+        @param dpid datapath ID as unsigned int; random value if None
+        '''
+        Switch.__init__(self, name, inNamespace = False)
+        self.dp = dp
+        self.dpid = dpid
+
+    def start(self, controllers):
+        '''Start up kernel datapath.'''
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        quietRun('ifconfig lo up')
+        # Delete local datapath if it exists;
+        # then create a new one monitoring the given interfaces
+        quietRun('ovs-dpctl del-dp dp%i' % self.dp)
+        self.cmdPrint('ovs-dpctl add-dp dp%i' % self.dp)
+        if self.dpid:
+            intf = 'dp' % self.dp
+            mac_str = macColonHex(self.dpid)
+            self.cmd(['ifconfig', intf, 'hw', 'ether', mac_str])
+
+        if len(self.ports) != max(self.ports.keys()) + 1:
+            raise Exception('only contiguous, zero-indexed port ranges'
+                            'supported: %s' % self.ports)
+        intfs = [self.ports[port] for port in self.ports.keys()]
+        self.cmdPrint('ovs-dpctl add-if dp' + str(self.dp) + ' ' +
+                      ' '.join(intfs))
+        # Run protocol daemon
+        self.cmdPrint('ovs-openflowd dp' + str(self.dp) + ' tcp:' +
+                      controllers['c0'].IP() + ':' +
+                      ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &')
+        self.execed = False
+
+    def stop(self):
+        '''Terminate kernel datapath.'''
+        quietRun('ovs-dpctl del-dp dp%i' % self.dp)
+        # In theory the interfaces should go away after we shut down.
+        # However, this takes time, so we're better off to remove them
+        # explicitly so that we won't get errors if we run before they
+        # have been removed by the kernel. Unfortunately this is very slow.
+        self.cmd('kill %ovs-openflowd')
         for intf in self.intfs:
             quietRun('ip link del ' + intf)
             lg.info('.')

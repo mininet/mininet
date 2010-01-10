@@ -53,7 +53,7 @@ import sys
 from time import sleep
 
 from mininet.logging_mod import lg
-from mininet.node import KernelSwitch
+from mininet.node import KernelSwitch, OVSKernelSwitch
 from mininet.util import quietRun, fixLimits
 from mininet.util import make_veth_pair, move_intf, retry, MOVEINTF_DELAY
 from mininet.xterm import cleanUpScreens, makeXterms
@@ -135,7 +135,7 @@ class Mininet(object):
         sw_dpid = None
         if self.auto_set_macs:
             sw_dpid = dpid
-        if self.switch is KernelSwitch:
+        if self.switch is KernelSwitch or self.switch is OVSKernelSwitch:
             sw = self.switch('s_' + self.topo.name(dpid), dp = self.dps,
                              dpid = sw_dpid)
             self.dps += 1
