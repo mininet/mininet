@@ -5,6 +5,7 @@
 '''
 
 from optparse import OptionParser
+import os.path
 import time
 
 try:
@@ -100,6 +101,8 @@ class MininetRunner(object):
         add_dict_option(opts, HOSTS, HOST_DEF, 'host')
         add_dict_option(opts, CONTROLLERS, CONTROLLER_DEF, 'controller')
 
+        opts.add_option('--custom', type = 'string', default = None,
+                        help = 'read custom mininet from current dir')
         opts.add_option('--test', type = 'choice', choices = TESTS,
                         default = TESTS[0],
                         help = '[' + ' '.join(TESTS) + ']')
@@ -137,6 +140,10 @@ class MininetRunner(object):
             raise Exception('multipath topos require multipath-capable '
                             'controller.')
 
+        if self.options.custom:
+            if not os.path.isfile(self.options.custom):
+                raise Exception('could not find custom file: %s' % custom)
+
     def begin(self):
         '''Create and run mininet.'''
 
@@ -156,10 +163,20 @@ class MininetRunner(object):
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
-        mn = Mininet(topo, switch, host, controller, controller_params,
-                     in_namespace = in_namespace,
-                     xterms = xterms, auto_set_macs = mac,
-                     auto_static_arp = arp)
+        mn = None
+        if not self.options.custom:
+            mn = Mininet(topo, switch, host, controller, controller_params,
+                         in_namespace = in_namespace,
+                         xterms = xterms, auto_set_macs = mac,
+                         auto_static_arp = arp)
+        else:
+            globals_ = {}
+            locals_ = {}
+            execfile(self.options.custom, globals_, locals_)
+            if 'mn' not in locals_:
+                raise Exception('could not find mn var in custom file')
+            else:
+                mn = locals_['mn']
 
         test = self.options.test
         if test != 'build':

@@ -1,0 +1,9 @@
+This directory should hold configuration files for custom mininets.
+
+See custom_example.py, which loads the default minimal topology.  The advantage of defining a mininet in a separate file is that you then use the --custom option in mn_run.py to run the CLI or specific tests with it.
+
+Each custom file must define a Mininet object for an 'mn' variable.
+
+To start up a mininet with this custom topology, do:
+  sudo mn_run.py --custom custom_example.py
+
