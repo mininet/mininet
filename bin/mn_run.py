@@ -35,7 +35,8 @@ if USE_RIPCORD:
          'tree1024': (lambda: TreeTopo(depth = 3, fanout = 32)),
          'fattree4': (lambda: FatTreeTopo(k = 4)),
          'fattree6': (lambda: FatTreeTopo(k = 6)),
-         'vl2': (lambda: VL2Topo(da = 4, di = 4))}
+         'vl2': (lambda: VL2Topo(da = 4, di = 4)),
+         'vl2reduced': (lambda: VL2Topo(da = 4, di = 4, edge_down = 1))}
     TOPOS.update(TOPOS_RIPCORD)
 
 SWITCH_DEF = 'kernel'
