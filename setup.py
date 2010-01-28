@@ -32,4 +32,4 @@ Insert longer description here.
         'setuptools'
     ],
     scripts=scripts,
-    package_dir={modname:''})
+)
