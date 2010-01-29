@@ -33,21 +33,18 @@ Bugs/limitations:
   For now, we recommend limiting CLI use to non-interactive
   commands which terminate in a reasonable amount of time.
 
-- We don't (yet) support command line history editing. This is
-  coming soon.
-
 """
 
 from subprocess import call
 import sys
+from cmd import Cmd
 
 from mininet.log import lg
 
-class CLI( object ):
+class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
 
-    cmds = [ '?', 'help', 'nodes', 'net', 'sh', 'pingAll', 'exit',
-            'pingPair', 'iperf', 'iperfUdp', 'intfs', 'dump' ]
+    prompt = 'mininet> '
 
     def __init__( self, mininet ):
         self.mn = mininet
@@ -57,24 +54,27 @@ class CLI( object ):
         for cname, cnode in self.mn.controllers.iteritems():
             self.nodemap[ cname ] = cnode
         self.nodelist = self.nodemap.values()
-        self.run()
+        Cmd.__init__( self )
+
+        lg.warn( '*** Starting CLI:\n' )
+        self.cmdloop()
 
     # Disable pylint "Unused argument: 'arg's'" messages.
     # Each CLI function needs the same interface.
     # pylint: disable-msg=W0613
 
-    # Commands
-    def help( self, args ):
-        "Semi-useful help for CLI."
-        helpStr = ( 'Available commands are:' + str( self.cmds ) + '\n'
-                   'You may also send a command to a node using:\n'
+    def do_help(self, arg):
+        "Describe available CLI commands."
+        Cmd.do_help(self, arg)
+        helpStr = ( 'You may also send a command to a node using:\n'
                    '  <node> command {args}\n'
                    'For example:\n'
                    '  mininet> h0 ifconfig\n'
                    '\n'
                    'The interpreter automatically substitutes IP '
                    'addresses\n'
-                   'for node names, so commands like\n'
+                   'for node names when a node is the first arg, so command'
+                   ' like\n'
                    '  mininet> h0 ping -c1 h1\n'
                    'should work.\n'
                    '\n\n'
@@ -82,14 +82,14 @@ class CLI( object ):
                    'so please limit commands to ones that do not\n'
                    'require user interaction and will terminate\n'
                    'after a reasonable amount of time.\n' )
-        print( helpStr )
+        self.stdout.write(helpStr)
 
-    def nodes( self, args ):
+    def do_nodes( self, args ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         lg.info( 'available nodes are: \n%s\n' % nodes )
 
-    def net( self, args ):
+    def do_net( self, args ):
         "List network connections."
         for switchDpid in self.mn.topo.switches():
             switch = self.mn.nodes[ switchDpid ]
@@ -99,81 +99,76 @@ class CLI( object ):
                 lg.info( ' %s' % node.name )
             lg.info( '\n' )
 
-    def sh( self, args ):
+    def do_sh( self, args ):
         "Run an external shell command"
         call( [ 'sh', '-c' ] + args )
 
-    def pingAll( self, args ):
+    def do_pingAll( self, args ):
         "Ping between all hosts."
         self.mn.pingAll()
 
-    def pingPair( self, args ):
+    def do_pingPair( self, args ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
 
-    def iperf( self, args ):
+    def do_iperf( self, args ):
         "Simple iperf TCP test between two hosts."
         self.mn.iperf()
 
-    def iperfUdp( self, args ):
+    def do_iperfUdp( self, args ):
         "Simple iperf UDP test between two hosts."
         udpBw = args[ 0 ] if len( args ) else '10M'
         self.mn.iperfUdp( udpBw )
 
-    def intfs( self, args ):
+    def do_intfs( self, args ):
         "List interfaces."
         for node in self.mn.nodes.values():
             lg.info( '%s: %s\n' % ( node.name, ' '.join( node.intfs ) ) )
 
-    def dump( self, args ):
+    def do_dump( self, args ):
         "Dump node info."
         for node in self.mn.nodes.values():
             lg.info( '%s\n' % node )
 
-    # Re-enable pylint "Unused argument: 'arg's'" messages.
-    # pylint: enable-msg=W0613
+    def do_exit( self, args ):
+        "Exit"
+        return 'exited by user command'
 
-    def run( self ):
-        "Read and execute commands."
-        lg.warn( '*** Starting CLI:\n' )
-        while True:
-            lg.warn( 'mininet> ' )
-            inputLine = sys.stdin.readline()
-            if inputLine == '':
-                break
-            if inputLine[ -1 ] == '\n':
-                inputLine = inputLine[ :-1 ]
-            cmd = inputLine.split( ' ' )
-            first = cmd[ 0 ]
-            rest = cmd[ 1: ]
-            if first in self.cmds and hasattr( self, first ):
-                getattr( self, first )( rest )
-            elif first in self.nodemap and rest != []:
-                node = self.nodemap[ first ]
-                # Substitute IP addresses for node names in command
-                rest = [ self.nodemap[ arg ].IP()
+    def do_quit( self, args ):
+        "Exit"
+        self.do_exit()
+
+    def default( self, line ):
+        """Called on an input line when the command prefix is not recognized.
+
+        Overridden to run shell commands when a node is the first CLI argument.
+        Past the first CLI argument, node names are automatically replaced with
+        corresponding IP addrs.
+        """
+        first, args, line = self.parseline( line )
+        if len(args) > 0 and args[ -1 ] == '\n':
+                args = args[ :-1 ]
+        rest = args.split( ' ' )
+
+        if first in self.nodemap:
+            node = self.nodemap[ first ]
+            # Substitute IP addresses for node names in command
+            rest = [ self.nodemap[ arg ].IP()
                     if arg in self.nodemap else arg
                     for arg in rest ]
-                rest = ' '.join( rest )
-                # Interactive commands don't work yet, and
-                # there are still issues with control-c
-                lg.warn( '*** %s: running %s\n' % ( node.name, rest ) )
-                node.sendCmd( rest )
-                while True:
-                    try:
-                        done, data = node.monitor()
-                        lg.info( '%s\n' % data )
-                        if done:
-                            break
-                    except KeyboardInterrupt:
-                        node.sendInt()
-            elif first == '':
-                pass
-            elif first in [ 'exit', 'quit' ]:
-                break
-            elif first == '?':
-                self.help( rest )
-            else:
-                lg.error( 'CLI: unknown node or command: < %s >\n' % first )
-            #lg.info( '*** CLI: command complete\n' )
-        return 'exited by user command'
+            rest = ' '.join( rest )
+            # Run cmd on node:
+            node.sendCmd( rest )
+            while True:
+                try:
+                    done, data = node.monitor()
+                    lg.info( '%s\n' % data )
+                    if done:
+                        break
+                except KeyboardInterrupt:
+                    node.sendInt()
+        else:
+            self.stdout.write('*** Unknown syntax: %s\n'%line)
+
+    # Re-enable pylint "Unused argument: 'arg's'" messages.
+    # pylint: enable-msg=W0613
