@@ -57,8 +57,8 @@ CONTROLLERS = { 'ref': Controller,
                'none': lambda a, b: None }
 
 # optional tests to run
-TESTS = [ 'cli', 'build', 'ping_all', 'ping_pair', 'iperf', 'all',
-    'iperf_udp' ]
+TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all',
+    'iperfUdp' ]
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
@@ -120,7 +120,7 @@ class MininetRunner( object ):
         opts.add_option( '--port', type='string', default=6633,
                         help='[port integer for a listening remote'
                         ' controller]' )
-        opts.add_option( '--in_namespace', action='store_true',
+        opts.add_option( '--inNamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
         self.options = opts.parse_args()[ 0 ]
 
