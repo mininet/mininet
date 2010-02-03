@@ -14,7 +14,7 @@ try:
 except ImportError:
     USE_RIPCORD = False
 
-from mininet.logging_mod import lg, LEVELS
+from mininet.log import lg, LEVELS
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch

@@ -6,7 +6,7 @@ from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 
-from mininet.logging_mod import lg
+from mininet.log import lg
 
 
 def run(cmd):

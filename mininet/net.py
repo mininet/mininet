@@ -52,7 +52,7 @@ from subprocess import call
 import sys
 from time import sleep
 
-from mininet.logging_mod import lg
+from mininet.log import lg
 from mininet.node import KernelSwitch, OVSKernelSwitch
 from mininet.util import quietRun, fixLimits
 from mininet.util import make_veth_pair, move_intf, retry, MOVEINTF_DELAY

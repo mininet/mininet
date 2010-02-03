@@ -78,7 +78,7 @@ class MininetLogger(Logger, object):
 
     Enable each mininet .py file to with one import:
 
-       from mininet.logging_mod import lg
+       from mininet.log import lg
 
     ...get a default logger that doesn't require one newline per logging call.
 

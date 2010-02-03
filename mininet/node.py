@@ -9,7 +9,7 @@ import select
 
 flush = sys.stdout.flush
 
-from mininet.logging_mod import lg
+from mininet.log import lg
 from mininet.util import quietRun, macColonHex, ipStr
 
 
