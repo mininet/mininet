@@ -143,7 +143,8 @@ class MininetRunner(object):
 
         if self.options.custom:
             if not os.path.isfile(self.options.custom):
-                raise Exception('could not find custom file: %s' % custom)
+                raise Exception('could not find custom file: %s' %
+                    self.options.custom)
 
     def begin(self):
         '''Create and run mininet.'''
