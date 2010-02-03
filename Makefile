@@ -1,12 +1,17 @@
 all: codecheck test
 
 clean:
-	rm -rf build dist build *.egg-info *.pyc
+	rm -rf build dist *.egg-info *.pyc
 
-codecheck: mininet/*.py mininet/test/*.py
-	pyflakes mininet/*.py mininet/test/*.py bin/*.py
-	pylint --rcfile=.pylint mininet/*.py mininet/test/*.py bin/*.py
-	pep8 --ignore=E251 mininet/*.py mininet/test/*.py bin/*.py
+MININET = mininet/*.py
+TEST = mininet/test/*.py
+BIN = bin/mn bin/mnclean
+PYSRC = $(MININET) $(TEST) $(BIN)
 
-test: mininet/*.py mininet/test/*.py
+codecheck: $(PYSRC)
+	pyflakes $(PYSRC)
+	pylint --rcfile=.pylint $(PYSRC)
+	pep8 --ignore=E251 $(PYSRC)
+
+test: $(MININET) $(TEST)
 	mininet/test/test_nets.py
