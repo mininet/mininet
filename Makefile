@@ -8,10 +8,12 @@ TEST = mininet/test/*.py
 BIN = bin/mn bin/mnclean
 PYSRC = $(MININET) $(TEST) $(BIN)
 
+P8IGN = E251,E201,E302
+
 codecheck: $(PYSRC)
 	pyflakes $(PYSRC)
 	pylint --rcfile=.pylint $(PYSRC)
-	pep8 --ignore=E251 $(PYSRC)
+	pep8 --ignore=$(P8IGN) $(PYSRC)
 
 test: $(MININET) $(TEST)
 	mininet/test/test_nets.py

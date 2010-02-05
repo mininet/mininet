@@ -130,7 +130,7 @@ class MininetRunner(object):
         '''Setup and validate environment.'''
 
         # set logging verbosity
-        lg.set_loglevel(self.options.verbosity)
+        lg.setLogLevel(self.options.verbosity)
 
         # validate environment setup
         init()

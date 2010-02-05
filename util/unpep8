@@ -1,16 +1,16 @@
 #!/usr/bin/python
 
 """
-unpep8: 
-
 Translate from PEP8 Python style to Mininet (i.e. Arista-like) 
-Python style:
+Python style
 
-- Reinstates CapWords for methods and instance variables.
-- Gets rid of triple single quotes.
-- Eliminates triple quotes on single lines.
-- Inserts extra spaces to improve readability.
-- Fixes Doxygen (or doxypy) ugliness.
+usage: unpep8 < old.py > new.py
+
+- Reinstates CapWords for methods and instance variables
+- Gets rid of triple single quotes
+- Eliminates triple quotes on single lines
+- Inserts extra spaces to improve readability
+- Fixes Doxygen (or doxypy) ugliness
 
 Does the following translations:
 
