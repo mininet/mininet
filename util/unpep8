@@ -1,0 +1,198 @@
+#!/usr/bin/python
+
+"""
+unpep8: 
+
+Translate from PEP8 Python style to Mininet (i.e. Arista-like) 
+Python style:
+
+- Reinstates CapWords for methods and instance variables.
+- Gets rid of triple single quotes.
+- Eliminates triple quotes on single lines.
+- Inserts extra spaces to improve readability.
+- Fixes Doxygen (or doxypy) ugliness.
+
+Does the following translations:
+
+ClassName.method_name(foo = bar) -> ClassName.methodName( foo=bar )
+
+Triple-single-quotes -> triple-double-quotes
+
+@param foo description -> foo: description
+@return description    -> returns: description
+@author me             -> author: me
+@todo(me)              -> TODO(me)
+
+Bugs/Limitations:
+
+- Hack to restore strings is ugly
+- Multiline strings get mangled
+- Comments are mangled (which is arguably the "right thing" to do, except
+  that, for example, the left hand sides of the above would get translated!)
+- Doesn't eliminate unnecessary backslashes
+- Has no opinion on tab size
+- complicated indented docstrings get flattened
+- We don't (yet) have a filter to generate Doxygen/Doxypy
+- Currently leaves indents on blank comment lines
+- May lead to namespace collisions (e.g. some_thing and someThing)
+
+Bob Lantz, rlantz@cs.stanford.edu
+1/24/2010
+"""
+
+import re, sys
+
+def fixUnderscoreTriplet( match ):
+   "Translate a matched triplet of the form a_b to aB."
+   triplet = match.group()
+   return triplet[ :-2 ] + triplet[ -1 ].capitalize()
+
+def reinstateCapWords( text ):
+   underscoreTriplet = re.compile( r'[A-Za-z0-9]_[A-Za-z0-9]' )
+   return underscoreTriplet.sub( fixUnderscoreTriplet, text )
+ 
+def replaceTripleApostrophes( text ):
+   "Replace triple apostrophes with triple quotes."
+   return text.replace( "'''", '"""')
+
+def simplifyTripleQuotes( text ):
+   "Fix single-line doc strings."
+   r = re.compile( r'"""([^\"\n]+)"""' )
+   return r.sub( r'"\1"', text )
+   
+def insertExtraSpaces( text ):
+   "Insert extra spaces inside of parentheses and brackets/curly braces."
+   lparen = re.compile( r'\((?![\s\)])' )
+   text = lparen.sub( r'( ', text )
+   rparen = re.compile( r'([^\s\(])(?=\))' )
+   text = rparen.sub( r'\1 ', text)
+   # brackets
+   lbrack = re.compile( r'\[(?![\s\]])' )
+   text = lbrack.sub( r'[ ', text )
+   rbrack = re.compile( r'([^\s\[])(?=\])' )
+   text = rbrack.sub( r'\1 ', text)
+   # curly braces
+   lcurly = re.compile( r'\{(?![\s\}])' )
+   text = lcurly.sub( r'{ ', text )
+   rcurly = re.compile( r'([^\s\{])(?=\})' )
+   text = rcurly.sub( r'\1 ', text)   
+   return text
+   
+def fixDoxygen( text ):
+   """Translate @param foo to foo:, @return bar to returns: bar, and
+      @author me to author: me"""
+   param = re.compile( r'@param (\w+)' )
+   text = param.sub( r'\1:', text )
+   returns = re.compile( r'@return' )
+   text = returns.sub( r'returns:', text )
+   author = re.compile( r'@author' )
+   text = author.sub( r'author:', text)
+   # @todo -> TODO
+   text = text.replace( '@todo', 'TODO' )
+   return text
+
+def removeCommentFirstBlankLine( text ):
+   "Remove annoying blank lines after first line in comments."
+   line = re.compile( r'("""[^\n]*\n)\s*\n', re.MULTILINE )
+   return line.sub( r'\1', text )
+   
+def fixArgs( match, kwarg = re.compile( r'(\w+) = ' ) ):
+   "Replace foo = bar with foo=bar."
+   return kwarg.sub( r'\1=', match.group() )
+   
+def fixKeywords( text ):
+   "Change keyword argumentsfrom foo = bar to foo=bar."
+   args = re.compile( r'\(([^\)]+)\)', re.MULTILINE )
+   return args.sub( fixArgs, text )
+
+# Unfortunately, Python doesn't natively support balanced or recursive
+# regular expressions. We could use PyParsing, but that opens another can
+# of worms. For now, we just have a cheap hack to restore strings,
+# so we don't end up accidentally mangling things like messages, search strings,
+# and regular expressions.
+
+def lineIter( text ):
+   "Simple iterator over lines in text."
+   for line in text.splitlines(): yield line
+   
+def stringIter( strList ):
+   "Yield strings in strList."
+   for s in strList: yield s
+
+def restoreRegex( regex, old, new ):
+   "Find regexes in old and restore them into new."
+   oldStrs = regex.findall( old )
+   # Sanity check - count should be the same!
+   newStrs = regex.findall( new )
+   assert len( oldStrs ) == len( newStrs )
+   # Replace newStrs with oldStrs
+   siter = stringIter( oldStrs )
+   reps = lambda dummy: siter.next()
+   return regex.sub( reps, new )
+
+# This is a cheap hack, and it may not work 100%, since
+# it doesn't handle multiline strings.
+# However, it should be mostly harmless...
+   
+def restoreStrings( oldText, newText ):
+   "Restore strings from oldText into newText, returning result."
+   oldLines, newLines = lineIter( oldText ), lineIter( newText )
+   quoteStrings = re.compile( r'("[^"]*")' )
+   tickStrings = re.compile( r"('[^']*')" )
+   result = ''
+   # It would be nice if we could blast the whole file, but for
+   # now it seems to work line-by-line
+   for newLine in newLines:
+      oldLine = oldLines.next()
+      newLine = restoreRegex( quoteStrings, oldLine, newLine )
+      newLine = restoreRegex( tickStrings, oldLine, newLine )
+      result += newLine + '\n'
+   return result
+   
+# This might be slightly controversial, since it uses
+# three spaces to line up multiline comments. However,
+# I much prefer it. Limitations: if you have deeper
+# indents in comments, they will be eliminated. ;-(
+
+def fixComment( match, 
+   indentExp=re.compile( r'\n([ ]*)(?=[^/s])', re.MULTILINE ),
+   trailingQuotes=re.compile( r'\s+"""' ) ):
+   "Re-indent comment, and join trailing quotes."
+   originalIndent = match.group( 1 )
+   comment = match.group( 2 )
+   indent = '\n' + originalIndent
+   # Exception: leave unindented things unindented!
+   if len( originalIndent ) is not 0: indent += '   '
+   comment = indentExp.sub( indent, comment )
+   return originalIndent + trailingQuotes.sub( '"""', comment )
+   
+def fixCommentIndents( text ):
+   "Fix multiline comment indentation."
+   comments = re.compile( r'^([ ]*)("""[^"]*""")$', re.MULTILINE )
+   return comments.sub( fixComment, text )
+ 
+def removeBogusLinefeeds( text ):
+   "Remove extra linefeeds at the end of single-line comments."
+   bogusLfs = re.compile( r'"([^"\n]*)\n"', re.MULTILINE )
+   return bogusLfs.sub( '"\1"', text)
+   
+def convertFromPep8( program ):
+   oldProgram = program
+   # Program text transforms
+   program = reinstateCapWords( program )
+   program = fixKeywords( program )
+   program = insertExtraSpaces( program )
+   # Undo string damage
+   program = restoreStrings( oldProgram, program )
+   # Docstring transforms
+   program = replaceTripleApostrophes( program )
+   program = simplifyTripleQuotes( program )
+   program = fixDoxygen( program )
+   program = fixCommentIndents( program )
+   program = removeBogusLinefeeds( program )
+   # Destructive transforms (these can delete lines)
+   program = removeCommentFirstBlankLine( program )
+   return program
+
+if __name__ == '__main__':
+   print convertFromPep8( sys.stdin.read() )
