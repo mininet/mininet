@@ -53,7 +53,7 @@ disable-msg-cat=IR
 #enable-msg=
 
 # Disable the message(s) with the given id(s).
-disable-msg=W0704,C0103,W0231,E1102
+disable-msg=W0704,C0103,W0231,E1102,W0511
 
 
 [REPORTS]
