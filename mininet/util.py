@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 "Utility functions for Mininet."
 
 from time import sleep

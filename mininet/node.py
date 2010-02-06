@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Node objects for Mininet.
 

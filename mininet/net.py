@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """
 
     Mininet: A simple networking testbed for OpenFlow!

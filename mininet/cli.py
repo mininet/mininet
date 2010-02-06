@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 """
 A simple command-line interface for Mininet.
 

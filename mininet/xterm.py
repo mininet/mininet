@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 XTerm creation and cleanup.
 Utility functions to run an xterm (connected via screen(1)) on each host.
