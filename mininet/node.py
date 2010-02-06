@@ -26,7 +26,8 @@ Controller: superclass for OpenFlow controllers. The default controller
 NOXController: a controller node using NOX (noxrepo.org).
 
 RemoteController: a remote controller node, which may use any
-    arbitrary OpenFlow-compatible controller.
+    arbitrary OpenFlow-compatible controller, and which is not
+    created or managed by mininet.
 """
 
 from subprocess import Popen, PIPE, STDOUT
@@ -142,7 +143,7 @@ class Node( object ):
 
     def waitOutput( self ):
         """Wait for a command to complete.
-           Completion is signaled by a sentinel character, ASCII( 127 )
+           Completion is signaled by a sentinel character, ASCII(127)
            appearing in the output stream.  Wait for the sentinel and return
            the output, including trailing newline."""
         assert self.waiting
@@ -404,7 +405,7 @@ class OVSKernelSwitch( Switch ):
 
 
 class Controller( Node ):
-    """A Controller is a Node that is running ( or has execed ) an
+    """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, controller='controller',
