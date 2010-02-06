@@ -28,7 +28,7 @@ class Node( object ):
         if self.inNamespace:
             cmd = [ 'netns' ] + cmd
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-            closeFds=closeFds )
+            close_fds=closeFds )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
         self.pollOut = select.poll()

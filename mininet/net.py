@@ -1,7 +1,10 @@
 #!/usr/bin/python
-"""Mininet: A simple networking testbed for OpenFlow!
-author: Bob Lantz ( rlantz@cs.stanford.edu )
-author: Brandon Heller ( brandonh@stanford.edu )
+"""
+
+    Mininet: A simple networking testbed for OpenFlow!
+
+author: Bob Lantz (rlantz@cs.stanford.edu)
+author: Brandon Heller (brandonh@stanford.edu)
 
 Mininet creates scalable OpenFlow test networks by using
 process-based virtualization and network namespaces.
@@ -11,9 +14,9 @@ namespaces. This allows a complete OpenFlow network to be simulated on
 top of a single Linux kernel.
 
 Each host has:
-A virtual console ( pipes to a shell )
-A virtual interfaces ( half of a veth pair )
-A parent shell ( and possibly some child processes ) in a namespace
+A virtual console (pipes to a shell)
+A virtual interfaces (half of a veth pair)
+A parent shell (and possibly some child processes) in a namespace
 
 Hosts have a network interface which is configured via ifconfig/ip
 link/etc.
@@ -24,24 +27,28 @@ from the OpenFlow reference implementation.
 In kernel datapath mode, the controller and switches are simply
 processes in the root namespace.
 
-Kernel OpenFlow datapaths are instantiated using dpctl( 8 ), and are
+Kernel OpenFlow datapaths are instantiated using dpctl(8), and are
 attached to the one side of a veth pair; the other side resides in the
 host namespace. In this mode, switch processes can simply connect to the
 controller via the loopback interface.
 
 In user datapath mode, the controller and switches are full-service
 nodes that live in their own network namespaces and have management
-interfaces and IP addresses on a control network ( e.g. 10.0.123.1,
-currently routed although it could be bridged. )
+interfaces and IP addresses on a control network (e.g. 10.0.123.1,
+currently routed although it could be bridged.)
 
 In addition to a management interface, user mode switches also have
 several switch interfaces, halves of veth pairs whose other halves
 reside in the host nodes that the switches are connected to.
 
 Naming:
-Host nodes are named h1-hN
-Switch nodes are named s0-sN
-Interfaces are named { nodename }-eth0 .. { nodename }-ethN,"""
+
+    Host nodes are named h1-hN
+    Switch nodes are named s0-sN
+    Interfaces are named { nodename }-eth0 .. { nodename }-ethN
+
+"""
+
 import os
 import re
 import signal
@@ -79,7 +86,7 @@ class Mininet( object ):
                  autoSetMacs=False, autoStaticArp=False ):
         """Create Mininet object.
            topo: Topo object
-            switch: Switch class
+           switch: Switch class
            host: Host class
            controller: Controller class
            cparams: ControllerParams object
@@ -219,7 +226,8 @@ class Mininet( object ):
         lg.info( '\n' )
         lg.info( '*** Testing control network\n' )
         while not controller.intfIsUp( controller.intfs[ 0 ] ):
-            lg.info( '*** Waiting for %s to come up\n', controller.intfs[ 0 ] )
+            lg.info( '*** Waiting for %s to come up\n',
+                controller.intfs[ 0 ] )
             sleep( 1 )
         for switchDpid in self.topo.switches():
             switch = self.nodes[ switchDpid ]
@@ -509,21 +517,21 @@ class MininetCLI( object ):
     # Commands
     def help( self, args ):
         "Semi-useful help for CLI."
-        helpStr = ( 'Available commands are:' + str( self.cmds ) + '\n' +
-                   'You may also send a command to a node using:\n' +
-                   '  <node> command {args}\n' +
-                   'For example:\n' +
-                   '  mininet> h0 ifconfig\n' +
-                   '\n' +
-                   'The interpreter automatically substitutes IP ' +
-                   'addresses\n' +
-                   'for node names, so commands like\n' +
-                   '  mininet> h0 ping -c1 h1\n' +
-                   'should work.\n' +
-                   '\n\n' +
-                   'Interactive commands are not really supported yet,\n' +
-                   'so please limit commands to ones that do not\n' +
-                   'require user interaction and will terminate\n' +
+        helpStr = ( 'Available commands are:' + str( self.cmds ) + '\n'
+                   'You may also send a command to a node using:\n'
+                   '  <node> command {args}\n'
+                   'For example:\n'
+                   '  mininet> h0 ifconfig\n'
+                   '\n'
+                   'The interpreter automatically substitutes IP '
+                   'addresses\n'
+                   'for node names, so commands like\n'
+                   '  mininet> h0 ping -c1 h1\n'
+                   'should work.\n'
+                   '\n\n'
+                   'Interactive commands are not really supported yet,\n'
+                   'so please limit commands to ones that do not\n'
+                   'require user interaction and will terminate\n'
                    'after a reasonable amount of time.\n' )
         print( helpStr )
 

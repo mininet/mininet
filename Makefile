@@ -17,3 +17,9 @@ codecheck: $(PYSRC)
 
 test: $(MININET) $(TEST)
 	mininet/test/test_nets.py
+
+install:
+	python setup.py install
+
+
+

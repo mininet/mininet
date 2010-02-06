@@ -100,7 +100,7 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
        intf: string, interface
        node: Node object
        printError: if true, print error"""
-    retry( retries, delaySecs, moveIntf, intf, node, printError )
+    retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
 
 def createLink( node1, node2, retries=10, delaySecs=0.001 ):
     """Create a link between nodes, making an interface for each.
