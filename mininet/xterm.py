@@ -2,9 +2,9 @@
 
 """
 XTerm creation and cleanup.
-Utility functions to run an xterm ( connected via screen( 1 ) ) on each host.
+Utility functions to run an xterm (connected via screen(1)) on each host.
 
-Requires xterm( 1 ) and GNU screen( 1 ).
+Requires xterm(1) and GNU screen(1).
 """
 
 import re

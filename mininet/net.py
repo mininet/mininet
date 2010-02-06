@@ -14,6 +14,7 @@ namespaces. This allows a complete OpenFlow network to be simulated on
 top of a single Linux kernel.
 
 Each host has:
+
 A virtual console (pipes to a shell)
 A virtual interfaces (half of a veth pair)
 A parent shell (and possibly some child processes) in a namespace

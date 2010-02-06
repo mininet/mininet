@@ -1,5 +1,35 @@
 #!/usr/bin/env python
-"Node objects for Mininet."
+
+"""
+Node objects for Mininet.
+
+Nodes provide a simple abstraction for interacting with
+hosts, switches and controllers. Local nodes are simply
+one or more processes on the local machine.
+
+Node: superclass for all (currently only local) network nodes.
+
+Host: a virtual host.
+
+Switch: superclass for switch nodes.
+
+UserSwitch: a switch using the user-space switch from the OpenFlow
+    reference implementation.
+
+KernelSwitch: a switch using the kernel switch from the OpenFlow reference
+    implementation.
+
+OVSSwitch: a switch using the OpenVSwitch OpenFlow-compatible switch
+    implementation (openvswitch.org).
+
+Controller: superclass for OpenFlow controllers. The default controller
+    is controller(8) from the reference implementation.
+
+NOXController: a controller node using NOX (noxrepo.org).
+
+RemoteController: a remote controller node, which may use any
+    arbitrary OpenFlow-compatible controller.
+"""
 
 from subprocess import Popen, PIPE, STDOUT
 import os
