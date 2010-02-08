@@ -1,11 +1,11 @@
 """
 Node objects for Mininet.
 
-Nodes provide a simple abstraction for interacting with
-hosts, switches and controllers. Local nodes are simply
-one or more processes on the local machine.
+Nodes provide a simple abstraction for interacting with hosts, switches
+and controllers. Local nodes are simply one or more processes on the local
+machine.
 
-Node: superclass for all (currently only local) network nodes.
+Node: superclass for all (primarily local) network nodes.
 
 Host: a virtual host.
 
@@ -33,20 +33,18 @@ RemoteController: a remote controller node, which may use any
 from subprocess import Popen, PIPE, STDOUT
 import os
 import signal
-import sys
 import select
 
-flush = sys.stdout.flush
-
-from mininet.log import lg
+from mininet.log import info, error
 from mininet.util import quietRun, macColonHex, ipStr
 
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
-    inToNode = {}
-    outToNode = {}
+
+    inToNode = {} # mapping of input fds to nodes
+    outToNode = {} # mapping of output fds to nodes
 
     def __init__( self, name, inNamespace=True ):
         self.name = name
@@ -71,28 +69,29 @@ class Node( object ):
         self.intfCount = 0
         self.intfs = [] # list of interface names, as strings
         self.ips = {} # dict of interfaces to ip addresses as strings
-        self.connection = {}
+        self.connection = {} # remote node connected to each interface
         self.waiting = False
         self.execed = False
         self.ports = {} # dict of ints to interface strings
                         # replace with Port object, eventually
 
-    def fdToNode( self, f ):
-        """Insert docstring.
-           f: unknown
-           returns: bool unknown"""
-        node = self.outToNode.get( f )
-        return node or self.inToNode.get( f )
+    @classmethod
+    def fdToNode( cls, fd ):
+        """Return node corresponding to given file descriptor.
+           fd: file descriptor
+           returns: node"""
+        node = Node.outToNode.get( fd )
+        return node or Node.inToNode.get( fd )
 
     def cleanup( self ):
         "Help python collect its garbage."
         self.shell = None
 
     # Subshell I/O, commands and control
-    def read( self, filenoMax ):
-        """Insert docstring.
-           filenoMax: unknown"""
-        return os.read( self.stdout.fileno(), filenoMax )
+    def read( self, bytes ):
+        """Read from a node.
+           bytes: maximum number of bytes to read"""
+        return os.read( self.stdout.fileno(), bytes )
 
     def write( self, data ):
         """Write data to node.
@@ -100,7 +99,7 @@ class Node( object ):
         os.write( self.stdin.fileno(), data )
 
     def terminate( self ):
-        "Send kill signal to Node and cleanup after it."
+        "Send kill signal to Node and clean up after it."
         os.kill( self.pid, signal.SIGKILL )
         self.cleanup()
 
@@ -109,7 +108,7 @@ class Node( object ):
         self.terminate()
 
     def waitReadable( self ):
-        "Poll on node."
+        "Wait until node's output is readable."
         self.pollOut.poll()
 
     def sendCmd( self, cmd ):
@@ -127,7 +126,7 @@ class Node( object ):
         self.waiting = True
 
     def monitor( self ):
-        "Monitor the output of a command, returning (done, data)."
+        "Monitor the output of a command, returning (done?, data)."
         assert self.waiting
         self.waitReadable()
         data = self.read( 1024 )
@@ -138,7 +137,7 @@ class Node( object ):
             return False, data
 
     def sendInt( self ):
-        "Send ^C, hopefully interrupting a running subprocess."
+        "Send ^C, hopefully interrupting an interactive subprocess."
         self.write( chr( 3 ) )
 
     def waitOutput( self ):
@@ -168,9 +167,9 @@ class Node( object ):
     def cmdPrint( self, cmd ):
         """Call cmd and printing its output
            cmd: string"""
-        #lg.info( '*** %s : %s', self.name, cmd )
+        #info( '*** %s : %s', self.name, cmd )
         result = self.cmd( cmd )
-        #lg.info( '%s\n', result )
+        #info( '%s\n', result )
         return result
 
     # Interface management, configuration, and routing
@@ -249,7 +248,7 @@ class Host( Node ):
 
 
 class Switch( Node ):
-    """A Switch is a Node that is running ( or has execed )
+    """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
     def sendCmd( self, cmd ):
@@ -258,7 +257,7 @@ class Switch( Node ):
         if not self.execed:
             return Node.sendCmd( self, cmd )
         else:
-            lg.error( '*** Error: %s has execed and cannot accept commands' %
+            error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
 
     def monitor( self ):
@@ -280,7 +279,7 @@ class UserSwitch( Switch ):
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
-           Log to /tmp/sN-{ ofd,ofp }.log.
+           Log to /tmp/sN-{ofd,ofp}.log.
            controllers: dict of controller names to objects"""
         if 'c0' not in controllers:
             raise Exception( 'User datapath start() requires controller c0' )
@@ -289,11 +288,13 @@ class UserSwitch( Switch ):
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
         intfs = self.intfs
-        self.cmdPrint( 'ofdatapath -i ' + ','.join( intfs ) + ' punix:/tmp/' +
-                      self.name + ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
-        self.cmdPrint( 'ofprotocol unix:/tmp/' + self.name + ' tcp:' +
-                      controller.IP() + ' --fail=closed 1> ' + ofplog + ' 2>' +
-                      ofplog + ' &' )
+
+        self.cmdPrint( 'ofdatapath -i ' + ','.join( intfs ) +
+            ' punix:/tmp/' + self.name +
+            ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
+        self.cmdPrint( 'ofprotocol unix:/tmp/' + self.name +
+            ' tcp:' + controller.IP() + ' --fail=closed' +
+            ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
     def stop( self ):
         "Stop OpenFlow reference user datapath."
@@ -308,7 +309,7 @@ class KernelSwitch( Switch ):
     def __init__( self, name, dp=None, dpid=None ):
         """Init.
            name:
-           dp: netlink id ( 0, 1, 2, ... )
+           dp: netlink id (0, 1, 2, ...)
            dpid: datapath ID as unsigned int; random value if None"""
         Switch.__init__( self, name, inNamespace=False )
         self.dp = dp
@@ -350,7 +351,7 @@ class KernelSwitch( Switch ):
         self.cmd( 'kill %ofprotocol' )
         for intf in self.intfs:
             quietRun( 'ip link del ' + intf )
-            lg.info( '.' )
+            info( '.' )
 
 
 class OVSKernelSwitch( Switch ):
@@ -360,7 +361,7 @@ class OVSKernelSwitch( Switch ):
     def __init__( self, name, dp=None, dpid=None ):
         """Init.
            name:
-           dp: netlink id ( 0, 1, 2, ... )
+           dp: netlink id (0, 1, 2, ...)
            dpid: datapath ID as unsigned int; random value if None"""
         Switch.__init__( self, name, inNamespace=False )
         self.dp = dp
@@ -401,7 +402,7 @@ class OVSKernelSwitch( Switch ):
         self.cmd( 'kill %ovs-openflowd' )
         for intf in self.intfs:
             quietRun( 'ip link del ' + intf )
-            lg.info( '.' )
+            info( '.' )
 
 
 class Controller( Node ):
@@ -465,7 +466,7 @@ class NOX( Controller ):
             raise Exception( 'please set NOX_CORE_DIR env var\n' )
         Controller.__init__( self, name,
             controller=noxCoreDir + '/nox_core',
-            cargs='--libdir=/usr/local/lib -v -i ptcp: ' + \
+            cargs='--libdir=/usr/local/lib -v -i ptcp: ' +
                     ' '.join( noxArgs ),
             cdir = noxCoreDir, **kwargs )
 
