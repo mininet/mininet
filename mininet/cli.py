@@ -46,7 +46,7 @@ from mininet.log import lg
 class CLI( object ):
     "Simple command-line interface to talk to nodes."
 
-    cmds = [ '?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit', \
+    cmds = [ '?', 'help', 'nodes', 'net', 'sh', 'ping_all', 'exit',
             'ping_pair', 'iperf', 'iperf_udp', 'intfs', 'dump' ]
 
     def __init__( self, mininet ):
