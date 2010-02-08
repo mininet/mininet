@@ -55,7 +55,7 @@ import signal
 from time import sleep
 
 from mininet.cli import CLI
-from mininet.log import lg
+from mininet.log import info, error
 from mininet.node import KernelSwitch, OVSKernelSwitch
 from mininet.util import quietRun, fixLimits
 from mininet.util import makeIntfPair, moveIntf
@@ -121,7 +121,7 @@ class Mininet( object ):
         # for now, assume one interface per host.
         host.intfs.append( 'h_' + self.topo.name( dpid ) + '-eth0' )
         self.nodes[ dpid ] = host
-        #lg.info( '%s ' % host.name )
+        #info( '%s ' % host.name )
 
     def _addSwitch( self, dpid ):
         """Add switch.
@@ -152,14 +152,14 @@ class Mininet( object ):
         dstNode.intfs.append( dstIntf )
         srcNode.ports[ srcPort ] = srcIntf
         dstNode.ports[ dstPort ] = dstIntf
-        #lg.info( '\n' )
-        #lg.info( 'added intf %s to src node %x\n' % ( srcIntf, src ) )
-        #lg.info( 'added intf %s to dst node %x\n' % ( dstIntf, dst ) )
+        #info( '\n' )
+        #info( 'added intf %s to src node %x\n' % ( srcIntf, src ) )
+        #info( 'added intf %s to dst node %x\n' % ( dstIntf, dst ) )
         if srcNode.inNamespace:
-            #lg.info( 'moving src w/inNamespace set\n' )
+            #info( 'moving src w/inNamespace set\n' )
             moveIntf( srcIntf, srcNode )
         if dstNode.inNamespace:
-            #lg.info( 'moving dst w/inNamespace set\n' )
+            #info( 'moving dst w/inNamespace set\n' )
             moveIntf( dstIntf, dstNode )
         srcNode.connection[ srcIntf ] = ( dstNode, dstIntf )
         dstNode.connection[ dstIntf ] = ( srcNode, srcIntf )
@@ -201,19 +201,18 @@ class Mininet( object ):
            For use with the user datapath only right now.
            TODO( brandonh ) test this code!
            """
-
         # params were: controller, switches, ips
 
         controller = self.controllers[ 'c0' ]
-        lg.info( '%s <-> ' % controller.name )
+        info( '%s <-> ' % controller.name )
         for switchDpid in self.topo.switches():
             switch = self.nodes[ switchDpid ]
-            lg.info( '%s ' % switch.name )
+            info( '%s ' % switch.name )
             sip = self.topo.ip( switchDpid )#ips.next()
             sintf = switch.intfs[ 0 ]
             node, cintf = switch.connection[ sintf ]
             if node != controller:
-                lg.error( '*** Error: switch %s not connected to correct'
+                error( '*** Error: switch %s not connected to correct'
                          'controller' %
                          switch.name )
                 exit( 1 )
@@ -222,22 +221,22 @@ class Mininet( object ):
             switch.setIP( sintf, sip, '/' + self.cparams.subnetSize )
             controller.setHostRoute( sip, cintf )
             switch.setHostRoute( self.cparams.ip, sintf )
-        lg.info( '\n' )
-        lg.info( '*** Testing control network\n' )
+        info( '\n' )
+        info( '*** Testing control network\n' )
         while not controller.intfIsUp( controller.intfs[ 0 ] ):
-            lg.info( '*** Waiting for %s to come up\n',
+            info( '*** Waiting for %s to come up\n',
                 controller.intfs[ 0 ] )
             sleep( 1 )
         for switchDpid in self.topo.switches():
             switch = self.nodes[ switchDpid ]
             while not switch.intfIsUp( switch.intfs[ 0 ] ):
-                lg.info( '*** Waiting for %s to come up\n' %
+                info( '*** Waiting for %s to come up\n' %
                     switch.intfs[ 0 ] )
                 sleep( 1 )
             if self.ping( hosts=[ switch, controller ] ) != 0:
-                lg.error( '*** Error: control network test failed\n' )
+                error( '*** Error: control network test failed\n' )
                 exit( 1 )
-        lg.info( '\n' )
+        info( '\n' )
 
     def _configHosts( self ):
         "Configure a set of hosts."
@@ -250,8 +249,8 @@ class Mininet( object ):
             host.setDefaultRoute( hintf )
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
-            lg.info( '%s ', host.name )
-        lg.info( '\n' )
+            info( '%s ', host.name )
+        info( '\n' )
 
     def build( self ):
         """Build mininet.
@@ -260,28 +259,28 @@ class Mininet( object ):
         if self.cleanup:
             pass # cleanup
         # validate topo?
-        lg.info( '*** Adding controller\n' )
+        info( '*** Adding controller\n' )
         self._addController( self.controller )
-        lg.info( '*** Creating network\n' )
-        lg.info( '*** Adding hosts:\n' )
+        info( '*** Creating network\n' )
+        info( '*** Adding hosts:\n' )
         for host in sorted( self.topo.hosts() ):
             self._addHost( host )
-            lg.info( '0x%x ' % host )
-        lg.info( '\n*** Adding switches:\n' )
+            info( '0x%x ' % host )
+        info( '\n*** Adding switches:\n' )
         for switch in sorted( self.topo.switches() ):
             self._addSwitch( switch )
-            lg.info( '0x%x ' % switch )
-        lg.info( '\n*** Adding edges:\n' )
+            info( '0x%x ' % switch )
+        info( '\n*** Adding edges:\n' )
         for src, dst in sorted( self.topo.edges() ):
             self._addLink( src, dst )
-            lg.info( '(0x%x, 0x%x) ' % ( src, dst ) )
-        lg.info( '\n' )
+            info( '(0x%x, 0x%x) ' % ( src, dst ) )
+        info( '\n' )
 
         if self.inNamespace:
-            lg.info( '*** Configuring control network\n' )
+            info( '*** Configuring control network\n' )
             self._configureControlNetwork()
 
-        lg.info( '*** Configuring hosts\n' )
+        info( '*** Configuring hosts\n' )
         self._configHosts()
 
         if self.xterms:
@@ -301,7 +300,7 @@ class Mininet( object ):
 
     def startXterms( self ):
         "Start an xterm for each node in the topo."
-        lg.info( "*** Running xterms on %s\n" % os.environ[ 'DISPLAY' ] )
+        info( "*** Running xterms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
         self.terms += makeXterms( self.controllers.values(), 'controller' )
         self.terms += makeXterms( self.switchNodes(), 'switch' )
@@ -330,44 +329,44 @@ class Mininet( object ):
                     srcNode.setARP( dst, dst )
 
     def start( self ):
-        "Start controller and switches\n"
-        lg.info( '*** Starting controller\n' )
+        "Start controller and switches"
+        info( '*** Starting controller\n' )
         for cnode in self.controllers.values():
             cnode.start()
-        lg.info( '*** Starting %s switches\n' % len( self.topo.switches() ) )
+        info( '*** Starting %s switches\n' % len( self.topo.switches() ) )
         for switchDpid in self.topo.switches():
             switch = self.nodes[ switchDpid ]
-            #lg.info( 'switch = %s' % switch )
-            lg.info( '0x%x ' % switchDpid )
+            #info( 'switch = %s' % switch )
+            info( '0x%x ' % switchDpid )
             switch.start( self.controllers )
-        lg.info( '\n' )
+        info( '\n' )
 
     def stop( self ):
-        "Stop the controller(s), switches and hosts\n"
+        "Stop the controller(s), switches and hosts"
         if self.terms:
-            lg.info( '*** Stopping %i terms\n' % len( self.terms ) )
+            info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        lg.info( '*** Stopping %i hosts\n' % len( self.topo.hosts() ) )
+        info( '*** Stopping %i hosts\n' % len( self.topo.hosts() ) )
         for hostDpid in self.topo.hosts():
             host = self.nodes[ hostDpid ]
-            lg.info( '%s ' % host.name )
+            info( '%s ' % host.name )
             host.terminate()
-        lg.info( '\n' )
-        lg.info( '*** Stopping %i switches\n' % len( self.topo.switches() ) )
+        info( '\n' )
+        info( '*** Stopping %i switches\n' % len( self.topo.switches() ) )
         for switchDpid in self.topo.switches():
             switch = self.nodes[ switchDpid ]
-            lg.info( '%s' % switch.name )
+            info( '%s' % switch.name )
             switch.stop()
-        lg.info( '\n' )
-        lg.info( '*** Stopping controller\n' )
+        info( '\n' )
+        info( '*** Stopping controller\n' )
         for cnode in self.controllers.values():
             cnode.stop()
-        lg.info( '*** Test complete\n' )
+        info( '*** Test complete\n' )
 
     def run( self, test, **params ):
         "Perform a complete start/test/stop cycle."
         self.start()
-        lg.info( '*** Running test\n' )
+        info( '*** Running test\n' )
         result = getattr( self, test )( **params )
         self.stop()
         return result
@@ -378,7 +377,7 @@ class Mininet( object ):
         r = r'(\d+) packets transmitted, (\d+) received'
         m = re.search( r, pingOutput )
         if m == None:
-            lg.error( '*** Error: could not parse ping output: %s\n' %
+            error( '*** Error: could not parse ping output: %s\n' %
                      pingOutput )
             exit( 1 )
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
@@ -395,10 +394,10 @@ class Mininet( object ):
         ploss = None
         if not hosts:
             hosts = self.topo.hosts()
-        lg.info( '*** Ping: testing ping reachability\n' )
+        info( '*** Ping: testing ping reachability\n' )
         for nodeDpid in hosts:
             node = self.nodes[ nodeDpid ]
-            lg.info( '%s -> ' % node.name )
+            info( '%s -> ' % node.name )
             for destDpid in hosts:
                 dest = self.nodes[ destDpid ]
                 if node != dest:
@@ -406,15 +405,15 @@ class Mininet( object ):
                     sent, received = self._parsePing( result )
                     packets += sent
                     if received > sent:
-                        lg.error( '*** Error: received too many packets' )
-                        lg.error( '%s' % result )
+                        error( '*** Error: received too many packets' )
+                        error( '%s' % result )
                         node.cmdPrint( 'route' )
                         exit( 1 )
                     lost += sent - received
-                    lg.info( ( '%s ' % dest.name ) if received else 'X ' )
-            lg.info( '\n' )
+                    info( ( '%s ' % dest.name ) if received else 'X ' )
+            info( '\n' )
             ploss = 100 * lost / packets
-        lg.info( "*** Results: %i%% dropped (%d/%d lost)\n" %
+        info( "*** Results: %i%% dropped (%d/%d lost)\n" %
                 ( ploss, lost, packets ) )
         return ploss
 
@@ -456,8 +455,8 @@ class Mininet( object ):
             assert len( hosts ) == 2
         host0 = self.nodes[ hosts[ 0 ] ]
         host1 = self.nodes[ hosts[ 1 ] ]
-        lg.info( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        lg.info( "%s and %s\n" % ( host0.name, host1.name ) )
+        info( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
+        info( "%s and %s\n" % ( host0.name, host1.name ) )
         host0.cmd( 'killall -9 iperf' )
         iperfArgs = 'iperf '
         bwArgs = ''
@@ -468,18 +467,18 @@ class Mininet( object ):
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
         server = host0.cmd( iperfArgs + '-s &' )
         if verbose:
-            lg.info( '%s\n' % server )
+            info( '%s\n' % server )
         client = host1.cmd( iperfArgs + '-t 5 -c ' + host0.IP() + ' ' +
                            bwArgs )
         if verbose:
-            lg.info( '%s\n' % client )
+            info( '%s\n' % client )
         server = host0.cmd( 'killall -9 iperf' )
         if verbose:
-            lg.info( '%s\n' % server )
+            info( '%s\n' % server )
         result = [ self._parseIperf( server ), self._parseIperf( client ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )
-        lg.info( '*** Results: %s\n' % result )
+        info( '*** Results: %s\n' % result )
         return result
 
     def iperfUdp( self, udpBw='10M' ):
