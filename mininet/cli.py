@@ -147,7 +147,7 @@ class CLI( Cmd ):
         Overridden to run shell commands when a node is the first CLI argument.
         Past the first CLI argument, node names are automatically replaced with
         corresponding IP addrs."""
-        
+
         first, args, line = self.parseline( line )
         if len(args) > 0 and args[ -1 ] == '\n':
             args = args[ :-1 ]

@@ -32,7 +32,7 @@ attached to the one side of a veth pair; the other side resides in the
 host namespace. In this mode, switch processes can simply connect to the
 controller via the loopback interface.
 
-In user datapath mode, the controller and switches are full-service
+In user datapath mode, the controller and switches can be full-service
 nodes that live in their own network namespaces and have management
 interfaces and IP addresses on a control network (e.g. 10.0.123.1,
 currently routed although it could be bridged.)
@@ -41,11 +41,37 @@ In addition to a management interface, user mode switches also have
 several switch interfaces, halves of veth pairs whose other halves
 reside in the host nodes that the switches are connected to.
 
-Naming:
+Consistent, straightforward naming is important in order to easily
+identify hosts, switches and controllers, both from the CLI and
+from program code. Interfaces are named to make it easy to identify
+which interfaces belong to which node.
+
+The basic naming scheme is as follows:
 
     Host nodes are named h1-hN
     Switch nodes are named s0-sN
-    Interfaces are named { nodename }-eth0 .. { nodename }-ethN
+    Controller nodes are named c0-cN
+    Interfaces are named {nodename}-eth0 .. {nodename}-ethN
+
+Currently we wrap the entire network in a 'mininet' object, which
+constructs a simulated network based on a network topology created
+using a topology object (e.g. LinearTopo) from topo.py and a Controller
+node which the switches will connect to.  Several
+configuration options are provided for functions such as
+automatically setting MAC addresses, populating the ARP table, or
+even running a set of xterms to allow direct interaction with nodes.
+
+After the mininet is created, it can be started using start(), and a variety
+of useful tasks maybe performed, including basic connectivity and
+bandwidth tests and running the mininet CLI.
+
+Once the network is up and running, test code can easily get access
+to its host and switch objects, which can then be used
+for arbitrary experiments, which typically involve running a series of
+commands on the hosts.
+
+After all desired tests or activities have been completed, the stop()
+method may be called to shut down the network.
 
 """
 
@@ -117,9 +143,9 @@ class Mininet( object ):
     def _addHost( self, dpid ):
         """Add host.
            dpid: DPID of host to add"""
-        host = self.host( 'h_' + self.topo.name( dpid ) )
+        host = self.host( 'h' + self.topo.name( dpid ) )
         # for now, assume one interface per host.
-        host.intfs.append( 'h_' + self.topo.name( dpid ) + '-eth0' )
+        host.intfs.append( 'h' + self.topo.name( dpid ) + '-eth0' )
         self.nodes[ dpid ] = host
         #info( '%s ' % host.name )
 

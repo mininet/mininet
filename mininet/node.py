@@ -7,7 +7,11 @@ machine.
 
 Node: superclass for all (primarily local) network nodes.
 
-Host: a virtual host.
+Host: a virtual host. By default, a host is simply a shell; commands
+    may be sent using Cmd (which waits for output), or using sendCmd(),
+    which returns immediately, allowing subsequent monitoring using
+    monitor(). Examples of how to run experiments using this
+    functionality are provided in the examples/ directory.
 
 Switch: superclass for switch nodes.
 
@@ -28,6 +32,7 @@ NOXController: a controller node using NOX (noxrepo.org).
 RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
     created or managed by mininet.
+
 """
 
 from subprocess import Popen, PIPE, STDOUT
