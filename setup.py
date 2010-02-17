@@ -27,9 +27,10 @@ Insert longer description here.
           "Topic :: Internet",
     ],
     keywords='networking protocol Internet OpenFlow',
-    license='GPL',
+    license='unspecified',
     install_requires=[
-        'setuptools'
+        'setuptools',
+        'networkx'
     ],
     scripts=scripts,
 )
