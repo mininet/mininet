@@ -17,3 +17,6 @@ cd build
 ../configure --with-python=yes
 make
 #make check
+
+#Add NOX_CORE_DIR env var;; modify ~/.bashrc:
+sudo sed -i -e 's|# for examples$|&\ncomplete -cf sudo|' ~/.bashrc
