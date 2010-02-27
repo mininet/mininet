@@ -48,13 +48,10 @@ class CLI( Cmd ):
     def __init__( self, mininet ):
         self.mn = mininet
         self.nodemap = {} # map names to Node objects
-        for node in self.mn.nodes.values():
+        self.nodelist = self.mn.switches + self.mn.hosts + self.mn.controllers
+        for node in self.nodelist:
             self.nodemap[ node.name ] = node
-        for cname, cnode in self.mn.controllers.iteritems():
-            self.nodemap[ cname ] = cnode
-        self.nodelist = self.nodemap.values()
         Cmd.__init__( self )
-
         warn( '*** Starting CLI:\n' )
         self.cmdloop()
 
