@@ -41,7 +41,7 @@ import signal
 import select
 
 from mininet.log import info, error
-from mininet.util import quietRun, macColonHex, ipStr
+from mininet.util import quietRun
 
 
 class Node( object ):
@@ -191,19 +191,16 @@ class Node( object ):
 
     def setMAC( self, intf, mac ):
         """Set the MAC address for an interface.
-           mac: MAC address as unsigned int"""
-        macStr = macColonHex( mac )
+           mac: MAC address as string"""
         result = self.cmd( [ 'ifconfig', intf, 'down' ] )
-        result += self.cmd( [ 'ifconfig', intf, 'hw', 'ether', macStr ] )
+        result += self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
         result += self.cmd( [ 'ifconfig', intf, 'up' ] )
         return result
 
     def setARP( self, ip, mac ):
         """Add an ARP entry.
-           ip: IP address as unsigned int
-           mac: MAC address as unsigned int"""
-        ip = ipStr( ip )
-        mac = macColonHex( mac )
+           ip: IP address as string
+           mac: MAC address as string"""
         result = self.cmd( [ 'arp', '-s', ip, mac ] )
         return result
 
@@ -286,9 +283,7 @@ class UserSwitch( Switch ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
            controllers: dict of controller names to objects"""
-        if 'c0' not in controllers:
-            raise Exception( 'User datapath start() requires controller c0' )
-        controller = controllers[ 'c0' ]
+        controller = controllers[ 0 ]
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
@@ -311,14 +306,14 @@ class KernelSwitch( Switch ):
     """Kernel-space switch.
        Currently only works in the root namespace."""
 
-    def __init__( self, name, dp=None, dpid=None ):
+    def __init__( self, name, dp=None, defaultMac=None ):
         """Init.
            name:
            dp: netlink id (0, 1, 2, ...)
-           dpid: datapath ID as unsigned int; random value if None"""
+           defaultMac: default MAC as string; random value if None"""
         Switch.__init__( self, name, inNamespace=False )
         self.dp = dp
-        self.dpid = dpid
+        self.defaultMac = defaultMac
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -328,10 +323,9 @@ class KernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'dpctl deldp nl:%i' % self.dp )
         self.cmdPrint( 'dpctl adddp nl:%i' % self.dp )
-        if self.dpid:
+        if self.defaultMac:
             intf = 'of%i' % self.dp
-            macStr = macColonHex( self.dpid )
-            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', macStr ] )
+            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMac ] )
 
         if len( self.ports ) != max( self.ports.keys() ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
@@ -340,9 +334,10 @@ class KernelSwitch( Switch ):
         self.cmdPrint( 'dpctl addif nl:' + str( self.dp ) + ' ' +
             ' '.join( intfs ) )
         # Run protocol daemon
+        controller = controllers[ 0 ]
         self.cmdPrint( 'ofprotocol nl:' + str( self.dp ) + ' tcp:' +
-                      controllers[ 'c0' ].IP() + ':' +
-                      str( controllers[ 'c0' ].port ) +
+                      controller.IP() + ':' +
+                      str( controller.port ) +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
 
@@ -363,14 +358,14 @@ class OVSKernelSwitch( Switch ):
     """Open VSwitch kernel-space switch.
        Currently only works in the root namespace."""
 
-    def __init__( self, name, dp=None, dpid=None ):
+    def __init__( self, name, dp=None, defaultMac=None ):
         """Init.
            name:
            dp: netlink id (0, 1, 2, ...)
            dpid: datapath ID as unsigned int; random value if None"""
         Switch.__init__( self, name, inNamespace=False )
         self.dp = dp
-        self.dpid = dpid
+        self.defaultMac = defaultMac
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -380,10 +375,10 @@ class OVSKernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
         self.cmdPrint( 'ovs-dpctl add-dp dp%i' % self.dp )
-        if self.dpid:
+        if self.defaultMac:
             intf = 'dp' % self.dp
-            macStr = macColonHex( self.dpid )
-            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', macStr ] )
+            mac = self.defaultMac
+            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
 
         if len( self.ports ) != max( self.ports.keys() ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
@@ -392,8 +387,9 @@ class OVSKernelSwitch( Switch ):
         self.cmdPrint( 'ovs-dpctl add-if dp' + str( self.dp ) + ' ' +
                       ' '.join( intfs ) )
         # Run protocol daemon
+        controller = controllers[ 0 ]
         self.cmdPrint( 'ovs-openflowd dp' + str( self.dp ) + ' tcp:' +
-                      controllers[ 'c0' ].IP() + ':' +
+                      controller.IP() + ':' +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
 

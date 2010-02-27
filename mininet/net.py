@@ -84,7 +84,7 @@ from mininet.cli import CLI
 from mininet.log import info, error
 from mininet.node import KernelSwitch, OVSKernelSwitch
 from mininet.util import quietRun, fixLimits
-from mininet.util import makeIntfPair, moveIntf
+from mininet.util import makeIntfPair, moveIntf, macColonHex
 from mininet.xterm import cleanUpScreens, makeXterms
 
 DATAPATHS = [ 'kernel' ] #[ 'user', 'kernel' ]
@@ -110,92 +110,103 @@ class Mininet( object ):
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False ):
         """Create Mininet object.
-           topo: Topo object
+           topo: Topo (topology) object or None
            switch: Switch class
            host: Host class
            controller: Controller class
            cparams: ControllerParams object
-           now: build now?
+           now: build now from topo?
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
            autoSetMacs: set MAC addrs to DPIDs?
            autoStaticArp: set all-pairs static MAC addrs?"""
-        self.topo = topo
         self.switch = switch
         self.host = host
         self.controller = controller
         self.cparams = cparams
-        self.nodes = {} # dpid to Node{ Host, Switch } objects
-        self.controllers = {} # controller name to Controller objects
-        self.dps = 0 # number of created kernel datapaths
+        self.topo = topo
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
         self.autoSetMacs = autoSetMacs
         self.autoStaticArp = autoStaticArp
 
+        self.hosts = []
+        self.switches = []
+        self.controllers = []
+        self.nameToNode = {} # name to Node (Host/Switch) objects
+        self.idToNode = {} # dpid to Node (Host/Switch) objects
+        self.dps = 0 # number of created kernel datapaths
         self.terms = [] # list of spawned xterm processes
 
-        if build:
-            self.build()
+        if topo and build:
+            self.buildFromTopo( self.topo )
 
-    def _addHost( self, dpid ):
+    def addHost( self, name, defaultMac=None, defaultIp=None ):
         """Add host.
-           dpid: DPID of host to add"""
-        host = self.host( 'h' + self.topo.name( dpid ) )
+           name: name of host to add
+           defaultMac: default MAC address for intf 0
+           defaultIp: default IP address for intf 0
+           returns: added host"""
+        host = self.host( name )
         # for now, assume one interface per host.
-        host.intfs.append( 'h' + self.topo.name( dpid ) + '-eth0' )
-        self.nodes[ dpid ] = host
-        #info( '%s ' % host.name )
+        host.intfs.append( name + '-eth0' )
+        self.hosts.append( host )
+        self.nameToNode[ name ] = host
+        # May wish to add this to actual object
+        if defaultMac:
+            host.defaultMac = defaultMac
+        if defaultIp:
+            host.defaultIP = defaultIp
+        return host
 
-    def _addSwitch( self, dpid ):
+    def addSwitch( self, name, defaultMac=None ):
         """Add switch.
-           dpid: DPID of switch to add"""
-        sw = None
-        swDpid = None
-        if self.autoSetMacs:
-            swDpid = dpid
+           name: name of switch to add
+           defaultMac: default MAC address for kernel/OVS switch intf 0
+           returns: added switch"""
         if self.switch is KernelSwitch or self.switch is OVSKernelSwitch:
-            sw = self.switch( 's_' + self.topo.name( dpid ), dp = self.dps,
-                             dpid = swDpid )
+            sw = self.switch( name, dp=self.dps, defaultMac=defaultMac )
             self.dps += 1
         else:
-            sw = self.switch( 's_' + self.topo.name( dpid ) )
-        self.nodes[ dpid ] = sw
+            sw = self.switch( name )
+        self.switches.append( sw )
+        self.nameToNode[ name ] = sw
+        return sw
 
-    def _addLink( self, src, dst ):
+    def addLink( self, src, srcPort, dst, dstPort ):
         """Add link.
-           src: source DPID
-           dst: destination DPID"""
-        srcPort, dstPort = self.topo.port( src, dst )
-        srcNode = self.nodes[ src ]
-        dstNode = self.nodes[ dst ]
-        srcIntf = srcNode.intfName( srcPort )
-        dstIntf = dstNode.intfName( dstPort )
+           src: source Node
+           srcPort: source port
+           dst: destination Node
+           dstPort: destination port"""
+        srcIntf = src.intfName( srcPort )
+        dstIntf = dst.intfName( dstPort )
         makeIntfPair( srcIntf, dstIntf )
-        srcNode.intfs.append( srcIntf )
-        dstNode.intfs.append( dstIntf )
-        srcNode.ports[ srcPort ] = srcIntf
-        dstNode.ports[ dstPort ] = dstIntf
+        src.intfs.append( srcIntf )
+        dst.intfs.append( dstIntf )
+        src.ports[ srcPort ] = srcIntf
+        dst.ports[ dstPort ] = dstIntf
         #info( '\n' )
         #info( 'added intf %s to src node %x\n' % ( srcIntf, src ) )
         #info( 'added intf %s to dst node %x\n' % ( dstIntf, dst ) )
-        if srcNode.inNamespace:
+        if src.inNamespace:
             #info( 'moving src w/inNamespace set\n' )
-            moveIntf( srcIntf, srcNode )
-        if dstNode.inNamespace:
+            moveIntf( srcIntf, src )
+        if dst.inNamespace:
             #info( 'moving dst w/inNamespace set\n' )
-            moveIntf( dstIntf, dstNode )
-        srcNode.connection[ srcIntf ] = ( dstNode, dstIntf )
-        dstNode.connection[ dstIntf ] = ( srcNode, srcIntf )
+            moveIntf( dstIntf, dst )
+        src.connection[ srcIntf ] = ( dst, dstIntf )
+        dst.connection[ dstIntf ] = ( src, srcIntf )
 
-    def _addController( self, controller ):
+    def addController( self, controller ):
         """Add controller.
            controller: Controller class"""
         controller = self.controller( 'c0', self.inNamespace )
         if controller: # allow controller-less setups
-            self.controllers[ 'c0' ] = controller
+            self.controllers.append( controller )
+            self.nameToNode[ 'c0' ] = controller
 
     # Control network support:
     #
@@ -216,7 +227,7 @@ class Mininet( object ):
     #
     # 4. Even if we dispense with this in general, it could still be
     #    useful for people who wish to simulate a separate control
-    #    network ( since real networks may need one! )
+    #    network (since real networks may need one!)
 
     def _configureControlNetwork( self ):
         "Configure control network."
@@ -229,12 +240,11 @@ class Mininet( object ):
            """
         # params were: controller, switches, ips
 
-        controller = self.controllers[ 'c0' ]
+        controller = self.controllers[ 0 ]
         info( '%s <-> ' % controller.name )
-        for switchDpid in self.topo.switches():
-            switch = self.nodes[ switchDpid ]
+        for switch in self.switches:
             info( '%s ' % switch.name )
-            sip = self.topo.ip( switchDpid )#ips.next()
+            sip = switch.defaultIP
             sintf = switch.intfs[ 0 ]
             node, cintf = switch.connection[ sintf ]
             if node != controller:
@@ -253,8 +263,7 @@ class Mininet( object ):
             info( '*** Waiting for %s to come up\n',
                 controller.intfs[ 0 ] )
             sleep( 1 )
-        for switchDpid in self.topo.switches():
-            switch = self.nodes[ switchDpid ]
+        for switch in self.switches:
             while not switch.intfIsUp( switch.intfs[ 0 ] ):
                 info( '*** Waiting for %s to come up\n' %
                     switch.intfs[ 0 ] )
@@ -267,10 +276,9 @@ class Mininet( object ):
     def _configHosts( self ):
         "Configure a set of hosts."
         # params were: hosts, ips
-        for hostDpid in self.topo.hosts():
-            host = self.nodes[ hostDpid ]
+        for host in self.hosts:
             hintf = host.intfs[ 0 ]
-            host.setIP( hintf, self.topo.ip( hostDpid ),
+            host.setIP( hintf, host.defaultIP,
                        '/' + str( self.cparams.subnetSize ) )
             host.setDefaultRoute( hintf )
             # You're low priority, dude!
@@ -278,28 +286,37 @@ class Mininet( object ):
             info( '%s ', host.name )
         info( '\n' )
 
-    def build( self ):
-        """Build mininet.
+    def buildFromTopo( self, topo ):
+        """Build mininet from a topology object
            At the end of this function, everything should be connected
            and up."""
         if self.cleanup:
             pass # cleanup
         # validate topo?
         info( '*** Adding controller\n' )
-        self._addController( self.controller )
+        self.addController( self.controller )
         info( '*** Creating network\n' )
         info( '*** Adding hosts:\n' )
-        for host in sorted( self.topo.hosts() ):
-            self._addHost( host )
-            info( '0x%x ' % host )
+        for hostId in sorted( topo.hosts() ):
+            name = 'h' + topo.name( hostId )
+            mac = macColonHex( hostId ) if self.setMacs else None
+            ip = topo.ip( hostId )
+            host = self.addHost( name, defaultIp=ip, defaultMac=mac )
+            self.idToNode[ hostId ] = host
+            info( name )
         info( '\n*** Adding switches:\n' )
-        for switch in sorted( self.topo.switches() ):
-            self._addSwitch( switch )
-            info( '0x%x ' % switch )
+        for switchId in sorted( topo.switches() ):
+            name = 's' + topo.name( switchId )
+            mac = macColonHex( switchId) if self.setMacs else None
+            switch = self.addSwitch( name, defaultMac=mac )
+            self.idToNode[ switchId ] = switch
+            info( name )
         info( '\n*** Adding edges:\n' )
-        for src, dst in sorted( self.topo.edges() ):
-            self._addLink( src, dst )
-            info( '(0x%x, 0x%x) ' % ( src, dst ) )
+        for srcId, dstId in sorted( topo.edges() ):
+            src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
+            srcPort, dstPort = topo.port( srcId, dstId )
+            self.addLink( src, srcPort, dst, dstPort )
+            info( '(%s, %s) ' % ( src.name, dst.name ) )
         info( '\n' )
 
         if self.inNamespace:
@@ -316,21 +333,13 @@ class Mininet( object ):
         if self.autoStaticArp:
             self.staticArp()
 
-    def switchNodes( self ):
-        "Return switch nodes."
-        return [ self.nodes[ dpid ] for dpid in self.topo.switches() ]
-
-    def hostNodes( self ):
-        "Return host nodes."
-        return [ self.nodes[ dpid ] for dpid in self.topo.hosts() ]
-
     def startXterms( self ):
-        "Start an xterm for each node in the topo."
+        "Start an xterm for each node."
         info( "*** Running xterms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
-        self.terms += makeXterms( self.controllers.values(), 'controller' )
-        self.terms += makeXterms( self.switchNodes(), 'switch' )
-        self.terms += makeXterms( self.hostNodes(), 'host' )
+        self.terms += makeXterms( self.controllers, 'controller' )
+        self.terms += makeXterms( self.switches, 'switch' )
+        self.terms += makeXterms( self.hosts, 'host' )
 
     def stopXterms( self ):
         "Kill each xterm."
@@ -342,28 +351,24 @@ class Mininet( object ):
     def setMacs( self ):
         """Set MAC addrs to correspond to datapath IDs on hosts.
            Assume that the host only has one interface."""
-        for dpid in self.topo.hosts():
-            hostNode = self.nodes[ dpid ]
-            hostNode.setMAC( hostNode.intfs[ 0 ], dpid )
+        for host in self.hosts:
+            host.setMAC( host.intfs[ 0 ], host.defaultMac )
 
     def staticArp( self ):
         "Add all-pairs ARP entries to remove the need to handle broadcast."
-        for src in self.topo.hosts():
-            srcNode = self.nodes[ src ]
-            for dst in self.topo.hosts():
+        for src in self.hosts:
+            for dst in self.hosts:
                 if src != dst:
-                    srcNode.setARP( dst, dst )
+                    src.setARP( ip=dst.IP(), mac=dst.defaultMac )
 
     def start( self ):
         "Start controller and switches"
         info( '*** Starting controller\n' )
-        for cnode in self.controllers.values():
-            cnode.start()
-        info( '*** Starting %s switches\n' % len( self.topo.switches() ) )
-        for switchDpid in self.topo.switches():
-            switch = self.nodes[ switchDpid ]
-            #info( 'switch = %s' % switch )
-            info( '0x%x ' % switchDpid )
+        for controller in self.controllers:
+            controller.start()
+        info( '*** Starting %s switches\n' % len( self.switches ) )
+        for switch in self.switches:
+            info( switch.name )
             switch.start( self.controllers )
         info( '\n' )
 
@@ -372,21 +377,19 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i hosts\n' % len( self.topo.hosts() ) )
-        for hostDpid in self.topo.hosts():
-            host = self.nodes[ hostDpid ]
+        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
+        for host in self.hosts:
             info( '%s ' % host.name )
             host.terminate()
         info( '\n' )
-        info( '*** Stopping %i switches\n' % len( self.topo.switches() ) )
-        for switchDpid in self.topo.switches():
-            switch = self.nodes[ switchDpid ]
-            info( '%s' % switch.name )
+        info( '*** Stopping %i switches\n' % len( self.switches ) )
+        for switch in self.switches:
+            info( '%s ' % switch.name )
             switch.stop()
         info( '\n' )
-        info( '*** Stopping controller\n' )
-        for cnode in self.controllers.values():
-            cnode.stop()
+        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
+        for controller in self.controllers:
+            controller.stop()
         info( '*** Test complete\n' )
 
     def run( self, test, **params ):
@@ -411,7 +414,7 @@ class Mininet( object ):
 
     def ping( self, hosts=None ):
         """Ping between all specified hosts.
-           hosts: list of host DPIDs
+           hosts: list of hosts
            returns: ploss packet loss percentage"""
         #self.start()
         # check if running - only then, start?
@@ -419,13 +422,11 @@ class Mininet( object ):
         lost = 0
         ploss = None
         if not hosts:
-            hosts = self.topo.hosts()
-        info( '*** Ping: testing ping reachability\n' )
-        for nodeDpid in hosts:
-            node = self.nodes[ nodeDpid ]
+            hosts = self.hosts
+            info( '*** Ping: testing ping reachability\n' )
+        for node in hosts:
             info( '%s -> ' % node.name )
-            for destDpid in hosts:
-                dest = self.nodes[ destDpid ]
+            for dest in hosts:
                 if node != dest:
                     result = node.cmd( 'ping -c1 ' + dest.IP() )
                     sent, received = self._parsePing( result )
@@ -451,8 +452,7 @@ class Mininet( object ):
     def pingPair( self ):
         """Ping between first two hosts, useful for testing.
            returns: ploss packet loss percentage"""
-        hostsSorted = sorted( self.topo.hosts() )
-        hosts = [ hostsSorted[ 0 ], hostsSorted[ 1 ] ]
+        hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
         return self.ping( hosts=hosts )
 
     @staticmethod
@@ -470,17 +470,15 @@ class Mininet( object ):
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M',
               verbose=False ):
         """Run iperf between two hosts.
-           hosts: list of host DPIDs; if None, uses opposite hosts
+           hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
            verbose: verbose printing
            returns: results two-element array of server and client speeds"""
         if not hosts:
-            hostsSorted = sorted( self.topo.hosts() )
-            hosts = [ hostsSorted[ 0 ], hostsSorted[ -1 ] ]
+            hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
             assert len( hosts ) == 2
-        host0 = self.nodes[ hosts[ 0 ] ]
-        host1 = self.nodes[ hosts[ 1 ] ]
+        host0, host1 = hosts
         info( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
         info( "%s and %s\n" % ( host0.name, host1.name ) )
         host0.cmd( 'killall -9 iperf' )
