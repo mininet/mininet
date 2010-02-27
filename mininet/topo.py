@@ -107,7 +107,7 @@ class Topo(object):
         self.g.add_node(dpid)
         self.node_info[dpid] = node
 
-    def _add_edge(self, src, dst, edge):
+    def _add_edge(self, src, dst, edge = None):
         '''Add edge (Node, Node) to graph.
 
         @param src src dpid
@@ -116,6 +116,8 @@ class Topo(object):
         '''
         src, dst = tuple(sorted([src, dst]))
         self.g.add_edge(src, dst)
+        if not edge:
+            edge = Edge()
         self.edge_info[(src, dst)] = edge
         self._add_port(src, dst)
 

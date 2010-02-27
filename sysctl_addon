@@ -1,0 +1,17 @@
+# Mininet: Increase open file limit
+fs.file-max = 100000
+
+# Mininet: increase network buffer space
+net.core.wmem_max = 16777216
+net.core.rmem_max = 16777216
+net.ipv4.tcp_rmem = 10240 87380 16777216
+net.ipv4.tcp_rmem = 10240 87380 16777216
+net.core.netdev_max_backlog = 5000
+
+# Mininet: increase arp cache size
+net.ipv4.neigh.default.gc_thresh1 = 4096 
+net.ipv4.neigh.default.gc_thresh2 = 8192 
+net.ipv4.neigh.default.gc_thresh3 = 16384
+
+# Mininet: increase routing table size
+net.ipv4.route.max_size=32768

@@ -1,25 +1,45 @@
-'''Example of custom topo
+"""Custom topology example
 
-@author Brandon Heller (brandonh@stanford.edu)
+author: Brandon Heller (brandonh@stanford.edu)
 
-'''
+Two directly connected switches plus a host for each switch:
 
-from mininet.topo import SingleSwitchTopo
-from mininet.net import Mininet
-from mininet.node import KernelSwitch, Host, Controller, ControllerParams
+   host --- switch --- switch --- host
 
-topo = SingleSwitchTopo(k = 2) # build topology object
-switch = KernelSwitch
-host = Host
-controller = Controller
-controller_params = ControllerParams(0x0a000000, 8) # 10.0.0.0/8
-in_namespace = False
-xterms = False
-mac = True
-arp = True
+Adding the 'topos' dict with a key/value pair to generate our newly defined
+topology enables one to pass in '--topo=mytopo' from the command line.
+"""
 
-mn = Mininet(topo, switch, host, controller, controller_params,
-             in_namespace = in_namespace,
-             xterms = xterms, auto_set_macs = mac,
-             auto_static_arp = arp)
+from mininet.topo import Topo, Node
 
+class MyTopo( Topo ):
+    """Simple topology example."""
+
+    def __init__( self, enable_all = True ):
+        """Create custom topo."""
+
+        # Add default members to class.
+        super( MyTopo, self ).__init__()
+
+        # Set Node IDs for hosts and switches
+        leftHost = 1
+        leftSwitch = 2
+        rightSwitch = 3
+        rightHost = 4
+
+        # Add nodes
+        self._add_node( leftSwitch, Node( is_switch=True ) )
+        self._add_node( rightSwitch, Node( is_switch=True ) )
+        self._add_node( leftHost, Node( is_switch=False ) )
+        self._add_node( rightHost, Node( is_switch=False ) )
+
+        # Add edges
+        self._add_edge( leftHost, leftSwitch )
+        self._add_edge( leftSwitch, rightSwitch )
+        self._add_edge( rightSwitch, rightHost )
+
+        # Consider all switches and hosts 'on'
+        self.enable_all()
+
+
+topos = { 'mytopo': ( lambda: MyTopo() ) }

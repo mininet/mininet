@@ -3,17 +3,18 @@
 """
 Mininet runner
 author: Brandon Heller (brandonh@stanford.edu)
+
+To see options:
+  sudo mn -h
+
+Example to pull custom params (topo, switch, etc.) from a file:
+  sudo mn --custom ~/mininet/custom/custom_example.py
 """
 
 from optparse import OptionParser
 import os.path
+import sys
 import time
-
-try:
-    from ripcord.dctopo import TreeTopo, FatTreeTopo, VL2Topo
-    USERIPCORD = True
-except ImportError:
-    USERIPCORD = False
 
 from mininet.log import lg, LEVELS
 from mininet.net import Mininet, init
@@ -29,16 +30,6 @@ TOPOS = { 'minimal': ( lambda: SingleSwitchTopo( k=2 ) ),
          'single100': ( lambda: SingleSwitchTopo( k=100 ) ),
          'linear2': ( lambda: LinearTopo( k=2 ) ),
          'linear100': ( lambda: LinearTopo( k=100 ) ) }
-if USERIPCORD:
-    TOPOSRIPCORD = {
-         'tree16': ( lambda: TreeTopo( depth=3, fanout=4 ) ),
-         'tree64': ( lambda: TreeTopo( depth=4, fanout=4 ) ),
-         'tree1024': ( lambda: TreeTopo( depth=3, fanout=32 ) ),
-         'fattree4': ( lambda: FatTreeTopo( k=4 ) ),
-         'fattree6': ( lambda: FatTreeTopo( k=6 ) ),
-         'vl2': ( lambda: VL2Topo( da=4, di=4 ) ),
-         'vl2reduced': ( lambda: VL2Topo( da=4, di=4, edgeDown=1 ) ) }
-    TOPOS.update( TOPOSRIPCORD )
 
 SWITCHDEF = 'kernel'
 SWITCHES = { 'kernel': KernelSwitch,
@@ -57,8 +48,7 @@ CONTROLLERS = { 'ref': Controller,
                'none': lambda a, b: None }
 
 # optional tests to run
-TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all',
-    'iperfUdp' ]
+TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp' ]
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
@@ -86,14 +76,37 @@ class MininetRunner( object ):
     def __init__( self ):
         "Init."
         self.options = None
+        self.validate = None
 
         self.parseArgs()
         self.setup()
         self.begin()
 
+    def parseCustomFile( self, custom ):
+        "Parse custom file and add params before parsing cmd-line options."
+        if os.path.isfile( custom ):
+            execfile( custom, globals(), globals() )
+            if 'topos' in globals(): TOPOS.update( topos )
+            if 'switches' in globals(): SWITCHES.update( switches )
+            if 'hosts' in globals(): HOSTS.update( hosts )
+            if 'controllers' in globals(): CONTROLLERS.update( controllers )
+            if 'validate' in globals(): self.validate = validate
+        else:
+            raise Exception( 'could not find custom file: %s' % custom )
+
     def parseArgs( self ):
         """Parse command-line args and return options object.
            returns: opts parse options dict"""
+        if '--custom' in sys.argv:
+            print "custom in sys.argv"
+            index = sys.argv.index( '--custom' )
+            if len( sys.argv ) > index + 1:
+                custom = sys.argv[ index + 1 ]
+                print "custom = %s" % custom
+                self.parseCustomFile( custom )
+            else:
+                raise Exception( 'Custom file name not found' )
+
         opts = OptionParser()
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
@@ -101,7 +114,7 @@ class MininetRunner( object ):
         addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
 
         opts.add_option( '--custom', type='string', default=None,
-                        help='read custom mininet from current dir' )
+                        help='read custom topo and node params from .py file' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                         default=TESTS[ 0 ],
                         help='[' + ' '.join( TESTS ) + ']' )
@@ -133,18 +146,6 @@ class MininetRunner( object ):
         # validate environment setup
         init()
 
-        # check for invalid combinations
-        if ( self.options.controller == 'ref' and
-            ( ( 'fattree' in self.options.topo ) or
-              ( 'vl2' in self.options.topo ) ) ):
-            raise Exception( 'multipath topos require multipath-capable '
-                            'controller.' )
-
-        if self.options.custom:
-            if not os.path.isfile( self.options.custom ):
-                raise Exception( 'could not find custom file: %s' %
-                    self.options.custom )
-
     def begin( self ):
         "Create and run mininet."
 
@@ -159,25 +160,18 @@ class MininetRunner( object ):
                              ipAddress=self.options.ip,
                              port=self.options.port )
 
+        if self.validate:
+            self.validate(self.options)
+
         controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
         inNamespace = self.options.inNamespace
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
-        mn = None
-        if not self.options.custom:
-            mn = Mininet( topo, switch, host, controller, controllerParams,
-                         inNamespace=inNamespace,
-                         xterms=xterms, autoSetMacs=mac,
-                         autoStaticArp=arp )
-        else:
-            globals_ = {}
-            locals_ = {}
-            execfile( self.options.custom, globals_, locals_ )
-            if 'mn' not in locals_:
-                raise Exception( 'could not find mn var in custom file' )
-            else:
-                mn = locals_[ 'mn' ]
+        mn = Mininet( topo, switch, host, controller, controllerParams,
+                     inNamespace=inNamespace,
+                     xterms=xterms, autoSetMacs=mac,
+                     autoStaticArp=arp )
 
         test = self.options.test
         if test != 'build':
