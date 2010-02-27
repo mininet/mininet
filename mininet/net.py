@@ -465,7 +465,7 @@ class Mininet( object ):
         if m:
             return m.group( 1 )
         else:
-            raise Exception( 'could not parse iperf output' )
+            raise Exception( 'could not parse iperf output: ' + iperfOutput )
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M',
               verbose=False ):
