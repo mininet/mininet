@@ -384,7 +384,7 @@ class Mininet( object ):
         info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
-            info( '%s ' % switch.name )
+            info( switch.name )
             switch.stop()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )

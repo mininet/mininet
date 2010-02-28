@@ -113,7 +113,6 @@ class MininetRunner( object ):
             index = sys.argv.index( '--custom' )
             if len( sys.argv ) > index + 1:
                 custom = sys.argv[ index + 1 ]
-                print "custom = %s" % custom
                 self.parseCustomFile( custom )
             else:
                 raise Exception( 'Custom file name not found' )

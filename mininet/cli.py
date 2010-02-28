@@ -47,8 +47,8 @@ class CLI( Cmd ):
 
     def __init__( self, mininet ):
         self.mn = mininet
+        self.nodelist = self.mn.hosts + self.mn.switches + self.mn.controllers
         self.nodemap = {} # map names to Node objects
-        self.nodelist = self.mn.switches + self.mn.hosts + self.mn.controllers
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
         Cmd.__init__( self )
@@ -91,7 +91,7 @@ class CLI( Cmd ):
         for switch in self.mn.switches:
             info( '%s <->', switch.name )
             for intf in switch.intfs:
-                node = switch.connection[ intf ]
+                node, name = switch.connection[ intf ]
                 info( ' %s' % node.name )
             info( '\n' )
 
@@ -118,12 +118,12 @@ class CLI( Cmd ):
 
     def do_intfs( self, args ):
         "List interfaces."
-        for node in self.mn.nodes.values():
+        for node in self.nodelist:
             info( '%s: %s\n' % ( node.name, ' '.join( node.intfs ) ) )
 
     def do_dump( self, args ):
         "Dump node info."
-        for node in self.mn.nodes.values():
+        for node in self.nodelist:
             info( '%s\n' % node )
 
     def do_exit( self, args ):
