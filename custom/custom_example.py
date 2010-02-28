@@ -13,10 +13,10 @@ topology enables one to pass in '--topo=mytopo' from the command line.
 from mininet.topo import Topo, Node
 
 class MyTopo( Topo ):
-    """Simple topology example."""
+    "Simple topology example."
 
     def __init__( self, enable_all = True ):
-        """Create custom topo."""
+        "Create custom topo."
 
         # Add default members to class.
         super( MyTopo, self ).__init__()
@@ -42,4 +42,6 @@ class MyTopo( Topo ):
         self.enable_all()
 
 
-topos = { 'mytopo': ( lambda: MyTopo() ) }
+topos = { 'mytopo': MyTopo }
+
+# topos = { 'mytopo': ( lambda: MyTopo() ) }

@@ -303,14 +303,14 @@ class Mininet( object ):
             ip = topo.ip( hostId )
             host = self.addHost( name, defaultIp=ip, defaultMac=mac )
             self.idToNode[ hostId ] = host
-            info( name )
+            info( name + ' ' )
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
             name = 's' + topo.name( switchId )
             mac = macColonHex( switchId) if self.setMacs else None
             switch = self.addSwitch( name, defaultMac=mac )
             self.idToNode[ switchId ] = switch
-            info( name )
+            info( name + ' ' )
         info( '\n*** Adding edges:\n' )
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]

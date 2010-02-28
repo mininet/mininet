@@ -88,8 +88,7 @@ class CLI( Cmd ):
 
     def do_net( self, args ):
         "List network connections."
-        for switchDpid in self.mn.topo.switches():
-            switch = self.mn.nodes[ switchDpid ]
+        for switch in self.mn.switches:
             info( '%s <->', switch.name )
             for intf in switch.intfs:
                 node = switch.connection[ intf ]

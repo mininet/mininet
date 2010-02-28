@@ -81,19 +81,30 @@ class MininetRunner( object ):
         self.parseArgs()
         self.setup()
         self.begin()
-
-    def parseCustomFile( self, custom ):
-        "Parse custom file and add params before parsing cmd-line options."
-        if os.path.isfile( custom ):
-            execfile( custom, globals(), globals() )
-            if 'topos' in globals(): TOPOS.update( topos )
-            if 'switches' in globals(): SWITCHES.update( switches )
-            if 'hosts' in globals(): HOSTS.update( hosts )
-            if 'controllers' in globals(): CONTROLLERS.update( controllers )
-            if 'validate' in globals(): self.validate = validate
+  
+    def setCustom( self, name, value ):
+        print "got", self, name, value
+        if name in ( 'topos', 'switches', 'hosts', 'controllers' ):
+            # Update dictionaries
+            param = name.upper()
+            globals()[ param ].update( value )
+        elif name == 'validate':
+            # Add custom validate function
+            self.validate = value
         else:
-            raise Exception( 'could not find custom file: %s' % custom )
-
+            # Add or modify global variable or class
+            globals()[ name ] = value
+        
+    def parseCustomFile( self, fileName ):
+        "Parse custom file and add params before parsing cmd-line options."
+        custom = {}
+        if os.path.isfile( fileName ):
+            execfile( fileName, custom, custom )
+            for name in custom:
+                self.setCustom( name, custom[ name ] )
+        else:
+            raise Exception( 'could not find custom file: %s' % fileName )
+        
     def parseArgs( self ):
         """Parse command-line args and return options object.
            returns: opts parse options dict"""
@@ -161,7 +172,7 @@ class MininetRunner( object ):
                              port=self.options.port )
 
         if self.validate:
-            self.validate(self.options)
+            self.validate( self.options )
 
         controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
         inNamespace = self.options.inNamespace
