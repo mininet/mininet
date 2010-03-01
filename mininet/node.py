@@ -462,9 +462,9 @@ class NOX( Controller ):
             noxArgs = [ noxArgs ]
         if not noxArgs:
             noxArgs = [ 'packetdump' ]
- 
+
         if 'NOX_CORE_DIR' not in os.environ:
-            exit( 'exiting; please set missing NOX_CORE_DIR env var' )       
+            exit( 'exiting; please set missing NOX_CORE_DIR env var' )
         noxCoreDir = os.environ[ 'NOX_CORE_DIR' ]
 
         Controller.__init__( self, name,
