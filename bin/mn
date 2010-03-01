@@ -81,9 +81,9 @@ class MininetRunner( object ):
         self.parseArgs()
         self.setup()
         self.begin()
-  
+
     def setCustom( self, name, value ):
-        print "got", self, name, value
+        "Set custom parameters for MininetRunner."
         if name in ( 'topos', 'switches', 'hosts', 'controllers' ):
             # Update dictionaries
             param = name.upper()
@@ -94,7 +94,7 @@ class MininetRunner( object ):
         else:
             # Add or modify global variable or class
             globals()[ name ] = value
-        
+
     def parseCustomFile( self, fileName ):
         "Parse custom file and add params before parsing cmd-line options."
         custom = {}
@@ -104,7 +104,7 @@ class MininetRunner( object ):
                 self.setCustom( name, custom[ name ] )
         else:
             raise Exception( 'could not find custom file: %s' % fileName )
-        
+
     def parseArgs( self ):
         """Parse command-line args and return options object.
            returns: opts parse options dict"""

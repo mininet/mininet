@@ -91,8 +91,8 @@ class CLI( Cmd ):
         for switch in self.mn.switches:
             info( '%s <->', switch.name )
             for intf in switch.intfs:
-                node, name = switch.connection[ intf ]
-                info( ' %s' % node.name )
+                name = switch.connection[ intf ][ 1 ]
+                info( ' %s' % name )
             info( '\n' )
 
     def do_sh( self, args ):
