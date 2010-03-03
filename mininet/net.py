@@ -81,10 +81,10 @@ import signal
 from time import sleep
 
 from mininet.cli import CLI
-from mininet.log import info, error
+from mininet.log import info, error, debug
 from mininet.node import KernelSwitch, OVSKernelSwitch
 from mininet.util import quietRun, fixLimits
-from mininet.util import makeIntfPair, moveIntf, macColonHex
+from mininet.util import createLink, macColonHex
 from mininet.xterm import cleanUpScreens, makeXterms
 
 DATAPATHS = [ 'kernel' ] #[ 'user', 'kernel' ]
@@ -150,8 +150,6 @@ class Mininet( object ):
            defaultIp: default IP address for intf 0
            returns: added host"""
         host = self.host( name )
-        # for now, assume one interface per host.
-        host.intfs.append( name + '-eth0' )
         self.hosts.append( host )
         self.nameToNode[ name ] = host
         # May wish to add this to actual object
@@ -174,31 +172,6 @@ class Mininet( object ):
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
-
-    def addLink( self, src, srcPort, dst, dstPort ):
-        """Add link.
-           src: source Node
-           srcPort: source port
-           dst: destination Node
-           dstPort: destination port"""
-        srcIntf = src.intfName( srcPort )
-        dstIntf = dst.intfName( dstPort )
-        makeIntfPair( srcIntf, dstIntf )
-        src.intfs.append( srcIntf )
-        dst.intfs.append( dstIntf )
-        src.ports[ srcPort ] = srcIntf
-        dst.ports[ dstPort ] = dstIntf
-        #info( '\n' )
-        #info( 'added intf %s to src node %x\n' % ( srcIntf, src ) )
-        #info( 'added intf %s to dst node %x\n' % ( dstIntf, dst ) )
-        if src.inNamespace:
-            #info( 'moving src w/inNamespace set\n' )
-            moveIntf( srcIntf, src )
-        if dst.inNamespace:
-            #info( 'moving dst w/inNamespace set\n' )
-            moveIntf( dstIntf, dst )
-        src.connection[ srcIntf ] = ( dst, dstIntf )
-        dst.connection[ dstIntf ] = ( src, srcIntf )
 
     def addController( self, controller ):
         """Add controller.
@@ -315,7 +288,7 @@ class Mininet( object ):
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
             srcPort, dstPort = topo.port( srcId, dstId )
-            self.addLink( src, srcPort, dst, dstPort )
+            createLink( src, srcPort, dst, dstPort )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
         info( '\n' )
 
@@ -368,7 +341,7 @@ class Mininet( object ):
             controller.start()
         info( '*** Starting %s switches\n' % len( self.switches ) )
         for switch in self.switches:
-            info( switch.name )
+            info( switch.name + ' ')
             switch.start( self.controllers )
         info( '\n' )
 
@@ -474,13 +447,14 @@ class Mininet( object ):
            l4Type: string, one of [ TCP, UDP ]
            verbose: verbose printing
            returns: results two-element array of server and client speeds"""
+        log = info if verbose else debug
         if not hosts:
             hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
             assert len( hosts ) == 2
         host0, host1 = hosts
-        info( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        info( "%s and %s\n" % ( host0.name, host1.name ) )
+        log( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
+        log( "%s and %s\n" % ( host0.name, host1.name ) )
         host0.cmd( 'killall -9 iperf' )
         iperfArgs = 'iperf '
         bwArgs = ''
@@ -490,19 +464,16 @@ class Mininet( object ):
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
         server = host0.cmd( iperfArgs + '-s &' )
-        if verbose:
-            info( '%s\n' % server )
+        log( '%s\n' % server )
         client = host1.cmd( iperfArgs + '-t 5 -c ' + host0.IP() + ' ' +
                            bwArgs )
-        if verbose:
-            info( '%s\n' % client )
+        log( '%s\n' % client )
         server = host0.cmd( 'killall -9 iperf' )
-        if verbose:
-            info( '%s\n' % server )
+        log( '%s\n' % server )
         result = [ self._parseIperf( server ), self._parseIperf( client ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )
-        info( '*** Results: %s\n' % result )
+        log( '*** Results: %s\n' % result )
         return result
 
     def iperfUdp( self, udpBw='10M' ):

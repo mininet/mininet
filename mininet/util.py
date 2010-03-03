@@ -15,7 +15,7 @@ def run( cmd ):
 def checkRun( cmd ):
     """Simple interface to subprocess.check_call()
        cmd: list of command params"""
-    check_call( cmd.split( ' ' ) )
+    return check_call( cmd.split( ' ' ) )
 
 def quietRun( cmd ):
     """Run a command, routing stderr to stdout, and return the output.
@@ -63,7 +63,7 @@ def makeIntfPair( intf1, intf2 ):
     quietRun( 'ip link del ' + intf2 )
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    return checkRun( cmd )
+    return quietRun( cmd )
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.
@@ -101,19 +101,20 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
 
-def createLink( node1, node2, retries=10, delaySecs=0.001 ):
+def createLink( node1, port1, node2, port2 ):
     """Create a link between nodes, making an interface for each.
        node1: Node object
-       node2: Node object"""
-    intf1 = node1.newIntf()
-    intf2 = node2.newIntf()
+       port1: node1 port number
+       node2: Node object
+       port2: node2 port number
+       returns: intf1 name, intf2 name"""
+    intf1 = node1.intfName( port1 )
+    intf2 = node2.intfName( port2 )
     makeIntfPair( intf1, intf2 )
-    if node1.inNamespace:
-        retry( retries, delaySecs, moveIntf, intf1, node1 )
-    if node2.inNamespace:
-        retry( retries, delaySecs, moveIntf, intf2, node2 )
-    node1.connection[ intf1 ] = ( node2, intf2 )
-    node2.connection[ intf2 ] = ( node1, intf1 )
+    node1.addIntf( intf1, port1 )
+    node2.addIntf( intf2, port2 )
+    node1.connect( intf1, node2, intf2 )
+    node2.connect( intf2, node1, intf1 )
     return intf1, intf2
 
 def fixLimits():
@@ -141,7 +142,8 @@ def macColonHex( mac ):
 
 def ipStr( ip ):
     """Generate IP address string
-       returns: ip addr string"""
+       ip: unsigned int of form x << 16 | y << 8 | z
+       returns: ip address string 10.x.y.z """
     hi = ( ip & 0xff0000 ) >> 16
     mid = ( ip & 0xff00 ) >> 8
     lo = ip & 0xff

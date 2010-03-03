@@ -40,8 +40,8 @@ import os
 import signal
 import select
 
-from mininet.log import info, error
-from mininet.util import quietRun
+from mininet.log import info, error, debug
+from mininet.util import quietRun, moveIntf
 
 
 class Node( object ):
@@ -72,13 +72,13 @@ class Node( object ):
         self.inToNode[ self.stdin.fileno() ] = self
         self.pid = self.shell.pid
         self.intfCount = 0
-        self.intfs = [] # list of interface names, as strings
+        self.intfs = {} # dict of port numbers to interface names
+        self.ports = {} # dict of interface names to port numbers
+                        # replace with Port objects, eventually ?
         self.ips = {} # dict of interfaces to ip addresses as strings
         self.connection = {} # remote node connected to each interface
         self.waiting = False
         self.execed = False
-        self.ports = {} # dict of ints to interface strings
-                        # replace with Port object, eventually
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -145,11 +145,13 @@ class Node( object ):
         "Send ^C, hopefully interrupting an interactive subprocess."
         self.write( chr( 3 ) )
 
-    def waitOutput( self ):
+    def waitOutput( self, verbose=False ):
         """Wait for a command to complete.
            Completion is signaled by a sentinel character, ASCII(127)
            appearing in the output stream.  Wait for the sentinel and return
-           the output, including trailing newline."""
+           the output, including trailing newline.
+           verbose: print output interactively"""
+        log = info if verbose else debug
         assert self.waiting
         output = ''
         while True:
@@ -157,37 +159,59 @@ class Node( object ):
             data = self.read( 1024 )
             if len( data ) > 0  and data[ -1 ] == chr( 0177 ):
                 output += data[ :-1 ]
+                log( output )
                 break
             else:
                 output += data
         self.waiting = False
         return output
 
-    def cmd( self, cmd ):
+    def cmd( self, cmd, verbose=False ):
         """Send a command, wait for output, and return it.
            cmd: string"""
+        log = info if verbose else debug
+        log( '*** %s : %s', self.name, cmd )
         self.sendCmd( cmd )
-        return self.waitOutput()
+        return self.waitOutput( verbose )
 
     def cmdPrint( self, cmd ):
         """Call cmd and printing its output
            cmd: string"""
-        #info( '*** %s : %s', self.name, cmd )
-        result = self.cmd( cmd )
-        #info( '%s\n', result )
-        return result
+        return self.cmd( cmd, verbose=True )
 
     # Interface management, configuration, and routing
+
+    # BL notes: This might be a bit redundant or over-complicated.
+    # However, it does allow a bit of specialization, including
+    # changing the canonical interface names. It's also tricky since
+    # the real interfaces are created as veth pairs, so we can't
+    # make a single interface at a time.
+
     def intfName( self, n ):
-        "Construct a canonical interface name node-intf for interface N."
+        "Construct a canonical interface name node-ethN for interface n."
         return self.name + '-eth' + repr( n )
 
     def newIntf( self ):
         "Reserve and return a new interface name."
         intfName = self.intfName( self.intfCount )
         self.intfCount += 1
-        self.intfs += [ intfName ]
         return intfName
+
+    def addIntf( self, intf, port ):
+        """Add an interface.
+           intf: interface name (nodeN-ethM)
+           port: port number (typically OpenFlow port number)"""
+        self.intfs[ port ] = intf
+        self.ports[ intf ] = port
+        #info( '\n' )
+        #info( 'added intf %s to node %x\n' % ( srcIntf, src ) )
+        if self.inNamespace:
+            #info( 'moving w/inNamespace set\n' )
+            moveIntf( intf, self )
+
+    def connect( self, intf, dstNode, dstIntf ):
+        "Register connection of intf to dstIntf on dstNode."
+        self.connection[ intf ] = ( dstNode, dstIntf )
 
     def setMAC( self, intf, mac ):
         """Set the MAC address for an interface.
@@ -206,9 +230,9 @@ class Node( object ):
 
     def setIP( self, intf, ip, bits ):
         """Set the IP address for an interface.
-           intf: string, interface name
+           intf: interface name
            ip: IP address as a string
-           bits:"""
+           bits: prefix length of form /24"""
         result = self.cmd( [ 'ifconfig', intf, ip + bits, 'up' ] )
         self.ips[ intf ] = ip
         return result
@@ -226,20 +250,19 @@ class Node( object ):
         return self.cmd( 'route add default ' + intf )
 
     def IP( self ):
-        "Return IP address of first interface"
-        if len( self.intfs ) > 0:
-            return self.ips.get( self.intfs[ 0 ], None )
+        "Return IP address of interface 0"
+        return self.ips.get( self.intfs.get( 0 , None ), None )
 
-    def intfIsUp( self ):
-        "Check if one of our interfaces is up."
-        return 'UP' in self.cmd( 'ifconfig ' + self.intfs[ 0 ] )
+    def intfIsUp( self, port ):
+        """Check if interface for a given port number is up.
+           port: port number"""
+        return 'UP' in self.cmd( 'ifconfig ' + self.intfs[ port ] )
 
     # Other methods
     def __str__( self ):
         result = self.name + ':'
-        if self.IP():
-            result += ' IP=' + self.IP()
-        result += ' intfs=' + ','.join( self.intfs )
+        result += ' IP=' + repr( self.IP() )
+        result += ' intfs=' + ','.join( sorted( self.intfs.values() ) )
         result += ' waiting=' + repr( self.waiting )
         return result
 
@@ -282,17 +305,17 @@ class UserSwitch( Switch ):
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
-           controllers: dict of controller names to objects"""
+           controllers: list of controller objects"""
         controller = controllers[ 0 ]
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
-        intfs = self.intfs
+        intfs = sorted( self.intfs.values() )
 
-        self.cmdPrint( 'ofdatapath -i ' + ','.join( intfs ) +
+        self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
             ' punix:/tmp/' + self.name +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
-        self.cmdPrint( 'ofprotocol unix:/tmp/' + self.name +
+        self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:' + controller.IP() + ' --fail=closed' +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
@@ -322,20 +345,20 @@ class KernelSwitch( Switch ):
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'dpctl deldp nl:%i' % self.dp )
-        self.cmdPrint( 'dpctl adddp nl:%i' % self.dp )
+        self.cmd( 'dpctl adddp nl:%i' % self.dp )
         if self.defaultMac:
             intf = 'of%i' % self.dp
             self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMac ] )
 
-        if len( self.ports ) != max( self.ports.keys() ) + 1:
+        if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
-                            'supported: %s' % self.ports )
-        intfs = [ self.ports[ port ] for port in self.ports.keys() ]
-        self.cmdPrint( 'dpctl addif nl:' + str( self.dp ) + ' ' +
+                            'supported: %s' % self.intfs )
+        intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
+        self.cmd( 'dpctl addif nl:' + str( self.dp ) + ' ' +
             ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmdPrint( 'ofprotocol nl:' + str( self.dp ) + ' tcp:' +
+        self.cmd( 'ofprotocol nl:' + str( self.dp ) + ' tcp:' +
                       controller.IP() + ':' +
                       str( controller.port ) +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
@@ -345,11 +368,11 @@ class KernelSwitch( Switch ):
         "Terminate kernel datapath."
         quietRun( 'dpctl deldp nl:%i' % self.dp )
         # In theory the interfaces should go away after we shut down.
-        # However, this takes time, so we're better off to remove them
+        # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow.
         self.cmd( 'kill %ofprotocol' )
-        for intf in self.intfs:
+        for intf in self.intfs.values():
             quietRun( 'ip link del ' + intf )
             info( '.' )
 
@@ -374,21 +397,21 @@ class OVSKernelSwitch( Switch ):
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
-        self.cmdPrint( 'ovs-dpctl add-dp dp%i' % self.dp )
+        self.cmd( 'ovs-dpctl add-dp dp%i' % self.dp )
         if self.defaultMac:
             intf = 'dp' % self.dp
             mac = self.defaultMac
             self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
 
-        if len( self.ports ) != max( self.ports.keys() ) + 1:
+        if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
-                            'supported: %s' % self.ports )
-        intfs = [ self.ports[ port ] for port in self.ports.keys() ]
-        self.cmdPrint( 'ovs-dpctl add-if dp' + str( self.dp ) + ' ' +
+                            'supported: %s' % self.intfs )
+        intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
+        self.cmd( 'ovs-dpctl add-if dp' + str( self.dp ) + ' ' +
                       ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmdPrint( 'ovs-openflowd dp' + str( self.dp ) + ' tcp:' +
+        self.cmd( 'ovs-openflowd dp' + str( self.dp ) + ' tcp:' +
                       controller.IP() + ':' +
                       ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
@@ -397,11 +420,11 @@ class OVSKernelSwitch( Switch ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
         # In theory the interfaces should go away after we shut down.
-        # However, this takes time, so we're better off to remove them
+        # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow.
         self.cmd( 'kill %ovs-openflowd' )
-        for intf in self.intfs:
+        for intf in self.intfs.values():
             quietRun( 'ip link del ' + intf )
             info( '.' )
 
@@ -425,8 +448,8 @@ class Controller( Node ):
            Log to /tmp/cN.log"""
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
-            self.cmdPrint( 'cd ' + self.cdir )
-        self.cmdPrint( self.controller + ' ' + self.cargs +
+            self.cmd( 'cd ' + self.cdir )
+        self.cmd( self.controller + ' ' + self.cargs +
             ' 1> ' + cout + ' 2> ' + cout + ' &' )
         self.execed = False
 
