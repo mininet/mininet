@@ -47,7 +47,7 @@ class CLI( Cmd ):
 
     def __init__( self, mininet ):
         self.mn = mininet
-        self.nodelist = self.mn.hosts + self.mn.switches + self.mn.controllers
+        self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
         self.nodemap = {} # map names to Node objects
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
@@ -69,9 +69,9 @@ class CLI( Cmd ):
                    '\n'
                    'The interpreter automatically substitutes IP '
                    'addresses\n'
-                   'for node names when a node is the first arg, so command'
+                   'for node names when a node is the first arg, so commands'
                    ' like\n'
-                   '  mininet> h0 ping -c1 h1\n'
+                   ' mininet> h0 ping -c1 h1\n'
                    'should work.\n'
                    '\n'
                    'Interactive commands are not really supported yet,\n'
@@ -90,7 +90,7 @@ class CLI( Cmd ):
         "List network connections."
         for switch in self.mn.switches:
             info( '%s <->', switch.name )
-            for intf in switch.intfs:
+            for intf in switch.intfs.values():
                 name = switch.connection[ intf ][ 1 ]
                 info( ' %s' % name )
             info( '\n' )
@@ -98,6 +98,25 @@ class CLI( Cmd ):
     def do_sh( self, args ):
         "Run an external shell command"
         call( args, shell=True )
+
+    # do_py() needs to catch any exception during eval()
+    # pylint: disable-msg=W0703
+
+    def do_py( self, args ):
+        """Evaluate a Python expression.
+           Node names may be used, e.g.: h1.cmd('ls')"""
+        try:
+            result = eval( args, globals(), self.nodemap )
+            if not result:
+                return
+            elif isinstance( result, str ):
+                info( result + '\n' )
+            else:
+                info( repr( result ) + '\n' )
+        except Exception, e:
+            info( str( e ) + '\n' )
+
+    # pylint: enable-msg=W0703
 
     def do_pingall( self, args ):
         "Ping between all hosts."
@@ -119,7 +138,8 @@ class CLI( Cmd ):
     def do_intfs( self, args ):
         "List interfaces."
         for node in self.nodelist:
-            info( '%s: %s\n' % ( node.name, ' '.join( node.intfs ) ) )
+            info( '%s: %s\n' %
+                ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
 
     def do_dump( self, args ):
         "Dump node info."
