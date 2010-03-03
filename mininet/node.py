@@ -54,7 +54,7 @@ class Node( object ):
     def __init__( self, name, inNamespace=True ):
         self.name = name
         closeFds = False # speed vs. memory use
-        # xpgEcho is needed so we can echo our sentinel in sendCmd
+        # xpg_echo is needed so we can echo our sentinel in sendCmd
         cmd = [ '/bin/bash', '-O', 'xpg_echo' ]
         self.inNamespace = inNamespace
         if self.inNamespace:
@@ -170,7 +170,7 @@ class Node( object ):
         """Send a command, wait for output, and return it.
            cmd: string"""
         log = info if verbose else debug
-        log( '*** %s : %s', self.name, cmd )
+        log( '*** %s : %s\n' % ( self.name, cmd ) )
         self.sendCmd( cmd )
         return self.waitOutput( verbose )
 
@@ -261,9 +261,9 @@ class Node( object ):
     # Other methods
     def __str__( self ):
         result = self.name + ':'
-        result += ' IP=' + repr( self.IP() )
+        result += ' IP=' + str( self.IP() )
         result += ' intfs=' + ','.join( sorted( self.intfs.values() ) )
-        result += ' waiting=' + repr( self.waiting )
+        result += ' waiting=' + str( self.waiting )
         return result
 
 
