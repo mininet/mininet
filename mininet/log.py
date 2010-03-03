@@ -122,4 +122,4 @@ class MininetLogger( Logger, object ):
 
 
 lg = MininetLogger()
-info, warn, error = lg.info, lg.warn, lg.error
+info, warn, error, debug = lg.info, lg.warn, lg.error, lg.debug
