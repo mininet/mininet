@@ -19,7 +19,7 @@ def makeXterm( node, title ):
         title += ' (root)'
     cmd = [ 'xterm', '-title', title, '-e' ]
     if not node.execed:
-        node.cmdPrint( 'screen -dmS ' + node.name )
+        node.cmd( 'screen -dmS ' + node.name )
         cmd += [ 'screen', '-D', '-RR', '-S', node.name ]
     else:
         cmd += [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
