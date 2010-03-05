@@ -38,7 +38,7 @@ Bugs/limitations:
 from subprocess import call
 from cmd import Cmd
 
-from mininet.log import info, cliinfo
+from mininet.log import info, output
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -84,16 +84,16 @@ class CLI( Cmd ):
     def do_nodes( self, args ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
-        cliinfo( 'available nodes are: \n%s\n' % nodes )
+        output( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, args ):
         "List network connections."
         for switch in self.mn.switches:
-            cliinfo( switch.name, '<->' )
+            output( switch.name, '<->' )
             for intf in switch.intfs.values():
                 name = switch.connection[ intf ][ 1 ]
-                cliinfo( ' %s' % name )
-            cliinfo( '\n' )
+                output( ' %s' % name )
+            output( '\n' )
 
     def do_sh( self, args ):
         "Run an external shell command"
@@ -138,13 +138,13 @@ class CLI( Cmd ):
     def do_intfs( self, args ):
         "List interfaces."
         for node in self.nodelist:
-            cliinfo( '%s: %s\n' %
+            output( '%s: %s\n' %
                 ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
 
     def do_dump( self, args ):
         "Dump node info."
         for node in self.nodelist:
-            cliinfo( '%s\n' % node )
+            output( '%s\n' % node )
 
     def do_exit( self, args ):
         "Exit"

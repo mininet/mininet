@@ -89,7 +89,7 @@ import signal
 from time import sleep
 
 from mininet.cli import CLI
-from mininet.log import info, error, debug, cliinfo
+from mininet.log import info, error, debug, output
 from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
@@ -402,9 +402,9 @@ class Mininet( object ):
         ploss = None
         if not hosts:
             hosts = self.hosts
-            cliinfo( '*** Ping: testing ping reachability\n' )
+            output( '*** Ping: testing ping reachability\n' )
         for node in hosts:
-            cliinfo( '%s -> ' % node.name )
+            output( '%s -> ' % node.name )
             for dest in hosts:
                 if node != dest:
                     result = node.cmd( 'ping -c1 ' + dest.IP() )
@@ -416,10 +416,10 @@ class Mininet( object ):
                         node.cmdPrint( 'route' )
                         exit( 1 )
                     lost += sent - received
-                    cliinfo( ( '%s ' % dest.name ) if received else 'X ' )
-            cliinfo( '\n' )
+                    output( ( '%s ' % dest.name ) if received else 'X ' )
+            output( '\n' )
             ploss = 100 * lost / packets
-        cliinfo( "*** Results: %i%% dropped (%d/%d lost)\n" %
+        output( "*** Results: %i%% dropped (%d/%d lost)\n" %
                 ( ploss, lost, packets ) )
         return ploss
 
@@ -456,8 +456,8 @@ class Mininet( object ):
         else:
             assert len( hosts ) == 2
         host0, host1 = hosts
-        cliinfo( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        cliinfo( "%s and %s\n" % ( host0.name, host1.name ) )
+        output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
+        output( "%s and %s\n" % ( host0.name, host1.name ) )
         host0.cmd( 'killall -9 iperf' )
         iperfArgs = 'iperf '
         bwArgs = ''
@@ -476,7 +476,7 @@ class Mininet( object ):
         result = [ self._parseIperf( server ), self._parseIperf( client ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )
-        cliinfo( '*** Results: %s\n' % result )
+        output( '*** Results: %s\n' % result )
         return result
 
     def iperfUdp( self, udpBw='10M' ):

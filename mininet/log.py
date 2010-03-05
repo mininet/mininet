@@ -8,11 +8,11 @@ import types
 # the output of the commands they execute, plus any errors or warnings.  This
 # level is in between info and warning.  CLI info-level commands should not be
 # printed during regression tests.
-CLIINFO = 25
+OUTPUT = 25
 
 LEVELS = { 'debug': logging.DEBUG,
           'info': logging.INFO,
-          'cliinfo': CLIINFO,
+          'output': OUTPUT,
           'warning': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL }
@@ -131,18 +131,18 @@ class MininetLogger( Logger, object ):
     # Not sure why this is occurring - this function definitely gets called.
 
     # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
-    def cliinfo( self, msg, *args, **kwargs ):
-        """Log 'msg % args' with severity 'CLIINFO'.
+    def output( self, msg, *args, **kwargs ):
+        """Log 'msg % args' with severity 'OUTPUT'.
 
            To pass exception information, use the keyword argument exc_info
            with a true value, e.g.
 
            logger.warning("Houston, we have a %s", "cli output", exc_info=1)
         """
-        if self.manager.disable >= CLIINFO:
+        if self.manager.disable >= OUTPUT:
             return
-        if self.isEnabledFor( CLIINFO ):
-            self._log( CLIINFO, msg, args, kwargs )
+        if self.isEnabledFor( OUTPUT ):
+            self._log( OUTPUT, msg, args, kwargs )
 
     # pylint: enable-msg=E0202
 
@@ -170,6 +170,6 @@ def makeListCompatible( fn ):
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
 
-info, cliinfo, warn, error, debug = lg.info, lg.cliinfo, lg.warn, lg.error, \
-    lg.debug = [ makeListCompatible( f ) for f in lg.info, lg.cliinfo, lg.warn,
+info, output, warn, error, debug = lg.info, lg.output, lg.warn, lg.error, \
+    lg.debug = [ makeListCompatible( f ) for f in lg.info, lg.output, lg.warn,
                  lg.error, lg.debug ]
