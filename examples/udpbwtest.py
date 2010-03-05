@@ -19,31 +19,8 @@ flush = sys.stdout.flush
 from mininet.log import lg   
 from mininet.net import init, Mininet
 from mininet.node import Host, KernelSwitch
-from mininet.topo import Topo, Node
+from mininet.topolib import TreeTopo
 from mininet.util import quietRun
-
-class TreeTopo( Topo ):
-    "Topology for a tree network with a given depth and fanout."
-
-    def __init__( self, depth=1, fanout=2 ):
-        super( TreeTopo, self ).__init__()
-        # Build topology
-        self.treeNet( 1, depth, fanout )
-        # Consider all switches and hosts 'on'
-        self.enable_all()
-
-    def treeNet( self, id, depth, fanout ):
-        """Add a subtree with a given id.
-           returns: last id added"""
-        me = id
-        isSwitch = (depth > 0 )
-        self._add_node( me, Node( is_switch=isSwitch ) )
-        if isSwitch:
-            for i in range( 0, fanout ):
-                child = id + 1
-                self._add_edge( me, child )
-                id = self.treeNet( child, depth-1, fanout )
-        return id
 
 # Some useful stuff: buffered readline and host monitoring
 
