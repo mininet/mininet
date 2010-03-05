@@ -6,7 +6,7 @@ clean:
 MININET = mininet/*.py
 TEST = mininet/test/*.py
 EXAMPLES = examples/*.py
-BIN = bin/mn bin/mnclean
+BIN = bin/mn
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 
 P8IGN = E251,E201,E302
