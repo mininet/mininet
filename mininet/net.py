@@ -22,7 +22,8 @@ Hosts have a network interface which is configured via ifconfig/ip
 link/etc.
 
 This version supports both the kernel and user space datapaths
-from the OpenFlow reference implementation.
+from the OpenFlow reference implementation (openflowswitch.org)
+as well as OpenVSwitch (openvswitch.org.)
 
 In kernel datapath mode, the controller and switches are simply
 processes in the root namespace.
@@ -48,7 +49,7 @@ which interfaces belong to which node.
 
 The basic naming scheme is as follows:
 
-    Host nodes are named h1-hN
+    Host nodes are named h0-hN
     Switch nodes are named s0-sN
     Controller nodes are named c0-cN
     Interfaces are named {nodename}-eth0 .. {nodename}-ethN
@@ -66,8 +67,8 @@ of useful tasks maybe performed, including basic connectivity and
 bandwidth tests and running the mininet CLI.
 
 Once the network is up and running, test code can easily get access
-to its host and switch objects, which can then be used
-for arbitrary experiments, which typically involve running a series of
+to host and switch objects, which can then be used
+for arbitrary experiments, typically involving running a series of
 commands on the hosts.
 
 After all desired tests or activities have been completed, the stop()
@@ -318,7 +319,7 @@ class Mininet( object ):
         cleanUpScreens()
 
     def setMacs( self ):
-        """Set MAC addrs to correspond to datapath IDs on hosts.
+        """Set MAC addrs to correspond to default MACs on hosts.
            Assume that the host only has one interface."""
         for host in self.hosts:
             host.setMAC( host.intfs[ 0 ], host.defaultMAC )
@@ -328,7 +329,7 @@ class Mininet( object ):
         for src in self.hosts:
             for dst in self.hosts:
                 if src != dst:
-                    src.setARP( ip=dst.IP(), mac=dst.defaultMAC )
+                    src.setARP( ip=dst.IP(), mac=dst.MAC() )
 
     def start( self ):
         "Start controller and switches"
