@@ -283,7 +283,7 @@ class Node( object ):
             return macs[ 0 ]
         else:
             return None
-        
+
     def intfIsUp( self, port ):
         """Check if interface for a given port number is up.
            port: port number"""
