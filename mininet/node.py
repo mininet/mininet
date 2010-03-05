@@ -561,7 +561,7 @@ class RemoteController( Controller ):
                  port=6633 ):
         """Init.
            name: name to give controller
-           ipAddress: the IP address where the remote controller is
+           defaultIP: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
         Controller.__init__( self, name, defaultIP=defaultIP, port=port )
