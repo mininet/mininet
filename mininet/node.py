@@ -39,6 +39,7 @@ from subprocess import Popen, PIPE, STDOUT
 import os
 import signal
 import select
+from time import sleep
 
 from mininet.log import info, error, debug
 from mininet.util import quietRun, moveIntf
@@ -51,7 +52,12 @@ class Node( object ):
     inToNode = {} # mapping of input fds to nodes
     outToNode = {} # mapping of output fds to nodes
 
-    def __init__( self, name, inNamespace=True ):
+    def __init__( self, name, inNamespace=True,
+        defaultMAC=None, defaultIP=None ):
+        """name: name of node
+           inNamespace: in network namespace?
+           defaultMAC: default MAC address for intf 0
+           defaultIP: default IP address for intf 0"""
         self.name = name
         closeFds = False # speed vs. memory use
         # xpg_echo is needed so we can echo our sentinel in sendCmd
@@ -79,6 +85,8 @@ class Node( object ):
         self.connection = {} # remote node connected to each interface
         self.waiting = False
         self.execed = False
+        self.defaultIP = defaultIP
+        self.defaultMAC = defaultMAC
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -213,6 +221,19 @@ class Node( object ):
         "Register connection of intf to dstIntf on dstNode."
         self.connection[ intf ] = ( dstNode, dstIntf )
 
+    def deleteIntfs( self ):
+        "Delete all of our interfaces."
+        # In theory the interfaces should go away after we shut down.
+        # However, this takes time, so we're better off removing them
+        # explicitly so that we won't get errors if we run before they
+        # have been removed by the kernel. Unfortunately this is very slow.
+        self.cmd( 'kill %ofprotocol' )
+        for intf in self.intfs.values():
+            quietRun( 'ip link del ' + intf )
+            info( '.' )
+            # Does it help to sleep to let things run?
+            sleep( 0.001 )
+
     def setMAC( self, intf, mac ):
         """Set the MAC address for an interface.
            mac: MAC address as string"""
@@ -228,12 +249,13 @@ class Node( object ):
         result = self.cmd( [ 'arp', '-s', ip, mac ] )
         return result
 
-    def setIP( self, intf, ip, bits ):
+    def setIP( self, intf, ip, prefixLen ):
         """Set the IP address for an interface.
            intf: interface name
            ip: IP address as a string
-           bits: prefix length of form /24"""
-        result = self.cmd( [ 'ifconfig', intf, ip + bits, 'up' ] )
+           prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
+        ipSub = '%s/%d' % ( ip, prefixLen )
+        result = self.cmd( [ 'ifconfig', intf, ipSub, 'up' ] )
         self.ips[ intf ] = ip
         return result
 
@@ -297,10 +319,10 @@ class UserSwitch( Switch ):
     """User-space switch.
        Currently only works in the root namespace."""
 
-    def __init__( self, name ):
+    def __init__( self, name, *args, **kwargs ):
         """Init.
            name: name for the switch"""
-        Switch.__init__( self, name, inNamespace=False )
+        Switch.__init__( self, name, inNamespace=False, **kwargs )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
@@ -323,20 +345,19 @@ class UserSwitch( Switch ):
         "Stop OpenFlow reference user datapath."
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
-
+        self.deleteIntfs()
 
 class KernelSwitch( Switch ):
     """Kernel-space switch.
        Currently only works in the root namespace."""
 
-    def __init__( self, name, dp=None, defaultMac=None ):
+    def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name:
            dp: netlink id (0, 1, 2, ...)
-           defaultMac: default MAC as string; random value if None"""
-        Switch.__init__( self, name, inNamespace=False )
+           defaultMAC: default MAC as string; random value if None"""
+        Switch.__init__( self, name, inNamespace=False, **kwargs )
         self.dp = dp
-        self.defaultMac = defaultMac
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -346,9 +367,9 @@ class KernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'dpctl deldp nl:%i' % self.dp )
         self.cmd( 'dpctl adddp nl:%i' % self.dp )
-        if self.defaultMac:
+        if self.defaultMAC:
             intf = 'of%i' % self.dp
-            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMac ] )
+            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMAC ] )
 
         if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
@@ -367,28 +388,19 @@ class KernelSwitch( Switch ):
     def stop( self ):
         "Terminate kernel datapath."
         quietRun( 'dpctl deldp nl:%i' % self.dp )
-        # In theory the interfaces should go away after we shut down.
-        # However, this takes time, so we're better off removing them
-        # explicitly so that we won't get errors if we run before they
-        # have been removed by the kernel. Unfortunately this is very slow.
-        self.cmd( 'kill %ofprotocol' )
-        for intf in self.intfs.values():
-            quietRun( 'ip link del ' + intf )
-            info( '.' )
-
+        self.deleteIntfs()
 
 class OVSKernelSwitch( Switch ):
     """Open VSwitch kernel-space switch.
        Currently only works in the root namespace."""
 
-    def __init__( self, name, dp=None, defaultMac=None ):
+    def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name:
            dp: netlink id (0, 1, 2, ...)
            dpid: datapath ID as unsigned int; random value if None"""
-        Switch.__init__( self, name, inNamespace=False )
+        Switch.__init__( self, name, inNamespace=False, **kwargs )
         self.dp = dp
-        self.defaultMac = defaultMac
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -398,9 +410,9 @@ class OVSKernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
         self.cmd( 'ovs-dpctl add-dp dp%i' % self.dp )
-        if self.defaultMac:
+        if self.defaultMAC:
             intf = 'dp' % self.dp
-            mac = self.defaultMac
+            mac = self.defaultMAC
             self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
 
         if len( self.intfs ) != max( self.intfs ) + 1:
@@ -419,14 +431,7 @@ class OVSKernelSwitch( Switch ):
     def stop( self ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
-        # In theory the interfaces should go away after we shut down.
-        # However, this takes time, so we're better off removing them
-        # explicitly so that we won't get errors if we run before they
-        # have been removed by the kernel. Unfortunately this is very slow.
-        self.cmd( 'kill %ovs-openflowd' )
-        for intf in self.intfs.values():
-            quietRun( 'ip link del ' + intf )
-            info( '.' )
+        self.deleteIntfs()
 
 
 class Controller( Node ):
@@ -434,14 +439,14 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, controller='controller',
-                 cargs='-v ptcp:', cdir=None, ipAddress="127.0.0.1",
+                 cargs='-v ptcp:', cdir=None, defaultIP="127.0.0.1",
                  port=6633 ):
         self.controller = controller
         self.cargs = cargs
         self.cdir = cdir
-        self.ipAddress = ipAddress
         self.port = port
-        Node.__init__( self, name, inNamespace=inNamespace )
+        Node.__init__( self, name, inNamespace=inNamespace,
+            defaultIP=defaultIP )
 
     def start( self ):
         """Start <controller> <args> on controller.
@@ -460,18 +465,18 @@ class Controller( Node ):
 
     def IP( self ):
         "Return IP address of the Controller"
-        return self.ipAddress
+        return self.defaultIP
 
 
 class ControllerParams( object ):
     "Container for controller IP parameters."
 
-    def __init__( self, ip, subnetSize ):
+    def __init__( self, ip, prefixLen ):
         """Init.
-           ip: integer, controller IP
-            subnetSize: integer, ex 8 for slash-8, covering 17M"""
+           ip: string, controller IP address
+           prefixLen: prefix length, e.g. 8 for /8, covering 16M"""
         self.ip = ip
-        self.subnetSize = subnetSize
+        self.prefixLen = prefixLen
 
 
 class NOX( Controller ):
@@ -500,14 +505,14 @@ class NOX( Controller ):
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
-    def __init__( self, name, inNamespace=False, ipAddress='127.0.0.1',
+    def __init__( self, name, inNamespace=False, defaultIP='127.0.0.1',
                  port=6633 ):
         """Init.
            name: name to give controller
            ipAddress: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
-        Controller.__init__( self, name, ipAddress=ipAddress, port=port )
+        Controller.__init__( self, name, defaultIP=defaultIP, port=port )
 
     def start( self ):
         "Overridden to do nothing."

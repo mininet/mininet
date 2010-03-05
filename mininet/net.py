@@ -82,7 +82,8 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug
-from mininet.node import KernelSwitch, OVSKernelSwitch
+from mininet.node import Host, KernelSwitch, OVSKernelSwitch, Controller
+from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex
 from mininet.xterm import cleanUpScreens, makeXterms
@@ -105,7 +106,9 @@ def init():
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
-    def __init__( self, topo, switch, host, controller, cparams,
+    def __init__( self, topo, switch=KernelSwitch, host=Host,
+                 controller=Controller,
+                 cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False ):
@@ -143,29 +146,24 @@ class Mininet( object ):
         if topo and build:
             self.buildFromTopo( self.topo )
 
-    def addHost( self, name, defaultMac=None, defaultIp=None ):
+    def addHost( self, name, mac=None, ip=None ):
         """Add host.
            name: name of host to add
-           defaultMac: default MAC address for intf 0
-           defaultIp: default IP address for intf 0
+           mac: default MAC address for intf 0
+           ip: default IP address for intf 0
            returns: added host"""
-        host = self.host( name )
+        host = self.host( name, defaultMAC=mac, defaultIP=ip )
         self.hosts.append( host )
         self.nameToNode[ name ] = host
-        # May wish to add this to actual object
-        if defaultMac:
-            host.defaultMac = defaultMac
-        if defaultIp:
-            host.defaultIP = defaultIp
         return host
 
-    def addSwitch( self, name, defaultMac=None ):
+    def addSwitch( self, name, mac=None ):
         """Add switch.
            name: name of switch to add
-           defaultMac: default MAC address for kernel/OVS switch intf 0
+           mac: default MAC address for kernel/OVS switch intf 0
            returns: added switch"""
         if self.switch is KernelSwitch or self.switch is OVSKernelSwitch:
-            sw = self.switch( name, dp=self.dps, defaultMac=defaultMac )
+            sw = self.switch( name, dp=self.dps, defaultMAC=mac )
             self.dps += 1
         else:
             sw = self.switch( name )
@@ -225,9 +223,8 @@ class Mininet( object ):
                          'controller' %
                          switch.name )
                 exit( 1 )
-            controller.setIP( cintf, self.cparams.ip, '/' +
-                             self.cparams.subnetSize )
-            switch.setIP( sintf, sip, '/' + self.cparams.subnetSize )
+            controller.setIP( cintf, self.cparams.ip, self.cparams.prefixLen )
+            switch.setIP( sintf, sip, self.cparams.prefixLen )
             controller.setHostRoute( sip, cintf )
             switch.setHostRoute( self.cparams.ip, sintf )
         info( '\n' )
@@ -251,12 +248,11 @@ class Mininet( object ):
         # params were: hosts, ips
         for host in self.hosts:
             hintf = host.intfs[ 0 ]
-            host.setIP( hintf, host.defaultIP,
-                       '/' + str( self.cparams.subnetSize ) )
+            host.setIP( hintf, host.defaultIP, self.cparams.prefixLen )
             host.setDefaultRoute( hintf )
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
-            info( '%s ', host.name )
+            info( host.name + ' ' )
         info( '\n' )
 
     def buildFromTopo( self, topo ):
@@ -274,14 +270,14 @@ class Mininet( object ):
             name = 'h' + topo.name( hostId )
             mac = macColonHex( hostId ) if self.setMacs else None
             ip = topo.ip( hostId )
-            host = self.addHost( name, defaultIp=ip, defaultMac=mac )
+            host = self.addHost( name, ip=ip, mac=mac )
             self.idToNode[ hostId ] = host
             info( name + ' ' )
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
             name = 's' + topo.name( switchId )
             mac = macColonHex( switchId) if self.setMacs else None
-            switch = self.addSwitch( name, defaultMac=mac )
+            switch = self.addSwitch( name, mac=mac )
             self.idToNode[ switchId ] = switch
             info( name + ' ' )
         info( '\n*** Adding edges:\n' )
@@ -325,14 +321,14 @@ class Mininet( object ):
         """Set MAC addrs to correspond to datapath IDs on hosts.
            Assume that the host only has one interface."""
         for host in self.hosts:
-            host.setMAC( host.intfs[ 0 ], host.defaultMac )
+            host.setMAC( host.intfs[ 0 ], host.defaultMAC )
 
     def staticArp( self ):
         "Add all-pairs ARP entries to remove the need to handle broadcast."
         for src in self.hosts:
             for dst in self.hosts:
                 if src != dst:
-                    src.setARP( ip=dst.IP(), mac=dst.defaultMac )
+                    src.setARP( ip=dst.IP(), mac=dst.defaultMAC )
 
     def start( self ):
         "Start controller and switches"
