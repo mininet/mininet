@@ -16,6 +16,7 @@ import os.path
 import sys
 import time
 
+from mininet.clean import cleanup
 from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
@@ -144,6 +145,8 @@ class MininetRunner( object ):
         opts.add_option( '--topo', type='string', default=TOPODEF,
                         help='[' + ' '.join( TOPOS.keys() ) + '],arg1,arg2,'
                         '...argN')
+        opts.add_option( '--clean', '-c', action='store_true',
+                        default=False, help='clean and exit' )
         opts.add_option( '--custom', type='string', default=None,
                         help='read custom topo and node params from .py file' )
         opts.add_option( '--test', type='choice', choices=TESTS,
@@ -183,6 +186,10 @@ class MininetRunner( object ):
 
     def begin( self ):
         "Create and run mininet."
+
+        if self.options.clean:
+            cleanup()
+            exit()
 
         start = time.time()
 
