@@ -35,10 +35,11 @@ RemoteController: a remote controller node, which may use any
 
 """
 
-from subprocess import Popen, PIPE, STDOUT
 import os
+import re
 import signal
 import select
+from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
@@ -227,7 +228,6 @@ class Node( object ):
         # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow.
-        self.cmd( 'kill %ofprotocol' )
         for intf in self.intfs.values():
             quietRun( 'ip link del ' + intf )
             info( '.' )
@@ -275,6 +275,15 @@ class Node( object ):
         "Return IP address of interface 0"
         return self.ips.get( self.intfs.get( 0 , None ), None )
 
+    def MAC( self ):
+        "Return MAC address of interface 0"
+        ifconfig = self.cmd( 'ifconfig ' + self.intfs[ 0 ] )
+        macs = re.findall( '..:..:..:..:..:..', ifconfig )
+        if len( macs ) > 0:
+            return macs[ 0 ]
+        else:
+            return None
+        
     def intfIsUp( self, port ):
         """Check if interface for a given port number is up.
            port: port number"""
@@ -388,6 +397,7 @@ class KernelSwitch( Switch ):
     def stop( self ):
         "Terminate kernel datapath."
         quietRun( 'dpctl deldp nl:%i' % self.dp )
+        self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
 class OVSKernelSwitch( Switch ):
@@ -431,6 +441,7 @@ class OVSKernelSwitch( Switch ):
     def stop( self ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
+        self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
 
 
