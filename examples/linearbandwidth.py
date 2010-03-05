@@ -23,13 +23,13 @@ from mininet.node import Host, KernelSwitch, UserSwitch
 from mininet.topo import Topo, Node
 from mininet.log import lg
 
-class LinearTopo( Topo ):
+class LinearTestTopo( Topo ):
     "Topology for a string of N hosts and N-1 switches."
 
     def __init__( self, N ):
     
         # Add default members to class.
-        super( LinearTopo, self ).__init__()
+        super( LinearTestTopo, self ).__init__()
         
         # Create switch and host nodes
         hosts = range( 1, N+1 )
@@ -63,10 +63,11 @@ def linearBandwidthTest( lengths ):
     for datapath in datapaths:
         Switch = KernelSwitch if datapath == 'kernel' else UserSwitch
         results[ datapath ] = []
-        net = Mininet( topo=LinearTopo( hostCount ), switch=Switch )
+        net = Mininet( topo=LinearTestTopo( hostCount ), switch=Switch )
         net.start()
         print "*** testing basic connectivity"
-        net.ping( [ net.hosts[ 0 ], net.hosts[ -1 ] ] )
+        for n in lengths:
+            net.ping( [ net.hosts[ 0 ], net.hosts[ n ] ] )
         print "*** testing bandwidth"
         for n in lengths:
             src, dst = net.hosts[ 0 ], net.hosts[ n ]
