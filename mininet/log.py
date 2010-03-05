@@ -108,12 +108,11 @@ class MininetLogger( Logger, object ):
     def setLogLevel( self, levelname=None ):
         """Setup loglevel.
            Convenience function to support lowercase names.
-
            levelName: level name from LEVELS"""
         level = LOGLEVELDEFAULT
         if levelname != None:
             if levelname not in LEVELS:
-                raise Exception( 'unknown loglevel seen in set_loglevel' )
+                raise Exception( 'unknown levelname seen in setLogLevel' )
             else:
                 level = LEVELS.get( levelname, level )
 
@@ -122,4 +121,28 @@ class MininetLogger( Logger, object ):
 
 
 lg = MininetLogger()
-info, warn, error, debug = lg.info, lg.warn, lg.error, lg.debug
+
+# Make things a bit more convenient by adding aliases
+# (info, warn, error, debug) and allowing info( 'this', 'is', 'OK' )
+# In the future we may wish to make things more efficient by only
+# doing the join (and calling the function) unless the logging level
+# is high enough.
+
+def makeListCompatible( fn ):
+    """Return a new function allowing fn( 'a 1 b' ) to be called as
+       newfn( 'a', 1, 'b' )"""
+
+    def newfn( *args ):
+        "Generated function."
+        if len( args ) == 1:
+            return fn( *args )
+        args = ' '.join( [ str( arg ) for arg in args ] )
+        return fn( args )
+
+    # Fix newfn's name and docstring
+    setattr( newfn, '__name__', fn.__name__ )
+    setattr( newfn, '__doc__', fn.__doc__ )
+    return newfn
+
+info, warn, error, debug = lg.info, lg.warn, lg.error, lg.debug = [
+    makeListCompatible( f ) for f in lg.info, lg.warn, lg.error, lg.debug ]
