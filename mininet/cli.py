@@ -52,7 +52,7 @@ class CLI( Cmd ):
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
         Cmd.__init__( self )
-        warn( '*** Starting CLI:\n' )
+        info( '*** Starting CLI:\n' )
         self.cmdloop()
 
     # Disable pylint "Unused argument: 'arg's'" messages.

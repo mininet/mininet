@@ -16,7 +16,7 @@ import os.path
 import sys
 import time
 
-from mininet.log import lg, LEVELS
+from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
@@ -221,7 +221,7 @@ class MininetRunner( object ):
                 mn.run( test )
 
         elapsed = float( time.time() - start )
-        print ( 'completed in %0.3f seconds' % elapsed )
+        info( 'completed in %0.3f seconds\n' % elapsed )
 
 
 if __name__ == "__main__":
