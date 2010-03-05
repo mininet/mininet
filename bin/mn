@@ -151,6 +151,10 @@ class MininetRunner( object ):
         "Setup and validate environment."
 
         # set logging verbosity
+        if LEVELS[self.options.verbosity] > LEVELS['cliinfo']:
+            print ( '*** WARNING: selected verbosity level (%s) will hide CLI '
+                    'output!\n'
+                    'Please restart Mininet with -v [debug, info, cliinfo].' )
         lg.setLogLevel( self.options.verbosity )
 
         # validate environment setup

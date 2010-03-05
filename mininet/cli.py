@@ -38,7 +38,7 @@ Bugs/limitations:
 from subprocess import call
 from cmd import Cmd
 
-from mininet.log import info, warn
+from mininet.log import info, warn, cliinfo
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -84,16 +84,16 @@ class CLI( Cmd ):
     def do_nodes( self, args ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
-        info( 'available nodes are: \n%s\n' % nodes )
+        cliinfo( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, args ):
         "List network connections."
         for switch in self.mn.switches:
-            info( switch.name, '<->' )
+            cliinfo( switch.name, '<->' )
             for intf in switch.intfs.values():
                 name = switch.connection[ intf ][ 1 ]
-                info( ' %s' % name )
-            info( '\n' )
+                cliinfo( ' %s' % name )
+            cliinfo( '\n' )
 
     def do_sh( self, args ):
         "Run an external shell command"
@@ -128,7 +128,7 @@ class CLI( Cmd ):
 
     def do_iperf( self, args ):
         "Simple iperf TCP test between two hosts."
-        self.mn.iperf( verbose=True )
+        self.mn.iperf()
 
     def do_iperfudp( self, args ):
         "Simple iperf UDP test between two hosts."
@@ -138,13 +138,13 @@ class CLI( Cmd ):
     def do_intfs( self, args ):
         "List interfaces."
         for node in self.nodelist:
-            info( '%s: %s\n' %
+            cliinfo( '%s: %s\n' %
                 ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
 
     def do_dump( self, args ):
         "Dump node info."
         for node in self.nodelist:
-            info( '%s\n' % node )
+            cliinfo( '%s\n' % node )
 
     def do_exit( self, args ):
         "Exit"

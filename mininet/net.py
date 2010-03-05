@@ -89,7 +89,7 @@ import signal
 from time import sleep
 
 from mininet.cli import CLI
-from mininet.log import info, error, debug
+from mininet.log import info, error, debug, cliinfo
 from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
@@ -402,9 +402,9 @@ class Mininet( object ):
         ploss = None
         if not hosts:
             hosts = self.hosts
-            info( '*** Ping: testing ping reachability\n' )
+            cliinfo( '*** Ping: testing ping reachability\n' )
         for node in hosts:
-            info( '%s -> ' % node.name )
+            cliinfo( '%s -> ' % node.name )
             for dest in hosts:
                 if node != dest:
                     result = node.cmd( 'ping -c1 ' + dest.IP() )
@@ -416,10 +416,10 @@ class Mininet( object ):
                         node.cmdPrint( 'route' )
                         exit( 1 )
                     lost += sent - received
-                    info( ( '%s ' % dest.name ) if received else 'X ' )
-            info( '\n' )
+                    cliinfo( ( '%s ' % dest.name ) if received else 'X ' )
+            cliinfo( '\n' )
             ploss = 100 * lost / packets
-        info( "*** Results: %i%% dropped (%d/%d lost)\n" %
+        cliinfo( "*** Results: %i%% dropped (%d/%d lost)\n" %
                 ( ploss, lost, packets ) )
         return ploss
 
@@ -446,21 +446,18 @@ class Mininet( object ):
         else:
             raise Exception( 'could not parse iperf output: ' + iperfOutput )
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M',
-              verbose=False ):
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
-           verbose: verbose printing
            returns: results two-element array of server and client speeds"""
-        log = info if verbose else debug
         if not hosts:
             hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
             assert len( hosts ) == 2
         host0, host1 = hosts
-        log( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        log( "%s and %s\n" % ( host0.name, host1.name ) )
+        cliinfo( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
+        cliinfo( "%s and %s\n" % ( host0.name, host1.name ) )
         host0.cmd( 'killall -9 iperf' )
         iperfArgs = 'iperf '
         bwArgs = ''
@@ -470,16 +467,16 @@ class Mininet( object ):
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
         server = host0.cmd( iperfArgs + '-s &' )
-        log( '%s\n' % server )
+        debug( '%s\n' % server )
         client = host1.cmd( iperfArgs + '-t 5 -c ' + host0.IP() + ' ' +
                            bwArgs )
-        log( '%s\n' % client )
+        debug( '%s\n' % client )
         server = host0.cmd( 'killall -9 iperf' )
-        log( '%s\n' % server )
+        debug( '%s\n' % server )
         result = [ self._parseIperf( server ), self._parseIperf( client ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )
-        log( '*** Results: %s\n' % result )
+        cliinfo( '*** Results: %s\n' % result )
         return result
 
     def iperfUdp( self, udpBw='10M' ):

@@ -4,8 +4,15 @@ import logging
 from logging import Logger
 import types
 
+# Create a new loglevel, 'CLI info', which enables a Mininet user to see only
+# the output of the commands they execute, plus any errors or warnings.  This
+# level is in between info and warning.  CLI info-level commands should not be
+# printed during regression tests.
+CLIINFO = 25
+
 LEVELS = { 'debug': logging.DEBUG,
           'info': logging.INFO,
+          'cliinfo': CLIINFO,
           'warning': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL }
@@ -119,6 +126,20 @@ class MininetLogger( Logger, object ):
         self.setLevel( level )
         self.handlers[ 0 ].setLevel( level )
 
+    # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
+    def cliinfo( self, msg, *args, **kwargs ):
+        """Log 'msg % args' with severity 'CLIINFO'.
+
+           To pass exception information, use the keyword argument exc_info
+           with a true value, e.g.
+
+           logger.warning("Houston, we have a %s", "cli output", exc_info=1)
+        """
+        if self.manager.disable >= CLIINFO:
+            return
+        if self.isEnabledFor( CLIINFO ):
+            apply( self._log, ( CLIINFO, msg, args ), kwargs )
+
 
 lg = MininetLogger()
 
@@ -144,5 +165,6 @@ def makeListCompatible( fn ):
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
 
-info, warn, error, debug = lg.info, lg.warn, lg.error, lg.debug = [
-    makeListCompatible( f ) for f in lg.info, lg.warn, lg.error, lg.debug ]
+info, cliinfo, warn, error, debug = lg.info, lg.cliinfo, lg.warn, lg.error, \
+    lg.debug = [ makeListCompatible( f ) for f in lg.info, lg.cliinfo, lg.warn,
+                 lg.error, lg.debug ]
