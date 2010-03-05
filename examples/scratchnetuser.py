@@ -13,7 +13,7 @@ from mininet.node import Node
 from mininet.util import createLink
 from mininet.log import lg, info
 
-def scratchNetUser( cname='controller', cargs='ptcp:'):
+def scratchNetUser( cname='controller', cargs='ptcp:' ):
     # Create Network
     # It's not strictly necessary for the controller and switches
     # to be in separate namespaces. For performance, they probably
@@ -30,12 +30,12 @@ def scratchNetUser( cname='controller', cargs='ptcp:'):
     createLink( h1, 0, switch, 2 )
 
     info( '*** Configuring control network\n' )
-    controller.setIP( controller.intfs[ 0 ], '10.0.123.1', '/24' )
-    switch.setIP( switch.intfs[ 0 ], '10.0.123.2', '/24' )
+    controller.setIP( controller.intfs[ 0 ], '10.0.123.1', 24 )
+    switch.setIP( switch.intfs[ 0 ], '10.0.123.2', 24 )
     
     info( '*** Configuring hosts\n' )
-    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', '/24' )
-    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', '/24' )
+    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', 24 )
+    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', 24 )
     
     info( '*** Network state:\n' )
     for node in controller, switch, h0, h1:
@@ -44,7 +44,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:'):
     info( '*** Starting controller and user datapath\n' )
     controller.cmd( cname + ' ' + cargs + '&' )
     switch.cmd( 'ifconfig lo 127.0.0.1' )
-    intfs = [ switch.intfs[ port ] for port in (1, 2) ]
+    intfs = [ switch.intfs[ port ] for port in ( 1, 2 ) ]
     switch.cmd( 'ofdatapath -i ' + ','.join( intfs ) + ' ptcp: &' )
     switch.cmd( 'ofprotocol tcp:' + controller.IP() + ' tcp:localhost &' )
 
@@ -55,9 +55,11 @@ def scratchNetUser( cname='controller', cargs='ptcp:'):
     controller.cmd( 'kill %' + cname )
     switch.cmd( 'kill %ofdatapath' )
     switch.cmd( 'kill %ofprotocol' )
-   
+    switch.deleteIntfs()
+    info( '\n' )
+        
 if __name__ == '__main__':
+    lg.setLogLevel( 'info' )
     info( '*** Scratch network demo (user datapath)\n' )
     init()   
-    lg.setLogLevel( 'info' )
     scratchNetUser()

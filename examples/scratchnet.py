@@ -26,8 +26,8 @@ def scratchNet( cname='controller', cargs='ptcp:'):
     createLink( node1=h1, port1=0, node2=switch, port2=1 )
 
     info( "*** Configuring hosts\n" )
-    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', '/24' )
-    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', '/24' )
+    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', 24 )
+    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', 24 )
     info( str( h0 ) + '\n' )
     info( str( h1 ) + '\n' )
     
@@ -46,9 +46,11 @@ def scratchNet( cname='controller', cargs='ptcp:'):
     controller.cmd( 'kill %' + cname)
     switch.cmd( 'dpctl deldp nl:0' )
     switch.cmd( 'kill %ofprotocol' )
-   
+    switch.deleteIntfs()
+    info( '\n' )
+    
 if __name__ == '__main__':
+    lg.setLogLevel( 'info' )
     info( '*** Scratch network demo (kernel datapath)\n' )
     init()
-    lg.setLogLevel( 'info' )
     scratchNet()
