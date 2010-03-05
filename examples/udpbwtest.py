@@ -8,8 +8,42 @@ udp traffic. This should be something of a stress test.
 We should also make a tcp version. :D
 """
 
-import select, sys, time, re
-from mininet import init, TreeNet, Cli, flush, quietRun
+import os
+import re
+import select
+import sys
+import time
+
+flush = sys.stdout.flush
+
+from mininet.log import lg   
+from mininet.net import init, Mininet
+from mininet.node import Host, KernelSwitch
+from mininet.topo import Topo, Node
+from mininet.util import quietRun
+
+class TreeTopo( Topo ):
+    "Topology for a tree network with a given depth and fanout."
+
+    def __init__( self, depth=1, fanout=2 ):
+        super( TreeTopo, self ).__init__()
+        # Build topology
+        self.treeNet( 1, depth, fanout )
+        # Consider all switches and hosts 'on'
+        self.enable_all()
+
+    def treeNet( self, id, depth, fanout ):
+        """Add a subtree with a given id.
+           returns: last id added"""
+        me = id
+        isSwitch = (depth > 0 )
+        self._add_node( me, Node( is_switch=isSwitch ) )
+        if isSwitch:
+            for i in range( 0, fanout ):
+                child = id + 1
+                self._add_edge( me, child )
+                id = self.treeNet( child, depth-1, fanout )
+        return id
 
 # Some useful stuff: buffered readline and host monitoring
 
@@ -61,8 +95,9 @@ def printTotal( time=None, result=None ):
    print '%d\t%d\t%.2f/%.2f\t\t%.2f/%.2f' % ( time, count, intotal, outtotal,
       inavg, outavg )
    
-def udpbwtest( controllers, switches, hosts, seconds ):
+def udpbwtest( net, seconds ):
    "Start up and monitor udpbwtest on each of our hosts."
+   hosts, switches = net.hosts, net.switches
    hostCount = len( hosts )
    print "*** Starting udpbwtest on hosts"
    for host in hosts: 
@@ -94,8 +129,11 @@ def udpbwtest( controllers, switches, hosts, seconds ):
    print 
      
 if __name__ == '__main__':
-   init()
-   network = TreeNet( depth=2, fanout=8, kernel=True )
-   def test( c, s, h ): return udpbwtest( c, s, h, seconds=10 )
-   network.run( test )
-   
+    lg.setLogLevel( 'info' )
+    if not os.path.exists( './udpbwtest' ):
+        raise Exception( 'Could not find udpbwtest in current directory.' )
+    init()
+    network = Mininet( TreeTopo( depth=2, fanout=2 ), switch=KernelSwitch )
+    network.start()
+    udpbwtest( network, seconds=10 )
+    network.stop()
