@@ -22,6 +22,7 @@ from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
+from mininet.topolib import TreeTopo
 from mininet.util import makeNumeric
 
 # built in topologies, created only when run
@@ -29,7 +30,8 @@ TOPODEF = 'minimal'
 TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
          'linear': LinearTopo,
          'reversed': SingleSwitchReversedTopo,
-         'single': SingleSwitchTopo }
+         'single': SingleSwitchTopo,
+         'tree': TreeTopo }
 
 SWITCHDEF = 'kernel'
 SWITCHES = { 'kernel': KernelSwitch,
