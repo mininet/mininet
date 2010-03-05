@@ -21,15 +21,14 @@ from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
+from mininet.util import makeNumeric
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'
-TOPOS = { 'minimal': ( lambda: SingleSwitchTopo( k=2 ) ),
-         'reversed': ( lambda: SingleSwitchReversedTopo( k=2 ) ),
-         'single4': ( lambda: SingleSwitchTopo( k=4 ) ),
-         'single100': ( lambda: SingleSwitchTopo( k=100 ) ),
-         'linear2': ( lambda: LinearTopo( k=2 ) ),
-         'linear100': ( lambda: LinearTopo( k=100 ) ) }
+TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
+         'linear': LinearTopo,
+         'reversed': SingleSwitchReversedTopo,
+         'single': SingleSwitchTopo }
 
 SWITCHDEF = 'kernel'
 SWITCHES = { 'kernel': KernelSwitch,
@@ -49,6 +48,26 @@ CONTROLLERS = { 'ref': Controller,
 
 # optional tests to run
 TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp' ]
+
+
+def buildTopo( topo ):
+    "Create topology from string with format (object, arg1, arg2,...)."
+    topo_split = topo.split( ',' )
+    topo_name = topo_split[ 0 ]
+    topo_params = topo_split[ 1: ]
+
+    # Convert int and float args; removes the need for every topology to
+    # be flexible with input arg formats.
+    topo_seq_params = [ s for s in topo_params if '=' not in s ]
+    topo_seq_params = [ makeNumeric( s ) for s in topo_seq_params ]
+    topo_kw_params = {}
+    for s in [ s for s in topo_params if '=' in s ]:
+        key, val = s.split( '=' )
+        topo_kw_params[ key ] = makeNumeric( val )
+
+    if topo_name not in TOPOS.keys():
+        raise Exception( 'Invalid topo_name %s' % topo_name )
+    return TOPOS[ topo_name ]( *topo_seq_params, **topo_kw_params )
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
@@ -118,11 +137,13 @@ class MininetRunner( object ):
                 raise Exception( 'Custom file name not found' )
 
         opts = OptionParser()
-        addDictOption( opts, TOPOS, TOPODEF, 'topo' )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
         addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
 
+        opts.add_option( '--topo', type='string', default=TOPODEF,
+                        help='[' + ' '.join( TOPOS.keys() ) + '],arg1,arg2,'
+                        '...argN')
         opts.add_option( '--custom', type='string', default=None,
                         help='read custom topo and node params from .py file' )
         opts.add_option( '--test', type='choice', choices=TESTS,
@@ -165,7 +186,7 @@ class MininetRunner( object ):
 
         start = time.time()
 
-        topo = TOPOS[ self.options.topo ]() # build topology object
+        topo = buildTopo( self.options.topo )
         switch = SWITCHES[ self.options.switch ]
         host = HOSTS[ self.options.host ]
         controller = CONTROLLERS[ self.options.controller ]

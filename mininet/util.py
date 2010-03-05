@@ -153,3 +153,28 @@ def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
     return ipNum( *args )
+
+def checkInt( s ):
+    "Check if input string is an int"
+    try:
+        int( s )
+        return True
+    except ValueError:
+        return False
+
+def checkFloat( s ):
+    "Check if input string is a float"
+    try:
+        float( s )
+        return True
+    except ValueError:
+        return False
+
+def makeNumeric( s ):
+    "Convert string to int or float if numeric."
+    if checkInt( s ):
+        return int( s )
+    elif checkFloat( s ):
+        return float( s )
+    else:
+        return s
