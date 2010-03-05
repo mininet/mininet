@@ -50,7 +50,8 @@ CONTROLLERS = { 'ref': Controller,
                'none': lambda a, b: None }
 
 # optional tests to run
-TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp' ]
+TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp',
+         'none' ]
 
 
 def buildTopo( topo ):
@@ -218,16 +219,18 @@ class MininetRunner( object ):
                      autoStaticArp=arp )
 
         test = self.options.test
-        if test != 'build':
-            if test == 'cli':
-                mn.interact()
-            elif test == 'all':
-                mn.start()
-                mn.ping()
-                mn.iperf()
-                mn.stop()
-            else:
-                mn.run( test )
+        if test == 'none':
+            mn.start()
+            mn.stop()
+        elif test == 'cli':
+            mn.interact()
+        elif test == 'all':
+            mn.start()
+            mn.ping()
+            mn.iperf()
+            mn.stop()
+        elif test != 'build':
+            mn.run( test )
 
         elapsed = float( time.time() - start )
         info( 'completed in %0.3f seconds\n' % elapsed )
