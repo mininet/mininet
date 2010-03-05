@@ -126,6 +126,10 @@ class MininetLogger( Logger, object ):
         self.setLevel( level )
         self.handlers[ 0 ].setLevel( level )
 
+    # pylint: disable-msg=E0202
+    # "An attribute inherited from mininet.log hide this method"
+    # Not sure why this is occurring - this function definitely gets called.
+
     # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
     def cliinfo( self, msg, *args, **kwargs ):
         """Log 'msg % args' with severity 'CLIINFO'.
@@ -138,8 +142,9 @@ class MininetLogger( Logger, object ):
         if self.manager.disable >= CLIINFO:
             return
         if self.isEnabledFor( CLIINFO ):
-            apply( self._log, ( CLIINFO, msg, args ), kwargs )
+            self._log( CLIINFO, msg, args, kwargs )
 
+    # pylint: enable-msg=E0202
 
 lg = MininetLogger()
 

@@ -38,7 +38,7 @@ Bugs/limitations:
 from subprocess import call
 from cmd import Cmd
 
-from mininet.log import info, warn, cliinfo
+from mininet.log import info, cliinfo
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
