@@ -74,7 +74,6 @@ ssize_t recvBytes( int sock, char *inbuf, size_t bufsize,
    return len;
 }
 
-
 int readable( int fd ) {
    /* Poll a single file descriptor for reading */
    struct pollfd fds = { fd, POLLIN, POLLIN };
