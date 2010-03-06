@@ -6,6 +6,14 @@ saturate global bandwidth by sending constant all-to-all
 udp traffic. This should be something of a stress test.
 
 We should also make a tcp version. :D
+
+In addition to trying to saturate global bandwidth in
+various Mininet configurations, this example:
+
+- uses a topology, TreeTopo, from mininet.topolib
+- starts up a custom test program, udpbwtest, on each host
+- dynamically monitors the output of a set of hosts
+
 """
 
 import os
@@ -36,7 +44,7 @@ def readline( host, buffer ):
 def monitor( hosts, seconds ):
    "Monitor a set of hosts and yield their output."
    poller = select.poll()
-   Node = hosts[ 0 ] # so we can call class method
+   Node = hosts[ 0 ] # so we can call class method fdToNode
    buffers = {}
    for host in hosts:
       poller.register( host.stdout )

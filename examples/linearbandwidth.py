@@ -13,6 +13,14 @@ h1 <-> sN+1 <-> sN+2 .. sN+N-1
 Note: by default, the reference controller only supports 16
 switches, so this test WILL NOT WORK unless you have recompiled
 your controller to support 100 switches (or more.)
+
+In addition to testing the bandwidth across varying numbers
+of switches, this example demonstrates:
+
+- creating a custom topology, LinearTestTopo
+- using the ping() and iperf() tests from Mininet()
+- testing both the kernel and user switches
+
 """
 
 import sys
