@@ -8,50 +8,64 @@ While something like rshd(8) would be lighter and faster,
 the advantage of running sshd is that scripts can work
 unchanged on mininet and hardware.
 
+In addition to providing ssh access to hosts, this example
+demonstrates:
+
+- creating a convenience function to construct networks
+- connecting the host network to the root namespace
+- running server processes (sshd in this case) on hosts
 """
 
-import sys ; readline = sys.stdin.readline
-from mininet.mininet import init, Node, createLink, TreeNet, Cli
+from mininet.net import init, Mininet
+from mininet.cli import CLI
+from mininet.log import lg
+from mininet.node import Node, KernelSwitch
+from mininet.topolib import TreeTopo
+from mininet.util import createLink
 
-def nets( hosts ):
-   "Return list of networks (/24) for hosts."
-   nets = {}
-   for host in hosts:
-      net = host.IP().split( '.' )[ : -1 ]
-      net = '.'.join( net ) + '.0/24'
-      nets[ net ] = True
-   return nets.keys()
+def TreeNet( depth=1, fanout=2, **kwargs ):
+    "Convenience function for creating tree networks."
+    topo = TreeTopo( depth, fanout )
+    return Mininet( topo, **kwargs )
    
-def connectToRootNS( network, switch ):
-   "Connect hosts to root namespace via switch. Starts network."
+def connectToRootNS( network, switch, ip, prefixLen, routes ):
+   """Connect hosts to root namespace via switch. Starts network.
+      network: Mininet() network object
+      switch: switch to connect to root namespace
+      ip: IP address for root namespace node
+      prefixLen: IP address prefix length (e.g. 8, 16, 24)
+      routes: host networks to route to"""
    # Create a node in root namespace and link to switch 0
    root = Node( 'root', inNamespace=False )
-   createLink( root, switch )
-   ip = '10.0.123.1'
-   root.setIP( root.intfs[ 0 ], ip, '/24' )
+   port = max( switch.ports.values() ) + 1
+   createLink( root, 0, switch, port )
+   root.setIP( root.intfs[ 0 ], ip, prefixLen )
    # Start network that now includes link to root namespace
    network.start()
-   # Add routes
-   routes = nets( network.hosts )
    intf = root.intfs[ 0 ]
+   # Add routes from root ns to hosts
    for net in routes:
-      root.cmdPrint( 'route add -net ' + net + ' dev ' + intf )
+      root.cmd( 'route add -net ' + net + ' dev ' + intf )
 
-def sshd( network ):
+def sshd( network, cmd='/usr/sbin/sshd -D' ):
    "Start a network, connect it to root ns, and run sshd on all hosts."
-   connectToRootNS( network, network.switches[ 0 ] )
-   for host in network.hosts: host.cmd( 'sshd -D &' )
+   switch = network.switches[ 0 ] # switch to use
+   ip = '10.123.123.1' # our IP address on host network
+   routes = [ '10.0.0.0/8' ] # host networks to route to
+   connectToRootNS( network, switch, ip, 8, routes )
+   for host in network.hosts: host.cmd( cmd + ' &' )
    print
    print "*** Hosts are running sshd at the following addresses:"
    print
    for host in network.hosts: print host.name, host.IP()
    print
-   print "*** Press return to shut down network: ",
-   readline()
-   for host in network.hosts: host.cmd( 'kill %sshd')
+   print "*** Type 'exit' or control-D to shut down network"
+   CLI( network )
+   for host in network.hosts: host.cmd( 'kill %' + cmd )
    network.stop()
    
 if __name__ == '__main__':
+   lg.setLogLevel( 'info')
    init()
-   network = TreeNet( depth=1, fanout=4, kernel=True )
+   network = TreeNet( depth=1, fanout=4, switch=KernelSwitch )
    sshd( network )
