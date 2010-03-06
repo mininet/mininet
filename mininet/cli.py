@@ -89,7 +89,7 @@ class CLI( Cmd ):
     def do_net( self, args ):
         "List network connections."
         for switch in self.mn.switches:
-            info( '%s <->', switch.name )
+            info( switch.name, '<->' )
             for intf in switch.intfs.values():
                 name = switch.connection[ intf ][ 1 ]
                 info( ' %s' % name )
