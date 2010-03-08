@@ -49,27 +49,34 @@ which interfaces belong to which node.
 
 The basic naming scheme is as follows:
 
-    Host nodes are named h0-hN
-    Switch nodes are named s0-sN
+    Host nodes are named h1-hN
+    Switch nodes are named s1-sN
     Controller nodes are named c0-cN
     Interfaces are named {nodename}-eth0 .. {nodename}-ethN
 
+Note: If the network topology is created using mininet.topo, then
+node numbers are unique among hosts and switches (e.g. we have
+h1..hN and SN..SN+M) and also correspond to their default IP addresses
+of 10.x.y.z/8 where x.y.z is the base-256 representation of N for
+hN. This mapping allows easy determination of a node's IP
+address from its name, e.g. h1 -> 10.0.0.1, h257 -> 10.0.1.1.
+
 Currently we wrap the entire network in a 'mininet' object, which
 constructs a simulated network based on a network topology created
-using a topology object (e.g. LinearTopo) from topo.py and a Controller
-node which the switches will connect to.  Several
-configuration options are provided for functions such as
+using a topology object (e.g. LinearTopo) from mininet.topo or
+mininet.topolib, and a Controller which the switches will connect
+to. Several configuration options are provided for functions such as
 automatically setting MAC addresses, populating the ARP table, or
 even running a set of xterms to allow direct interaction with nodes.
 
-After the mininet is created, it can be started using start(), and a variety
-of useful tasks maybe performed, including basic connectivity and
-bandwidth tests and running the mininet CLI.
+After the network is created, it can be started using start(), and a
+variety of useful tasks maybe performed, including basic connectivity
+and bandwidth tests and running the mininet CLI.
 
 Once the network is up and running, test code can easily get access
-to host and switch objects, which can then be used
-for arbitrary experiments, typically involving running a series of
-commands on the hosts.
+to host and switch objects which can then be used for arbitrary
+experiments, typically involving running a series of commands on the
+hosts.
 
 After all desired tests or activities have been completed, the stop()
 method may be called to shut down the network.
@@ -187,10 +194,8 @@ class Mininet( object ):
     #
     # Notes:
     #
-    # 1. If the controller and switches are in the same ( e.g. root )
+    # 1. If the controller and switches are in the same (e.g. root)
     #    namespace, they can just use the loopback connection.
-    #    We may wish to do this for the user datapath as well as the
-    #    kernel datapath.
     #
     # 2. If we can get unix domain sockets to work, we can use them
     #    instead of an explicit control network.
@@ -244,7 +249,7 @@ class Mininet( object ):
                 exit( 1 )
         info( '\n' )
 
-    def _configHosts( self ):
+    def configHosts( self ):
         "Configure a set of hosts."
         # params were: hosts, ips
         for host in self.hosts:
@@ -294,7 +299,7 @@ class Mininet( object ):
             self._configureControlNetwork()
 
         info( '*** Configuring hosts\n' )
-        self._configHosts()
+        self.configHosts()
 
         if self.xterms:
             self.startXterms()

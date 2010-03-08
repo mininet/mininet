@@ -4,12 +4,12 @@
 Mininet Cleanup
 author: Bob Lantz (rlantz@cs.stanford.edu)
 
-Unfortunately, Mininet and OpenFlow don't always clean up
-properly after themselves. Until they do (or until cleanup
-functionality is integrated into the python code), this
-script may be used to get rid of unwanted garbage. It may
-also get rid of 'false positives', but hopefully nothing
-irreplaceable!
+Unfortunately, Mininet and OpenFlow (and the Linux kernel)
+don't always clean up properly after themselves. Until they do
+(or until cleanup functionality is integrated into the Python
+code), this script may be used to get rid of unwanted garbage.
+It may also get rid of 'false positives', but hopefully
+nothing irreplaceable!
 """
 
 from subprocess import Popen, PIPE
@@ -28,7 +28,7 @@ def cleanup():
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
     zombies += 'udpbwtest'
     # Note: real zombie processes can't actually be killed, since they
-    # are already ( un )dead. Then again,
+    # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 

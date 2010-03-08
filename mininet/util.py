@@ -141,7 +141,7 @@ def macColonHex( mac ):
     return _colonHex( mac, 6 )
 
 def ipStr( ip ):
-    """Generate IP address string
+    """Generate IP address string from an unsigned int
        ip: unsigned int of form x << 16 | y << 8 | z
        returns: ip address string 10.x.y.z """
     hi = ( ip & 0xff0000 ) >> 16

@@ -33,6 +33,12 @@ RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
     created or managed by mininet.
 
+Future enhancements:
+
+- Possibly make Node, Switch and Controller more abstract so that
+  they can be used for both local and remote nodes
+
+- Create proxy objects for remote nodes (Mininet: Cluster Edition)
 """
 
 import os

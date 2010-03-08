@@ -98,7 +98,7 @@ class Topo(object):
         self.ports = {} # ports[src][dst] is port on src that connects to dst
         self.id_gen = NodeID # class used to generate dpid
 
-    def _add_node(self, dpid, node):
+    def add_node(self, dpid, node):
         '''Add Node to graph.
 
         @param dpid dpid
@@ -107,7 +107,7 @@ class Topo(object):
         self.g.add_node(dpid)
         self.node_info[dpid] = node
 
-    def _add_edge(self, src, dst, edge = None):
+    def add_edge(self, src, dst, edge = None):
         '''Add edge (Node, Node) to graph.
 
         @param src src dpid
@@ -119,9 +119,9 @@ class Topo(object):
         if not edge:
             edge = Edge()
         self.edge_info[(src, dst)] = edge
-        self._add_port(src, dst)
+        self.add_port(src, dst)
 
-    def _add_port(self, src, dst):
+    def add_port(self, src, dst):
         '''Generate port mapping for new edge.
 
         @param src source switch DPID
@@ -329,11 +329,11 @@ class SingleSwitchTopo(Topo):
 
         self.k = k
 
-        self._add_node(1, Node())
+        self.add_node(1, Node())
         hosts = range(2, k + 2)
         for h in hosts:
-            self._add_node(h, Node(is_switch = False))
-            self._add_edge(h, 1, Edge())
+            self.add_node(h, Node(is_switch = False))
+            self.add_edge(h, 1, Edge())
 
         if enable_all:
             self.enable_all()
@@ -388,12 +388,12 @@ class LinearTopo(Topo):
         switches = range(1, k + 1)
         for s in switches:
             h = s + k
-            self._add_node(s, Node())
-            self._add_node(h, Node(is_switch = False))
-            self._add_edge(s, h, Edge())
+            self.add_node(s, Node())
+            self.add_node(h, Node(is_switch = False))
+            self.add_edge(s, h, Edge())
         for s in switches:
             if s != k:
-                self._add_edge(s, s + 1, Edge())
+                self.add_edge(s, s + 1, Edge())
 
         if enable_all:
             self.enable_all()

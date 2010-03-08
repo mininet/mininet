@@ -20,11 +20,11 @@ class TreeTopo( Topo ):
            returns: last node added"""
         me = n
         isSwitch = depth > 0
-        self._add_node( me, Node( is_switch=isSwitch ) )
+        self.add_node( me, Node( is_switch=isSwitch ) )
         if isSwitch:
             for i in range( 0, fanout ):
                 child = n + 1
-                self._add_edge( me, child )
+                self.add_edge( me, child )
                 n = self.addTree( child, depth-1, fanout )
         return n
 

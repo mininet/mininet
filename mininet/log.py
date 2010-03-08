@@ -133,7 +133,7 @@ def makeListCompatible( fn ):
        newfn( 'a', 1, 'b' )"""
 
     def newfn( *args ):
-        "Generated function."
+        "Generated function. Closure-ish."
         if len( args ) == 1:
             return fn( *args )
         args = ' '.join( [ str( arg ) for arg in args ] )
