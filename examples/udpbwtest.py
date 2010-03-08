@@ -35,8 +35,8 @@ from mininet.util import quietRun
 def readline( host, buf ):
     "Read a line from a host, buffering with buffer."
     buf += host.read( 1024 )
-    if '\n' not in buffer:
-        return None, buffer
+    if '\n' not in buf:
+        return None, buf
     pos = buf.find( '\n' )
     line = buf[ 0 : pos ]
     rest = buf[ pos + 1: ]
@@ -130,7 +130,7 @@ def udpbwtest( net, seconds ):
     printTotalHeader()
     times = sorted( results.keys() )
     for t in times:
-        printTotal( t - t[ 0 ] , results[ t ] )
+        printTotal( t - times[ 0 ] , results[ t ] )
     print
 
 # pylint: enable-msg=E1101
