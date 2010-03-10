@@ -101,21 +101,14 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
 
-def createLink( node1, port1, node2, port2 ):
+def createLink( node1, node2, port1=None, port2=None ):
     """Create a link between nodes, making an interface for each.
        node1: Node object
-       port1: node1 port number
        node2: Node object
-       port2: node2 port number
+       port1: node1 port number (optional)
+       port2: node2 port number (optional)
        returns: intf1 name, intf2 name"""
-    intf1 = node1.intfName( port1 )
-    intf2 = node2.intfName( port2 )
-    makeIntfPair( intf1, intf2 )
-    node1.addIntf( intf1, port1 )
-    node2.addIntf( intf2, port2 )
-    node1.connect( intf1, node2, intf2 )
-    node2.connect( intf2, node1, intf1 )
-    return intf1, intf2
+    return node1.linkTo( node2, port1, port2 )
 
 def fixLimits():
     "Fix ridiculously small resource limits."
@@ -141,10 +134,22 @@ def macColonHex( mac ):
     return _colonHex( mac, 6 )
 
 def ipStr( ip ):
-    """Generate IP address string from an unsigned int
-       ip: unsigned int of form x << 16 | y << 8 | z
-       returns: ip address string 10.x.y.z """
-    hi = ( ip & 0xff0000 ) >> 16
-    mid = ( ip & 0xff00 ) >> 8
-    lo = ip & 0xff
-    return "10.%i.%i.%i" % ( hi, mid, lo )
+    """Generate IP address string from an unsigned int.
+       ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
+       returns: ip address string w.x.y.z, or 10.x.y.z if w==0"""
+    w = ( ip & 0xff000000 ) >> 24
+    w = 10 if w == 0 else w
+    x = ( ip & 0xff0000 ) >> 16
+    y = ( ip & 0xff00 ) >> 8
+    z = ip & 0xff
+    return "%i.%i.%i.%i" % ( w, x, y, z )
+
+def ipNum( w, x, y, z ):
+    """Generate unsigned int from components ofIP address
+       returns: w << 24 | x << 16 | y << 8 | z"""
+    return  ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
+
+def ipParse( ip ):
+    "Parse an IP address and return an unsigned int."
+    args = [ int( arg ) for arg in ip.split( '.' ) ]
+    return ipNum( *args )

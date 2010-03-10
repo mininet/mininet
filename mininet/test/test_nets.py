@@ -20,7 +20,7 @@ class testSingleSwitch( unittest.TestCase ):
         "Ping test with both datapaths on minimal topology"
         init()
         for switch in SWITCHES.values():
-            controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
+            controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( SingleSwitchTopo(), switch, Host, Controller,
                          controllerParams )
             dropped = mn.run( 'ping' )
@@ -30,7 +30,7 @@ class testSingleSwitch( unittest.TestCase ):
         "Ping test with both datapaths on 5-host single-switch topology"
         init()
         for switch in SWITCHES.values():
-            controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
+            controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( SingleSwitchTopo( k=5 ), switch, Host, Controller,
                          controllerParams )
             dropped = mn.run( 'ping' )
@@ -44,7 +44,7 @@ class testLinear( unittest.TestCase ):
         "Ping test with both datapaths on a 5-switch topology"
         init()
         for switch in SWITCHES.values():
-            controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
+            controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( LinearTopo( k=5 ), switch, Host, Controller,
                          controllerParams )
             dropped = mn.run( 'ping' )

@@ -90,10 +90,10 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug
-from mininet.node import Host, KernelSwitch, OVSKernelSwitch, Controller
+from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
-from mininet.util import createLink, macColonHex
+from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.xterm import cleanUpScreens, makeXterms
 
 DATAPATHS = [ 'kernel' ] #[ 'user', 'kernel' ]
@@ -130,7 +130,7 @@ class Mininet( object ):
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
-           autoSetMacs: set MAC addrs to DPIDs?
+           autoSetMacs: set MAC addrs from topo?
            autoStaticArp: set all-pairs static MAC addrs?"""
         self.switch = switch
         self.host = host
@@ -151,8 +151,8 @@ class Mininet( object ):
         self.dps = 0 # number of created kernel datapaths
         self.terms = [] # list of spawned xterm processes
 
-        if topo and build:
-            self.buildFromTopo( self.topo )
+        if build:
+            self.build()
 
     def addHost( self, name, mac=None, ip=None ):
         """Add host.
@@ -165,16 +165,18 @@ class Mininet( object ):
         self.nameToNode[ name ] = host
         return host
 
-    def addSwitch( self, name, mac=None ):
+    def addSwitch( self, name, mac=None, ip=None ):
         """Add switch.
            name: name of switch to add
            mac: default MAC address for kernel/OVS switch intf 0
            returns: added switch"""
-        if self.switch is KernelSwitch or self.switch is OVSKernelSwitch:
-            sw = self.switch( name, dp=self.dps, defaultMAC=mac )
-            self.dps += 1
+        if self.switch == UserSwitch:
+            sw = self.switch( name, defaultMAC=mac, defaultIP=ip,
+                inNamespace=self.inNamespace )
         else:
-            sw = self.switch( name )
+            sw = self.switch( name, defaultMAC=mac, defaultIP=ip, dp=self.dps,
+                inNamespace=self.inNamespace )
+        self.dps += 1
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
@@ -206,43 +208,41 @@ class Mininet( object ):
     #    useful for people who wish to simulate a separate control
     #    network (since real networks may need one!)
 
-    def _configureControlNetwork( self ):
+    def configureControlNetwork( self ):
         "Configure control network."
-        self._configureRoutedControlNetwork()
+        self.configureRoutedControlNetwork()
 
-    def _configureRoutedControlNetwork( self ):
+    # We still need to figure out the right way to pass
+    # in the control network location.
+
+    def configureRoutedControlNetwork( self, ip='192.168.123.1',
+        prefixLen=16 ):
         """Configure a routed control network on controller and switches.
            For use with the user datapath only right now.
-           TODO( brandonh ) test this code!
            """
-        # params were: controller, switches, ips
-
         controller = self.controllers[ 0 ]
-        info( '%s <-> ' % controller.name )
+        info( controller.name + ' <->' )
+        cip = ip
+        snum = ipParse( ip )
         for switch in self.switches:
-            info( '%s ' % switch.name )
-            sip = switch.defaultIP
-            sintf = switch.intfs[ 0 ]
-            node, cintf = switch.connection[ sintf ]
-            if node != controller:
-                error( '*** Error: switch %s not connected to correct'
-                         'controller' %
-                         switch.name )
-                exit( 1 )
-            controller.setIP( cintf, self.cparams.ip, self.cparams.prefixLen )
-            switch.setIP( sintf, sip, self.cparams.prefixLen )
+            info( ' ' + switch.name )
+            sintf, cintf = createLink( switch, controller )
+            snum += 1
+            while snum & 0xff in [ 0, 255 ]:
+                snum += 1
+            sip = ipStr( snum )
+            controller.setIP( cintf, cip, prefixLen )
+            switch.setIP( sintf, sip, prefixLen )
             controller.setHostRoute( sip, cintf )
-            switch.setHostRoute( self.cparams.ip, sintf )
+            switch.setHostRoute( cip, sintf )
         info( '\n' )
         info( '*** Testing control network\n' )
-        while not controller.intfIsUp( controller.intfs[ 0 ] ):
-            info( '*** Waiting for %s to come up\n',
-                controller.intfs[ 0 ] )
+        while not controller.intfIsUp( cintf ):
+            info( '*** Waiting for', cintf, 'to come up\n' )
             sleep( 1 )
         for switch in self.switches:
-            while not switch.intfIsUp( switch.intfs[ 0 ] ):
-                info( '*** Waiting for %s to come up\n' %
-                    switch.intfs[ 0 ] )
+            while not switch.intfIsUp( sintf ):
+                info( '*** Waiting for', sintf, 'to come up\n' )
                 sleep( 1 )
             if self.ping( hosts=[ switch, controller ] ) != 0:
                 error( '*** Error: control network test failed\n' )
@@ -265,42 +265,47 @@ class Mininet( object ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
            and up."""
+
+        def addNode( prefix, addMethod, nodeId ):
+            "Add a host or a switch."
+            name = prefix + topo.name( nodeId )
+            mac = macColonHex( nodeId ) if self.setMacs else None
+            ip = topo.ip( nodeId )
+            node = addMethod( name, mac=mac, ip=ip )
+            self.idToNode[ nodeId ] = node
+            info( name + ' ' )
+
+        # Possibly we should clean up here and/or validate
+        # the topo
         if self.cleanup:
-            pass # cleanup
-        # validate topo?
+            pass
+
         info( '*** Adding controller\n' )
         self.addController( self.controller )
         info( '*** Creating network\n' )
         info( '*** Adding hosts:\n' )
         for hostId in sorted( topo.hosts() ):
-            name = 'h' + topo.name( hostId )
-            mac = macColonHex( hostId ) if self.setMacs else None
-            ip = topo.ip( hostId )
-            host = self.addHost( name, ip=ip, mac=mac )
-            self.idToNode[ hostId ] = host
-            info( name + ' ' )
+            addNode( 'h', self.addHost, hostId )
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
-            name = 's' + topo.name( switchId )
-            mac = macColonHex( switchId) if self.setMacs else None
-            switch = self.addSwitch( name, mac=mac )
-            self.idToNode[ switchId ] = switch
-            info( name + ' ' )
+            addNode( 's', self.addSwitch, switchId )
         info( '\n*** Adding edges:\n' )
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
             srcPort, dstPort = topo.port( srcId, dstId )
-            createLink( src, srcPort, dst, dstPort )
+            createLink( src, dst, srcPort, dstPort )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
         info( '\n' )
 
+    def build( self ):
+        "Build mininet."
+        if self.topo:
+            self.buildFromTopo( self.topo )
         if self.inNamespace:
             info( '*** Configuring control network\n' )
-            self._configureControlNetwork()
-
+            self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
-
         if self.xterms:
             self.startXterms()
         if self.autoSetMacs:
@@ -391,8 +396,7 @@ class Mininet( object ):
         """Ping between all specified hosts.
            hosts: list of hosts
            returns: ploss packet loss percentage"""
-        #self.start()
-        # check if running - only then, start?
+        # should we check if running?
         packets = 0
         lost = 0
         ploss = None

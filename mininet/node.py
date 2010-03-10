@@ -49,8 +49,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, moveIntf
-
+from mininet.util import quietRun, makeIntfPair, moveIntf
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -84,7 +83,6 @@ class Node( object ):
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
         self.pid = self.shell.pid
-        self.intfCount = 0
         self.intfs = {} # dict of port numbers to interface names
         self.ports = {} # dict of interface names to port numbers
                         # replace with Port objects, eventually ?
@@ -206,11 +204,11 @@ class Node( object ):
         "Construct a canonical interface name node-ethN for interface n."
         return self.name + '-eth' + repr( n )
 
-    def newIntf( self ):
-        "Reserve and return a new interface name."
-        intfName = self.intfName( self.intfCount )
-        self.intfCount += 1
-        return intfName
+    def newPort( self ):
+        "Return the next port number to allocate."
+        if len( self.ports ) > 0:
+            return max( self.ports.values() ) + 1
+        return 0
 
     def addIntf( self, intf, port ):
         """Add an interface.
@@ -219,21 +217,47 @@ class Node( object ):
         self.intfs[ port ] = intf
         self.ports[ intf ] = port
         #info( '\n' )
-        #info( 'added intf %s to node %x\n' % ( srcIntf, src ) )
+        #info( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
         if self.inNamespace:
             #info( 'moving w/inNamespace set\n' )
             moveIntf( intf, self )
 
-    def connect( self, intf, dstNode, dstIntf ):
+    def registerIntf( self, intf, dstNode, dstIntf ):
         "Register connection of intf to dstIntf on dstNode."
         self.connection[ intf ] = ( dstNode, dstIntf )
+
+    # This is a symmetric operation, but it makes sense to put
+    # the code here since it is tightly coupled to routines in
+    # this class. For a more symmetric API, you can use
+    # mininet.util.createLink()
+
+    def linkTo( self, node2, port1=None, port2=None ):
+        """Create link to another node, making two new interfaces.
+           node2: Node to link us to
+           port1: our port number (optional)
+           port2: node2 port number (optional)
+           returns: intf1 name, intf2 name"""
+        node1 = self
+        if port1 is None:
+            port1 = node1.newPort()
+        if port2 is None:
+            port2 = node2.newPort()
+        intf1 = node1.intfName( port1 )
+        intf2 = node2.intfName( port2 )
+        makeIntfPair( intf1, intf2 )
+        node1.addIntf( intf1, port1 )
+        node2.addIntf( intf2, port2 )
+        node1.registerIntf( intf1, node2, intf2 )
+        node2.registerIntf( intf2, node1, intf1 )
+        return intf1, intf2
 
     def deleteIntfs( self ):
         "Delete all of our interfaces."
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
-        # have been removed by the kernel. Unfortunately this is very slow.
+        # have been removed by the kernel. Unfortunately this is very slow,
+        # at least with Linux kernels before 2.6.33
         for intf in self.intfs.values():
             quietRun( 'ip link del ' + intf )
             info( '.' )
@@ -255,7 +279,7 @@ class Node( object ):
         result = self.cmd( [ 'arp', '-s', ip, mac ] )
         return result
 
-    def setIP( self, intf, ip, prefixLen ):
+    def setIP( self, intf, ip, prefixLen=8 ):
         """Set the IP address for an interface.
            intf: interface name
            ip: IP address as a string
@@ -277,23 +301,25 @@ class Node( object ):
         self.cmd( 'ip route flush' )
         return self.cmd( 'route add default ' + intf )
 
-    def IP( self ):
-        "Return IP address of interface 0"
-        return self.ips.get( self.intfs.get( 0 , None ), None )
+    def IP( self, intf=None ):
+        "Return IP address of a node or specific interface."
+        if len( self.ips ) == 1:
+            return self.ips.values()[ 0 ]
+        if intf:
+            return self.ips.get( intf, None )
 
-    def MAC( self ):
-        "Return MAC address of interface 0"
-        ifconfig = self.cmd( 'ifconfig ' + self.intfs[ 0 ] )
+    def MAC( self, intf=None ):
+        "Return MAC address of a node or specific interface."
+        if intf is None and len( self.intfs ) == 1:
+            intf = self.intfs.values()[ 0 ]
+        ifconfig = self.cmd( 'ifconfig ' + intf )
         macs = re.findall( '..:..:..:..:..:..', ifconfig )
         if len( macs ) > 0:
             return macs[ 0 ]
-        else:
-            return None
 
-    def intfIsUp( self, port ):
-        """Check if interface for a given port number is up.
-           port: port number"""
-        return 'UP' in self.cmd( 'ifconfig ' + self.intfs[ port ] )
+    def intfIsUp( self, intf ):
+        "Check if an interface is up."
+        return 'UP' in self.cmd( 'ifconfig ' + intf )
 
     # Other methods
     def __str__( self ):
@@ -331,13 +357,12 @@ class Switch( Node ):
 
 
 class UserSwitch( Switch ):
-    """User-space switch.
-       Currently only works in the root namespace."""
+    "User-space switch."
 
     def __init__( self, name, *args, **kwargs ):
         """Init.
            name: name for the switch"""
-        Switch.__init__( self, name, inNamespace=False, **kwargs )
+        Switch.__init__( self, name, **kwargs )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
@@ -348,7 +373,8 @@ class UserSwitch( Switch ):
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
         intfs = sorted( self.intfs.values() )
-
+        if self.inNamespace:
+            intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
             ' punix:/tmp/' + self.name +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
@@ -364,15 +390,19 @@ class UserSwitch( Switch ):
 
 class KernelSwitch( Switch ):
     """Kernel-space switch.
-       Currently only works in the root namespace."""
+       Currently only works in root namespace."""
 
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name:
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as string; random value if None"""
-        Switch.__init__( self, name, inNamespace=False, **kwargs )
+        Switch.__init__( self, name, **kwargs )
         self.dp = dp
+        if self.inNamespace:
+            error( "KernelSwitch currently only works"
+                " in the root namespace." )
+            exit( 1 )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -385,7 +415,6 @@ class KernelSwitch( Switch ):
         if self.defaultMAC:
             intf = 'of%i' % self.dp
             self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMAC ] )
-
         if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % self.intfs )
@@ -412,11 +441,15 @@ class OVSKernelSwitch( Switch ):
 
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
-           name:
+           name: name of switch
            dp: netlink id (0, 1, 2, ...)
-           dpid: datapath ID as unsigned int; random value if None"""
-        Switch.__init__( self, name, inNamespace=False, **kwargs )
+           defaultMAC: default MAC as unsigned int; random value if None"""
+        Switch.__init__( self, name, **kwargs )
         self.dp = dp
+        if self.inNamespace:
+            error( "OVSKernelSwitch currently only works"
+                " in the root namespace." )
+            exit( 1 )
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -480,10 +513,12 @@ class Controller( Node ):
         self.cmd( 'kill %' + self.controller )
         self.terminate()
 
-    def IP( self ):
+    def IP( self, intf=None ):
         "Return IP address of the Controller"
-        return self.defaultIP
-
+        ip = Node.IP( self, intf=intf )
+        if ip is None:
+            ip = self.defaultIP
+        return ip
 
 class ControllerParams( object ):
     "Container for controller IP parameters."
