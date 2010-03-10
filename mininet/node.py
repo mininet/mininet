@@ -460,7 +460,7 @@ class OVSKernelSwitch( Switch ):
         quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
         self.cmd( 'ovs-dpctl add-dp dp%i' % self.dp )
         if self.defaultMAC:
-            intf = 'dp' % self.dp
+            intf = 'dp%i' % self.dp
             mac = self.defaultMAC
             self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
 
