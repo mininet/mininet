@@ -394,7 +394,7 @@ class KernelSwitch( Switch ):
 
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
-           name:
+           name: name for switch
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as string; random value if None"""
         Switch.__init__( self, name, **kwargs )
@@ -441,7 +441,7 @@ class OVSKernelSwitch( Switch ):
 
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
-           name: name of switch
+           name: name for switch
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **kwargs )
