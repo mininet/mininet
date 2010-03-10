@@ -26,17 +26,17 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     switch = Node( 's0')
     h0 = Node( 'h0' )
     h1 = Node( 'h1' )
-    createLink( controller, 0, switch, 0 )
-    createLink( h0, 0, switch, 1 )
-    createLink( h1, 0, switch, 2 )
+    cintf, sintf = createLink( controller, switch )
+    h0intf, sintf1 = createLink( h0, switch )
+    h1intf, sintf2 = createLink( h1, switch )
 
     info( '*** Configuring control network\n' )
-    controller.setIP( controller.intfs[ 0 ], '10.0.123.1', 24 )
-    switch.setIP( switch.intfs[ 0 ], '10.0.123.2', 24 )
+    controller.setIP( cintf, '10.0.123.1', 24 )
+    switch.setIP( sintf, '10.0.123.2', 24 )
 
     info( '*** Configuring hosts\n' )
-    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', 24 )
-    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', 24 )
+    h0.setIP( h0intf, '192.168.123.1', 24 )
+    h1.setIP( h1intf, '192.168.123.2', 24 )
 
     info( '*** Network state:\n' )
     for node in controller, switch, h0, h1:
@@ -45,7 +45,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     info( '*** Starting controller and user datapath\n' )
     controller.cmd( cname + ' ' + cargs + '&' )
     switch.cmd( 'ifconfig lo 127.0.0.1' )
-    intfs = [ switch.intfs[ port ] for port in ( 1, 2 ) ]
+    intfs = [ sintf1, sintf2 ]
     switch.cmd( 'ofdatapath -i ' + ','.join( intfs ) + ' ptcp: &' )
     switch.cmd( 'ofprotocol tcp:' + controller.IP() + ' tcp:localhost &' )
 

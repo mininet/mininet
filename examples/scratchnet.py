@@ -21,8 +21,8 @@ def scratchNet( cname='controller', cargs='ptcp:' ):
     h1 = Node( 'h1' )
 
     info( "*** Creating links\n" )
-    createLink( node1=h0, port1=0, node2=switch, port2=0 )
-    createLink( node1=h1, port1=0, node2=switch, port2=1 )
+    createLink( node1=h0, node2=switch, port1=0, port2=0 )
+    createLink( node1=h1, node2=switch, port1=0, port2=1 )
 
     info( "*** Configuring hosts\n" )
     h0.setIP( h0.intfs[ 0 ], '192.168.123.1', 24 )
