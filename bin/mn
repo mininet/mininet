@@ -173,7 +173,7 @@ class MininetRunner( object ):
         if self.validate:
             self.validate( self.options )
 
-        controllerParams = ControllerParams( 0x0a000000, 8 ) # 10.0.0.0/8
+        controllerParams = ControllerParams( '10.0.0.0', 8 )
         inNamespace = self.options.inNamespace
         xterms = self.options.xterms
         mac = self.options.mac
