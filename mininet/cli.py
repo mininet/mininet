@@ -128,7 +128,7 @@ class CLI( Cmd ):
 
     def do_iperf( self, args ):
         "Simple iperf TCP test between two hosts."
-        self.mn.iperf()
+        self.mn.iperf( verbose=True )
 
     def do_iperfudp( self, args ):
         "Simple iperf UDP test between two hosts."
@@ -181,7 +181,7 @@ class CLI( Cmd ):
             while True:
                 try:
                     done, data = node.monitor()
-                    info( '%s\n' % data )
+                    info( '%s' % data )
                     if done:
                         break
                 except KeyboardInterrupt:
