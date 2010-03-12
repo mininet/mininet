@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-'''Setuptools params'''
+"Setuptools params"
 
 from setuptools import setup, find_packages
 from os.path import join
 
-scripts = [join('bin', filename) for filename in
-            ['mn', 'mnclean']]
+scripts = [ join('bin', filename) for filename in
+            ['mn', 'mnclean'] ]
 
 modname = distname = 'mininet'
 
@@ -16,7 +16,7 @@ setup(
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
     packages=find_packages(exclude='test'),
-    long_description="""\
+    long_description="""
 Insert longer description here.
       """,
     classifiers=[
