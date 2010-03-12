@@ -66,8 +66,9 @@ class Node( object ):
            defaultIP: default IP address for intf 0"""
         self.name = name
         closeFds = False # speed vs. memory use
+        # setsid is necessary to detach from tty
         # xpg_echo is needed so we can echo our sentinel in sendCmd
-        cmd = [ '/bin/bash', '-O', 'xpg_echo' ]
+        cmd = [ '/usr/bin/setsid', '/bin/bash', '-O', 'xpg_echo' ]
         self.inNamespace = inNamespace
         if self.inNamespace:
             cmd = [ 'netns' ] + cmd
@@ -143,20 +144,22 @@ class Node( object ):
         self.write( cmd + separator + ' echo -n "\\0177" \n' )
         self.waiting = True
 
+    def sendInt( self ):
+        """Placeholder for function to interrupt running subprocess.
+           This is a tricky problem to solve."""
+        self.write( chr( 3 ) )
+
     def monitor( self ):
         "Monitor the output of a command, returning (done?, data)."
         assert self.waiting
         self.waitReadable()
         data = self.read( 1024 )
-        if len( data ) > 0 and data[ -1 ] == chr( 0177 ):
+        if len( data ) > 0 and data[ -1 ] == chr( 127 ):
             self.waiting = False
             return True, data[ :-1 ]
-        else:
-            return False, data
-
-    def sendInt( self ):
-        "Send ^C, hopefully interrupting an interactive subprocess."
-        self.write( chr( 3 ) )
+        elif chr( 127 ) in data:
+            return True, data.replace( chr( 127 ), '' )
+        return False, data
 
     def waitOutput( self, verbose=False ):
         """Wait for a command to complete.
@@ -165,18 +168,12 @@ class Node( object ):
            the output, including trailing newline.
            verbose: print output interactively"""
         log = info if verbose else debug
-        assert self.waiting
         output = ''
-        while True:
-            self.waitReadable()
-            data = self.read( 1024 )
-            if len( data ) > 0  and data[ -1 ] == chr( 0177 ):
-                output += data[ :-1 ]
-                log( output )
-                break
-            else:
-                output += data
-        self.waiting = False
+        done = False
+        while not done:
+            done, data = self.monitor()
+            output += data
+            log( data )
         return output
 
     def cmd( self, cmd, verbose=False ):
