@@ -22,7 +22,8 @@ In order to run Mininet, you must have:
 
 * A Linux 2.6.26 or greater kernel compiled with network namespace support
   enabled. (debian-testing seems to have such a kernel, but it doesn't
-  work for compiling nox, unfortunately.)
+  work for compiling nox, unfortunately.) 2.6.33 or greater is recommended
+  for faster switch shutdown.
 
 * The OpenFlow reference implementation (either the user or kernel
   datapath may be used, and the tun or ofdatapath kernel modules must be
