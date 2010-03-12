@@ -25,8 +25,9 @@ Preliminary Mininet Installation/Configuration Notes
   does!
 
 - Mininet should probably be run either on a machine with
-  no other important processes, or on a virtual machine
-  
+  no other important processes, or on a virtual machine.
+  Multiple concurrent Mininet instances are not supported.
+
 - To run the iperf test, you need to install iperf:
 
     sudo aptitude/yum install iperf
@@ -54,9 +55,7 @@ Preliminary Mininet Installation/Configuration Notes
 - The reference OpenFlow controller (controller(8)) only supports 16
   switches by default! If you wish to run a network with more than 16
   switches, please recompile controller(8) with larger limits, or use a
-  different controller such as nox. (At the moment, unfortunately, it's
-  not easy to do so without modifying mininet.py. This will be improved
-  upon, and an example provided, in the future.)
+  different controller such as nox.
   
 - For scalable configurations, you might need to increase some of your
   kernel limits. Sample params are in sysctl_addon, which can be appended to
