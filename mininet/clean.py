@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Mininet Cleanup
 author: Bob Lantz (rlantz@cs.stanford.edu)
