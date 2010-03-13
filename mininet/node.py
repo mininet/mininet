@@ -355,11 +355,11 @@ class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
-    def sendCmd( self, cmd, printCmd=False):
+    def sendCmd( self, cmd, printPid=False):
         """Send command to Node.
            cmd: string"""
         if not self.execed:
-            return Node.sendCmd( self, cmd, printCmd )
+            return Node.sendCmd( self, cmd, printPid )
         else:
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
