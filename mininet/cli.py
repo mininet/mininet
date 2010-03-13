@@ -28,8 +28,7 @@ and bandwidth ('iperf'.)
 Bugs/limitations:
 
 - Interactive commands are not supported at the moment;
-  notably, if you type 'ping h1', you can control-C it, but
-  it breaks the CLI and your network. ;-(
+  notably, if you type 'ping h1', you can't interrupt it.
   For now, we recommend limiting CLI use to non-interactive
   commands which terminate in a reasonable amount of time.
 
@@ -74,7 +73,7 @@ class CLI( Cmd ):
                    ' mininet> h0 ping -c1 h1\n'
                    'should work.\n'
                    '\n'
-                   'Interactive commands are not really supported yet,\n'
+                   'Interactive commands are not supported yet,\n'
                    'so please limit commands to ones that do not\n'
                    'require user interaction and will terminate\n'
                    'after a reasonable amount of time.\n' )
