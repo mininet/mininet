@@ -134,13 +134,13 @@ class Node( object ):
         """Send a command, followed by a command to echo a sentinel,
            and return without waiting for the command to complete."""
         assert not self.waiting
+        if isinstance( cmd, list ):
+            cmd = ' '.join( cmd )
         if cmd[ -1 ] == '&':
             separator = '&'
             cmd = cmd[ :-1 ]
         else:
             separator = ';'
-        if isinstance( cmd, list ):
-            cmd = ' '.join( cmd )
         self.write( cmd + separator + ' echo -n "\\0177" \n' )
         self.waiting = True
 
