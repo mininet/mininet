@@ -33,7 +33,7 @@ Bugs/limitations:
 from subprocess import call
 from cmd import Cmd
 
-from mininet.log import info, output
+from mininet.log import info, output, error
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -146,6 +146,15 @@ class CLI( Cmd ):
         "Dump node info."
         for node in self.nodelist:
             output( '%s\n' % node )
+
+    def do_link( self, args ):
+        "Bring a link up or down."
+        if len(args) != 3:
+            error( 'invalid number of args: link [up down] end1 end2\n' )
+        elif args[ 0 ] not in [ 'up', 'down' ]:
+            error( 'invalid type: link [up down] end1 end2\n' )
+        else:
+            self.mn.link( *args )
 
     def do_exit( self, args ):
         "Exit"

@@ -483,6 +483,33 @@ class Mininet( object ):
         "Run iperf UDP test."
         return self.iperf( l4Type='UDP', udpBw=udpBw )
 
+    def link( self, type, src, dst ):
+        """Change link status.
+           type: string {up, down}
+           src: string
+           dst: string"""
+        if src not in self.nameToNode:
+            error( 'src not in network: %s\n' % src )
+        elif dst not in self.nameToNode:
+            error( 'dst not in network: %s\n' % dst )
+        else:
+            srcNode = self.nameToNode[ src ]
+            dstNode = self.nameToNode[ dst ]
+            srcID = int( src[ 1: ] )
+            dstID = int( dst[ 1: ] )
+            if self.topo.port( srcID, dstID ) is None:
+                error( 'src and dst not connected: %s %s\n' % ( src, dst) )
+            else:
+                srcPort, dstPort = self.topo.port( srcID, dstID )
+                srcIntf = srcNode.intfs[ srcPort ]
+                dstIntf = dstNode.intfs[ dstPort ]
+                result = srcNode.cmd( [ 'ifconfig', srcIntf, type ] )
+                if result:
+                    error( 'link src status change failed: %s\n' % result )
+                result = dstNode.cmd( [ 'ifconfig', dstIntf, type ] )
+                if result:
+                    error( 'link dst status change failed: %s\n' % result )
+
     def interact( self ):
         "Start network and run our simple CLI."
         self.start()
