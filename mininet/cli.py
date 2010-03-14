@@ -15,10 +15,9 @@ size.
 The CLI automatically substitutes IP addresses for node names,
 so commands like
 
-mininet> h0 ping -c1 h31
+mininet> h2 ping h3
 
-should work correctly and allow host h0 to ping host h31.
-Note the '-c1' argument as per the Bugs/limitations section below!
+should work correctly and allow host h2 to ping host h3
 
 Several useful commands are provided, including the ability to
 list all nodes ('nodes'), to print out the network topology
@@ -27,10 +26,7 @@ and bandwidth ('iperf'.)
 
 Bugs/limitations:
 
-- Interactive commands are not supported at the moment;
-  notably, if you type 'ping h1', you can't interrupt it.
-  For now, we recommend limiting CLI use to non-interactive
-  commands which terminate in a reasonable amount of time.
+- Interactive commands are not supported at the moment
 
 """
 
@@ -52,7 +48,16 @@ class CLI( Cmd ):
             self.nodemap[ node.name ] = node
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
-        self.cmdloop()
+        while True:
+            try:
+                self.cmdloop()
+                break
+            except KeyboardInterrupt:
+                info( 'Interrupt\n' )
+
+    def emptyline( self ):
+        "Don't repeat last command when you hit return."
+        pass
 
     # Disable pylint "Unused argument: 'arg's'" messages.
     # Each CLI function needs the same interface.
@@ -70,13 +75,10 @@ class CLI( Cmd ):
                    'addresses\n'
                    'for node names when a node is the first arg, so commands'
                    ' like\n'
-                   ' mininet> h0 ping -c1 h1\n'
+                   ' mininet> h2 ping h3\n'
                    'should work.\n'
                    '\n'
-                   'Interactive commands are not supported yet,\n'
-                   'so please limit commands to ones that do not\n'
-                   'require user interaction and will terminate\n'
-                   'after a reasonable amount of time.\n' )
+                   'Interactive commands are not supported yet.\n' )
         if args is "":
             self.stdout.write( helpStr )
 
@@ -176,7 +178,7 @@ class CLI( Cmd ):
                     for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
-            node.sendCmd( rest )
+            node.sendCmd( rest, printPid=True )
             while True:
                 try:
                     done, data = node.monitor()

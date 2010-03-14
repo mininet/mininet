@@ -49,7 +49,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, makeIntfPair, moveIntf
+from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -65,21 +65,20 @@ class Node( object ):
            defaultMAC: default MAC address for intf 0
            defaultIP: default IP address for intf 0"""
         self.name = name
-        closeFds = False # speed vs. memory use
-        # setsid is necessary to detach from tty
-        # xpg_echo is needed so we can echo our sentinel in sendCmd
-        cmd = [ '/usr/bin/setsid', '/bin/bash', '-O', 'xpg_echo' ]
+        opts = '-cdp'
         self.inNamespace = inNamespace
         if self.inNamespace:
-            cmd = [ 'netns' ] + cmd
+            opts += '-n'
+        # xpg_echo is needed so we can echo our sentinel in sendCmd
+        cmd = [ 'mnexec', opts, 'bash', '-O', 'xpg_echo', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-            close_fds=closeFds )
+            close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
-        # This could be useful for monitoring multiple nodes
+        # This is useful for monitoring multiple nodes
         # using select.poll()
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
@@ -89,10 +88,17 @@ class Node( object ):
                         # replace with Port objects, eventually ?
         self.ips = {} # dict of interfaces to ip addresses as strings
         self.connection = {} # remote node connected to each interface
-        self.waiting = False
         self.execed = False
         self.defaultIP = defaultIP
         self.defaultMAC = defaultMAC
+        self.lastCmd = None
+        self.lastPid = None
+        # Grab PID
+        self.waiting = True
+        while self.lastPid is None:
+            self.monitor()
+        self.pid = self.lastPid
+        self.waiting = False
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -130,7 +136,7 @@ class Node( object ):
         "Wait until node's output is readable."
         self.pollOut.poll()
 
-    def sendCmd( self, cmd ):
+    def sendCmd( self, cmd, printPid=False ):
         """Send a command, followed by a command to echo a sentinel,
            and return without waiting for the command to complete."""
         assert not self.waiting
@@ -141,23 +147,36 @@ class Node( object ):
             cmd = cmd[ :-1 ]
         else:
             separator = ';'
+            if printPid and not isShellBuiltin( cmd ):
+                cmd = 'mnexec -p ' + cmd
         self.write( cmd + separator + ' echo -n "\\0177" \n' )
+        self.lastCmd = cmd
+        self.lastPid = None
         self.waiting = True
 
     def sendInt( self ):
-        """Placeholder for function to interrupt running subprocess.
-           This is a tricky problem to solve."""
-        self.write( chr( 3 ) )
+        "Interrupt running command."
+        if self.lastPid:
+            os.kill( self.lastPid, signal.SIGINT )
 
     def monitor( self ):
         "Monitor the output of a command, returning (done?, data)."
         assert self.waiting
         self.waitReadable()
         data = self.read( 1024 )
+        # Look for PID
+        marker = chr( 1 ) + r'\d+\n'
+        if chr( 1 ) in data:
+            markers = re.findall( marker, data )
+            if markers:
+                self.lastPid = int( markers[ 0 ][ 1: ] )
+                data = re.sub( marker, '', data )
+        # Look for sentinel/EOF
         if len( data ) > 0 and data[ -1 ] == chr( 127 ):
             self.waiting = False
             return True, data[ :-1 ]
         elif chr( 127 ) in data:
+            self.waiting = False
             return True, data.replace( chr( 127 ), '' )
         return False, data
 
@@ -336,11 +355,11 @@ class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
-    def sendCmd( self, cmd ):
+    def sendCmd( self, cmd, printCmd=False):
         """Send command to Node.
            cmd: string"""
         if not self.execed:
-            return Node.sendCmd( self, cmd )
+            return Node.sendCmd( self, cmd, printCmd )
         else:
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )

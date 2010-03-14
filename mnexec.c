@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
     if (optind < argc) {
 		execvp(argv[optind], &argv[optind]);
-		perror("execvp");
+		perror(argv[optind]);
 		return 1;
 	}
     

@@ -178,3 +178,18 @@ def makeNumeric( s ):
         return float( s )
     else:
         return s
+
+# pylint: disable-msg=E1101,W0612
+
+def isShellBuiltin( cmd ):
+    "Return True if cmd is a bash builtin."
+    if isShellBuiltin.builtIns is None:
+        isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
+    space = cmd.find( ' ' )
+    if space > 0:
+        cmd = cmd[ :space]
+    return cmd in isShellBuiltin.builtIns
+
+isShellBuiltin.builtIns = None
+
+# pylint: enable-msg=E1101,W0612

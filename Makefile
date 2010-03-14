@@ -19,7 +19,8 @@ codecheck: $(PYSRC)
 test: $(MININET) $(TEST)
 	mininet/test/test_nets.py
 
-install:
+install: mnexec
+	cp mnexec bin/
 	python setup.py install
 
 
