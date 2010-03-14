@@ -66,9 +66,8 @@ class Node( object ):
            defaultIP: default IP address for intf 0"""
         self.name = name
         closeFds = False # speed vs. memory use
-        # setsid is necessary to detach from tty
         # xpg_echo is needed so we can echo our sentinel in sendCmd
-        cmd = [ '/usr/bin/setsid', '/bin/bash', '-O', 'xpg_echo' ]
+        cmd = [ '/bin/bash', '-O', 'xpg_echo' ]
         self.inNamespace = inNamespace
         if self.inNamespace:
             cmd = [ 'netns' ] + cmd
