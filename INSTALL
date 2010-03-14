@@ -9,20 +9,13 @@ Preliminary Mininet Installation/Configuration Notes
 
   This places the mininet package in /usr/lib/python-2.5/site-packages/,
   so that 'import mininet' will work.
-  
-- A functional netns binary is required to run mininet, but currently you
-  have to compile it and install it yourself from the included .c file:
 
-  to make it: make netns (or cc -o netns netns.c)
-  to test it: ./netns /sbin/ifconfig -a 
-  to 'install' a link to it, you could do something like:
-    sudo ln -s /home/openflow/mininet/netns /usr/local/bin/netns
-
-  Installation is simplest with a distribution that includes a kernel
+- Installation is simplest with a distribution that includes a kernel
   which supports the CLONE_NETNS unshare flag by default. Debian 5.0+ does
   (e.g. current debian-testing release); Ubuntu doesn't. If your kernel
   doesn't support it, you will need to build and install a kernel that
-  does!
+  does! If you are using OpenVSwitch, 2.6.33 works best. For the reference
+  kernel switch, 2.6.30 is compatible.
 
 - Mininet should probably be run either on a machine with
   no other important processes, or on a virtual machine.
