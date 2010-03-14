@@ -126,7 +126,7 @@ class Mininet( object ):
            host: Host class
            controller: Controller class
            cparams: ControllerParams object
-           now: build now from topo?
+           build: build now from topo?
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
