@@ -29,7 +29,6 @@ int main(int argc, char *argv[])
 {
     char c;
     int fd;
-    int opt;
     
     while ((c = getopt(argc, argv, "+cdnp")) != -1)
         switch(c) {
