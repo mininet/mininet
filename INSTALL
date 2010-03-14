@@ -44,7 +44,7 @@ Preliminary Mininet Installation/Configuration Notes
 
   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
   
-  To compile for LInux 2.6.33, you may need to apply the patch
+  To compile for Linux 2.6.33, you may need to apply the patch
   included below.
 
   If you want to automatically load the kernel modules required
