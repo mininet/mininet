@@ -10,12 +10,12 @@ Preliminary Mininet Installation/Configuration Notes
   This places the mininet package in /usr/lib/python-2.5/site-packages/,
   so that 'import mininet' will work.
 
-- Installation is simplest with a distribution that includes a kernel
-  which supports the CLONE_NETNS unshare flag by default. Debian 5.0+ does
-  (e.g. current debian-testing release); Ubuntu doesn't. If your kernel
-  doesn't support it, you will need to build and install a kernel that
-  does! If you are using OpenVSwitch, 2.6.33 works best. For the reference
-  kernel switch, 2.6.30 is compatible.
+- Mininet requires a kernel built with support for the CLONE_NETNS unshare 
+  flag by default.
+  
+  If your kernel doesn't support it, you will need to build and install a 
+  kernel that does! If you are using Open vSwitch, 2.6.33 works best. For 
+  the reference kernel switch, 2.6.30 should be compatible.
 
 - Mininet should probably be run either on a machine with
   no other important processes, or on a virtual machine.
@@ -62,5 +62,3 @@ Preliminary Mininet Installation/Configuration Notes
     sudo sysctl -p
 
 ---
-
-
