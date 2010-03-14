@@ -157,6 +157,26 @@ class CLI( Cmd ):
         else:
             self.mn.link( *args )
 
+    def do_pause( self, args ):
+        "Temporarily bring a node down."
+        args = args.split()
+        if len(args) != 1:
+            error( 'invalid number of args: pause [node]\n' )
+        elif args[0] not in self.nodemap:
+            error( 'invalid node: %s\n' % args[0] )
+        else:
+            self.nodemap[ args[ 0 ] ].pause()
+
+    def do_resume( self, args ):
+        "Temporarily bring a node up."
+        args = args.split()
+        if len(args) != 1:
+            error( 'invalid number of args: resume [node]\n' )
+        elif args[0] not in self.nodemap:
+            error( 'invalid node: %s\n' % args[0] )
+        else:
+            self.nodemap[ args[ 0 ] ].resume()
+
     def do_exit( self, args ):
         "Exit"
         return 'exited by user command'
