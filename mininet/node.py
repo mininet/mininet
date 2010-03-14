@@ -357,9 +357,10 @@ class Node( object ):
 class Host( Node ):
     "A host is simply a Node."
 
-    # Ideally, pausing a host would pause the process.  However, when one
-    # tries to run a command on a paused host, it leads to an exception later.
-    # For now, disable interfaces to "pause" the host.
+    # Ideally, pausing a host would pause the bash process corresponding to
+    # that host.  However, when one tries to run a command on a paused host,
+    # it leads to an exception later.  For now, disable interfaces to "pause"
+    # the host.
 
     def pause( self ):
         "Disable interfaces."
