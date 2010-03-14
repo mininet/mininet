@@ -50,6 +50,7 @@ from time import sleep
 
 from mininet.log import info, error, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
+from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -397,6 +398,11 @@ class UserSwitch( Switch ):
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
 
+    @staticmethod
+    def setup():
+        "Ensure any dependencies are loaded; if not, try to load them."
+        moduleDeps( add = TUN )
+
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
@@ -447,6 +453,11 @@ class KernelSwitch( Switch ):
             error( "KernelSwitch currently only works"
                 " in the root namespace." )
             exit( 1 )
+
+    @staticmethod
+    def setup():
+        "Ensure any dependencies are loaded; if not, try to load them."
+        moduleDeps( subtract = OVS_KMOD, add = OF_KMOD )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -507,6 +518,11 @@ class OVSKernelSwitch( Switch ):
             error( "OVSKernelSwitch currently only works"
                 " in the root namespace." )
             exit( 1 )
+
+    @staticmethod
+    def setup():
+        "Ensure any dependencies are loaded; if not, try to load them."
+        moduleDeps( subtract = OF_KMOD, add = OVS_KMOD )
 
     def start( self, controllers ):
         "Start up kernel datapath."

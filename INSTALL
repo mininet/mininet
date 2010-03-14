@@ -47,12 +47,11 @@ Preliminary Mininet Installation/Configuration Notes
   To compile for Linux 2.6.33, you may need to apply the patch
   included below.
 
-  If you want to automatically load the kernel modules required
-  for OpenFlow, you could add something like the following to
-  /etc/rc.local:
+- Mininet will automatically load and remove kernel module dependencies for
+  supported switch types, using modprobe and rmmod - but these modules must be
+  in a location where modprobe can find them.
 
-    insmod /home/openflow/openflow/datapath/linux-2.6/ofdatapath.ko 
-    modprobe tun
+  See ~/mininet/util/modprobe_setup.sh for an example.
 
 - The reference OpenFlow controller (controller(8)) only supports 16
   switches by default! If you wish to run a network with more than 16

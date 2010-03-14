@@ -7,10 +7,13 @@ import unittest
 
 from mininet.net import init, Mininet
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams
+from mininet.node import UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 
 # temporary, until user-space side is tested
-SWITCHES = { 'kernel': KernelSwitch }
+SWITCHES = { 'kernel': KernelSwitch,
+             'user': UserSwitch,
+             'ovsk': OVSKernelSwitch }
 
 
 class testSingleSwitch( unittest.TestCase ):

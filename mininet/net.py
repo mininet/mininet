@@ -151,6 +151,8 @@ class Mininet( object ):
         self.dps = 0 # number of created kernel datapaths
         self.terms = [] # list of spawned xterm processes
 
+        switch.setup()
+
         if build:
             self.build()
 
