@@ -343,6 +343,7 @@ class Node( object ):
         result += ' IP=' + str( self.IP() )
         result += ' intfs=' + ','.join( sorted( self.intfs.values() ) )
         result += ' waiting=' + str( self.waiting )
+        result += ' pid=' + str( self.pid )
         return result
 
 
