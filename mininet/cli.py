@@ -149,6 +149,7 @@ class CLI( Cmd ):
 
     def do_link( self, args ):
         "Bring a link up or down."
+        args = args.split()
         if len(args) != 3:
             error( 'invalid number of args: link [up down] end1 end2\n' )
         elif args[ 0 ] not in [ 'up', 'down' ]:
