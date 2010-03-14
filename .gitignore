@@ -1,2 +1,3 @@
 mnexec
+*.pyc
 mininet.egg-info
