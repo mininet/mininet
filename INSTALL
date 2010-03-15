@@ -3,19 +3,25 @@ Preliminary Mininet Installation/Configuration Notes
 
 - This is not (yet) a 'release'; things may be broken.
 
+- These installation notes assume you understand how to do things 
+  like compile kernels, apply patches, configure networks, write code, 
+  etc.. If this is unfamiliar territory, we recommend using one of
+  our pre-built virtual machine images.
+
 - To install mininet, with root privileges:
 
-  python setup.py install
+  # python setup.py install
 
   This places the mininet package in /usr/lib/python-2.5/site-packages/,
-  so that 'import mininet' will work.
+  so that 'import mininet' will work, and installs the primary mn
+  script (mn) as well as its helper utility (mnexec.)
 
 - Mininet requires a kernel built with support for the CLONE_NETNS unshare 
-  flag by default.
+  flag by default (i.e. with CONFIG_NET_NS turned on.)
   
   If your kernel doesn't support it, you will need to build and install a 
-  kernel that does! If you are using Open vSwitch, 2.6.33 works best. For 
-  the reference kernel switch, 2.6.30 should be compatible.
+  kernel that does! >= 2.6.33 works best, although the reference kernel
+  switch requires a small patch to compile with it (see below.)
 
 - Mininet should probably be run either on a machine with
   no other important processes, or on a virtual machine.
@@ -37,6 +43,9 @@ Preliminary Mininet Installation/Configuration Notes
   recent one with full NOX support):
 
   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
+  
+  To compile for LInux 2.6.33, you may need to apply the patch
+  included below.
 
   If you want to automatically load the kernel modules required
   for OpenFlow, you could add something like the following to
@@ -62,3 +71,33 @@ Preliminary Mininet Installation/Configuration Notes
     sudo sysctl -p
 
 ---
+
+patch to OpenFlow reference implementation datapath/datapath.c to compile 
+under linux 2.6.33:
+
+diff --git a/datapath/datapath.c b/datapath/datapath.c
+index 4a4d3a2..365aa25 100644
+--- a/datapath/datapath.c
++++ b/datapath/datapath.c
+@@ -47,6 +47,9 @@
+
+#include "compat.h"
+
++#ifdef CONFIG_NET_NS
++#include <net/net_namespace.h>
++#endif
+
+/* Strings to describe the manufacturer, hardware, and software.  This data 
+ * is queriable through the switch description stats message. */
+@@ -259,7 +262,11 @@ send_openflow_skb(const struct datapath *dp,
+                 struct sk_buff *skb, const struct sender *sender)
+{
+       return (sender
+-               ? genlmsg_unicast(skb, sender->pid)
++#ifdef CONFIG_NET_NS
++               ? genlmsg_unicast(&init_net, skb, sender->pid)
++#else
++               ? genlmsg_unicast(skb, sender->pid)
++#endif
+               : genlmsg_multicast(skb, 0, dp_mc_group(dp), GFP_ATOMIC));
+}

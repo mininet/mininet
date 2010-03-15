@@ -3,7 +3,7 @@
                         aka
 How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 
-Development Release, March 2010
+Development Version, March 2010
 
 ---
 
@@ -15,9 +15,9 @@ datapath) are created as processes in separate network namespaces. This
 allows a complete OpenFlow network to be simulated on top of a single
 Linux kernel.
 
-Although Mininet may be invoked directly from the command line, it also
-incorporates a handy Python API, in the form of classes and functions
-which enable creation of OpenFlow networks of varying sizes and topologies.
+Mininet may be invoked directly from the command line, and also
+provides a handy Python API for creating networks of varying sizes and
+topologies.
 
 In order to run Mininet, you must have:
 
@@ -33,7 +33,7 @@ In order to run Mininet, you must have:
 
 * Root privileges (required for network device access)
 
-Currently mininet includes:
+Currently Mininet includes:
 
 - A simple node infrastructure (Host, Switch, Controller classes) for
   creating virtual OpenFlow networks
@@ -42,7 +42,7 @@ Currently mininet includes:
   topologies (Topo subclasses.) For example, a tree network may be created
   with the command
   
-  # mn --topo tree,depth=2,fanout==3
+  # mn --topo tree,depth=2,fanout=3
   
 - Basic tests, including connectivity (ping) and bandwidth (iperf)
 
@@ -60,7 +60,7 @@ Currently mininet includes:
   
   # mn -c
   
-- Examples (in examples/ directory) to help you get started.
+- Examples (in the examples/ directory) to help you get started.
 
 Batteries are not included (yet!) 
 
