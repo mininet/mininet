@@ -10,7 +10,7 @@ Preliminary Mininet Installation/Configuration Notes
 
 - To install mininet, with root privileges:
 
-  # python setup.py install
+  # make install
 
   This places the mininet package in /usr/lib/python-2.5/site-packages/,
   so that 'import mininet' will work, and installs the primary mn
