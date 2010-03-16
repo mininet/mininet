@@ -486,9 +486,9 @@ class Mininet( object ):
         "Run iperf UDP test."
         return self.iperf( l4Type='UDP', udpBw=udpBw )
 
-    def link( self, type, src, dst ):
+    def link( self, status, src, dst ):
         """Change link status.
-           type: string {up, down}
+           status: string {up, down}
            src: string
            dst: string"""
         if src not in self.nameToNode:
@@ -506,10 +506,10 @@ class Mininet( object ):
                 srcPort, dstPort = self.topo.port( srcID, dstID )
                 srcIntf = srcNode.intfs[ srcPort ]
                 dstIntf = dstNode.intfs[ dstPort ]
-                result = srcNode.cmd( [ 'ifconfig', srcIntf, type ] )
+                result = srcNode.cmd( [ 'ifconfig', srcIntf, status ] )
                 if result:
                     error( 'link src status change failed: %s\n' % result )
-                result = dstNode.cmd( [ 'ifconfig', dstIntf, type ] )
+                result = dstNode.cmd( [ 'ifconfig', dstIntf, status ] )
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 

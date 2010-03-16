@@ -341,7 +341,7 @@ class Node( object ):
         """Bring all interfaces up or down.
            action: string to pass to ifconfig"""
         for intf in self.intfs.values():
-            result = self.cmd( [ 'ifconfig', intf, action ] )
+            self.cmd( [ 'ifconfig', intf, action ] )
 
     # Other methods
     def __str__( self ):
@@ -355,11 +355,11 @@ class Node( object ):
 
 class Host( Node ):
     "A host is simply a Node."
-    pass
 
     # Ideally, pausing a host would pause the process.  However, when one
     # tries to run a command on a paused host, it leads to an exception later.
     # For now, disable interfaces to "pause" the host.
+
     def pause( self ):
         "Disable interfaces."
         self.modIntfs('down')
@@ -481,6 +481,7 @@ class KernelSwitch( Switch ):
 
     # Since kernel threads cannot receive signals like user-space processes,
     # disabling the interfaces and ofdatapath is our workaround.
+
     def pause( self ):
         "Disable interfaces and pause ofprotocol."
         self.cmd( 'kill -STOP %ofprotocol' )
@@ -541,6 +542,7 @@ class OVSKernelSwitch( Switch ):
 
     # Since kernel threads cannot receive signals like user-space processes,
     # disabling the interfaces and ofdatapath is our workaround.
+
     def pause( self ):
         "Disable interfaces and pause ovs-openflowd."
         self.cmd( 'kill -STOP %ovs-openflowd' )
