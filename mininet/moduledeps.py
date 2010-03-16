@@ -21,10 +21,12 @@ OF_KMOD = 'ofdatapath'
 OVS_KMOD = 'openvswitch_mod'
 TUN = 'tun'
 
-def moduleDeps( subtract = [], add = [] ):
+def moduleDeps( subtract=None, add=None ):
     """Handle module dependencies.
        subtract: string or list of module names to remove, if already loaded
        add: string or list of module names to add, if not already loaded"""
+    subtract = subtract if subtract is not None else []
+    add = add if add is not None else []
     if type( subtract ) is str:
         subtract = [ subtract ]
     if type( add ) is str:
