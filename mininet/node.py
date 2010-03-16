@@ -94,11 +94,7 @@ class Node( object ):
         self.defaultMAC = defaultMAC
         self.lastCmd = None
         self.lastPid = None
-        # Grab PID
-        self.waiting = True
-        while self.lastPid is None:
-            self.monitor()
-        self.pid = self.lastPid
+        self.readbuf = ''
         self.waiting = False
 
     @classmethod
@@ -115,9 +111,30 @@ class Node( object ):
 
     # Subshell I/O, commands and control
     def read( self, bytes ):
-        """Read from a node.
-           bytes: maximum number of bytes to read"""
-        return os.read( self.stdout.fileno(), bytes )
+        """Buffered read from node, non-blocking.
+           bytes: maximum number of bytes to return"""
+        count = len( self.readbuf )
+        if count < bytes:
+            data = os.read( self.stdout.fileno(), bytes - count )
+            self.readbuf += data
+        if bytes >= len( self.readbuf ):
+            result = self.readbuf
+            self.readbuf = ''
+        else:
+            result = self.readbuf[ :bytes ]
+            self.readbuf = self.readbuf[ bytes: ]
+        return result
+
+    def readline( self ):
+        """Buffered readline from node, non-blocking.
+           returns: line (minus newline) or None"""
+        self.readbuf += self.read( 1024 )
+        if '\n' not in self.readbuf:
+            return None
+        pos = self.readbuf.find( '\n' )
+        line = self.readbuf[ 0 : pos ]
+        self.readbuf = self.readbuf[ pos + 1: ]
+        return line
 
     def write( self, data ):
         """Write data to node.
@@ -135,7 +152,8 @@ class Node( object ):
 
     def waitReadable( self ):
         "Wait until node's output is readable."
-        self.pollOut.poll()
+        if len( self.readbuf ) == 0:
+            self.pollOut.poll()
 
     def sendCmd( self, cmd, printPid=False ):
         """Send a command, followed by a command to echo a sentinel,
@@ -155,10 +173,10 @@ class Node( object ):
         self.lastPid = None
         self.waiting = True
 
-    def sendInt( self ):
+    def sendInt( self, sig=signal.SIGINT ):
         "Interrupt running command."
         if self.lastPid:
-            os.kill( self.lastPid, signal.SIGINT )
+            os.kill( self.lastPid, sig )
 
     def monitor( self ):
         """Monitor and return the output of a command.
@@ -315,7 +333,7 @@ class Node( object ):
     def setDefaultRoute( self, intf ):
         """Set the default route to go through intf.
            intf: string, interface name"""
-        self.cmd( 'ip route flush' )
+        self.cmd( 'ip route flush root 0/0' )
         return self.cmd( 'route add default ' + intf )
 
     def IP( self, intf=None ):

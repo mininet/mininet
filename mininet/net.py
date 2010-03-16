@@ -85,6 +85,7 @@ method may be called to shut down the network.
 
 import os
 import re
+import select
 import signal
 from time import sleep
 
@@ -382,6 +383,25 @@ class Mininet( object ):
         self.stop()
         return result
 
+    def monitor( self, hosts=None ):
+        """Monitor a set of hosts (or all hosts by default),
+           and return their output, a line at a time.
+           returns: host, line"""
+        if hosts is None:
+            hosts = self.hosts
+        poller = select.poll()
+        Node = hosts[ 0 ] # so we can call class method fdToNode
+        for host in hosts:
+            poller.register( host.stdout )
+        while True:
+            ready = poller.poll()
+            for fd, event in ready:
+                host = Node.fdToNode( fd )
+                if event & select.POLLIN:
+                    line = host.readline()
+                    if line:
+                        yield host, line
+
     @staticmethod
     def _parsePing( pingOutput ):
         "Parse ping output and return packets sent, received."
@@ -460,10 +480,10 @@ class Mininet( object ):
             hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
             assert len( hosts ) == 2
-        host0, host1 = hosts
+        client, server = hosts
         output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        output( "%s and %s\n" % ( host0.name, host1.name ) )
-        host0.cmd( 'killall -9 iperf' )
+        output( "%s and %s\n" % ( client.name, server.name ) )
+        server.cmd( 'killall -9 iperf' )
         iperfArgs = 'iperf '
         bwArgs = ''
         if l4Type == 'UDP':
@@ -471,14 +491,17 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
-        server = host0.cmd( iperfArgs + '-s &' )
-        debug( '%s\n' % server )
-        client = host1.cmd( iperfArgs + '-t 5 -c ' + host0.IP() + ' ' +
+        server.sendCmd( iperfArgs + '-s', printPid=True )
+        servout = ''
+        while server.lastPid is None:
+            servout += server.monitor()
+        cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
-        debug( '%s\n' % client )
-        server = host0.cmd( 'killall -9 iperf' )
-        debug( '%s\n' % server )
-        result = [ self._parseIperf( server ), self._parseIperf( client ) ]
+        debug( 'Client output: %s\n' % cliout )
+        server.sendInt()
+        servout += server.waitOutput()
+        debug( 'Server output: %s\n' % servout )
+        result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )
         output( '*** Results: %s\n' % result )

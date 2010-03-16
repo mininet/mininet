@@ -18,7 +18,6 @@ various Mininet configurations, this example:
 
 import os
 import re
-import select
 import sys
 from time import time
 
@@ -29,37 +28,6 @@ from mininet.net import init, Mininet
 from mininet.node import KernelSwitch
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun
-
-# Some useful stuff: buffered readline and host monitoring
-
-def readline( host, buf ):
-    "Read a line from a host, buffering with buffer."
-    buf += host.read( 1024 )
-    if '\n' not in buf:
-        return None, buf
-    pos = buf.find( '\n' )
-    line = buf[ 0 : pos ]
-    rest = buf[ pos + 1: ]
-    return line, rest
-
-def monitor( hosts, seconds ):
-    "Monitor a set of hosts and yield their output."
-    poller = select.poll()
-    Node = hosts[ 0 ] # so we can call class method fdToNode
-    buffers = {}
-    for host in hosts:
-        poller.register( host.stdout )
-        buffers[ host ] = ''
-    quitTime = time() + seconds
-    while time() < quitTime:
-        ready = poller.poll()
-        for fd, event in ready:
-            host = Node.fdToNode( fd )
-            if event & select.POLLIN:
-                line, buffers[ host ] = readline( host, buffers[ host ] )
-                if line:
-                    yield host, line
-    yield None, ''
 
 # bwtest support
 
@@ -111,8 +79,9 @@ def udpbwtest( net, seconds ):
     print
     results = {}
     print "*** Monitoring hosts"
-    output = monitor( hosts, seconds )
-    while True:
+    output = net.monitor( hosts )
+    quitTime = time() + seconds
+    while time() < quitTime:
         host, line = output.next()
         if host is None:
             break
