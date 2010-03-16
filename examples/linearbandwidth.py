@@ -69,6 +69,7 @@ def linearBandwidthTest( lengths ):
     hostCount = switchCount + 1
 
     for datapath in datapaths:
+        print "*** testing", datapath, "datapath"
         Switch = KernelSwitch if datapath == 'kernel' else UserSwitch
         results[ datapath ] = []
         net = Mininet( topo=LinearTestTopo( hostCount ), switch=Switch )
@@ -79,7 +80,7 @@ def linearBandwidthTest( lengths ):
         print "*** testing bandwidth"
         for n in lengths:
             src, dst = net.hosts[ 0 ], net.hosts[ n ]
-            print "testing", src.name, "<->", dst.name
+            print "testing", src.name, "<->", dst.name,
             bandwidth = net.iperf( [ src, dst ] )
             print bandwidth
             flush()
@@ -99,7 +100,8 @@ def linearBandwidthTest( lengths ):
     print
 
 if __name__ == '__main__':
-    lg.setLogLevel( 'info' )
+    lg.setLogLevel( 'warning' )
     init()
-    print "*** Running linearBandwidthTest"
-    linearBandwidthTest( [ 1, 10, 20  ]  )
+    sizes = [ 1, 10, 20 ]
+    print "*** Running linearBandwidthTest", sizes
+    linearBandwidthTest( sizes  )
