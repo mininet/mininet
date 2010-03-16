@@ -1,0 +1,22 @@
+Mininet Examples
+
+These examples are intended to help you get started using Mininet via its
+Python API.
+
+
+linearbandwidth.py
+
+This example shows how to create a custom topology programatically
+by subclassing Topo, and how to run a series of tests on it.
+
+scratchnet.py, scratchnetuser.py
+
+These two examples demonstrate how to create a network by using the lowest-
+level Mininet functions. Generally the higher-level API is easier to use,
+but scratchnet shows what is going on behind the scenes.
+
+udpbwtest.py
+
+This example shows how to run a test across an entire network, and monitor
+the output of a set of hosts in real time.
+
