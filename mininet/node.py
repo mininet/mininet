@@ -541,7 +541,7 @@ class OVSKernelSwitch( Switch ):
         self.deleteIntfs()
 
     # Since kernel threads cannot receive signals like user-space processes,
-    # disabling the interfaces and ofdatapath is our workaround.
+    # disabling the interfaces and ovs-openflowd is our workaround.
 
     def pause( self ):
         "Disable interfaces and pause ovs-openflowd."
