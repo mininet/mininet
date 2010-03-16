@@ -209,12 +209,10 @@ class CLI( Cmd ):
             rest = ' '.join( rest )
             # Run cmd on node:
             node.sendCmd( rest, printPid=True )
-            while True:
+            while node.waiting:
                 try:
-                    done, data = node.monitor()
+                    data = node.monitor()
                     info( '%s' % data )
-                    if done:
-                        break
                 except KeyboardInterrupt:
                     node.sendInt()
         else:

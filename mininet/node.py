@@ -161,7 +161,8 @@ class Node( object ):
             os.kill( self.lastPid, signal.SIGINT )
 
     def monitor( self ):
-        "Monitor the output of a command, returning (done?, data)."
+        """Monitor and return the output of a command.
+           Set self.waiting to False if command has completed."""
         assert self.waiting
         self.waitReadable()
         data = self.read( 1024 )
@@ -175,11 +176,11 @@ class Node( object ):
         # Look for sentinel/EOF
         if len( data ) > 0 and data[ -1 ] == chr( 127 ):
             self.waiting = False
-            return True, data[ :-1 ]
+            data = data[ :-1 ]
         elif chr( 127 ) in data:
             self.waiting = False
-            return True, data.replace( chr( 127 ), '' )
-        return False, data
+            data = data.replace( chr( 127 ), '' )
+        return data
 
     def waitOutput( self, verbose=False ):
         """Wait for a command to complete.
@@ -189,9 +190,8 @@ class Node( object ):
            verbose: print output interactively"""
         log = info if verbose else debug
         output = ''
-        done = False
-        while not done:
-            done, data = self.monitor()
+        while self.waiting:
+            data = self.monitor()
             output += data
             log( data )
         return output
