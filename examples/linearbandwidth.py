@@ -27,7 +27,7 @@ import sys
 flush = sys.stdout.flush
 
 from mininet.net import init, Mininet
-from mininet.node import KernelSwitch, UserSwitch
+from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
 from mininet.topo import Topo, Node
 from mininet.log import lg
 
@@ -59,18 +59,22 @@ class LinearTestTopo( Topo ):
         # Consider all switches and hosts 'on'
         self.enable_all()
 
+
 def linearBandwidthTest( lengths ):
 
     "Check bandwidth at various lengths along a switch chain."
 
-    datapaths = [ 'kernel', 'user' ]
     results = {}
     switchCount = max( lengths )
     hostCount = switchCount + 1
 
-    for datapath in datapaths:
+    switches = { 'reference kernel': KernelSwitch,
+            'reference user': UserSwitch,
+            'Open vSwitch kernel': OVSKernelSwitch }
+            
+    for datapath in switches.keys():
         print "*** testing", datapath, "datapath"
-        Switch = KernelSwitch if datapath == 'kernel' else UserSwitch
+        Switch = switches[ datapath ]
         results[ datapath ] = []
         net = Mininet( topo=LinearTestTopo( hostCount ), switch=Switch )
         net.start()
@@ -87,7 +91,7 @@ def linearBandwidthTest( lengths ):
             results[ datapath ] += [ ( n, bandwidth ) ]
         net.stop()
 
-    for datapath in datapaths:
+    for datapath in switches.keys():
         print
         print "*** Linear network results for", datapath, "datapath:"
         print
