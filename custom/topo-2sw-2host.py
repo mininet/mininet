@@ -28,20 +28,18 @@ class MyTopo( Topo ):
         rightHost = 4
 
         # Add nodes
-        self._add_node( leftSwitch, Node( is_switch=True ) )
-        self._add_node( rightSwitch, Node( is_switch=True ) )
-        self._add_node( leftHost, Node( is_switch=False ) )
-        self._add_node( rightHost, Node( is_switch=False ) )
+        self.add_node( leftSwitch, Node( is_switch=True ) )
+        self.add_node( rightSwitch, Node( is_switch=True ) )
+        self.add_node( leftHost, Node( is_switch=False ) )
+        self.add_node( rightHost, Node( is_switch=False ) )
 
         # Add edges
-        self._add_edge( leftHost, leftSwitch )
-        self._add_edge( leftSwitch, rightSwitch )
-        self._add_edge( rightSwitch, rightHost )
+        self.add_edge( leftHost, leftSwitch )
+        self.add_edge( leftSwitch, rightSwitch )
+        self.add_edge( rightSwitch, rightHost )
 
         # Consider all switches and hosts 'on'
         self.enable_all()
 
 
-topos = { 'mytopo': MyTopo }
-
-# topos = { 'mytopo': ( lambda: MyTopo() ) }
+topos = { 'mytopo': ( lambda: MyTopo() ) }
