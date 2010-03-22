@@ -7,7 +7,7 @@ but it exposes the configuration details and allows customization.
 """
 
 from mininet.net import init
-from mininet.node import Node
+from mininet.node import Node, KernelSwitch
 from mininet.util import createLink
 from mininet.log import lg, info
 
@@ -51,5 +51,6 @@ def scratchNet( cname='controller', cargs='ptcp:' ):
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     info( '*** Scratch network demo (kernel datapath)\n' )
+    KernelSwitch.setup()
     init()
     scratchNet()
