@@ -16,13 +16,17 @@ Preliminary Mininet Installation/Configuration Notes
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
 
-- Mininet requires a kernel built with support for the CLONE_NETNS unshare 
-  flag by default (i.e. with CONFIG_NET_NS turned on.)
+- Mininet requires a kernel built with network namespace support enabled,
+  i.e. with CONFIG_NET_NS=Y
   
   If your kernel doesn't support it, you will need to build and install a 
-  kernel that does! >= 2.6.33 works best, although the reference kernel
-  switch requires a small patch to compile with it (see below.)
-
+  kernel that does! >= 2.6.33 works best, but requires a patch to
+  ofdatapath and to tun.c (see patches [1] and [2], below.)
+  
+  2.6.26 works with CONFIG_NET_NS enabled and no additional patches, but
+  it is much slower at removing veth interfaces, resulting in much slower
+  switch shutdown.
+    
 - Mininet should probably be run either on a machine with
   no other important processes, or on a virtual machine.
   Multiple concurrent Mininet instances are not supported.
@@ -71,8 +75,13 @@ Preliminary Mininet Installation/Configuration Notes
 
 ---
 
-patch to OpenFlow reference implementation datapath/datapath.c to compile 
-under linux 2.6.33:
+[1] OpenFlow Reference Implementation patch for Linux 2.6.33/2.6.33.1
+
+The OpenFlow kernel reference implementation does not compile out of the box
+on Linux 2.6.33/2.6.33.1 with network namespaces enabled.
+
+The following workaround modifies it to always use the root namespace, and should
+enable it to work with Mininet under 2.6.33.x:
 
 diff --git a/datapath/datapath.c b/datapath/datapath.c
 index 4a4d3a2..365aa25 100644
@@ -100,3 +109,26 @@ index 4a4d3a2..365aa25 100644
 +#endif
                : genlmsg_multicast(skb, 0, dp_mc_group(dp), GFP_ATOMIC));
 }
+
+[2] Linux kernel 2.6.33/2.6.33.1 tun driver patch
+
+The tun driver in Linux 2.6.33/2.6.33.1 doesn't work correctly in a network
+namespace. As a result, running the user datapath in a network namespace
+(e.g. as is done in examples/scratchnetuser.py) will cause a kernel panic
+when sysfs cannot create an entry for a tap interface, since the tun network
+device has a missing parent kobj. As a workaround, the following patch
+skips creating the sysfs entries when this is the case. This is an acceptable
+workaround as long as sysfs entries for tap interfaces are not being actively
+used (and they are not currently in Mininet.)
+
+diff linux-2.6.33.1/drivers/net/tun-orig.c linux-2.6.33.1/drivers/net/tun.c 
+1009c1009,1011
+< 		if (device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
+---
+> 		/* BL workaround: check for null parent kobj */
+> 		if (!tun->dev->dev.kobj.sd ||
+> 		    device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
+
+
+
+
