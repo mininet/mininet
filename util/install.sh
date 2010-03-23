@@ -260,7 +260,7 @@ function modprobe {
 	echo "Setting up modprobe for OF kmod..."
 	sudo cp $OF_DIR/datapath/linux-2.6/$OF_KMOD $DRIVERS_DIR
 
-	sudo depmod -a
+	sudo depmod -a ${KERNEL_NAME}
 }
 
 function all {
