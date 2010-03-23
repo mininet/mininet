@@ -156,8 +156,8 @@ function nox {
 	git clone git://noxrepo.org/noxcore
 	cd noxcore
 
-	# With later autoconf versions this doesn't work:
-	#./boot.sh
+	# With later autoconf versions this doesn't quite work:
+	./boot.sh || true
 	# So use this instead:
 	autoreconf --install --force
 	mkdir build
