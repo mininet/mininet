@@ -290,7 +290,7 @@ function vm_clean {
 
 	# Remove Mininet files
 	sudo rm -rf ~/mininet
-	sudo rm /lib/modules/python2.5/site-packets/mininet*
+	sudo rm /lib/modules/python2.5/site-packages/mininet*
 	sudo rm /usr/bin/mnexec
 
 	# Clear git changes
