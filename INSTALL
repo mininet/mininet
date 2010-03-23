@@ -7,13 +7,12 @@ Disclaimer: this is not (yet) a 'release'; things may be broken.
 These installation notes assume you understand how to do things 
 like compile kernels, apply patches, configure networks, write code, 
 etc.. If this is unfamiliar territory, we recommend using one of
-our pre-built virtual machine images. More information can be found
-at:
+our pre-built virtual machine images from:
 
-http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/Mininet
+http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
-If you are Linux-savvy and wish to install Mininet from scratch, here
-are the requirements:
+If you are Linux-savvy and wish to take on the challenge of installing
+Mininet and its dependencies from scratch, here are the requirements:
 
 1. Core Mininet installation
 
