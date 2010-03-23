@@ -661,10 +661,10 @@ class NOX( Controller ):
         """Init.
            name: name to give controller
            noxArgs: list of args, or single arg, to pass to NOX"""
-        if type( noxArgs ) != list:
-            noxArgs = [ noxArgs ]
         if not noxArgs:
             noxArgs = [ 'packetdump' ]
+        elif type( noxArgs ) != list:
+            noxArgs = [ noxArgs ]
 
         if 'NOX_CORE_DIR' not in os.environ:
             exit( 'exiting; please set missing NOX_CORE_DIR env var' )

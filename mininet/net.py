@@ -187,10 +187,10 @@ class Mininet( object ):
     def addController( self, controller ):
         """Add controller.
            controller: Controller class"""
-        controller = self.controller( 'c0', self.inNamespace )
-        if controller:  # allow controller-less setups
-            self.controllers.append( controller )
-            self.nameToNode[ 'c0' ] = controller
+        controller_new = self.controller( 'c0' )
+        if controller_new:  # allow controller-less setups
+            self.controllers.append( controller_new )
+            self.nameToNode[ 'c0' ] = controller_new
 
     # Control network support:
     #

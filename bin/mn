@@ -44,10 +44,10 @@ HOSTS = { 'process': Host }
 CONTROLLERDEF = 'ref'
 # a and b are the name and inNamespace params.
 CONTROLLERS = { 'ref': Controller,
-               'nox_dump': lambda a, b: NOX( a, b, 'packetdump' ),
-               'nox_pysw': lambda a, b: NOX( a, b, 'pyswitch' ),
-               'remote': lambda a, b: None,
-               'none': lambda a, b: None }
+               'nox_dump': lambda name: NOX( name, 'packetdump' ),
+               'nox_pysw': lambda name: NOX( name, 'pyswitch' ),
+               'remote': lambda name: None,
+               'none': lambda name: None }
 
 # optional tests to run
 TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp',
