@@ -193,6 +193,48 @@ function other {
 	sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
 }
 
+# The OpenFlow ref kmod is broken with 2.6.33 and CONFIG_NET_NS=y.  This is a
+# reported bug: http://www.openflowswitch.org/bugs/openflow/ticket/82
+function of_33 {
+	echo "Installing OpenFlow..."
+	cd ~/
+	cd openflow
+	git checkout -b fix-2.6.33 origin/devel-0.8.9/fix-2.6.33
+	./boot.sh
+	./configure --with-l26=/lib/modules/${KERNEL_NAME}
+	make
+	sudo make install
+}
+
+# OVS v0.99.2 does not build on 2.6.33, and the master branch of OVS includes
+# patches for OF1.0 support.  It doesn't look like there's a supported branch
+# for v0.99, so the script below applies a patch for this.
+# Since the patch is in a makefile, we'll have to steal the makefile builder,
+# boot.sh, from the OVS git repo.
+function ovs_33 {
+	echo "Installing OpenVSwitch..."
+	cd ~/
+	git clone git://openvswitch.org/openvswitch
+	cp openvswitch/boot.sh $OVS_RELEASE
+	rm -rf openvswitch
+	cd ~/$OVS_RELEASE
+	git apply ~/mininet/util/ovs-fix-2.6.33.patch
+	./boot.sh
+	./configure --with-l26=/lib/modules/${KERNEL_NAME}/build
+	make
+	sudo make install
+}
+
+function linux_33 {
+    kernel
+	of_33
+	ovs_33
+	modprobe
+
+	# Clean unneeded debs:
+	rm -f ~/linux-headers-* ~/linux-image-*
+}
+
 # Script to copy built OVS and OF kernel modules to where modprobe will
 # find them automatically.  Removes the need to keep an environment variable
 # for each, and works nicely with multiple kernel versions.
@@ -247,7 +289,7 @@ function vm_clean {
 }
 
 function usage {
-    printf "Usage: %s: [-acdfhkmntvx] args\n" $(basename $0) >&2
+    printf "Usage: %s: [-acdfhkmntvxy] args\n" $(basename $0) >&2
     exit 2
 }
 
@@ -255,7 +297,7 @@ if [ $# -eq 0 ]
 then
 	all
 else
-	while getopts 'acdfhkmntvx' OPTION
+	while getopts 'acdfhkmntvxy' OPTION
 	do
 	  case $OPTION in
 	  a)    all;;
@@ -269,6 +311,7 @@ else
 	  t)    other;;
 	  v)    ovs;;
 	  x)    nox;;
+	  y)    linux_33;;
 	  ?)    usage;;
 	  esac
 	done
