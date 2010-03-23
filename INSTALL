@@ -1,14 +1,23 @@
 Preliminary Mininet Installation/Configuration Notes
----
 
-- This is not (yet) a 'release'; things may be broken.
+Development version, March 2010
 
-- These installation notes assume you understand how to do things 
-  like compile kernels, apply patches, configure networks, write code, 
-  etc.. If this is unfamiliar territory, we recommend using one of
-  our pre-built virtual machine images.
+Disclaimer: this is not (yet) a 'release'; things may be broken.
 
-- To install mininet, with root privileges:
+These installation notes assume you understand how to do things 
+like compile kernels, apply patches, configure networks, write code, 
+etc.. If this is unfamiliar territory, we recommend using one of
+our pre-built virtual machine images. More information can be found
+at:
+
+http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/Mininet
+
+If you are Linux-savvy and wish to install Mininet from scratch, here
+are the requirements:
+
+1. Core Mininet installation
+
+  To install Mininet itself, with root privileges:
 
   # make install
 
@@ -16,7 +25,9 @@ Preliminary Mininet Installation/Configuration Notes
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
 
-- Mininet requires a kernel built with network namespace support enabled,
+2. Linux Kernel requirements
+
+  Mininet requires a kernel built with network namespace support enabled,
   i.e. with CONFIG_NET_NS=Y
   
   If your kernel doesn't support it, you will need to build and install a 
@@ -26,43 +37,8 @@ Preliminary Mininet Installation/Configuration Notes
   2.6.26 works with CONFIG_NET_NS enabled and no additional patches, but
   it is much slower at removing veth interfaces, resulting in much slower
   switch shutdown.
-    
-- Mininet should probably be run either on a machine with
-  no other important processes, or on a virtual machine.
-  Multiple concurrent Mininet instances are not supported.
 
-- To run the iperf test, you need to install iperf:
-
-    sudo aptitude/yum install iperf
-
-  We assume you already have ping installed. ;-)
-  
-- You may need other packages to run the examples, e.g.
-
-    sudo aptitude/yum install sshd xterm screen
-    
-  Consult the appropriate example file for details.
-  
-- To switch to the most recent OpenFlow 0.8.9 release branch (the most
-  recent one with full NOX support):
-
-  git checkout -b release/0.8.9 remotes/origin/release/0.8.9
-  
-  To compile for Linux 2.6.33, you may need to apply the patch
-  included below.
-
-- Mininet will automatically load and remove kernel module dependencies for
-  supported switch types, using modprobe and rmmod - but these modules must be
-  in a location where modprobe can find them.
-
-  See ~/mininet/util/modprobe_setup.sh for an example.
-
-- The reference OpenFlow controller (controller(8)) only supports 16
-  switches by default! If you wish to run a network with more than 16
-  switches, please recompile controller(8) with larger limits, or use a
-  different controller such as nox.
-  
-- For scalable configurations, you might need to increase some of your
+  For scalable configurations, you might need to increase some of your
   kernel limits. Sample params are in sysctl_addon, which can be appended to
   /etc/sysctl.conf (and modified as necessary for your desired
   configuration):
@@ -72,8 +48,60 @@ Preliminary Mininet Installation/Configuration Notes
   To save the config change, run:
 
     sudo sysctl -p
+    
+3. OpenFlow software and configuration requirements
 
----
+  Mininet requires either the reference OpenFlow switch implementation
+  (from openflowswitch.org) or Open vSwitch (openvswitch.org) to be 
+  installed. "make test" requires the reference user and kernel
+  space implementations as well as Open vSwitch. Note the kernel
+  implementation is not currently included in OpenFlow 1.0.
+
+  To switch to the most recent OpenFlow 0.8.9 release branch (the most
+  recent one with full NOX support):
+
+  git checkout -b release/0.8.9 remotes/origin/release/0.8.9
+  
+  To compile for Linux >= 2.6.33, you may need to apply patch [1]
+  included below.
+
+  Mininet will automatically load and remove kernel module dependencies for
+  supported switch types, using modprobe and rmmod - but these modules must be
+  in a location where modprobe can find them.
+
+  See ~/mininet/util/modprobe_setup.sh for an example.
+
+  The reference OpenFlow controller (controller(8)) only supports 16
+  switches by default! If you wish to run a network with more than 16
+  switches, please recompile controller(8) with larger limits, or use a
+  different controller such as nox. A patch to controller(8) is included
+  as patch [3] below.
+  
+4. Other software dependencies
+
+ To run the iperf test, you need to install iperf:
+
+    sudo aptitude/yum install iperf
+
+  We assume you already have ping installed. ;-)
+  
+ To use xterm or sshd with Mininet, you need the following:
+
+    sudo aptitude/yum install sshd xterm screen
+    
+ Some examples may have additional requirements - consult the specific
+ example file for details.
+  
+5. Other notes and recommendations
+
+  Mininet should probably be run either on a machine with
+  no other important processes, or on a virtual machine.
+  
+  Multiple concurrent Mininet instances are not supported!
+
+Good luck!
+  
+--- Patches and Footnones ---
 
 [1] OpenFlow Reference Implementation patch for Linux 2.6.33/2.6.33.1
 
@@ -130,5 +158,22 @@ diff linux-2.6.33.1/drivers/net/tun-orig.c linux-2.6.33.1/drivers/net/tun.c
 > 		    device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
 
 
+[3] Patch to reference OpenFlow controller to allow more than 16 switches
+
+diff --git a/controller/controller.c b/controller/controller.c
+index 41f2547..6eec590 100644
+--- a/controller/controller.c
++++ b/controller/controller.c
+@@ -58,8 +58,8 @@
+ #include "vlog.h"
+ #define THIS_MODULE VLM_controller
+ 
+-#define MAX_SWITCHES 16
+-#define MAX_LISTENERS 16
++#define MAX_SWITCHES 4096
++#define MAX_LISTENERS 4096
+ 
+ struct switch_ {
+     struct lswitch *lswitch;
 
 
