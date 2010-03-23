@@ -78,7 +78,7 @@ function mn_deps {
 function of {
 	echo "Installing OpenFlow and its tools..."
 
-    cd ~/
+	cd ~/
 	sudo apt-get install -y git-core automake m4 pkg-config libtool make libc6-dev autoconf autotools-dev gcc
 	git clone git://openflowswitch.org/openflow.git
 	cd ~/openflow
@@ -152,6 +152,7 @@ function nox {
 	sudo apt-get install -y libsqlite3-dev python-simplejson
 
 	#Install NOX:
+	cd ~/
 	git clone git://noxrepo.org/noxcore
 	cd noxcore
 
