@@ -511,11 +511,11 @@ class Mininet( object ):
         "Run iperf UDP test."
         return self.iperf( l4Type='UDP', udpBw=udpBw )
 
-    def link( self, status, src, dst ):
-        """Change link status.
-           status: string {up, down}
-           src: string
-           dst: string"""
+    def configLinkStatus( self, src, dst, status ):
+        """Change status of src <-> dst links.
+           src: node name
+           dst: node name
+           status: string {up, down}"""
         if src not in self.nameToNode:
             error( 'src not in network: %s\n' % src )
         elif dst not in self.nameToNode:

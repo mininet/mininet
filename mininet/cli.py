@@ -148,14 +148,14 @@ class CLI( Cmd ):
             output( '%s\n' % node )
 
     def do_link( self, args ):
-        "Bring a link up or down."
+        "Bring link(s) between two nodes up or down."
         args = args.split()
         if len(args) != 3:
-            error( 'invalid number of args: link [up down] end1 end2\n' )
-        elif args[ 0 ] not in [ 'up', 'down' ]:
-            error( 'invalid type: link [up down] end1 end2\n' )
+            error( 'invalid number of args: link end1 end2 [up down]\n' )
+        elif args[ 2 ] not in [ 'up', 'down' ]:
+            error( 'invalid type: link end1 end2 [up down]\n' )
         else:
-            self.mn.link( *args )
+            self.mn.configLinkStatus( *args )
 
     def do_pause( self, args ):
         "Temporarily bring a node down."
