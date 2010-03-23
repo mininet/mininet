@@ -34,6 +34,8 @@ OF_KMOD=ofdatapath.ko
 
 function kernel {
 	echo "Install new kernel..."
+	sudo apt-get update
+
 	# The easy approach: download pre-built linux-image and linux-headers packages:
 	wget $KERNEL_LOC/$KERNEL_HEADERS
 	wget $KERNEL_LOC/$KERNEL_IMAGE
@@ -121,7 +123,7 @@ function ovs {
 	sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
 	sudo apt-get update
 	sudo apt-get -y --force-yes install debian-backports-keyring
-	sudo apt-get -y -t lenny-backports install autoconf
+	sudo apt-get -y --force-yes -t lenny-backports install autoconf
 
 	#Install OVS from git
 	#git clone git://openvswitch.org/openvswitch
