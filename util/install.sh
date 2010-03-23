@@ -43,6 +43,17 @@ function kernel {
 	#Install custom linux headers and image:
 	sudo dpkg -i $KERNEL_IMAGE $KERNEL_HEADERS
 
+	# The next two steps are to work around a bug in newer versions of
+	# kernel-package, which fails to add initrd images with the latest kernels.
+	# See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=525032
+	# Generate initrd image if the .deb didn't install it:
+	if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
+		sudo update-initramfs -c -k ${KERNEL_NAME}
+	fi
+	
+	# Ensure /boot/grub/menu.lst boots with initrd image:
+	sudo update-grub
+
 	# The default should be the new kernel. Otherwise, you may need to modify /boot/grub/menu.lst to set the default to the entry corresponding to the kernel you just installed.
 }
 
