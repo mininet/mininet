@@ -521,16 +521,11 @@ class Mininet( object ):
         elif dst not in self.nameToNode:
             error( 'dst not in network: %s\n' % dst )
         else:
-            srcNode = self.nameToNode[ src ]
-            dstNode = self.nameToNode[ dst ]
-            srcID = int( src[ 1: ] )
-            dstID = int( dst[ 1: ] )
-            if self.topo.port( srcID, dstID ) is None:
+            srcNode, dstNode = self.nameToNode[ src ], self.nameToNode[ dst ]
+            connections = srcNode.connectionsTo( dstNode )
+            if len( connections ) == 0:
                 error( 'src and dst not connected: %s %s\n' % ( src, dst) )
-            else:
-                srcPort, dstPort = self.topo.port( srcID, dstID )
-                srcIntf = srcNode.intfs[ srcPort ]
-                dstIntf = dstNode.intfs[ dstPort ]
+            for srcIntf, dstIntf in connections:
                 result = srcNode.cmd( [ 'ifconfig', srcIntf, status ] )
                 if result:
                     error( 'link src status change failed: %s\n' % result )

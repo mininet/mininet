@@ -261,6 +261,16 @@ class Node( object ):
         "Register connection of intf to dstIntf on dstNode."
         self.connection[ intf ] = ( dstNode, dstIntf )
 
+    def connectionsTo( self, node):
+        "Return [(srcIntf, dstIntf)..] for connections to dstNode."
+        # We could optimize this if it is important
+        connections = []
+        for intf in self.connection.keys():
+            dstNode, dstIntf = self.connection[ intf ]
+            if dstNode == node:
+                connections.append( ( intf, dstIntf ) )
+        return connections
+        
     # This is a symmetric operation, but it makes sense to put
     # the code here since it is tightly coupled to routines in
     # this class. For a more symmetric API, you can use
