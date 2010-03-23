@@ -365,12 +365,6 @@ class Node( object ):
         "Check if an interface is up."
         return 'UP' in self.cmd( 'ifconfig ' + intf )
 
-    def modIntfs( self, action ):
-        """Bring all interfaces up or down.
-           action: string to pass to ifconfig"""
-        for intf in self.intfs.values():
-            self.cmd( [ 'ifconfig', intf, action ] )
-
     # Other methods
     def __str__( self ):
         result = self.name + ':'
@@ -384,18 +378,6 @@ class Node( object ):
 class Host( Node ):
     "A host is simply a Node."
 
-    # Ideally, pausing a host would pause the bash process corresponding to
-    # that host.  However, when one tries to run a command on a paused host,
-    # it leads to an exception later.  For now, disable interfaces to "pause"
-    # the host.
-
-    def pause( self ):
-        "Disable interfaces."
-        self.modIntfs('down')
-
-    def resume( self ):
-        "Re-enable interfaces"
-        self.modIntfs('up')
 
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
@@ -455,17 +437,6 @@ class UserSwitch( Switch ):
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
-    def pause( self ):
-        "Pause ofprotocol and ofdatapath."
-        self.cmd( 'kill -STOP %ofdatapath' )
-        self.cmd( 'kill -STOP %ofprotocol' )
-
-    def resume( self ):
-        "Resume ofprotocol and datapath."
-        self.cmd( 'kill -CONT %ofdatapath' )
-        self.cmd( 'kill -CONT %ofprotocol' )
-
-
 class KernelSwitch( Switch ):
     """Kernel-space switch.
        Currently only works in root namespace."""
@@ -518,18 +489,6 @@ class KernelSwitch( Switch ):
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
-    # Since kernel threads cannot receive signals like user-space processes,
-    # disabling the interfaces and ofdatapath is our workaround.
-
-    def pause( self ):
-        "Disable interfaces and pause ofprotocol."
-        self.cmd( 'kill -STOP %ofprotocol' )
-        self.modIntfs('down')
-
-    def resume( self ):
-        "Re-enable interfaces and resume ofprotocol."
-        self.cmd( 'kill -CONT %ofprotocol' )
-        self.modIntfs('up')
 
 class OVSKernelSwitch( Switch ):
     """Open VSwitch kernel-space switch.
@@ -584,19 +543,6 @@ class OVSKernelSwitch( Switch ):
         self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
 
-    # Since kernel threads cannot receive signals like user-space processes,
-    # disabling the interfaces and ovs-openflowd is our workaround.
-
-    def pause( self ):
-        "Disable interfaces and pause ovs-openflowd."
-        self.cmd( 'kill -STOP %ovs-openflowd' )
-        self.modIntfs('down')
-
-    def resume( self ):
-        "Re-enable interfaces and resume ovs-openflowd."
-        self.cmd( 'kill -CONT %ovs-openflowd' )
-        self.modIntfs('up')
-
 
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
@@ -627,21 +573,12 @@ class Controller( Node ):
         self.cmd( 'kill %' + self.controller )
         self.terminate()
 
-    def pause( self ):
-        "Pause controller."
-        self.cmd( 'kill -STOP %' + self.controller )
-
-    def resume( self ):
-        "Resume controller."
-        self.cmd( 'kill -CONT %' + self.controller )
-
     def IP( self, intf=None ):
         "Return IP address of the Controller"
         ip = Node.IP( self, intf=intf )
         if ip is None:
             ip = self.defaultIP
         return ip
-
 
 class ControllerParams( object ):
     "Container for controller IP parameters."
