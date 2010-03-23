@@ -13,9 +13,9 @@ KERNEL_LOC=http://www.stanford.edu/~brandonh
 
 # Kernel params
 # These kernels have been tried:
-#KERNEL_NAME=2.6.29.6-custom
+KERNEL_NAME=2.6.29.6-custom
 #KERNEL_NAME=2.6.33-custom
-KERNEL_NAME=2.6.33.1-custom
+#KERNEL_NAME=2.6.33.1-custom
 #KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
