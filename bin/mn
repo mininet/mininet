@@ -230,7 +230,7 @@ class MininetRunner( object ):
             mn.iperf()
             mn.stop()
         elif test != 'build':
-            mn.run( test )
+            mn.run( getattr( mn, test ) )
 
         elapsed = float( time.time() - start )
         info( 'completed in %0.3f seconds\n' % elapsed )
