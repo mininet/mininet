@@ -1,0 +1,51 @@
+>From 0ccd7844bbe9f6014d162c573e796c8c6f3f707b Mon Sep 17 00:00:00 2001
+From: Ben Pfaff <blp@nicira.com>
+Date: Tue, 23 Mar 2010 09:27:08 -0700
+Subject: [PATCH] datapath: Support 2.6.33 kernel layout in build system.
+
+The 2.6.33 kernel moves generated header files to include/generated, so
+we need to look for autoconf.h there.
+
+Reported-by: Brandon Heller <brandonh@stanford.edu>
+---
+ acinclude.m4                        |    5 +++--
+ datapath/linux-2.6/Makefile.main.in |    7 +++++--
+ 2 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/acinclude.m4 b/acinclude.m4
+index e38676f..abbc57e 100644
+--- a/acinclude.m4
++++ b/acinclude.m4
+@@ -70,8 +70,9 @@ AC_DEFUN([OVS_CHECK_LINUX26], [
+          AC_ERROR([Linux kernel in build tree $KBUILD26 (source tree $KSRC26) is not version 2.6])
+        fi
+     fi
+-    if ! test -e "$KBUILD26"/include/linux/version.h || \
+-       ! test -e "$KBUILD26"/include/linux/autoconf.h; then
++    if test ! -e "$KBUILD26"/include/linux/version.h || \
++       (test ! -e "$KBUILD26"/include/linux/autoconf.h && \
++        test ! -e "$KBUILD26"/include/generated/autoconf.h); then
+ 	AC_MSG_ERROR([Linux kernel source in $KBUILD26 is not configured])
+     fi
+     OVS_CHECK_LINUX26_COMPAT
+diff --git a/datapath/linux-2.6/Makefile.main.in b/datapath/linux-2.6/Makefile.main.in
+index fd231e6..cb2a042 100644
+--- a/datapath/linux-2.6/Makefile.main.in
++++ b/datapath/linux-2.6/Makefile.main.in
+@@ -42,9 +42,12 @@ ifeq (,$(wildcard $(VERSION_FILE)))
+   $(error Linux kernel source not configured - missing version.h)
+ endif
+ 
+-CONFIG_FILE := $(KSRC)/include/linux/autoconf.h
++CONFIG_FILE := $(KSRC)/include/generated/autoconf.h
+ ifeq (,$(wildcard $(CONFIG_FILE)))
+-  $(error Linux kernel source not configured - missing autoconf.h)
++  CONFIG_FILE := $(KSRC)/include/linux/autoconf.h
++  ifeq (,$(wildcard $(CONFIG_FILE)))
++    $(error Linux kernel source not configured - missing autoconf.h)
++  endif
+ endif
+ 
+ default:
+-- 
+1.6.6.1
