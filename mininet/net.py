@@ -375,11 +375,11 @@ class Mininet( object ):
             controller.stop()
         info( '*** Test complete\n' )
 
-    def run( self, test, **params ):
+    def run( self, test, *args, **kwargs ):
         "Perform a complete start/test/stop cycle."
         self.start()
         info( '*** Running test\n' )
-        result = getattr( self, test )( **params )
+        result = test( *args, **kwargs )
         self.stop()
         return result
 
