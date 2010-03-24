@@ -93,10 +93,10 @@ class Topo(object):
 
         '''
         self.g = Graph()
-        self.node_info = {} # dpids hash to Node objects
-        self.edge_info = {} # (src_dpid, dst_dpid) tuples hash to Edge objects
-        self.ports = {} # ports[src][dst] is port on src that connects to dst
-        self.id_gen = NodeID # class used to generate dpid
+        self.node_info = {}  # dpids hash to Node objects
+        self.edge_info = {}  # (src_dpid, dst_dpid) tuples hash to Edge objects
+        self.ports = {}  # ports[src][dst] is port on src that connects to dst
+        self.id_gen = NodeID  # class used to generate dpid
 
     def add_node(self, dpid, node):
         '''Add Node to graph.
@@ -130,12 +130,12 @@ class Topo(object):
         if src not in self.ports:
             self.ports[src] = {}
         if dst not in self.ports[src]:
-            self.ports[src][dst] = len(self.ports[src]) # num outlinks
+            self.ports[src][dst] = len(self.ports[src])  # num outlinks
 
         if dst not in self.ports:
             self.ports[dst] = {}
         if src not in self.ports[dst]:
-            self.ports[dst][src] = len(self.ports[dst]) # num outlinks
+            self.ports[dst][src] = len(self.ports[dst])  # num outlinks
 
     def node_enabled(self, dpid):
         '''Is node connected, admin on, powered on, and fault-free?
