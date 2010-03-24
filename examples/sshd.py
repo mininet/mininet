@@ -47,9 +47,9 @@ def connectToRootNS( network, switch, ip, prefixLen, routes ):
 
 def sshd( network, cmd='/usr/sbin/sshd', opts='-D' ):
     "Start a network, connect it to root ns, and run sshd on all hosts."
-    switch = network.switches[ 0 ] # switch to use
-    ip = '10.123.123.1' # our IP address on host network
-    routes = [ '10.0.0.0/8' ] # host networks to route to
+    switch = network.switches[ 0 ]  # switch to use
+    ip = '10.123.123.1'  # our IP address on host network
+    routes = [ '10.0.0.0/8' ]  # host networks to route to
     connectToRootNS( network, switch, ip, 8, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )

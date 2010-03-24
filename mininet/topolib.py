@@ -25,7 +25,7 @@ class TreeTopo( Topo ):
             for i in range( 0, fanout ):
                 child = n + 1
                 self.add_edge( me, child )
-                n = self.addTree( child, depth-1, fanout )
+                n = self.addTree( child, depth - 1, fanout )
         return n
 
     # pylint: enable-msg=W0612

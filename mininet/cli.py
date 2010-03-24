@@ -43,7 +43,7 @@ class CLI( Cmd ):
     def __init__( self, mininet ):
         self.mn = mininet
         self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
-        self.nodemap = {} # map names to Node objects
+        self.nodemap = {}  # map names to Node objects
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
         Cmd.__init__( self )

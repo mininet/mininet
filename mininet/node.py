@@ -56,8 +56,8 @@ class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
 
-    inToNode = {} # mapping of input fds to nodes
-    outToNode = {} # mapping of output fds to nodes
+    inToNode = {}  # mapping of input fds to nodes
+    outToNode = {}  # mapping of output fds to nodes
 
     def __init__( self, name, inNamespace=True,
         defaultMAC=None, defaultIP=None ):
@@ -84,11 +84,11 @@ class Node( object ):
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
         self.pid = self.shell.pid
-        self.intfs = {} # dict of port numbers to interface names
-        self.ports = {} # dict of interface names to port numbers
-                        # replace with Port objects, eventually ?
-        self.ips = {} # dict of interfaces to ip addresses as strings
-        self.connection = {} # remote node connected to each interface
+        self.intfs = {}  # dict of port numbers to interface names
+        self.ports = {}  # dict of interface names to port numbers
+                         # replace with Port objects, eventually ?
+        self.ips = {}  # dict of interfaces to ip addresses as strings
+        self.connection = {}  # remote node connected to each interface
         self.execed = False
         self.defaultIP = defaultIP
         self.defaultMAC = defaultMAC

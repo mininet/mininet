@@ -97,7 +97,7 @@ from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.xterm import cleanUpScreens, makeXterms
 
-DATAPATHS = [ 'kernel' ] #[ 'user', 'kernel' ]
+DATAPATHS = [ 'kernel' ]  # [ 'user', 'kernel' ]
 
 def init():
     "Initialize Mininet."
@@ -147,10 +147,10 @@ class Mininet( object ):
         self.hosts = []
         self.switches = []
         self.controllers = []
-        self.nameToNode = {} # name to Node (Host/Switch) objects
-        self.idToNode = {} # dpid to Node (Host/Switch) objects
-        self.dps = 0 # number of created kernel datapaths
-        self.terms = [] # list of spawned xterm processes
+        self.nameToNode = {}  # name to Node (Host/Switch) objects
+        self.idToNode = {}  # dpid to Node (Host/Switch) objects
+        self.dps = 0  # number of created kernel datapaths
+        self.terms = []  # list of spawned xterm processes
 
         switch.setup()
 
@@ -188,7 +188,7 @@ class Mininet( object ):
         """Add controller.
            controller: Controller class"""
         controller = self.controller( 'c0', self.inNamespace )
-        if controller: # allow controller-less setups
+        if controller:  # allow controller-less setups
             self.controllers.append( controller )
             self.nameToNode[ 'c0' ] = controller
 
@@ -390,7 +390,7 @@ class Mininet( object ):
         if hosts is None:
             hosts = self.hosts
         poller = select.poll()
-        Node = hosts[ 0 ] # so we can call class method fdToNode
+        Node = hosts[ 0 ]  # so we can call class method fdToNode
         for host in hosts:
             poller.register( host.stdout )
         while True:

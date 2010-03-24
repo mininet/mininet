@@ -40,8 +40,8 @@ class StreamHandlerNoNewline( logging.StreamHandler ):
            traceback.printException and appended to the stream."""
         try:
             msg = self.format( record )
-            fs = '%s' # was '%s\n'
-            if not hasattr( types, 'UnicodeType' ): #if no unicode support...
+            fs = '%s'  # was '%s\n'
+            if not hasattr( types, 'UnicodeType' ):  # if no unicode support...
                 self.stream.write( fs % msg )
             else:
                 try:
