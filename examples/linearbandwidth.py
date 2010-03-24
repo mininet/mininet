@@ -71,7 +71,7 @@ def linearBandwidthTest( lengths ):
     switches = { 'reference kernel': KernelSwitch,
             'reference user': UserSwitch,
             'Open vSwitch kernel': OVSKernelSwitch }
-            
+
     for datapath in switches.keys():
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]

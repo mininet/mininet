@@ -270,7 +270,7 @@ class Node( object ):
             if dstNode == node:
                 connections.append( ( intf, dstIntf ) )
         return connections
-        
+
     # This is a symmetric operation, but it makes sense to put
     # the code here since it is tightly coupled to routines in
     # this class. For a more symmetric API, you can use
