@@ -59,9 +59,10 @@ class CLI( Cmd ):
         "Don't repeat last command when you hit return."
         pass
 
-    # Disable pylint "Unused argument: 'arg's'" messages.
-    # Each CLI function needs the same interface.
-    # pylint: disable-msg=W0613
+    # Disable pylint "Unused argument: 'arg's'" messages, as well as
+    # "method could be a function" warning, since each CLI function
+    # must have the same interface
+    # pylint: disable-msg=W0613,R0201
 
     def do_help( self, args ):
         "Describe available CLI commands."
@@ -218,5 +219,4 @@ class CLI( Cmd ):
         else:
             self.stdout.write( '*** Unknown syntax: %s\n' % line )
 
-    # Re-enable pylint "Unused argument: 'arg's'" messages.
-    # pylint: enable-msg=W0613
+    # pylint: enable-msg=W0613,R0201

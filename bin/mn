@@ -65,7 +65,7 @@ def buildTopo( topo ):
     topo_seq_params = [ s for s in topo_params if '=' not in s ]
     topo_seq_params = [ makeNumeric( s ) for s in topo_seq_params ]
     topo_kw_params = {}
-    for s in [ s for s in topo_params if '=' in s ]:
+    for s in [ p for p in topo_params if '=' in p ]:
         key, val = s.split( '=' )
         topo_kw_params[ key ] = makeNumeric( val )
 

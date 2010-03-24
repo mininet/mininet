@@ -422,7 +422,7 @@ class Switch( Node ):
 class UserSwitch( Switch ):
     "User-space switch."
 
-    def __init__( self, name, *args, **kwargs ):
+    def __init__( self, name, **kwargs ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
@@ -658,7 +658,7 @@ class ControllerParams( object ):
 class NOX( Controller ):
     "Controller to run a NOX application."
 
-    def __init__( self, name, inNamespace=False, noxArgs=None, **kwargs ):
+    def __init__( self, name, noxArgs=None, **kwargs ):
         """Init.
            name: name to give controller
            noxArgs: list of args, or single arg, to pass to NOX"""
@@ -681,14 +681,15 @@ class NOX( Controller ):
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
-    def __init__( self, name, inNamespace=False, defaultIP='127.0.0.1',
-                 port=6633 ):
+    def __init__( self, name, defaultIP='127.0.0.1',
+                 port=6633, **kwargs):
         """Init.
            name: name to give controller
            defaultIP: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
-        Controller.__init__( self, name, defaultIP=defaultIP, port=port )
+        Controller.__init__( self, name, defaultIP=defaultIP, port=port,
+            **kwargs )
 
     def start( self ):
         "Overridden to do nothing."
