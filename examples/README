@@ -29,8 +29,18 @@ to an interface in the root namespace (generaly the control network
 already lives in the root namespace, so it does not need to be explicitly
 connected.)
 
+treeping64:
+
+This example creates a 64-host tree network, and attempts to check full
+connectivity using ping, for three different switch/datapath types.
+
+tree1024.py:
+
+This example attempts to create a 1024-host network, and then runs the
+CLI on it. It may run into scalability limits, depending on available
+memory and sysctl configuration (see INSTALL.)
+
 udpbwtest.py:
 
 This example shows how to run a test across an entire network, and monitor
 the output of a set of hosts in real time.
-
