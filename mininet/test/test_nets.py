@@ -26,7 +26,7 @@ class testSingleSwitch( unittest.TestCase ):
             controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( SingleSwitchTopo(), switch, Host, Controller,
                          controllerParams )
-            dropped = mn.run( 'ping' )
+            dropped = mn.run( mn.ping )
             self.assertEqual( dropped, 0 )
 
     def testSingle5( self ):
@@ -36,7 +36,7 @@ class testSingleSwitch( unittest.TestCase ):
             controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( SingleSwitchTopo( k=5 ), switch, Host, Controller,
                          controllerParams )
-            dropped = mn.run( 'ping' )
+            dropped = mn.run( mn.ping )
             self.assertEqual( dropped, 0 )
 
 
@@ -50,7 +50,7 @@ class testLinear( unittest.TestCase ):
             controllerParams = ControllerParams( '10.0.0.0', 8 )
             mn = Mininet( LinearTopo( k=5 ), switch, Host, Controller,
                          controllerParams )
-            dropped = mn.run( 'ping' )
+            dropped = mn.run( mn.ping )
             self.assertEqual( dropped, 0 )
 
 
