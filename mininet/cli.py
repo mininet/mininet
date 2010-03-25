@@ -35,6 +35,17 @@ from cmd import Cmd
 
 from mininet.log import info, output, error
 
+
+def waitForNode( node ):
+    "Wait for a node to finish, and  print its output."
+    while node.waiting:
+        try:
+            data = node.monitor()
+            info( '%s' % data )
+        except KeyboardInterrupt:
+            node.sendInt()
+
+        
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
 
@@ -54,6 +65,8 @@ class CLI( Cmd ):
                 break
             except KeyboardInterrupt:
                 info( 'Interrupt\n' )
+                for node in self.nodelist:
+                    waitForNode( node )
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
@@ -210,12 +223,7 @@ class CLI( Cmd ):
             rest = ' '.join( rest )
             # Run cmd on node:
             node.sendCmd( rest, printPid=True )
-            while node.waiting:
-                try:
-                    data = node.monitor()
-                    info( '%s' % data )
-                except KeyboardInterrupt:
-                    node.sendInt()
+            waitForNode( node )
         else:
             self.stdout.write( '*** Unknown syntax: %s\n' % line )
 
