@@ -11,7 +11,7 @@ This version uses the user datapath and an explicit control network.
 from mininet.net import init
 from mininet.node import Node
 from mininet.util import createLink
-from mininet.log import lg, info
+from mininet.log import setLogLevel, info
 
 def scratchNetUser( cname='controller', cargs='ptcp:' ):
     "Create network from scratch using user switch."
@@ -60,7 +60,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     info( '\n' )
 
 if __name__ == '__main__':
-    lg.setLogLevel( 'info' )
+    setLogLevel( 'info' )
     info( '*** Scratch network demo (user datapath)\n' )
     init()
     scratchNetUser()
