@@ -70,8 +70,7 @@ class Node( object ):
         self.inNamespace = inNamespace
         if self.inNamespace:
             opts += '-n'
-        # xpg_echo is needed so we can echo our sentinel in sendCmd
-        cmd = [ 'mnexec', opts, 'bash', '-O', 'xpg_echo', '-m' ]
+        cmd = [ 'mnexec', opts, 'bash', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
             close_fds=False )
         self.stdin = self.shell.stdin
@@ -168,7 +167,7 @@ class Node( object ):
             separator = ';'
             if printPid and not isShellBuiltin( cmd ):
                 cmd = 'mnexec -p ' + cmd
-        self.write( cmd + separator + ' echo -n "\\0177" \n' )
+        self.write( cmd + separator + ' printf "\\177" \n' )
         self.lastCmd = cmd
         self.lastPid = None
         self.waiting = True
