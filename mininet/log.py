@@ -170,9 +170,9 @@ def makeListCompatible( fn ):
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
 
-info, output, warn, error, debug = ( 
-    lg.info, lg.output, lg.warn, lg.error, lg.debug ) = [ 
-        makeListCompatible( f ) for f in 
+info, output, warn, error, debug = (
+    lg.info, lg.output, lg.warn, lg.error, lg.debug ) = [
+        makeListCompatible( f ) for f in
             lg.info, lg.output, lg.warn, lg.error, lg.debug ]
 
 setLogLevel = lg.setLogLevel
