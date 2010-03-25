@@ -35,16 +35,6 @@ from cmd import Cmd
 
 from mininet.log import info, output, error
 
-
-def waitForNode( node ):
-    "Wait for a node to finish, and  print its output."
-    while node.waiting:
-        try:
-            data = node.monitor()
-            info( '%s' % data )
-        except KeyboardInterrupt:
-            node.sendInt()
-
         
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -228,3 +218,16 @@ class CLI( Cmd ):
             self.stdout.write( '*** Unknown syntax: %s\n' % line )
 
     # pylint: enable-msg=W0613,R0201
+
+
+# This function may be a candidate for util.py
+
+def waitForNode( node ):
+    "Wait for a node to finish, and  print its output."
+    while node.waiting:
+        try:
+            data = node.monitor()
+            info( '%s' % data )
+        except KeyboardInterrupt:
+            node.sendInt()
+
