@@ -1,0 +1,13 @@
+--- linux-2.6.33.1/drivers/net/tun.c	2010-03-24 22:47:32.000000000 -0700
++++ tun-new.c	2010-03-24 22:45:00.000000000 -0700
+@@ -1006,7 +1006,9 @@
+ 		if (err < 0)
+ 			goto err_free_sk;
+ 
+-		if (device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
++		/* BL hack: check for null parent kobj */
++		if (!tun->dev->dev.kobj.sd ||
++		    device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
+ 		    device_create_file(&tun->dev->dev, &dev_attr_owner) ||
+ 		    device_create_file(&tun->dev->dev, &dev_attr_group))
+ 			printk(KERN_ERR "Failed to create tun sysfs files\n");

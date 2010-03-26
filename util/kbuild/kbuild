@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# Script to build new Debian kernel packages for 2.6.33.1
+#
+# Caveats:
+#
+# Since kernel-package in debian-stable doesn't work with
+# 2.6.33.1, we attempt to patch it in place. This may not be the
+# right thing to do. A possibly better alternative is to install
+# a later version of kernel-package, although that could potentially
+# cause problems with upgrades, etc..
+#
+# The patch to tun.c is a workaround rather than a real fix.
+
+
+# Season to taste
+# export PATH=/usr/lib/ccache:$PATH
+export CONCURRENCY_LEVEL=3
+
+debversion=2.6.26-2-686-bigmem
+
+image=linux-image-$debversion
+
+echo "*** Installing $image"
+aptitude install $image
+
+newversion=2.6.33.1
+archive=linux-$newversion.tar.bz2
+location=http://www.kernel.org/pub/linux/kernel/v2.6
+
+echo "*** Fetching $location/$archive"
+wget -c $location/$archive
+
+tree=linux-$newversion
+if [ -e $tree ]; then 
+  echo "*** $tree already exists"
+else
+  echo "*** Extracting $archive"
+  tar xjf $archive
+fi
+
+echo "*** Patching tun driver"
+patch $tree/drivers/net/tun.c < tun.patch
+
+echo "*** Patching debian build script"
+sudo patch /usr/share/kernel-package/ruleset/misc/version_vars.mk < version_vars.patch
+
+config=/boot/config-$debversion
+echo "*** Copying $config to $tree/.config"
+cp $config $tree/.config
+
+echo "*** Updating config"
+cd $tree
+yes '' | make oldconfig 1> /dev/null
+sed 's/# CONFIG_NET_NS is not set/CONFIG_NET_NS=y/' .config > .config-new
+mv .config-new .config
+echo "*** Result: " `grep CONFIG_NET_NS .config`
+
+echo "*** Building kernel"
+time fakeroot make-kpkg --initrd --append-to-version=-mininet kernel_image kernel_headers
+
+cd ..
+echo "*** Done - package should be in current directory"
+ls *$newversion*.deb
+
+echo "To install:"
+echo "# dpkg -i "  *$newversion*.deb
