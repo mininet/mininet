@@ -26,7 +26,7 @@ debversion=2.6.26-2-686-bigmem
 image=linux-image-$debversion
 
 echo "*** Installing $image"
-aptitude install $image
+sudo aptitude install $image
 
 newversion=2.6.33.1
 archive=linux-$newversion.tar.bz2
