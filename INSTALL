@@ -5,23 +5,23 @@ Alpha release, March 2010
 
 ---
 
-(Disclaimer: this is an early alpha release; things may be broken.)
+(Disclaimer: this is an early alpha release; things may be broken!)
 
 The easiest way to get Mininet running is to use one of our pre-built
 virtual machine images from:
 
 http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
-If you are Linux-savvy and wish to take on the challenge 
-of installing Mininet and its dependencies from scratch, 
-the requirements are described below.
+If you are Linux-savvy and wish to take on the challenge of installing
+Mininet and its dependencies from scratch, the requirements are described
+below.
 
-These installation notes assume you understand how to do things 
-like compile kernels, apply patches, configure networks, write code, 
-etc.. If this is unfamiliar territory, we recommend using one of
-our pre-built virtual machine images (see above.)
+These installation notes assume you understand how to do things like
+compile kernels, apply patches, configure networks, write code, etc.. If
+this is unfamiliar territory, or if you run into trouble, we recommend
+using one of our pre-built virtual machine images (see above.)
 
-Mininet installation requirements:
+Mininet manual installation:
 
 1. Core Mininet installation
 
@@ -33,7 +33,27 @@ Mininet installation requirements:
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
 
-2. Linux Kernel requirements
+2. Script-based kernel and OpenFlow installation for Debian
+
+  If you are running debian-stable, you may be able to use the
+  util/install.sh script to install a compatible Linux kernel as well as
+  other software including the OpenFlow reference implementation, the Open
+  vSwitch switch implementation, and the NOX OpenFlow controller. Assuming
+  the mininet source tree is installed in ~/mininet, the steps to run
+  install.sh are as follows:
+
+  % cd
+  % time ~/mininet/util/install.sh
+  % sudo reboot  # to load new kernel
+  % ~/mininet/util/install.sh -c  # to clean out unneeded kernel stuff
+
+  If install.sh cannot be used for some reason, the kernel and
+  OpenFlow software requirements are descibed in steps [3] and [4],
+  which follow.
+
+  If you successfully used install.sh, proceed to step [5].
+
+3. Linux Kernel requirements
 
   Mininet requires a kernel built with network namespace support enabled,
   i.e. with CONFIG_NET_NS=Y
@@ -47,14 +67,14 @@ Mininet installation requirements:
   to enable 2.6.33.1 to build under debian-stable, and to enable the
   tun driver to work correctly with Mininet.
     
-  Earlier kernels work (e.g. 2.6.29) work with CONFIG_NET_NS enabled and 
-  no additional patches, but are much slower at removing veth interfaces,
+  Earlier kernels (e.g. 2.6.29) work with CONFIG_NET_NS enabled and no
+  additional patches, but are much slower at removing veth interfaces,
   resulting in much slower switch shutdown.
 
   For scalable configurations, you might need to increase some of your
-  kernel limits. Sample params are in sysctl_addon, which can be appended to
-  /etc/sysctl.conf (and modified as necessary for your desired
-  configuration):
+  kernel limits. Sample params are in util/sysctl_addon, which can be
+  appended to /etc/sysctl.conf (and modified as necessary for your
+  desired configuration):
 
     sudo su -c "cat sysctl_addon >> /etc/sysctl.conf"
 
@@ -62,48 +82,50 @@ Mininet installation requirements:
 
     sudo sysctl -p
     
-3. OpenFlow software and configuration requirements
+4. OpenFlow software and configuration requirements
 
   Mininet requires either the reference OpenFlow switch implementation
-  (from openflowswitch.org) or Open vSwitch (openvswitch.org) to be 
-  installed. "make test" requires the reference user and kernel
-  space implementations as well as Open vSwitch. Note the kernel
-  implementation is not currently included in OpenFlow 1.0.
+  (from openflowswitch.org) or Open vSwitch (openvswitch.org) to be
+  installed. "make test" requires the reference user and kernel space
+  implementations as well as Open vSwitch. Note the kernel implementation
+  is not currently included in OpenFlow 1.0.
 
   To switch to the most recent OpenFlow 0.8.9 release branch (the most
-  recent one with full NOX support):
+  recent one with full NOX support and kernel datapath support) in your
+  OpenFlow git tree:
 
-  git checkout -b release/0.8.9 remotes/origin/release/0.8.9
+   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
   
   A patch to enable datapath.c to compile with recent kernels
-  is included in util/openflow-patches/datapath.patch
+  is included in util/openflow-patches/datapath.patch.
   
-  Mininet will automatically load and remove kernel module dependencies for
-  supported switch types, using modprobe and rmmod - but these modules must be
-  in a location where modprobe can find them (i.e. /lib/modules/...)
+  Mininet will automatically load and remove kernel module dependencies
+  for supported switch types, using modprobe and rmmod - but these
+  modules must be in a location where modprobe can find them (i.e.
+  /lib/modules/...)
 
   The reference OpenFlow controller (controller(8)) only supports 16
   switches by default! If you wish to run a network with more than 16
   switches, please recompile controller(8) with larger limits, or use a
   different controller such as nox. A patch to controller(8) is included
-  as mininet/util/openflow-patches/controller.patch.
+  as util/openflow-patches/controller.patch.
   
-4. Other software dependencies
+5. Other software dependencies
 
- To run the iperf test, you need to install iperf:
+  To run the iperf test, you need to install iperf:
 
     sudo aptitude/yum install iperf
 
   We assume you already have ping installed. ;-)
   
- To use xterm or sshd with Mininet, you need the following:
+  To use xterm or sshd with Mininet, you need the following:
 
     sudo aptitude/yum install sshd xterm screen
     
- Some examples may have additional requirements - consult the specific
- example file for details.
+  Some examples may have additional requirements - consult the specific
+  example file for details.
   
-5. Other notes and recommendations
+6. Other notes and recommendations
 
   Mininet should be run either on a machine with
   no other important processes, or on a virtual machine (recommended!)

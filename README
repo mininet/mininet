@@ -6,6 +6,7 @@ How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 Alpha release, March 2010
 
 ---
+Welcome to the Mininet alpha release!
 
 Mininet creates OpenFlow test networks by using process-based
 virtualization and network namespaces.
@@ -15,9 +16,15 @@ datapath) are created as processes in separate network namespaces. This
 allows a complete OpenFlow network to be simulated on top of a single
 Linux kernel.
 
-Mininet may be invoked directly from the command line, and also
-provides a handy Python API for creating networks of varying sizes and
-topologies.
+Mininet may be invoked directly from the command line, and also provides a
+handy Python API for creating networks of varying sizes and topologies.
+
+Mininet is currently in *limited alpha release*. We encourage you to
+experiment with it and hope that you will provide us with feedback on
+features, documentation, and how you're using it. We plan to make it
+available publicly via a GPL or BSD license (probably in April), but please
+don't distribute the code or URLs yet! The feedback you provide will help
+us improve Mininet for general release.
 
 In order to run Mininet, you must have:
 
@@ -62,10 +69,16 @@ Currently Mininet includes:
   
 - Examples (in the examples/ directory) to help you get started.
 
-Batteries are not included (yet!) 
+Batteries are not included (yet!)
 
 However, some preliminary installation notes are included in the INSTALL
-file. Good luck!
+file.
+
+Additionally, much useful information is available on the Mininet wiki:
+
+http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/Mininet
+
+Enjoy, and good luck!
 
 ---
 Bob Lantz
