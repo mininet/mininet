@@ -1,0 +1,15 @@
+diff --git a/controller/controller.c b/controller/controller.c
+index 41f2547..6eec590 100644
+--- a/controller/controller.c
++++ b/controller/controller.c
+@@ -58,8 +58,8 @@
+ #include "vlog.h"
+ #define THIS_MODULE VLM_controller
+ 
+-#define MAX_SWITCHES 16
+-#define MAX_LISTENERS 16
++#define MAX_SWITCHES 4096
++#define MAX_LISTENERS 4096
+ 
+ struct switch_ {
+     struct lswitch *lswitch;

@@ -1,0 +1,26 @@
+diff --git a/datapath/datapath.c b/datapath/datapath.c
+index 4a4d3a2..365aa25 100644
+--- a/datapath/datapath.c
++++ b/datapath/datapath.c
+@@ -47,6 +47,9 @@
+
+#include "compat.h"
+
++#ifdef CONFIG_NET_NS
++#include <net/net_namespace.h>
++#endif
+
+/* Strings to describe the manufacturer, hardware, and software.  This data 
+ * is queriable through the switch description stats message. */
+@@ -259,7 +262,11 @@ send_openflow_skb(const struct datapath *dp,
+                 struct sk_buff *skb, const struct sender *sender)
+{
+       return (sender
+-               ? genlmsg_unicast(skb, sender->pid)
++#ifdef CONFIG_NET_NS
++               ? genlmsg_unicast(&init_net, skb, sender->pid)
++#else
++               ? genlmsg_unicast(skb, sender->pid)
++#endif
+               : genlmsg_multicast(skb, 0, dp_mc_group(dp), GFP_ATOMIC));
+}
