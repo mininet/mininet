@@ -1,13 +1,13 @@
 
     Mininet: A Simple Virtual Testbed for OpenFlow
-                        aka
+                        or
 How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 
-Development Version, March 2010
+Alpha release, March 2010
 
 ---
 
-Mininet creates simple OpenFlow test networks by using process-based
+Mininet creates OpenFlow test networks by using process-based
 virtualization and network namespaces.
 
 Simulated hosts (as well as switches and controllers with the user
@@ -55,8 +55,8 @@ Currently Mininet includes:
   tells host h11 to run the command 'ifconfig -a'
 
 - A 'cleanup' command to get rid of junk (interfaces, processes, files in
-  /tmp, etc.) which might be left around by mininet. Try this if things
-  stop working!
+  /tmp, etc.) which might be left around by Mininet or Linux. Try this if 
+  things stop working!
   
   # mn -c
   

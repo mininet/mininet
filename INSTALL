@@ -1,21 +1,27 @@
 
 Preliminary Mininet Installation/Configuration Notes
 
-Development version, March 2010
+Alpha release, March 2010
 
 ---
 
-Disclaimer: this is not (yet) a 'release'; things may be broken.
+(Disclaimer: this is an early alpha release; things may be broken.)
+
+The easiest way to get Mininet running is to use one of our pre-built
+virtual machine images from:
+
+http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
+
+If you are Linux-savvy and wish to take on the challenge 
+of installing Mininet and its dependencies from scratch, 
+the requirements are described below.
 
 These installation notes assume you understand how to do things 
 like compile kernels, apply patches, configure networks, write code, 
 etc.. If this is unfamiliar territory, we recommend using one of
-our pre-built virtual machine images from:
+our pre-built virtual machine images (see above.)
 
-http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
-
-If you are Linux-savvy and wish to take on the challenge of installing
-Mininet and its dependencies from scratch, here are the requirements:
+Mininet installation requirements:
 
 1. Core Mininet installation
 
@@ -33,12 +39,17 @@ Mininet and its dependencies from scratch, here are the requirements:
   i.e. with CONFIG_NET_NS=Y
   
   If your kernel doesn't support it, you will need to build and install a 
-  kernel that does! >= 2.6.33 works best, but requires a patch to
-  ofdatapath and to tun.c (see patches [1] and [2], below.)
+  kernel that does! >= 2.6.33 works better, but may be harder to get
+  working, depending on your Linux distribution.
   
-  2.6.26 works with CONFIG_NET_NS enabled and no additional patches, but
-  it is much slower at removing veth interfaces, resulting in much slower
-  switch shutdown.
+  A script for building Debian packages for 2.6.33.1 is provided in
+  mininet/util/kbuild. You may wish to read it, as it applies patches
+  to enable 2.6.33.1 to build under debian-stable, and to enable the
+  tun driver to work correctly with Mininet.
+    
+  Earlier kernels work (e.g. 2.6.29) work with CONFIG_NET_NS enabled and 
+  no additional patches, but are much slower at removing veth interfaces,
+  resulting in much slower switch shutdown.
 
   For scalable configurations, you might need to increase some of your
   kernel limits. Sample params are in sysctl_addon, which can be appended to
@@ -64,20 +75,18 @@ Mininet and its dependencies from scratch, here are the requirements:
 
   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
   
-  To compile for Linux >= 2.6.33, you may need to apply patch [1]
-  included below.
-
+  A patch to enable datapath.c to compile with recent kernels
+  is included in util/openflow-patches/datapath.patch
+  
   Mininet will automatically load and remove kernel module dependencies for
   supported switch types, using modprobe and rmmod - but these modules must be
-  in a location where modprobe can find them.
-
-  See ~/mininet/util/modprobe_setup.sh for an example.
+  in a location where modprobe can find them (i.e. /lib/modules/...)
 
   The reference OpenFlow controller (controller(8)) only supports 16
   switches by default! If you wish to run a network with more than 16
   switches, please recompile controller(8) with larger limits, or use a
   different controller such as nox. A patch to controller(8) is included
-  as patch [3] below.
+  as mininet/util/openflow-patches/controller.patch.
   
 4. Other software dependencies
 
@@ -96,86 +105,9 @@ Mininet and its dependencies from scratch, here are the requirements:
   
 5. Other notes and recommendations
 
-  Mininet should probably be run either on a machine with
-  no other important processes, or on a virtual machine.
+  Mininet should be run either on a machine with
+  no other important processes, or on a virtual machine (recommended!)
   
   Multiple concurrent Mininet instances are not supported!
 
 Good luck!
-  
---- Patches and Footnones ---
-
-[1] OpenFlow Reference Implementation patch for Linux 2.6.33/2.6.33.1
-
-The OpenFlow kernel reference implementation does not compile out of the box
-on Linux 2.6.33/2.6.33.1 with network namespaces enabled.
-
-The following workaround modifies it to always use the root namespace, and should
-enable it to work with Mininet under 2.6.33.x:
-
-diff --git a/datapath/datapath.c b/datapath/datapath.c
-index 4a4d3a2..365aa25 100644
---- a/datapath/datapath.c
-+++ b/datapath/datapath.c
-@@ -47,6 +47,9 @@
-
-#include "compat.h"
-
-+#ifdef CONFIG_NET_NS
-+#include <net/net_namespace.h>
-+#endif
-
-/* Strings to describe the manufacturer, hardware, and software.  This data 
- * is queriable through the switch description stats message. */
-@@ -259,7 +262,11 @@ send_openflow_skb(const struct datapath *dp,
-                 struct sk_buff *skb, const struct sender *sender)
-{
-       return (sender
--               ? genlmsg_unicast(skb, sender->pid)
-+#ifdef CONFIG_NET_NS
-+               ? genlmsg_unicast(&init_net, skb, sender->pid)
-+#else
-+               ? genlmsg_unicast(skb, sender->pid)
-+#endif
-               : genlmsg_multicast(skb, 0, dp_mc_group(dp), GFP_ATOMIC));
-}
-
-[2] Linux kernel 2.6.33/2.6.33.1 tun driver patch
-
-The tun driver in Linux 2.6.33/2.6.33.1 doesn't work correctly in a network
-namespace. As a result, running the user datapath in a network namespace
-(e.g. as is done in examples/scratchnetuser.py) will cause a kernel panic
-when sysfs cannot create an entry for a tap interface, since the tun network
-device has a missing parent kobj. As a workaround, the following patch
-skips creating the sysfs entries when this is the case. This is an acceptable
-workaround as long as sysfs entries for tap interfaces are not being actively
-used (and they are not currently in Mininet.)
-
-diff linux-2.6.33.1/drivers/net/tun-orig.c linux-2.6.33.1/drivers/net/tun.c 
-1009c1009,1011
-< 		if (device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
----
-> 		/* BL workaround: check for null parent kobj */
-> 		if (!tun->dev->dev.kobj.sd ||
-> 		    device_create_file(&tun->dev->dev, &dev_attr_tun_flags) ||
-
-
-[3] Patch to reference OpenFlow controller to allow more than 16 switches
-
-diff --git a/controller/controller.c b/controller/controller.c
-index 41f2547..6eec590 100644
---- a/controller/controller.c
-+++ b/controller/controller.c
-@@ -58,8 +58,8 @@
- #include "vlog.h"
- #define THIS_MODULE VLM_controller
- 
--#define MAX_SWITCHES 16
--#define MAX_LISTENERS 16
-+#define MAX_SWITCHES 4096
-+#define MAX_LISTENERS 4096
- 
- struct switch_ {
-     struct lswitch *lswitch;
-
-
