@@ -11,7 +11,11 @@
 # cause problems with upgrades, etc..
 #
 # The patch to tun.c is a workaround rather than a real fix.
-
+#
+# Building a full Debian kernel package with all drivers takes a long
+# time, 60-80 minutes on my laptop.
+#
+# Re-running a make-kpkg may not work without running 'make-kpkg clean'
 
 # Season to taste
 # export PATH=/usr/lib/ccache:$PATH
