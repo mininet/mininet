@@ -1,0 +1,10 @@
+Mininet alpha release license
+
+(c) 2009-2010 Bob Lantz and Brandon Heller
+
+Mininet is currently in *limited alpha release*. We encourage you to
+experiment with it and hope that you will provide us with feedback on
+features, documentation, and how you're using it. We plan to make it
+available publicly via a GPL or BSD license (probably in April), but please
+don't distribute the code or URLs yet! The feedback you provide will help
+us improve Mininet for general release.
