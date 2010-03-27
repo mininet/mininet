@@ -82,7 +82,8 @@ class CLI( Cmd ):
                    ' mininet> h2 ping h3\n'
                    'should work.\n'
                    '\n'
-                   'Interactive commands are not supported yet.\n' )
+                   'Interactive commands that require user input are '
+                   'not (yet) supported.\n\n' )
         if args is "":
             self.stdout.write( helpStr )
 
