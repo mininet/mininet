@@ -7,23 +7,39 @@ Alpha release, March 2010
 
 (Disclaimer: this is an early alpha release; things may be broken!)
 
-The easiest way to get Mininet running is to use one of our pre-built
-virtual machine images from:
+The easiest way to get Mininet running is to start with one of our pre-built virtual machine images from:
 
 http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
-If you are Linux-savvy and wish to take on the challenge of installing
-Mininet and its dependencies from scratch, the requirements are described
-below.
+Once you have booted up the VM image, all you need to do to install
+Mininet is:
+
+ git clone git@yuba.stanford.edu:mininet.git
+ cd mininet
+ sudo make install
+
+At this point, it should be possible to run a simple Mininet configuration
+from the command line:
+
+ sudo mn
+
+As an alternative, if you are Linux-savvy, do not wish to use the VM
+image, and wish to take on the challenge of installing Mininet and its
+dependencies from scratch, the requirements are described below.
+
+---
+
+Mininet Manual Installation Notes
 
 These installation notes assume you understand how to do things like
 compile kernels, apply patches, configure networks, write code, etc.. If
 this is unfamiliar territory, or if you run into trouble, we recommend
 using one of our pre-built virtual machine images (see above.)
 
-Mininet manual installation:
-
 1. Core Mininet installation
+
+  The core Mininet installation requires gcc, make, python,
+  and setuptools.
 
   To install Mininet itself, with root privileges:
 
@@ -133,3 +149,5 @@ Mininet manual installation:
   Multiple concurrent Mininet instances are not supported!
 
 Good luck!
+
+---
