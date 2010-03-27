@@ -201,7 +201,7 @@ class MininetRunner( object ):
         host = HOSTS[ self.options.host ]
         controller = CONTROLLERS[ self.options.controller ]
         if self.options.controller == 'remote':
-            controller = lambda a, b: RemoteController( a, b,
+            controller = lambda a: RemoteController( a,
                              defaultIP=self.options.ip,
                              port=self.options.port )
 
