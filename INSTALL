@@ -12,9 +12,9 @@ The easiest way to get Mininet running is to start with one of our pre-built vir
 http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
 Once you have booted up the VM image, all you need to do to install
-Mininet is:
+Mininet into it is:
 
- git clone git@yuba.stanford.edu:mininet.git
+ git clone git://yuba.stanford.edu/mininet.git
  cd mininet
  sudo make install
 
