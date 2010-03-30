@@ -69,7 +69,7 @@ class Node( object ):
         opts = '-cdp'
         self.inNamespace = inNamespace
         if self.inNamespace:
-            opts += '-n'
+            opts += 'n'
         cmd = [ 'mnexec', opts, 'bash', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
             close_fds=False )
