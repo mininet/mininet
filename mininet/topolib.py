@@ -7,25 +7,33 @@ class TreeTopo( Topo ):
 
     def __init__( self, depth=1, fanout=2 ):
         super( TreeTopo, self ).__init__()
+        # Numbering:  h1..N, sN+1..M
+        hostCount = fanout ** depth
+        self.hostNum = 1
+        self.switchNum = hostCount + 1
         # Build topology
-        self.addTree( 1, depth, fanout )
+        self.addTree( depth, fanout )
         # Consider all switches and hosts 'on'
         self.enable_all()
 
     # It is OK that i is "unused" in the for loop.
     # pylint: disable-msg=W0612
 
-    def addTree( self, n, depth, fanout ):
+    def addTree( self, depth, fanout ):
         """Add a subtree starting with node n.
            returns: last node added"""
-        me = n
         isSwitch = depth > 0
-        self.add_node( me, Node( is_switch=isSwitch ) )
+        if isSwitch:
+            num = self.switchNum
+            self.switchNum += 1
+        else:
+            num = self.hostNum
+            self.hostNum += 1
+        self.add_node( num, Node( is_switch=isSwitch ) )
         if isSwitch:
             for i in range( 0, fanout ):
-                child = n + 1
-                self.add_edge( me, child )
-                n = self.addTree( child, depth - 1, fanout )
-        return n
+                child = self.addTree( depth - 1, fanout )
+                self.add_edge( num, child )
+        return num
 
     # pylint: enable-msg=W0612
