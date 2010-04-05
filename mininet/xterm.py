@@ -32,7 +32,7 @@ def cleanUpScreens():
     for line in output:
         m = re.search( r, line )
         if m:
-            quietRun( 'screen -S ' + m.group( 1 ) + ' -X kill' )
+            quietRun( 'screen -S ' + m.group( 1 ) + ' -X quit' )
 
 def makeXterms( nodes, title = '' ):
     """Create XTerms.
