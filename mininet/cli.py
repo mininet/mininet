@@ -34,7 +34,7 @@ from subprocess import call
 from cmd import Cmd
 
 from mininet.log import info, output, error
-from mininet.xterm import makeXterms
+from mininet.term import makeTerms
 
         
 class CLI( Cmd ):
@@ -163,17 +163,23 @@ class CLI( Cmd ):
         else:
             self.mn.configLinkStatus( *args )
 
-    def do_xterm( self, args ):
-        "Spawn xterm for the given node."
+    def do_term( self, args ):
+        "Spawn terminal for the given node."
         args = args.split()
         if not args:
-            error( 'please specify node list: xterm node1 node2 ...\n' )
+            error( 'please specify node list: term [type] node1 node2 ...\n' )
         else:
+            if args[ 0 ] in [ 'xterm', 'gnome' ]:
+                term = args[ 0 ]
+                args = args[ 1: ]
+            else:
+                term = 'xterm'
             for arg in args:
                 if arg not in self.nodemap:
                     error( 'arg not in network: %s\n' % arg )
                 else:
-                    self.mn.terms += makeXterms( [ self.nodemap[ arg ] ] )
+                    node = self.nodemap[ arg ]
+                    self.mn.terms += makeTerms( [ node ], term = term )
 
     def do_exit( self, args ):
         "Exit"

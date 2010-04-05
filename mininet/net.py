@@ -67,7 +67,7 @@ using a topology object (e.g. LinearTopo) from mininet.topo or
 mininet.topolib, and a Controller which the switches will connect
 to. Several configuration options are provided for functions such as
 automatically setting MAC addresses, populating the ARP table, or
-even running a set of xterms to allow direct interaction with nodes.
+even running a set of terminals to allow direct interaction with nodes.
 
 After the network is created, it can be started using start(), and a
 variety of useful tasks maybe performed, including basic connectivity
@@ -95,7 +95,7 @@ from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
-from mininet.xterm import cleanUpScreens, makeXterms
+from mininet.term import cleanUpScreens, makeTerms
 
 DATAPATHS = [ 'kernel' ]  # [ 'user', 'kernel' ]
 
@@ -310,19 +310,19 @@ class Mininet( object ):
         info( '*** Configuring hosts\n' )
         self.configHosts()
         if self.xterms:
-            self.startXterms()
+            self.startTerms()
         if self.autoSetMacs:
             self.setMacs()
         if self.autoStaticArp:
             self.staticArp()
 
-    def startXterms( self ):
-        "Start an xterm for each node."
-        info( "*** Running xterms on %s\n" % os.environ[ 'DISPLAY' ] )
+    def startTerms( self ):
+        "Start a terminal for each node."
+        info( "*** Running terms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
-        self.terms += makeXterms( self.controllers, 'controller' )
-        self.terms += makeXterms( self.switches, 'switch' )
-        self.terms += makeXterms( self.hosts, 'host' )
+        self.terms += makeTerms( self.controllers, 'controller' )
+        self.terms += makeTerms( self.switches, 'switch' )
+        self.terms += makeTerms( self.hosts, 'host' )
 
     def stopXterms( self ):
         "Kill each xterm."
