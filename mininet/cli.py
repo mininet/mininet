@@ -34,6 +34,7 @@ from subprocess import call
 from cmd import Cmd
 
 from mininet.log import info, output, error
+from mininet.xterm import makeXterms
 
         
 class CLI( Cmd ):
@@ -161,6 +162,18 @@ class CLI( Cmd ):
             error( 'invalid type: link end1 end2 [up down]\n' )
         else:
             self.mn.configLinkStatus( *args )
+
+    def do_xterm( self, args ):
+        "Spawn xterm for the given node."
+        args = args.split()
+        if not args:
+            error( 'please specify node list: xterm node1 node2 ...\n' )
+        else:
+            for arg in args:
+                if arg not in self.nodemap:
+                    error( 'arg not in network: %s\n' % arg )
+                else:
+                    self.mn.terms += makeXterms( [ self.nodemap[ arg ] ] )
 
     def do_exit( self, args ):
         "Exit"

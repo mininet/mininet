@@ -9,7 +9,7 @@ import re
 from subprocess import Popen
 from mininet.util import quietRun
 
-def makeXterm( node, title ):
+def makeXterm( node, title = '' ):
     """Run screen on a node, and hook up an xterm.
        node: Node object
        title: base title
@@ -34,7 +34,7 @@ def cleanUpScreens():
         if m:
             quietRun( 'screen -S ' + m.group( 1 ) + ' -X kill' )
 
-def makeXterms( nodes, title ):
+def makeXterms( nodes, title = '' ):
     """Create XTerms.
        nodes: list of Node objects
        title: base title for each
