@@ -177,7 +177,7 @@ class Node( object ):
         if self.lastPid:
             try:
                 os.kill( self.lastPid, sig )
-            except e, Exception:
+            except Exception:
                 pass
 
     def monitor( self ):
