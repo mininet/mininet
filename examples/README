@@ -6,10 +6,24 @@ Mininet's Python API.
 
 ---
 
+consoles.py:
+
+This example creates a grid of console windows, one for each node, 
+and allows interaction with and monitoring of each console.
+
+emptynet.py:
+
+This example demonstrates creating an empty network (i.e. with no
+topology object) and adding nodes to it.
+
 linearbandwidth.py:
 
 This example shows how to create a custom topology programatically
 by subclassing Topo, and how to run a series of tests on it.
+
+miniedit.py:
+
+This example demonstrates creating a network via a graphical editor.
 
 multitest.py:
 
