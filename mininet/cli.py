@@ -163,23 +163,22 @@ class CLI( Cmd ):
         else:
             self.mn.configLinkStatus( *args )
 
-    def do_term( self, args ):
-        "Spawn terminal for the given node."
+    def do_xterm( self, args, term='xterm' ):
+        "Spawn xterm(s) for the given node(s)."
         args = args.split()
         if not args:
-            error( 'please specify node list: term [type] node1 node2 ...\n' )
+            info( 'usage: %s node1 node2 ...\n' % term )
         else:
-            if args[ 0 ] in [ 'xterm', 'gnome' ]:
-                term = args[ 0 ]
-                args = args[ 1: ]
-            else:
-                term = 'xterm'
             for arg in args:
                 if arg not in self.nodemap:
-                    error( 'arg not in network: %s\n' % arg )
+                    error( "node '%s' not in network\n" % arg )
                 else:
                     node = self.nodemap[ arg ]
                     self.mn.terms += makeTerms( [ node ], term = term )
+
+    def do_gterm( self, args ):
+        "Spawn gnome-terminal(s) for the given node(s)."
+        self.do_xterm( args, term='gterm' )
 
     def do_exit( self, args ):
         "Exit"
