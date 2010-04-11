@@ -180,12 +180,12 @@ class ConsoleApp( Frame ):
         consoles = self.consoles
         count = len( consoles )
         for console in consoles:
-            console.node.cmd( 'iperf -sD &' )
+            console.node.cmd( 'iperf -sD' )
         i = 0
         for console in consoles:
             i = ( i + 1 ) % count
             ip = consoles[ i ].node.IP()
-            console.sendCmd( 'iperf -i 1 -c ' + ip )
+            console.sendCmd( 'iperf -t 99999 -i 1 -c ' + ip )
 
     def stop( self ):
         "Interrupt all consoles."
