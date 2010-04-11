@@ -17,13 +17,13 @@ from mininet.util import quietRun
 class Console( Frame ):
     "A simple console on a host."
        
-    def __init__( self, parent, net, node, height=10, width=32 ):
+    def __init__( self, parent, net, node, height=10, width=32, title='Node' ):
         Frame.__init__( self, parent )
 
         self.net = net
         self.node = node
         self.prompt = node.name + '# '
-        self.height, self.width = height, width
+        self.height, self.width, self.title = height, width, title
                 
         # Initialize widget styles
         self.buttonStyle = { 'font': 'Monaco 7' }
@@ -48,9 +48,9 @@ class Console( Frame ):
     def makeWidgets( self ):
         "Make a label, a text area, and a scroll bar."
 
-        def newTerm( net=self.net, node=self.node ):
+        def newTerm( net=self.net, node=self.node, title=self.title ):
             "Pop up a new terminal window for a node."
-            net.terms += makeTerms( [ node ] )
+            net.terms += makeTerms( [ node ], title )
         label = Button( self, text=self.node.name, command=newTerm, 
             **self.buttonStyle )
         label.pack( side='top', fill='x' )
@@ -63,9 +63,10 @@ class Console( Frame ):
 
     def bindEvents( self ):
         "Bind keyboard and file events."
+        # The text widget handles regular key presses, but we
+        # use special handlers for the following:
         self.text.bind( '<Return>', self.handleReturn )
         self.text.bind( '<Control-c>', self.handleInt )
-        # self.text.bind( '<KeyPress>', self.handleKey )
         # This is not well-documented, but it is the correct
         # way to trigger a file event handler from Tk's
         # event loop!
@@ -77,10 +78,6 @@ class Console( Frame ):
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
-    
-    def handleKey( self, event  ):
-        "Handle a regular key press."
-        self.append( event.char )
     
     def handleReturn( self, event ):
         "Handle a carriage return."
@@ -104,7 +101,7 @@ class Console( Frame ):
         data = self.node.monitor()
         self.append( data )
         if not self.node.waiting:
-            # Print prompt, just for the heck of it
+            # Print prompt
             self.append( self.prompt )
             
     def waitOutput( self ):
@@ -128,9 +125,15 @@ class ConsoleApp( Frame ):
         self.menubar = self.createMenuBar()
         cframe = self.cframe = Frame( self )
         self.consoles = {}  # consoles themselves
-        for name in 'hosts', 'switches', 'controllers':
+        titles = { 
+            'hosts': 'Host', 
+            'switches': 'Switch',
+            'controllers': 'Controller'
+        }
+        for name in titles:
             nodes = getattr( net, name )
-            frame, consoles = self.createConsoles( cframe, nodes, width )
+            frame, consoles = self.createConsoles( 
+                cframe, nodes, width, titles[ name ] )
             self.consoles[ name ] = Object( frame=frame, consoles=consoles )
         self.selected = None
         self.select( 'hosts' )
@@ -140,14 +143,14 @@ class ConsoleApp( Frame ):
         # Close window gracefully
         Wm.wm_protocol( self.top, name='WM_DELETE_WINDOW', func=self.quit )
         
-    def createConsoles( self, parent, nodes, width ):
+    def createConsoles( self, parent, nodes, width, title ):
         "Create a grid of consoles in a frame."
         f = Frame( parent )
         # Create consoles
         consoles = []
         index = 0
         for node in nodes:
-            console = Console( f, net, node )
+            console = Console( f, net, node, title=title )
             consoles.append( console )
             row = index / width
             column = index % width
