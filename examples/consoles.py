@@ -16,23 +16,18 @@ from mininet.util import quietRun
 
 class Console( Frame ):
     "A simple console on a host."
-    
+       
     def __init__( self, parent, net, node, height=10, width=32 ):
         Frame.__init__( self, parent )
+
         self.net = net
         self.node = node
         self.prompt = node.name + '# '
         self.height, self.width = height, width
-        self.text = self.makeWidgets( )
-        self.bindEvents()
-        self.append( self.prompt )
-
-    def makeWidgets( self ):
-        "Make a label, a text area, and a scroll bar."
-        buttonStyle = {
-            'font': 'Monaco 7',
-        }
-        textStyle = { 
+                
+        # Initialize widget styles
+        self.buttonStyle = { 'font': 'Monaco 7' }
+        self.textStyle = { 
             'font': 'Monaco 7',
             'bg': 'black',
             'fg': 'green',
@@ -43,13 +38,23 @@ class Console( Frame ):
             'highlightcolor': 'green',
             'selectforeground': 'black',
             'selectbackground': 'green'
-        }
+        }    
+
+        # Set up widgets
+        self.text = self.makeWidgets( )
+        self.bindEvents()
+        self.append( self.prompt )
+    
+    def makeWidgets( self ):
+        "Make a label, a text area, and a scroll bar."
+
         def newTerm( net=self.net, node=self.node ):
             "Pop up a new terminal window for a node."
             net.terms += makeTerms( [ node ] )
-        label = Button( self, text=self.node.name, command=newTerm, **buttonStyle )
+        label = Button( self, text=self.node.name, command=newTerm, 
+            **self.buttonStyle )
         label.pack( side='top', fill='x' )
-        text = Text( self, wrap='word', **textStyle )
+        text = Text( self, wrap='word', **self.textStyle )
         ybar = Scrollbar( self, orient='vertical', width=7, command=text.yview )
         text.configure( yscrollcommand=ybar.set )
         text.pack( side='left', expand=True, fill='both' )
@@ -113,41 +118,59 @@ class Console( Frame ):
         
 class ConsoleApp( Frame ):
 
-    def __init__( self, net, nodes, parent=None, width=4 ):
+    menuStyle = { 'font': 'Geneva 7 bold' }
+
+    def __init__( self, net, parent=None, width=4 ):
         Frame.__init__( self, parent )
         self.top = self.winfo_toplevel()
         self.top.title( 'Mininet' )
         self.net = net
-        self.nodes = nodes
-        self.createMenuBar( font='Geneva 7' )
-        self.consoles = self.createConsoles( nodes, width )
+        self.menubar = self.createMenuBar()
+        cframe = self.cframe = Frame( self )
+        self.consoles = {}  # consoles themselves
+        for name in 'hosts', 'switches', 'controllers':
+            nodes = getattr( net, name )
+            frame, consoles = self.createConsoles( cframe, nodes, width )
+            self.consoles[ name ] = Object( frame=frame, consoles=consoles )
+        self.selected = None
+        self.select( 'hosts' )
+        self.cframe.pack( expand=True, fill='both' )
         self.pack( expand=True, fill='both' )
         cleanUpScreens()
         # Close window gracefully
         Wm.wm_protocol( self.top, name='WM_DELETE_WINDOW', func=self.quit )
         
-    def createConsoles( self, nodes, width ):
+    def createConsoles( self, parent, nodes, width ):
         "Create a grid of consoles in a frame."
-        f = Frame( self )
+        f = Frame( parent )
         # Create consoles
         consoles = []
         index = 0
         for node in nodes:
             console = Console( f, net, node )
             consoles.append( console )
-            row = int( index / width )
+            row = index / width
             column = index % width
             console.grid( row=row, column=column, sticky='nsew' )
             index += 1
             f.rowconfigure( row, weight=1 )
             f.columnconfigure( column, weight=1 )
-        f.pack( expand=True, fill='both' )
-        return consoles
-        
-    def createMenuBar( self, font ):
+        return f, consoles
+    
+    def select( self, set ):
+        "Select a set of consoles to display."
+        if self.selected is not None:
+            self.selected.frame.pack_forget()
+        self.selected = self.consoles[ set ]
+        self.selected.frame.pack( expand=True, fill='both' )
+
+    def createMenuBar( self ):
         "Create and return a menu (really button) bar."
         f = Frame( self )
         buttons = [
+            ( 'Hosts', lambda: self.select( 'hosts' ) ),
+            ( 'Switches', lambda: self.select( 'switches' ) ),
+            ( 'Controllers', lambda: self.select( 'controllers' ) ),            
             ( 'Ping', self.ping ),
             ( 'Iperf', self.iperf ),
             ( 'Interrupt', self.stop ),
@@ -155,19 +178,19 @@ class ConsoleApp( Frame ):
             ( 'Quit', self.quit )
         ]
         for name, cmd in buttons:
-            b = Button( f, text=name, command=cmd, font=font )
+            b = Button( f, text=name, command=cmd, **self.menuStyle )
             b.pack( side='left' )
         f.pack( padx=4, pady=4, fill='x' )
         return f
     
     def clear( self ):
         "Clear all consoles."
-        for console in self.consoles:
+        for console in self.selected.consoles:
             console.clear()
             
     def ping( self ):
-        "Tell each console to ping the next one."
-        consoles = self.consoles
+        "Tell each host to ping the next one."
+        consoles = self.consoles[ 'hosts' ].consoles
         count = len( consoles )
         i = 0
         for console in consoles:
@@ -176,8 +199,8 @@ class ConsoleApp( Frame ):
             console.sendCmd( 'ping ' + ip )
 
     def iperf( self ):
-        "Tell each console to iperf to the next one."
-        consoles = self.consoles
+        "Tell each host to iperf to the next one."
+        consoles = self.consoles[ 'hosts' ].consoles
         count = len( consoles )
         for console in consoles:
             console.node.cmd( 'iperf -sD' )
@@ -188,10 +211,11 @@ class ConsoleApp( Frame ):
             console.sendCmd( 'iperf -t 99999 -i 1 -c ' + ip )
 
     def stop( self ):
-        "Interrupt all consoles."
-        for console in self.consoles:
+        "Interrupt all hosts."
+        consoles = self.consoles[ 'hosts' ].consoles
+        for console in consoles:
             console.handleInt()
-        for console in self.consoles:
+        for console in consoles:
             console.waitOutput()
         # Shut down any iperfs that might still be running
         quietRun( 'killall -9 iperf' )
@@ -202,10 +226,16 @@ class ConsoleApp( Frame ):
         self.stop()
         Frame.quit( self )
 
+class Object( object ):
+    "Generic object you can stuff junk into."
+    def __init__( self, **kwargs ):
+        for name, value in kwargs.items():
+            setattr( self, name, value )
+            
 if __name__ == '__main__':
     setLogLevel( 'info' )
     net = TreeNet( depth=2, fanout=4 )
     net.start()
-    app = ConsoleApp( net, net.hosts, width=4 )
+    app = ConsoleApp( net, width=4 )
     app.mainloop()
     net.stop()
