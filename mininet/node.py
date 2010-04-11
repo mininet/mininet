@@ -109,7 +109,7 @@ class Node( object ):
         self.shell = None
 
     # Subshell I/O, commands and control
-    def read( self, bytes ):
+    def read( self, bytes=1024 ):
         """Buffered read from node, non-blocking.
            bytes: maximum number of bytes to return"""
         count = len( self.readbuf )
@@ -154,7 +154,7 @@ class Node( object ):
         if len( self.readbuf ) == 0:
             self.pollOut.poll()
 
-    def sendCmd( self, cmd, printPid=False ):
+    def sendCmd( self, cmd, printPid=True ):
         """Send a command, followed by a command to echo a sentinel,
            and return without waiting for the command to complete."""
         assert not self.waiting
@@ -175,7 +175,10 @@ class Node( object ):
     def sendInt( self, sig=signal.SIGINT ):
         "Interrupt running command."
         if self.lastPid:
-            os.kill( self.lastPid, sig )
+            try:
+                os.kill( self.lastPid, sig )
+            except e, Exception:
+                pass
 
     def monitor( self ):
         """Monitor and return the output of a command.
