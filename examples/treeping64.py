@@ -7,10 +7,7 @@ from mininet.net import init, Mininet
 from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
 from mininet.topolib import TreeTopo
 
-def TreeNet( depth=1, fanout=2, **kwargs ):
-    "Convenience function for creating tree networks."
-    topo = TreeTopo( depth, fanout )
-    return Mininet( topo, **kwargs )
+
 
 def treePing64():
     "Run ping test on 64-node tree networks."
