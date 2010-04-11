@@ -12,35 +12,46 @@ from subprocess import Popen
 from mininet.log import error
 from mininet.util import quietRun
 
+def joinCmd( args ):
+    "Join args into a string, single-quoting items with spaces."
+    result = ''
+    for arg in args:
+        if ' ' in item:
+            result += " '%s'" % arg
+        else:
+            result += " %s" % arg
+    return result
+
 def makeTerm( node, title = '', term = 'xterm' ):
-    """Run screen on a node, and hook up an xterm.
+    """Run screen on a node, and hook up a terminal.
        node: Node object
        title: base title
+       term: 'xterm' or 'gterm'
        returns: process created"""
     title += ': ' + node.name
     if not node.inNamespace:
         title += ' (root)'
-    cmd = ''
-    if term == 'xterm':
-        cmd = [ 'xterm', '-title', title, '-e' ]
-    elif term == 'gnome':
-        cmd = [ 'gnome-terminal', '--title', title, '-e' ]
-    else:
+    cmds = {
+        'xterm': [ 'xterm', '-title', title, '-e' ],
+        'gterm': [ 'gnome-terminal', '--title', title, '-e' ]
+    }
+    if term not in cmds:
         error( 'invalid terminal type: %s' % term )
         return
     if not node.execed:
         node.cmd( 'screen -dmS ' + node.name)
-        #cmd += [ 'screen', '-D', '-RR', '-S', node.name ]
+        args = [ 'screen', '-D', '-RR', '-S', 'mininet.' + node.name ]
+    else:
+        args = [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
+    if term == 'gterm':
         # Compress these for gnome-terminal, which expects one token to follow
         # the -e option    .
-        cmd += [ 'screen -D -RR -S ' + node.name ]
-    else:
-        cmd += [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
-    return Popen( cmd )
+        args = joinCmd( args )
+    return Popen( cmds[ term ] + args )
 
 def cleanUpScreens():
     "Remove moldy old screen sessions."
-    r = r'(\d+.[hsc]\d+)'
+    r = r'(\d+which .[hsc]\d+)'
     output = quietRun( 'screen -ls' ).split( '\n' )
     for line in output:
         m = re.search( r, line )
