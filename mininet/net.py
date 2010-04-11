@@ -99,8 +99,11 @@ from mininet.term import cleanUpScreens, makeTerms
 
 DATAPATHS = [ 'kernel' ]  # [ 'user', 'kernel' ]
 
+
 def init():
     "Initialize Mininet."
+    if init.inited:
+        return
     if os.getuid() != 0:
         # Note: this script must be run as root
         # Perhaps we should do so automatically!
@@ -111,6 +114,8 @@ def init():
     if not quietRun( [ 'which', 'mnexec' ] ):
         raise Exception( "Could not find mnexec - check $PATH" )
     fixLimits()
+    
+init.inited = False
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -152,11 +157,13 @@ class Mininet( object ):
         self.dps = 0  # number of created kernel datapaths
         self.terms = []  # list of spawned xterm processes
 
+        init()
         switch.setup()
 
         if build:
             self.build()
 
+    
     def addHost( self, name, mac=None, ip=None ):
         """Add host.
            name: name of host to add
@@ -292,7 +299,7 @@ class Mininet( object ):
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
             addNode( 's', self.addSwitch, switchId )
-        info( '\n*** Adding edges:\n' )
+        info( '\n*** Adding links:\n' )
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
             srcPort, dstPort = topo.port( srcId, dstId )
@@ -373,7 +380,7 @@ class Mininet( object ):
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
             controller.stop()
-        info( '*** Test complete\n' )
+        info( '*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
         "Perform a complete start/test/stop cycle."
