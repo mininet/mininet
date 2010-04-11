@@ -16,7 +16,7 @@ def quoteArg( arg ):
     "Quote an argument if it contains spaces."
     return repr( arg ) if ' ' in arg else arg
     
-def makeTerm( node, title = 'Node', term = 'xterm' ):
+def makeTerm( node, title='Node', term='xterm' ):
     """Run screen on a node, and hook up a terminal.
        node: Node object
        title: base title
@@ -52,9 +52,10 @@ def cleanUpScreens():
         if m:
             quietRun( 'screen -S ' + m.group( 1 ) + ' -X quit' )
 
-def makeTerms( nodes, title = '', term = 'xterm' ):
+def makeTerms( nodes, title='Node', term='xterm' ):
     """Create terminals.
        nodes: list of Node objects
        title: base title for each
        returns: list of created terminal processes"""
     return [ makeTerm( node, title, term ) for node in nodes ]
+
