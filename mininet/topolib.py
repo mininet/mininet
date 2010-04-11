@@ -1,6 +1,7 @@
 "Library of potentially useful topologies for Mininet"
 
 from mininet.topo import Topo, Node
+from mininet.net import Mininet
 
 class TreeTopo( Topo ):
     "Topology for a tree network with a given depth and fanout."
@@ -37,3 +38,8 @@ class TreeTopo( Topo ):
         return num
 
     # pylint: enable-msg=W0612
+
+def TreeNet( depth=1, fanout=2, **kwargs ):
+    "Convenience function for creating tree networks."
+    topo = TreeTopo( depth, fanout )
+    return Mininet( topo, **kwargs )
