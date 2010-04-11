@@ -11,22 +11,25 @@ from Tkinter import *
 
 from mininet.log import setLogLevel
 from mininet.topolib import TreeNet
+from mininet.term import makeTerms, cleanUpScreens
 
 class Console( Frame ):
     "A simple console on a host."
     
-    def __init__( self, parent, node, height=16, width=32 ):
+    def __init__( self, parent, net, node, height=10, width=32 ):
         Frame.__init__( self, parent )
+        self.net = net
         self.node = node
+        self.prompt = node.name + '# '
         self.height, self.width = height, width
         self.text = self.makeWidgets( )
         self.bindEvents()
+        self.append( self.prompt )
 
     def makeWidgets( self ):
         "Make a label, a text area, and a scroll bar."
-        labelStyle = {
+        buttonStyle = {
             'font': 'Monaco 7',
-            'relief': 'sunken'
         }
         textStyle = { 
             'font': 'Monaco 7',
@@ -34,9 +37,16 @@ class Console( Frame ):
             'fg': 'green',
             'width': self.width,
             'height': self.height,
-            'relief': 'sunken'
+            'relief': 'sunken',
+            'insertbackground': 'green',
+            'highlightcolor': 'green',
+            'selectforeground': 'black',
+            'selectbackground': 'green'
         }
-        label = Label( self, text=self.node.name, **labelStyle )
+        def newTerm( net=self.net, node=self.node ):
+            "Pop up a new terminal window for a node."
+            net.terms += makeTerms( [ node ] )
+        label = Button( self, text=self.node.name, command=newTerm, **buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **textStyle )
         ybar = Scrollbar( self, orient='vertical', command=text.yview )
@@ -49,7 +59,7 @@ class Console( Frame ):
         "Bind keyboard and file events."
         self.text.bind( '<Return>', self.handleReturn )
         self.text.bind( '<Control-c>', self.handleInt )
-        self.text.bind( '<KeyPress>', self.handleKey )
+        # self.text.bind( '<KeyPress>', self.handleKey )
         # This is not well-documented, but it is the correct
         # way to trigger a file event handler from Tk's
         # event loop!
@@ -68,8 +78,11 @@ class Console( Frame ):
     
     def handleReturn( self, event ):
         "Handle a carriage return."
-        print "handleReturn"
-    
+        cmd = self.text.get( 'insert linestart', 'insert lineend' )
+        if cmd.find( self.prompt ) == 0:
+            cmd = cmd[ len( self.prompt ): ]
+        self.sendCmd( cmd )
+        
     def handleInt( self, event=None ):
         "Handle control-c."
         self.node.sendInt()
@@ -82,15 +95,22 @@ class Console( Frame ):
     def handleReadable( self, file, mask ):
         data = self.node.monitor()
         self.append( data )
+        if not self.node.waiting:
+            # Print prompt, just for the heck of it
+            self.append( self.prompt )
 
-class Consoles( Frame ):
+class ConsoleApp( Frame ):
 
-    def __init__( self, nodes, parent=None, width=4 ):
+    def __init__( self, net, nodes, parent=None, width=4 ):
         Frame.__init__( self, parent )
+        self.top = self.winfo_toplevel()
+        self.top.title( 'Mininet' )
+        self.net = net
         self.nodes = nodes
         self.createMenuBar( font='Geneva 7' )
         self.consoles = self.createConsoles( nodes, width )
         self.pack( expand=True, fill='both' )
+        cleanUpScreens()
         
     def createConsoles( self, nodes, width ):
         "Create a grid of consoles in a frame."
@@ -99,7 +119,7 @@ class Consoles( Frame ):
         consoles = []
         index = 0
         for node in nodes:
-            console = Console( f, node )
+            console = Console( f, net, node )
             consoles.append( console )
             row = int( index / width )
             column = index % width
@@ -128,11 +148,11 @@ class Consoles( Frame ):
         "Tell each console to ping the next one."
         consoles = self.consoles
         count = len( consoles )
-        i = 1
+        i = 0
         for console in consoles:
+            i = ( i + 1 ) % count
             ip = consoles[ i ].node.IP()
             console.sendCmd( 'ping ' + ip )
-            i = ( i + 1 ) % count
             
     def stop( self ):
         "Interrupt all consoles."
@@ -142,8 +162,8 @@ class Consoles( Frame ):
     
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    net = TreeNet( depth=2, fanout=2 )
+    net = TreeNet( depth=2, fanout=4 )
     net.start()
-    app = Consoles( net.hosts, width=2 )
+    app = ConsoleApp( net, net.hosts, width=4 )
     app.mainloop()
     net.stop()
