@@ -4,7 +4,7 @@
 consoles.py: bring up a bunch of miniature consoles on a virtual network
 
 This demo shows how to monitor a set of nodes by using
-Tkinter's createfilehandler() and Node()'s monitor().
+Node's monitor() and Tkinter's createfilehandler().
 """
 
 from Tkinter import *
@@ -49,7 +49,7 @@ class Console( Frame ):
         label = Button( self, text=self.node.name, command=newTerm, **buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **textStyle )
-        ybar = Scrollbar( self, orient='vertical', command=text.yview )
+        ybar = Scrollbar( self, orient='vertical', width=7, command=text.yview )
         text.configure( yscrollcommand=ybar.set )
         text.pack( side='left', expand=True, fill='both' )
         ybar.pack( side='right', fill='y' )
