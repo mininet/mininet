@@ -12,16 +12,10 @@ from subprocess import Popen
 from mininet.log import error
 from mininet.util import quietRun
 
-def joinCmd( args ):
-    "Join args into a string, single-quoting items with spaces."
-    result = ''
-    for arg in args:
-        if ' ' in item:
-            result += " '%s'" % arg
-        else:
-            result += " %s" % arg
-    return result
-
+def quoteArg( arg ):
+    "Quote an argument if it contains spaces."
+    return repr( arg ) if ' ' in arg else arg
+    
 def makeTerm( node, title = 'Node', term = 'xterm' ):
     """Run screen on a node, and hook up a terminal.
        node: Node object
@@ -44,9 +38,9 @@ def makeTerm( node, title = 'Node', term = 'xterm' ):
     else:
         args = [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
     if term == 'gterm':
-        # Compress these for gnome-terminal, which expects one token to follow
-        # the -e option    .
-        args = joinCmd( args )
+        # Compress these for gnome-terminal, which expects one token 
+        # to follow the -e option
+        args = [ ' '.join( [ quoteArg( arg ) for arg in args ] ) ] 
     return Popen( cmds[ term ] + args )
 
 def cleanUpScreens():
