@@ -22,7 +22,7 @@ def joinCmd( args ):
             result += " %s" % arg
     return result
 
-def makeTerm( node, title = '', term = 'xterm' ):
+def makeTerm( node, title = 'Node', term = 'xterm' ):
     """Run screen on a node, and hook up a terminal.
        node: Node object
        title: base title
