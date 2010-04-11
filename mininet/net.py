@@ -35,7 +35,7 @@ controller via the loopback interface.
 
 In user datapath mode, the controller and switches can be full-service
 nodes that live in their own network namespaces and have management
-interfaces and IP addresses on a control network (e.g. 10.0.123.1,
+interfaces and IP addresses on a control network (e.g. 192.168.123.1,
 currently routed although it could be bridged.)
 
 In addition to a management interface, user mode switches also have
@@ -60,6 +60,9 @@ h1..hN and SN..SN+M) and also correspond to their default IP addresses
 of 10.x.y.z/8 where x.y.z is the base-256 representation of N for
 hN. This mapping allows easy determination of a node's IP
 address from its name, e.g. h1 -> 10.0.0.1, h257 -> 10.0.1.1.
+
+Note also that 10.0.0.1 can often be written as 10.1 for short, e.g.
+"ping 10.1" is equivalent to "ping 10.0.0.1".
 
 Currently we wrap the entire network in a 'mininet' object, which
 constructs a simulated network based on a network topology created
