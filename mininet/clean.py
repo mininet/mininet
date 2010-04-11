@@ -13,7 +13,7 @@ nothing irreplaceable!
 from subprocess import Popen, PIPE
 
 from mininet.log import info
-from mininet.xterm import cleanUpScreens
+from mininet.term import cleanUpScreens
 
 def sh( cmd ):
     "Print a command and send it to the shell"
