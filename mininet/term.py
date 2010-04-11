@@ -39,7 +39,7 @@ def makeTerm( node, title = 'Node', term = 'xterm' ):
         error( 'invalid terminal type: %s' % term )
         return
     if not node.execed:
-        node.cmd( 'screen -dmS ' + node.name)
+        node.cmd( 'screen -dmS ' + 'mininet.' + node.name)
         args = [ 'screen', '-D', '-RR', '-S', 'mininet.' + node.name ]
     else:
         args = [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
