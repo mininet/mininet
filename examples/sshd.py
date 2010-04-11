@@ -67,6 +67,5 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D' ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info')
-    init()
     net = TreeNet( depth=1, fanout=4, switch=KernelSwitch )
     sshd( net )

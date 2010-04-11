@@ -108,7 +108,6 @@ if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     if not os.path.exists( './udpbwtest' ):
         raise Exception( 'Could not find udpbwtest in current directory.' )
-    init()
     network = Mininet( TreeTopo( depth=2, fanout=2 ), switch=KernelSwitch )
     network.start()
     udpbwtest( network, seconds=10 )

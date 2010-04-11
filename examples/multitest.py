@@ -21,7 +21,6 @@ if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     info( "*** Initializing Mininet and kernel modules\n" )
     KernelSwitch.setup()
-    init()
     info( "*** Creating network\n" )
     network = Mininet( TreeTopo( depth=2, fanout=2 ), switch=KernelSwitch)
     info( "*** Starting network\n" )
