@@ -120,7 +120,7 @@ init.inited = False
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
-    def __init__( self, topo, switch=KernelSwitch, host=Host,
+    def __init__( self, topo=None, switch=KernelSwitch, host=Host,
                  controller=Controller,
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
@@ -160,7 +160,8 @@ class Mininet( object ):
         init()
         switch.setup()
 
-        if build:
+        self.built = False
+        if topo and build:
             self.build()
 
     
@@ -322,6 +323,7 @@ class Mininet( object ):
             self.setMacs()
         if self.autoStaticArp:
             self.staticArp()
+        self.built = True
 
     def startTerms( self ):
         "Start a terminal for each node."
@@ -352,7 +354,9 @@ class Mininet( object ):
                     src.setARP( ip=dst.IP(), mac=dst.MAC() )
 
     def start( self ):
-        "Start controller and switches"
+        "Start controller and switches."
+        if not self.built:
+            self.build()
         info( '*** Starting controller\n' )
         for controller in self.controllers:
             controller.start()
