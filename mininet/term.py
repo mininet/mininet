@@ -51,7 +51,7 @@ def makeTerm( node, title = '', term = 'xterm' ):
 
 def cleanUpScreens():
     "Remove moldy old screen sessions."
-    r = r'(\d+which .[hsc]\d+)'
+    r = r'(\d+\.mininet\.[hsc]\d+)'
     output = quietRun( 'screen -ls' ).split( '\n' )
     for line in output:
         m = re.search( r, line )
