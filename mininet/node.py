@@ -160,7 +160,7 @@ class Node( object ):
         assert not self.waiting
         if isinstance( cmd, list ):
             cmd = ' '.join( cmd )
-        if cmd[ -1 ] == '&':
+        if len( cmd ) > 0 and cmd[ -1 ] == '&':
             separator = '&'
             cmd = cmd[ :-1 ]
         else:
