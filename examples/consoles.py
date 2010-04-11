@@ -176,7 +176,7 @@ class ConsoleApp( Frame ):
             console.sendCmd( 'ping ' + ip )
 
     def iperf( self ):
-        "Tell each console to ping the next one."
+        "Tell each console to iperf to the next one."
         consoles = self.consoles
         count = len( consoles )
         for console in consoles:
