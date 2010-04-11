@@ -5,9 +5,7 @@
 from mininet.log import setLogLevel
 from mininet.net import init, Mininet
 from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
-from mininet.topolib import TreeTopo
-
-
+from mininet.topolib import TreeNet
 
 def treePing64():
     "Run ping test on 64-node tree networks."
@@ -32,5 +30,4 @@ def treePing64():
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    init()
     treePing64()
