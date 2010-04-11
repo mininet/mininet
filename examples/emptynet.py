@@ -8,7 +8,7 @@ This example shows how to create an empty Mininet() object
 from mininet.net import Mininet
 from mininet.node import Controller
 from mininet.cli import CLI
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, info
 
 def emptyNet():
 
@@ -16,30 +16,29 @@ def emptyNet():
     
     net = Mininet( controller=Controller )
 
-    print "*** Adding controller"
+    info( '*** Adding controller\n' )
     c0 = net.addController( 'c0' )
     
-    print "*** Adding hosts"
+    info( '*** Adding hosts\n' )
     h1 = net.addHost( 'h1', ip='10.0.0.1' )
     h2 = net.addHost( 'h2', ip='10.0.0.2' )
     
-    print "*** Adding switch"
+    info( '*** Adding switch\n' )
     s3 = net.addSwitch( 's3' )
     
-    print "*** Creating links"
+    info( '*** Creating links\n' )
     h1.linkTo( s3 )
     h2.linkTo( s3 )
     
-    print "*** Starting network"
-    net.build()
+    info( '*** Starting network\n')
     net.start()
     
-    print "*** Running CLI"
-    setLogLevel( 'info' )
+    info( '*** Running CLI\n' )
     CLI( net )
     
-    print "*** Stopping network"
+    info( '*** Stopping network' )
     net.stop()
     
 if __name__ == '__main__':
+    setLogLevel( 'info' )
     emptyNet()
