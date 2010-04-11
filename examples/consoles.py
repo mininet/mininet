@@ -12,6 +12,7 @@ from Tkinter import *
 from mininet.log import setLogLevel
 from mininet.topolib import TreeNet
 from mininet.term import makeTerms, cleanUpScreens
+from mininet.util import quietRun
 
 class Console( Frame ):
     "A simple console on a host."
@@ -86,19 +87,30 @@ class Console( Frame ):
     def handleInt( self, event=None ):
         "Handle control-c."
         self.node.sendInt()
-        
+
     def sendCmd( self, cmd ):
         "Send a command to our node."
         text, node = self.text, self.node
-        node.sendCmd( cmd )
+        if not node.waiting:
+            node.sendCmd( cmd )
 
-    def handleReadable( self, file, mask ):
+    def handleReadable( self, file=None, mask=None ):
+        "Handle file readable event."
         data = self.node.monitor()
         self.append( data )
         if not self.node.waiting:
             # Print prompt, just for the heck of it
             self.append( self.prompt )
+            
+    def waitOutput( self ):
+        "Wait for any remaining output."
+        while self.node.waiting:
+            self.handleReadable( self )
 
+    def clear( self ):
+        "Clear all of our text."
+        self.text.delete( '1.0', 'end' )
+        
 class ConsoleApp( Frame ):
 
     def __init__( self, net, nodes, parent=None, width=4 ):
@@ -111,6 +123,8 @@ class ConsoleApp( Frame ):
         self.consoles = self.createConsoles( nodes, width )
         self.pack( expand=True, fill='both' )
         cleanUpScreens()
+        # Close window gracefully
+        Wm.wm_protocol( self.top, name='WM_DELETE_WINDOW', func=self.quit )
         
     def createConsoles( self, nodes, width ):
         "Create a grid of consoles in a frame."
@@ -135,7 +149,9 @@ class ConsoleApp( Frame ):
         f = Frame( self )
         buttons = [
             ( 'Ping', self.ping ),
+            ( 'Iperf', self.iperf ),
             ( 'Interrupt', self.stop ),
+            ( 'Clear', self.clear ),
             ( 'Quit', self.quit )
         ]
         for name, cmd in buttons:
@@ -144,6 +160,11 @@ class ConsoleApp( Frame ):
         f.pack( padx=4, pady=4, fill='x' )
         return f
     
+    def clear( self ):
+        "Clear all consoles."
+        for console in self.consoles:
+            console.clear()
+            
     def ping( self ):
         "Tell each console to ping the next one."
         consoles = self.consoles
@@ -153,13 +174,34 @@ class ConsoleApp( Frame ):
             i = ( i + 1 ) % count
             ip = consoles[ i ].node.IP()
             console.sendCmd( 'ping ' + ip )
-            
+
+    def iperf( self ):
+        "Tell each console to ping the next one."
+        consoles = self.consoles
+        count = len( consoles )
+        for console in consoles:
+            console.node.cmd( 'iperf -sD &' )
+        i = 0
+        for console in consoles:
+            i = ( i + 1 ) % count
+            ip = consoles[ i ].node.IP()
+            console.sendCmd( 'iperf -i 1 -c ' + ip )
+
     def stop( self ):
         "Interrupt all consoles."
         for console in self.consoles:
             console.handleInt()
+        for console in self.consoles:
+            console.waitOutput()
+        # Shut down any iperfs that might still be running
+        quietRun( 'killall -9 iperf' )
 
-    
+    def quit( self ):
+        "Stope everything and quit."
+        print "Quit"
+        self.stop()
+        Frame.quit( self )
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     net = TreeNet( depth=2, fanout=4 )
