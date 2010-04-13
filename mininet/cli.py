@@ -32,32 +32,45 @@ Bugs/limitations:
 
 from subprocess import call
 from cmd import Cmd
+from os import isatty
+from select import poll, select, POLLIN
+from sys import stdin
+from tty import setcbreak
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms
-
+from mininet.util import quietRun, isShellBuiltin
         
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
 
     prompt = 'mininet> '
 
-    def __init__( self, mininet ):
+    def __init__( self, mininet, stdin=stdin ):
         self.mn = mininet
         self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
         self.nodemap = {}  # map names to Node objects
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
+        # Attempt to handle input
+        self.stdin = stdin
+        self.inPoller = poll()
+        self.inPoller.register( stdin )
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
         while True:
             try:
+                # Make sure no nodes are still waiting
+                for node in self.nodelist:
+                    while node.waiting:
+                        node.sendInt()
+                        node.monitor()
+                if self.isatty():
+                    quietRun( 'stty sane' )
                 self.cmdloop()
                 break
             except KeyboardInterrupt:
-                info( 'Interrupt\n' )
-                for node in self.nodelist:
-                    waitForNode( node )
+                output( '\nInterrupt\n' )
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
@@ -71,21 +84,25 @@ class CLI( Cmd ):
     def do_help( self, args ):
         "Describe available CLI commands."
         Cmd.do_help( self, args )
-        helpStr = ( 'You may also send a command to a node using:\n'
-                   '  <node> command {args}\n'
-                   'For example:\n'
-                   '  mininet> h0 ifconfig\n'
-                   '\n'
-                   'The interpreter automatically substitutes IP '
-                   'addresses\n'
-                   'for node names when a node is the first arg, so commands'
-                   ' like\n'
-                   ' mininet> h2 ping h3\n'
-                   'should work.\n'
-                   '\n'
-                   'Interactive commands that require user input are '
-                   'not (yet) supported.\n\n' )
-        if args is "":
+        helpStr = ( 
+            'You may also send a command to a node using:\n'
+            '  <node> command {args}\n'
+            'For example:\n'
+            '  mininet> h1 ifconfig\n'
+            '\n'
+            'The interpreter automatically substitutes IP addresses\n'
+            'for node names when a node is the first arg, so commands\n'
+            'like\n'
+            '  mininet> h2 ping h3\n'
+            'should work.\n'
+            '\n'
+            'Some character-oriented interactive commands require\n'
+            'noecho, e.g.\n'
+            '  mininet> noecho h2 vi foo.py\n'
+            'However, starting up an xterm/gterm is generally better:\n'
+            '  mininet> xterm h2\n\n'
+        )
+        if args is '':
             self.stdout.write( helpStr )
 
     def do_nodes( self, args ):
@@ -117,11 +134,11 @@ class CLI( Cmd ):
             if not result:
                 return
             elif isinstance( result, str ):
-                info( result + '\n' )
+                output( result + '\n' )
             else:
-                info( repr( result ) + '\n' )
+                output( repr( result ) + '\n' )
         except Exception, e:
-            info( str( e ) + '\n' )
+            output( str( e ) + '\n' )
 
     # pylint: enable-msg=W0703
 
@@ -167,7 +184,7 @@ class CLI( Cmd ):
         "Spawn xterm(s) for the given node(s)."
         args = args.split()
         if not args:
-            info( 'usage: %s node1 node2 ...\n' % term )
+            error( 'usage: %s node1 node2 ...\n' % term )
         else:
             for arg in args:
                 if arg not in self.nodemap:
@@ -190,7 +207,19 @@ class CLI( Cmd ):
 
     def do_EOF( self, args ):
         "Exit"
+        output( '\n' )
         return self.do_exit( args )
+
+    def isatty( self ):
+        "Is our standard input a tty?"
+        return isatty( self.stdin.fileno() )
+        
+    def do_noecho( self, line ):
+        "Run an interactive command with echoing turned off."
+        if self.isatty():
+            quietRun( 'stty -echo' )
+        self.default( line )
+        # default() fixes tty
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
@@ -211,22 +240,42 @@ class CLI( Cmd ):
                     for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
-            node.sendCmd( rest, printPid=True )
-            waitForNode( node )
+            node.sendCmd( rest )
+            self.waitForNode( node, isShellBuiltin( first ) )
         else:
-            self.stdout.write( '*** Unknown syntax: %s\n' % line )
+            self.stdout.write( '*** Unknown command: %s\n' % first )
 
     # pylint: enable-msg=W0613,R0201
 
+    def isReadable( self, poller ):
+        "Check whether a single polled object is readable."
+        for fd, mask in poller.poll( 0 ):
+            if mask & POLLIN:
+                return True
 
-# This function may be a candidate for util.py
-
-def waitForNode( node ):
-    "Wait for a node to finish, and  print its output."
-    while node.waiting:
-        try:
-            data = node.monitor()
-            info( '%s' % data )
-        except KeyboardInterrupt:
-            node.sendInt()
+    def waitForNode( self, node, isShellBuiltin=False ):
+        "Wait for a node to finish, and  print its output."
+        # Pollers
+        nodePoller = poll()
+        nodePoller.register( node.stdout )
+        bothPoller = poll()
+        bothPoller.register( self.stdin )
+        bothPoller.register( node.stdout )
+        if self.isatty():
+            # Buffer by character, so that interactive
+            # commands sort of work
+            quietRun( 'stty -icanon min 1' )
+        while True:
+            try:
+                bothPoller.poll()
+                if self.isReadable( self.inPoller ):
+                    key = self.stdin.read( 1 )
+                    node.write( key )
+                if self.isReadable( nodePoller ):
+                    data = node.monitor()
+                    output( '%s' % data )
+                if not node.waiting:
+                    break
+            except KeyboardInterrupt:
+                node.sendInt()
 
