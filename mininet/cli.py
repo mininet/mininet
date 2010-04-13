@@ -95,18 +95,18 @@ class CLI( Cmd ):
         '  mininet> xterm h2\n\n'
     )
 
-    def do_help( self, args ):
+    def do_help( self, line ):
         "Describe available CLI commands."
-        Cmd.do_help( self, args )
-        if args is '':
+        Cmd.do_help( self, line )
+        if line is '':
             output( self.helpStr )
 
-    def do_nodes( self, args ):
+    def do_nodes( self, line ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    def do_net( self, args ):
+    def do_net( self, line ):
         "List network connections."
         for switch in self.mn.switches:
             output( switch.name, '<->' )
@@ -115,18 +115,18 @@ class CLI( Cmd ):
                 output( ' %s' % name )
             output( '\n' )
 
-    def do_sh( self, args ):
+    def do_sh( self, line ):
         "Run an external shell command"
-        call( args, shell=True )
+        call( line, shell=True )
 
     # do_py() needs to catch any exception during eval()
     # pylint: disable-msg=W0703
 
-    def do_py( self, args ):
+    def do_py( self, line ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: h1.cmd('ls')"""
         try:
-            result = eval( args, globals(), self.nodemap )
+            result = eval( line, globals(), self.nodemap )
             if not result:
                 return
             elif isinstance( result, str ):
@@ -138,37 +138,38 @@ class CLI( Cmd ):
 
     # pylint: enable-msg=W0703
 
-    def do_pingall( self, args ):
+    def do_pingall( self, line ):
         "Ping between all hosts."
         self.mn.pingAll()
 
-    def do_pingpair( self, args ):
+    def do_pingpair( self, line ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
 
-    def do_iperf( self, args ):
+    def do_iperf( self, line ):
         "Simple iperf TCP test between two hosts."
         self.mn.iperf()
 
-    def do_iperfudp( self, args ):
+    def do_iperfudp( self, line ):
         "Simple iperf UDP test between two hosts."
+        args = line.split()
         udpBw = args[ 0 ] if len( args ) else '10M'
         self.mn.iperfUdp( udpBw )
 
-    def do_intfs( self, args ):
+    def do_intfs( self, line ):
         "List interfaces."
         for node in self.nodelist:
             output( '%s: %s\n' %
                 ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
 
-    def do_dump( self, args ):
+    def do_dump( self, line ):
         "Dump node info."
         for node in self.nodelist:
             output( '%s\n' % node )
 
-    def do_link( self, args ):
+    def do_link( self, line ):
         "Bring link(s) between two nodes up or down."
-        args = args.split()
+        args = line.split()
         if len(args) != 3:
             error( 'invalid number of args: link end1 end2 [up down]\n' )
         elif args[ 2 ] not in [ 'up', 'down' ]:
@@ -176,9 +177,9 @@ class CLI( Cmd ):
         else:
             self.mn.configLinkStatus( *args )
 
-    def do_xterm( self, args, term='xterm' ):
+    def do_xterm( self, line, term='xterm' ):
         "Spawn xterm(s) for the given node(s)."
-        args = args.split()
+        args = line.split()
         if not args:
             error( 'usage: %s node1 node2 ...\n' % term )
         else:
@@ -189,22 +190,22 @@ class CLI( Cmd ):
                     node = self.nodemap[ arg ]
                     self.mn.terms += makeTerms( [ node ], term = term )
 
-    def do_gterm( self, args ):
+    def do_gterm( self, line ):
         "Spawn gnome-terminal(s) for the given node(s)."
-        self.do_xterm( args, term='gterm' )
+        self.do_xterm( line, term='gterm' )
 
-    def do_exit( self, args ):
+    def do_exit( self, line ):
         "Exit"
         return 'exited by user command'
 
-    def do_quit( self, args ):
+    def do_quit( self, line ):
         "Exit"
-        return self.do_exit( args )
+        return self.do_exit( line )
 
-    def do_EOF( self, args ):
+    def do_EOF( self, line ):
         "Exit"
         output( '\n' )
-        return self.do_exit( args )
+        return self.do_exit( line )
 
     def isatty( self ):
         "Is our standard input a tty?"
