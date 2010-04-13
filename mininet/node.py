@@ -149,10 +149,11 @@ class Node( object ):
         "Stop node."
         self.terminate()
 
-    def waitReadable( self ):
-        "Wait until node's output is readable."
+    def waitReadable( self, timeoutms=None ):
+        """Wait until node's output is readable.
+           timeoutms: timeout in ms or None to wait indefinitely."""
         if len( self.readbuf ) == 0:
-            self.pollOut.poll()
+            self.pollOut.poll( timeoutms )
 
     def sendCmd( self, cmd, printPid=True ):
         """Send a command, followed by a command to echo a sentinel,
@@ -160,6 +161,9 @@ class Node( object ):
         assert not self.waiting
         if isinstance( cmd, list ):
             cmd = ' '.join( cmd )
+        if not re.search( r'\w', cmd ):
+            # Replace empty commands with something harmless
+            cmd = 'echo -n'
         if len( cmd ) > 0 and cmd[ -1 ] == '&':
             separator = '&'
             cmd = cmd[ :-1 ]
@@ -180,11 +184,12 @@ class Node( object ):
             except Exception:
                 pass
 
-    def monitor( self ):
+    def monitor( self, timeoutms=None ):
         """Monitor and return the output of a command.
-           Set self.waiting to False if command has completed."""
+           Set self.waiting to False if command has completed.
+           timeoutms: timeout in ms or None to wait indefinitely."""
         assert self.waiting
-        self.waitReadable()
+        self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
         marker = chr( 1 ) + r'\d+\n'
@@ -395,10 +400,10 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
 
-    def monitor( self ):
-        "Monitor node."
+    def monitor( self, *args, **kwargs ):
+        "Monitor a switch."
         if not self.execed:
-            return Node.monitor( self )
+            return Node.monitor( self, *args, **kwargs )
         else:
             return True, ''
 
