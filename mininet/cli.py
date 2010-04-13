@@ -23,11 +23,6 @@ Several useful commands are provided, including the ability to
 list all nodes ('nodes'), to print out the network topology
 ('net') and to check connectivity ('pingall', 'pingpair')
 and bandwidth ('iperf'.)
-
-Bugs/limitations:
-
-- Interactive commands are not supported at the moment
-
 """
 
 from subprocess import call
