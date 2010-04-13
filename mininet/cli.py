@@ -98,7 +98,7 @@ class CLI( Cmd ):
             '  mininet> xterm h2\n\n'
         )
         if args is '':
-            self.stdout.write( helpStr )
+            output( helpStr )
 
     def do_nodes( self, args ):
         "List all nodes."
@@ -238,7 +238,7 @@ class CLI( Cmd ):
             node.sendCmd( rest )
             self.waitForNode( node, isShellBuiltin( first ) )
         else:
-            self.stdout.write( '*** Unknown command: %s\n' % first )
+            error( '*** Unknown command: %s\n' % first )
 
     # pylint: enable-msg=W0613,R0201
 
@@ -268,7 +268,7 @@ class CLI( Cmd ):
                     node.write( key )
                 if self.isReadable( nodePoller ):
                     data = node.monitor()
-                    output( '%s' % data )
+                    output( data )
                 if not node.waiting:
                     break
             except KeyboardInterrupt:
