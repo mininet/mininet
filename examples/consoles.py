@@ -7,6 +7,7 @@ This demo shows how to monitor a set of nodes by using
 Node's monitor() and Tkinter's createfilehandler().
 """
 
+import re
 from Tkinter import *
 
 from mininet.log import setLogLevel
@@ -43,7 +44,7 @@ class Console( Frame ):
         # Set up widgets
         self.text = self.makeWidgets( )
         self.bindEvents()
-        self.append( self.prompt )
+        self.sendCmd( 'export TERM=dumb' )
     
     def makeWidgets( self ):
         "Make a label, a text area, and a scroll bar."
@@ -67,23 +68,41 @@ class Console( Frame ):
         # use special handlers for the following:
         self.text.bind( '<Return>', self.handleReturn )
         self.text.bind( '<Control-c>', self.handleInt )
+        self.text.bind( '<KeyPress>', self.handleKey )
         # This is not well-documented, but it is the correct
         # way to trigger a file event handler from Tk's
         # event loop!
         self.tk.createfilehandler( self.node.stdout, READABLE,
             self.handleReadable )
 
+    # We're not a terminal (yet?), so we ignore the following
+    # control characters other than [\b\n\r]
+    ignoreChars  = re.compile( r'[\x00-\x07\x09\x0b\x0c\x0e-\x1f]+' )
+    
     def append( self, text ):
         "Append something to our text frame."
+        text = self.ignoreChars.sub( '', text )
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
     
+    def handleKey( self, event ):
+        "If it's an interactive command, send it to the node."
+        char = event.char
+        if self.node.waiting:
+            self.node.write( char )
+            
     def handleReturn( self, event ):
         "Handle a carriage return."
         cmd = self.text.get( 'insert linestart', 'insert lineend' )
-        if cmd.find( self.prompt ) == 0:
-            cmd = cmd[ len( self.prompt ): ]
+        # Send it immediately, if "interactive" command
+        if self.node.waiting:
+            self.node.write( event.char )
+            return
+        # Otherwise send the whole line to the shell
+        pos = cmd.find( self.prompt )
+        if pos >= 0:
+            cmd = cmd[ pos + len( self.prompt ): ]
         self.sendCmd( cmd )
         
     def handleInt( self, event=None ):
@@ -96,9 +115,9 @@ class Console( Frame ):
         if not node.waiting:
             node.sendCmd( cmd )
 
-    def handleReadable( self, file=None, mask=None ):
+    def handleReadable( self, file=None, mask=None, timeoutms=None ):
         "Handle file readable event."
-        data = self.node.monitor()
+        data = self.node.monitor( timeoutms )
         self.append( data )
         if not self.node.waiting:
             # Print prompt
@@ -107,7 +126,9 @@ class Console( Frame ):
     def waitOutput( self ):
         "Wait for any remaining output."
         while self.node.waiting:
-            self.handleReadable( self )
+            # A bit of a trade-off here...
+            self.handleReadable( self, timeoutms=1000)
+            self.update()
 
     def clear( self ):
         "Clear all of our text."
@@ -213,22 +234,26 @@ class ConsoleApp( Frame ):
             ip = consoles[ i ].node.IP()
             console.sendCmd( 'iperf -t 99999 -i 1 -c ' + ip )
 
-    def stop( self ):
+    def stop( self, wait=True ):
         "Interrupt all hosts."
         consoles = self.consoles[ 'hosts' ].consoles
         for console in consoles:
             console.handleInt()
-        for console in consoles:
-            console.waitOutput()
+        if wait:
+            for console in consoles:
+                console.waitOutput()
         # Shut down any iperfs that might still be running
         quietRun( 'killall -9 iperf' )
 
     def quit( self ):
         "Stope everything and quit."
         print "Quit"
-        self.stop()
+        self.stop( wait=False)
         Frame.quit( self )
 
+    def reallyQuit( self ):
+        print "ReallyQuit"
+        
 class Object( object ):
     "Generic object you can stuff junk into."
     def __init__( self, **kwargs ):
@@ -237,7 +262,7 @@ class Object( object ):
             
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    net = TreeNet( depth=2, fanout=4 )
+    net = TreeNet( depth=2, fanout=2 )
     net.start()
     app = ConsoleApp( net, width=4 )
     app.mainloop()
