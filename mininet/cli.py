@@ -76,29 +76,30 @@ class CLI( Cmd ):
     # must have the same interface
     # pylint: disable-msg=W0613,R0201
 
+    helpStr = ( 
+        'You may also send a command to a node using:\n'
+        '  <node> command {args}\n'
+        'For example:\n'
+        '  mininet> h1 ifconfig\n'
+        '\n'
+        'The interpreter automatically substitutes IP addresses\n'
+        'for node names when a node is the first arg, so commands\n'
+        'like\n'
+        '  mininet> h2 ping h3\n'
+        'should work.\n'
+        '\n'
+        'Some character-oriented interactive commands require\n'
+        'noecho:\n'
+        '  mininet> noecho h2 vi foo.py\n'
+        'However, starting up an xterm/gterm is generally better:\n'
+        '  mininet> xterm h2\n\n'
+    )
+
     def do_help( self, args ):
         "Describe available CLI commands."
         Cmd.do_help( self, args )
-        helpStr = ( 
-            'You may also send a command to a node using:\n'
-            '  <node> command {args}\n'
-            'For example:\n'
-            '  mininet> h1 ifconfig\n'
-            '\n'
-            'The interpreter automatically substitutes IP addresses\n'
-            'for node names when a node is the first arg, so commands\n'
-            'like\n'
-            '  mininet> h2 ping h3\n'
-            'should work.\n'
-            '\n'
-            'Some character-oriented interactive commands require\n'
-            'noecho, e.g.\n'
-            '  mininet> noecho h2 vi foo.py\n'
-            'However, starting up an xterm/gterm is generally better:\n'
-            '  mininet> xterm h2\n\n'
-        )
         if args is '':
-            output( helpStr )
+            output( self.helpStr )
 
     def do_nodes( self, args ):
         "List all nodes."
