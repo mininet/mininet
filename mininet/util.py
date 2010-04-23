@@ -17,9 +17,11 @@ def checkRun( cmd ):
        cmd: list of command params"""
     return check_call( cmd.split( ' ' ) )
 
-def quietRun( cmd ):
+def quietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
        cmd: list of command params"""
+    if len( cmd ) == 1:
+        cmd = cmd[ 0 ]
     if isinstance( cmd, str ):
         cmd = cmd.split( ' ' )
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
@@ -87,7 +89,7 @@ def moveIntfNoRetry( intf, node, printError=False ):
     cmd = 'ip link set ' + intf + ' netns ' + repr( node.pid )
     quietRun( cmd )
     links = node.cmd( 'ip link show' )
-    if not intf in links:
+    if not ( ' %s:' % intf ) in links:
         if printError:
             lg.error( '*** Error: moveIntf: ' + intf +
                 ' not successfully moved to ' + node.name + '\n' )
