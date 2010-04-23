@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-This example shows how to create an empty Mininet() object 
+This example shows how to create an empty Mininet object 
 (without a topology object) and add nodes to it manually.
 """
 
