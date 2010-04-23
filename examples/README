@@ -9,7 +9,8 @@ Mininet's Python API.
 consoles.py:
 
 This example creates a grid of console windows, one for each node, 
-and allows interaction with and monitoring of each console.
+and allows interaction with and monitoring of each console, including
+graphical monitoring.
 
 emptynet.py:
 
