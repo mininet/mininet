@@ -114,7 +114,7 @@ def init():
         exit( 1 )
     # If which produces no output, then mnexec is not in the path.
     # May want to loosen this to handle mnexec in the current dir.
-    if not quietRun( [ 'which', 'mnexec' ] ):
+    if not quietRun( 'which mnexec' ):
         raise Exception( "Could not find mnexec - check $PATH" )
     fixLimits()
     
@@ -540,10 +540,10 @@ class Mininet( object ):
             if len( connections ) == 0:
                 error( 'src and dst not connected: %s %s\n' % ( src, dst) )
             for srcIntf, dstIntf in connections:
-                result = srcNode.cmd( [ 'ifconfig', srcIntf, status ] )
+                result = srcNode.cmd( 'ifconfig', srcIntf, status )
                 if result:
                     error( 'link src status change failed: %s\n' % result )
-                result = dstNode.cmd( [ 'ifconfig', dstIntf, status ] )
+                result = dstNode.cmd( 'ifconfig', dstIntf, status )
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 
