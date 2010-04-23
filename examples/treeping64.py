@@ -15,7 +15,7 @@ def treePing64():
         'reference user': UserSwitch,
         'Open vSwitch kernel': OVSKernelSwitch }
 
-    for name in switches.keys():
+    for name in switches:
         print "*** Testing", name, "datapath"
         switch = switches[ name ]
         network = TreeNet( depth=2, fanout=8, switch=switch )
@@ -24,7 +24,7 @@ def treePing64():
 
     print
     print "*** Tree network ping results:"
-    for name in switches.keys():
+    for name in switches:
         print "%s: %d%% packet loss" % ( name, results[ name ] )
     print
 
