@@ -60,14 +60,16 @@ class Node( object ):
     outToNode = {}  # mapping of output fds to nodes
 
     def __init__( self, name, inNamespace=True,
-        defaultMAC=None, defaultIP=None ):
+        defaultMAC=None, defaultIP=None, **kwargs ):
         """name: name of node
            inNamespace: in network namespace?
            defaultMAC: default MAC address for intf 0
            defaultIP: default IP address for intf 0"""
         self.name = name
-        opts = '-cdp'
         self.inNamespace = inNamespace
+        self.defaultIP = defaultIP
+        self.defaultMAC = defaultMAC
+        opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
         cmd = [ 'mnexec', opts, 'bash', '-m' ]
@@ -75,6 +77,7 @@ class Node( object ):
             close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
+        self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
@@ -82,15 +85,12 @@ class Node( object ):
         # using select.poll()
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
-        self.pid = self.shell.pid
         self.intfs = {}  # dict of port numbers to interface names
         self.ports = {}  # dict of interface names to port numbers
                          # replace with Port objects, eventually ?
         self.ips = {}  # dict of interfaces to ip addresses as strings
         self.connection = {}  # remote node connected to each interface
         self.execed = False
-        self.defaultIP = defaultIP
-        self.defaultMAC = defaultMAC
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
@@ -155,11 +155,16 @@ class Node( object ):
         if len( self.readbuf ) == 0:
             self.pollOut.poll( timeoutms )
 
-    def sendCmd( self, cmd, printPid=True ):
+    def sendCmd( self, *args, **kwargs ):
         """Send a command, followed by a command to echo a sentinel,
-           and return without waiting for the command to complete."""
+           and return without waiting for the command to complete.
+           args: command and arguments, or string
+           printPid: print command's PID?"""
         assert not self.waiting
-        if isinstance( cmd, list ):
+        printPid = kwargs.get( 'printPid', True )
+        if len( args ) > 0:
+            cmd = args
+        if not isinstance( cmd, str ):
             cmd = ' '.join( cmd )
         if not re.search( r'\w', cmd ):
             # Replace empty commands with something harmless
@@ -221,18 +226,19 @@ class Node( object ):
             log( data )
         return output
 
-    def cmd( self, cmd, verbose=False ):
+    def cmd( self, *args, **kwargs ):
         """Send a command, wait for output, and return it.
            cmd: string"""
+        verbose = kwargs.get( 'verbose', False )
         log = info if verbose else debug
-        log( '*** %s : %s\n' % ( self.name, cmd ) )
-        self.sendCmd( cmd )
+        log( '*** %s : %s\n' % ( self.name, args ) )
+        self.sendCmd( *args, **kwargs )
         return self.waitOutput( verbose )
 
-    def cmdPrint( self, cmd ):
+    def cmdPrint( self, *args):
         """Call cmd and printing its output
            cmd: string"""
-        return self.cmd( cmd, verbose=True )
+        return self.cmd( *args, **{ 'verbose': True } )
 
     # Interface management, configuration, and routing
 
@@ -252,10 +258,12 @@ class Node( object ):
             return max( self.ports.values() ) + 1
         return 0
 
-    def addIntf( self, intf, port ):
+    def addIntf( self, intf, port=None ):
         """Add an interface.
-           intf: interface name (nodeN-ethM)
-           port: port number (typically OpenFlow port number)"""
+           intf: interface name (e.g. nodeN-ethM)
+           port: port number (optional, typically OpenFlow port number)"""
+        if port is None:
+            port = self.newPort()
         self.intfs[ port ] = intf
         self.ports[ intf ] = port
         #info( '\n' )
@@ -293,7 +301,7 @@ class Node( object ):
         if port1 is None:
             port1 = node1.newPort()
         if port2 is None:
-            port2 = node2.newPort()
+            port2 = node2.newPort() 
         intf1 = node1.intfName( port1 )
         intf2 = node2.intfName( port2 )
         makeIntfPair( intf1, intf2 )
@@ -319,16 +327,16 @@ class Node( object ):
     def setMAC( self, intf, mac ):
         """Set the MAC address for an interface.
            mac: MAC address as string"""
-        result = self.cmd( [ 'ifconfig', intf, 'down' ] )
-        result += self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
-        result += self.cmd( [ 'ifconfig', intf, 'up' ] )
+        result = self.cmd( 'ifconfig', intf, 'down' )
+        result += self.cmd( 'ifconfig', intf, 'hw', 'ether', mac )
+        result += self.cmd( 'ifconfig', intf, 'up' )
         return result
 
     def setARP( self, ip, mac ):
         """Add an ARP entry.
            ip: IP address as string
            mac: MAC address as string"""
-        result = self.cmd( [ 'arp', '-s', ip, mac ] )
+        result = self.cmd( 'arp', '-s', ip, mac )
         return result
 
     def setIP( self, intf, ip, prefixLen=8 ):
@@ -337,7 +345,7 @@ class Node( object ):
            ip: IP address as a string
            prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
         ipSub = '%s/%d' % ( ip, prefixLen )
-        result = self.cmd( [ 'ifconfig', intf, ipSub, 'up' ] )
+        result = self.cmd( 'ifconfig', intf, ipSub, 'up' )
         self.ips[ intf ] = ip
         return result
 
@@ -391,11 +399,16 @@ class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
-    def sendCmd( self, cmd, printPid=False):
+    def __init__( self, name, opts='', **kwargs):
+        Node.__init__( self, name, **kwargs )
+        self.opts = opts
+
+    def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
            cmd: string"""
+        kwargs.setdefault( 'printPid', False )
         if not self.execed:
-            return Node.sendCmd( self, cmd, printPid )
+            return Node.sendCmd( self, *cmd, **kwargs )
         else:
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
@@ -433,10 +446,10 @@ class UserSwitch( Switch ):
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name +
+            ' punix:/tmp/' + self.name  +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' tcp:' + controller.IP() + ' --fail=closed' +
+            ' tcp:' + controller.IP() + ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
     def stop( self ):
@@ -448,14 +461,16 @@ class UserSwitch( Switch ):
 class KernelSwitch( Switch ):
     """Kernel-space switch.
        Currently only works in root namespace."""
-
+    
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name: name for switch
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as string; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        self.dp = dp
+        print kwargs, "opts=", self.opts
+        self.dp = 'nl:%i' % dp
+        self.intf = 'of%i' % dp
         if self.inNamespace:
             error( "KernelSwitch currently only works"
                 " in the root namespace." )
@@ -472,28 +487,26 @@ class KernelSwitch( Switch ):
         quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
-        quietRun( 'dpctl deldp nl:%i' % self.dp )
-        self.cmd( 'dpctl adddp nl:%i' % self.dp )
+        quietRun( 'dpctl deldp ' + self.dp )
+        self.cmd( 'dpctl adddp ' + self.dp )
         if self.defaultMAC:
-            intf = 'of%i' % self.dp
-            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', self.defaultMAC ] )
+            self.cmd( 'ifconfig', self.intf, 'hw', 'ether', self.defaultMAC )
         if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
-        self.cmd( 'dpctl addif nl:' + str( self.dp ) + ' ' +
-            ' '.join( intfs ) )
+        self.cmd( 'dpctl',  'addif', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmd( 'ofprotocol nl:' + str( self.dp ) + ' tcp:' +
-                      controller.IP() + ':' +
-                      str( controller.port ) +
-                      ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+        self.cmdPrint( 'ofprotocol ' + self.dp +
+            ' tcp:%s:%d' %  ( controller.IP(), controller.port ) + 
+            ' --fail=closed ' + self.opts +
+            ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
 
     def stop( self ):
         "Terminate kernel datapath."
-        quietRun( 'dpctl deldp nl:%i' % self.dp )
+        quietRun( 'dpctl deldp ' + self.dp )
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
@@ -508,7 +521,8 @@ class OVSKernelSwitch( Switch ):
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        self.dp = dp
+        self.dp = 'dp%i' % dp
+        self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
                 " in the root namespace." )
@@ -525,29 +539,27 @@ class OVSKernelSwitch( Switch ):
         quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
-        quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
-        self.cmd( 'ovs-dpctl add-dp dp%i' % self.dp )
+        quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'ovs-dpctl add-dp ' + self.dp )
         if self.defaultMAC:
-            intf = 'dp%i' % self.dp
             mac = self.defaultMAC
-            self.cmd( [ 'ifconfig', intf, 'hw', 'ether', mac ] )
-
+            self.cmd( 'ifconfig', self.intf, 'hw', 'ether', mac )
         if len( self.intfs ) != max( self.intfs ) + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
-        self.cmd( 'ovs-dpctl add-if dp' + str( self.dp ) + ' ' +
-                      ' '.join( intfs ) )
+        self.cmd( 'ovs-dpctl',  'add-if',  self.dp,  ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmd( 'ovs-openflowd dp' + str( self.dp ) + ' tcp:' +
-                      controller.IP() + ':' +
-                      ' --fail=closed 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+        self.cmd( 'ovs-openflowd ' + self.dp +
+            ' tcp:%s:%i' % ( controller.IP(),  controller.port ) + 
+            ' --fail=closed ' + self.opts + 
+            ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
     def stop( self ):
         "Terminate kernel datapath."
-        quietRun( 'ovs-dpctl del-dp dp%i' % self.dp )
+        quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
 
@@ -573,7 +585,7 @@ class Controller( Node ):
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.controller + ' ' + self.cargs +
-            ' 1> ' + cout + ' 2> ' + cout + ' &' )
+            ' 1>' + cout +  ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
@@ -619,7 +631,7 @@ class NOX( Controller ):
             controller=noxCoreDir + '/nox_core',
             cargs='--libdir=/usr/local/lib -v -i ptcp: ' +
                     ' '.join( noxArgs ),
-            cdir = noxCoreDir, **kwargs )
+            cdir=noxCoreDir, **kwargs )
 
 
 class RemoteController( Controller ):
