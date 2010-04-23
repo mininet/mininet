@@ -120,8 +120,8 @@ function of {
 	# Remove avahi-daemon, which may cause unwanted discovery packets to be sent during tests, near link status changes:
 	sudo apt-get remove -y avahi-daemon
 
-	# Disable IPv6.  Add to /etc/modprobe.d/blacklist.conf:
-	sudo sh -c "echo -e 'blacklist net-pf-10\nblacklist ipv6' >> /etc/modprobe.d/blacklist.conf"
+	# Disable IPv6.  Add to /etc/modprobe.d/blacklist:
+	sudo sh -c "echo -e 'blacklist net-pf-10\nblacklist ipv6' >> /etc/modprobe.d/blacklist"
 }
 
 # Install OpenVSwitch
