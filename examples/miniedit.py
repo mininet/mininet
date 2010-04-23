@@ -22,7 +22,7 @@ from mininet.node import Controller, NOX
 from mininet.topo import Topo
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun, ipStr
-from mininet.xterm import makeXterm, cleanUpScreens
+from mininet.term import makeTerm, cleanUpScreens
 
 class MiniEdit( Frame ):
 
@@ -594,7 +594,7 @@ class MiniEdit( Frame ):
         name = self.itemToWidget[ self.selection ][ 'text' ]
         if name not in self.net.nameToNode:
             return
-        makeXterm( self.net.nameToNode[ name ], 'Mininet: ' )
+        self.net.terms.append( makeTerm( self.net.nameToNode[ name ],  'Host' ) )
     
     # Image data. Git will be unhappy.
 
