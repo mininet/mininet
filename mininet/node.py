@@ -468,7 +468,6 @@ class KernelSwitch( Switch ):
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as string; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        print kwargs, "opts=", self.opts
         self.dp = 'nl:%i' % dp
         self.intf = 'of%i' % dp
         if self.inNamespace:
@@ -498,7 +497,7 @@ class KernelSwitch( Switch ):
         self.cmd( 'dpctl',  'addif', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmdPrint( 'ofprotocol ' + self.dp +
+        self.cmd( 'ofprotocol ' + self.dp +
             ' tcp:%s:%d' %  ( controller.IP(), controller.port ) + 
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
