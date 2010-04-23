@@ -111,7 +111,7 @@ class CLI( Cmd ):
         for switch in self.mn.switches:
             output( switch.name, '<->' )
             for intf in switch.intfs.values():
-                name = switch.connection[ intf ][ 1 ]
+                node, name  = switch.connection.get( intf, ( None, 'Unknown ' ) )
                 output( ' %s' % name )
             output( '\n' )
 
