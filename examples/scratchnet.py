@@ -4,6 +4,8 @@
 Build a simple network from scratch, using mininet primitives.
 This is more complicated than using the higher-level classes,
 but it exposes the configuration details and allows customization.
+
+For most tasks, the higher-level API will be preferable.
 """
 
 from mininet.net import init
