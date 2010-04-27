@@ -383,12 +383,9 @@ class Node( object ):
 
     # Other methods
     def __str__( self ):
-        result = self.name + ':'
-        result += ' IP=' + str( self.IP() )
-        result += ' intfs=' + ','.join( sorted( self.intfs.values() ) )
-        result += ' waiting=' + str( self.waiting )
-        result += ' pid=' + str( self.pid )
-        return result
+        intfs = sorted( self.intfs.values() )
+        return '%s: IP=%s intfs=%s pid=%s' % (
+            self.name, self.IP(), ','.join( intfs ), self.pid )
 
 
 class Host( Node ):
@@ -490,10 +487,11 @@ class KernelSwitch( Switch ):
         self.cmd( 'dpctl adddp ' + self.dp )
         if self.defaultMAC:
             self.cmd( 'ifconfig', self.intf, 'hw', 'ether', self.defaultMAC )
-        if len( self.intfs ) != max( self.intfs ) + 1:
+        ports = sorted( self.ports.values() )
+        if len( ports ) != ports[ -1 ] + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
-                            'supported: %s' % self.intfs )
-        intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
+                            'supported: %s' % ports )
+        intfs = [ self.intfs[ port ] for port in ports ]
         self.cmd( 'dpctl',  'addif', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
@@ -543,10 +541,11 @@ class OVSKernelSwitch( Switch ):
         if self.defaultMAC:
             mac = self.defaultMAC
             self.cmd( 'ifconfig', self.intf, 'hw', 'ether', mac )
-        if len( self.intfs ) != max( self.intfs ) + 1:
+        ports = sorted( self.ports.values() )
+        if len( ports ) != ports[ -1 ] + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % self.intfs )
-        intfs = [ self.intfs[ port ] for port in sorted( self.intfs.keys() ) ]
+        intfs = [ self.intfs[ port ] for port in ports ]
         self.cmd( 'ovs-dpctl',  'add-if',  self.dp,  ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
