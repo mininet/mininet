@@ -440,7 +440,7 @@ class ConsoleApp( Frame ):
 
 # Make it easier to construct and assign objects
 
-def assign( obj, **kwargs):
+def assign( obj, **kwargs ):
     "Set a bunch of fields in an object."
     for name, value in kwargs.items():
         setattr( obj, name, value )
