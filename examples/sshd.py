@@ -16,7 +16,7 @@ demonstrates:
 - running server processes (sshd in this case) on hosts
 """
 
-from mininet.net import init, Mininet
+from mininet.net import Mininet
 from mininet.cli import CLI
 from mininet.log import lg
 from mininet.node import Node, KernelSwitch

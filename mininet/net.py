@@ -397,10 +397,12 @@ class Mininet( object ):
         self.stop()
         return result
 
-    def monitor( self, hosts=None ):
+    def monitor( self, hosts=None, timeoutms=-1 ):
         """Monitor a set of hosts (or all hosts by default),
            and return their output, a line at a time.
-           returns: host, line"""
+           hosts: (optional) set of hosts to monitor
+           timeoutms: (optional) timeout value in ms
+           returns: iterator which returns host, line"""
         if hosts is None:
             hosts = self.hosts
         poller = select.poll()
@@ -408,13 +410,16 @@ class Mininet( object ):
         for host in hosts:
             poller.register( host.stdout )
         while True:
-            ready = poller.poll()
+            ready = poller.poll( timeoutms )
             for fd, event in ready:
                 host = Node.fdToNode( fd )
                 if event & select.POLLIN:
                     line = host.readline()
-                    if line:
+                    if line is not None:
                         yield host, line
+            # Return if non-blocking
+            if not ready and timeoutms >= 0:
+                yield None, None
 
     @staticmethod
     def _parsePing( pingOutput ):

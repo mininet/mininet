@@ -17,7 +17,7 @@ def emptyNet():
     net = Mininet( controller=Controller )
 
     info( '*** Adding controller\n' )
-    c0 = net.addController( 'c0' )
+    net.addController( 'c0' )
     
     info( '*** Adding hosts\n' )
     h1 = net.addHost( 'h1', ip='10.0.0.1' )

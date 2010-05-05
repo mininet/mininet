@@ -7,17 +7,13 @@ Bob Lantz
 3/27/10
 """
 
-from time import sleep
-
-import os
 import re
-import sys
-from time import time
 
-from Tkinter import *
+from Tkinter import Frame, Label, Button, Scrollbar, OptionMenu, Canvas
+from Tkinter import StringVar
 
 from mininet.log import setLogLevel
-from mininet.net import init, Mininet
+from mininet.net import Mininet
 from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
 from mininet.node import Controller, NOX
 from mininet.topolib import TreeTopo
@@ -61,7 +57,7 @@ class Graph( Frame ):
         scale.create_line( width - 1, height, width - 1, 0, fill=fill )
         # Draw ticks and numbers
         for y in range( 0, int( ymax + 1 ) ):
-            ypos = height * (1 - float( y ) / ymax )
+            ypos = height * ( 1 - float( y ) / ymax )
             scale.create_line( width, ypos, width - 10, ypos, fill=fill )
             scale.create_text( 10, ypos, text=str( y ), fill=fill )
             
@@ -76,9 +72,9 @@ class Graph( Frame ):
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
         
     def yview( self, *args ):
-            "Scroll both scale and graph."
-            self.graph.yview( *args )
-            self.scale.yview( *args )
+        "Scroll both scale and graph."
+        self.graph.yview( *args )
+        self.scale.yview( *args )
                 
     def createWidgets( self ):
         "Create initial widget set."
@@ -96,11 +92,11 @@ class Graph( Frame ):
         scale.configure( yscrollcommand=ybar.set )
         
         # Layout
-        title.grid( row=0, columnspan=3, sticky=N+E+W)
-        scale.grid( row=1, column=0, sticky=N+S+E+W )
-        graph.grid( row=1, column=1, sticky=N+S+E+W )
-        ybar.grid( row=1, column=2, sticky=N+S )
-        xbar.grid( row=2, column=0, columnspan=2, sticky=E+W )
+        title.grid( row=0, columnspan=3, sticky='new')
+        scale.grid( row=1, column=0, sticky='nsew' )
+        graph.grid( row=1, column=1, sticky='nsew' )
+        ybar.grid( row=1, column=2, sticky='ns' )
+        xbar.grid( row=2, column=0, columnspan=2, sticky='ew' )
         self.rowconfigure( 1, weight=1 )
         self.columnconfigure( 1, weight=1 )
 
@@ -113,7 +109,6 @@ class Graph( Frame ):
     def addBar( self, yval ):
         "Add a new bar to our graph."
         percent = yval / self.ymax
-        height = percent * self.gheight
         c = self.graph
         x0 = self.xpos * self.barwidth
         x1 = x0 + self.barwidth
@@ -151,26 +146,42 @@ class Controls( Frame ):
         'NOX': NOX
     }
     
-    
-    def __init__( self, master=None ):
+    def optionMenu( self, name, dict, initval, opts ):
+        "Add a new option menu."
+        var = StringVar()
+        var.set( findKey( dict, initval ) )
+        menu = OptionMenu( self, var, *dict )
+        menu.config( **opts )
+        menu.pack( fill='x' )
+        def value():
+            return dict[ var.get() ]
+        return value
+
+    def __init__( self, master, start, stop, quit ):
     
         Frame.__init__( self, master )
         
-        self.switch = StringVar()
-        self.switch.set( 'Kernel Switch' )
-        self.switchMenu = OptionMenu( self, self.switch, 
-            *( switches.keys() ) )
+        # Option menus
+        opts = { 'font': 'Geneva 7 bold' }
+        self.switch = self.optionMenu( 'Switch', self.switches, 
+            KernelSwitch, opts )
+        self.controller = self.optionMenu( 'Controller', self.controllers, 
+            Controller, opts)
+            
+        # Spacer
+        pk = { 'fill': 'x' }
+        Label( self, **opts ).pack( **pk )
+
+        # Buttons
+        self.start = Button( self, text='Start', command=start, **opts )
+        self.stop = Button( self, text='Stop', command=stop, **opts )
+        self.quit = Button( self, text='Quit', command=quit, **opts )
+        for button in ( self.start, self.stop, self.quit ):
+            button.pack( **pk )
+
         
-        self.controller = StringVar()
-        self.controller.set( 'Reference Controller' )
-        self.controllerMenu = OpetionMenu( self, self.controller,
-            *( controllers.keys() ) )
-
-def App( Frame ):
-
-           
 def parsebwtest( line,
-    r=re.compile( r'(\d+) s: in ([\d\.]+) Mbps, out ([\d\.]+) Mbps' ) ):
+    r=re.compile( r'(\d+) s: in ([\d\.]+) MB/s, out ([\d\.]+) MB/s' ) ):
     "Parse udpbwtest.c output, returning seconds, inbw, outbw."
     match = r.match( line )
     if match:
@@ -179,25 +190,50 @@ def parsebwtest( line,
     return None, None, None
 
 
-class UdpBwTest( object ):
+class UdpBwTest( Frame ):
     "Test and plot UDP bandwidth over time"
 
-    def __init__( self, graph, net, seconds=60 ):
+    def __init__( self, topo, seconds=60, master=None ):
         "Start up and monitor udpbwtest on each of our hosts."
         
-        hosts = net.hosts
-        self.graph = graph
-        self.hostCount = len( hosts )
+        Frame.__init__( self, master )
+
+        self.controls = Controls( self, self.start, self.stop, self.quit )
+        self.graph = Graph( self )
         
+        # Layout
+        self.controls.pack( side='left', expand=False, fill='y' )
+        self.graph.pack( side='right', expand=True, fill='both' )
+        self.pack( expand=True, fill='both' )
+
+        self.running = False
+
+    def start( self ):
+        print "start"
+    
+        if self.running:
+            return
+
+        switch = self.controls.switch()
+        controller = self.controls.controller() 
+
+        self.net = Mininet( topo, switch=switch, controller=controller )
+        self.hosts = self.net.hosts
+        self.hostCount = len( self.hosts )
+        
+        print "*** Starting network"
+        self.net.start()
+
         print "*** Starting udpbwtest on hosts"
+        hosts = self.hosts
         for host in hosts:
             ips = [ h.IP() for h in hosts if h != host ]
             host.cmdPrint( './udpbwtest ' + ' '.join( ips ) + ' &' )
         
         print "*** Monitoring hosts"
-        self.output = net.monitor( hosts, timeoutms=0 )
+        self.output = self.net.monitor( hosts, timeoutms=1 )
         self.results = {}
-        self.quitTime = time() + seconds
+        self.running = True
         self.updateGraph()
 
     # Pylint isn't smart enough to understand iterator.next()
@@ -205,6 +241,12 @@ class UdpBwTest( object ):
     
     def updateGraph( self ):
         "Graph input bandwidth."
+        
+        print "updateGraph"
+        
+        if not self.running:
+            return
+
         while True:
             host, line = self.output.next()
             if host is None or len( line ) == 0:
@@ -220,35 +262,51 @@ class UdpBwTest( object ):
                 totalin = 0
                 for host, inbw, outbw in result:
                     totalin += inbw
-                self.graph.addBar( totalin / 1000.0 )
+                self.graph.addBar( totalin * 8.0/1000.0 )
                 print totalin
-        if time() < self.quitTime:
-            # Fileevent would be better, but for now we just poll every 500ms
-            self.graph.after( 10, self.updateGraph )
-        else:
-            self.shutdown()
+        # Fileevent might be better, but for now we just poll every 500ms
+        self.graph.after( 500, self.updateGraph )
 
-    def shutdown( self ):
-        "Stop udpbwtest proceses."
+    def stop( self ):
+        "Stop test."
+        
         print "*** Stopping udpbwtest processes"
         # We *really* don't want these things hanging around!
         quietRun( 'killall -9 udpbwtest' )
+        
+        if not self.running:
+            return
+            
+        print "*** Stopping network"
+        self.running = False
+        self.net.stop()
+    
+    def quit( self ):
+        print "*** Quitting"
+        self.stop()
+        Frame.quit( self )
 
     # pylint: enable-msg=E1101
 
+# Useful utilities
+
+def findKey( dict, value ):
+    "Find some key where dict[ key ] == value."
+    return [ key for key, val in dict.items() if val == value ][ 0 ]
+
+def assign( obj, **kwargs):
+    "Set a bunch of fields in an object."
+    for name, value in kwargs.items():
+        setattr( obj, name, value )
+
+class Object( object ):
+    "Generic object you can stuff junk into."
+    def __init__( self, **kwargs ):
+        assign( self, **kwargs )
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    app = Graph()
-    app.master.title( "Mininet Bandwidth" )
-    depth, fanout = 1, 2
-    net = Mininet( topo=TreeTopo( depth=depth, fanout=fanout), 
-        switch=KernelSwitch )
-    title = "Bandwidth (Mb/s), (%i hosts, %i switches, depth=%d, fanout=%d)" % (
-        len( net.hosts ), len( net.switches), depth, fanout )
-    app.setTitle( title )
-    net.start()
-    test = UdpBwTest( app, net )
+    topo = TreeTopo( depth=1, fanout=2 )
+    app = UdpBwTest( topo )
     app.mainloop()
-    net.stop()
-    test.shutdown()  # just in case!
     

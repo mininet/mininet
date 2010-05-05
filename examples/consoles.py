@@ -26,9 +26,10 @@ Bob Lantz, April 2010
 """
 
 import re
-from Tkinter import *
 
-from mininet.log import setLogLevel,info
+from Tkinter import Frame, Button, Label, Text, Scrollbar, Canvas, Wm, READABLE
+
+from mininet.log import setLogLevel
 from mininet.topolib import TreeNet
 from mininet.term import makeTerms, cleanUpScreens
 from mininet.util import quietRun
@@ -233,11 +234,11 @@ class Graph( Frame ):
         scale.configure( yscrollcommand=ybar.set )
         
         # Layout
-        title.grid( row=0, columnspan=3, sticky=N+E+W)
-        scale.grid( row=1, column=0, sticky=N+S+E+W )
-        graph.grid( row=1, column=1, sticky=N+S+E+W )
-        ybar.grid( row=1, column=2, sticky=N+S )
-        xbar.grid( row=2, column=0, columnspan=2, sticky=E+W )
+        title.grid( row=0, columnspan=3, sticky='new')
+        scale.grid( row=1, column=0, sticky='nsew' )
+        graph.grid( row=1, column=1, sticky='nsew' )
+        ybar.grid( row=1, column=2, sticky='ns' )
+        xbar.grid( row=2, column=0, columnspan=2, sticky='ew' )
         self.rowconfigure( 1, weight=1 )
         self.columnconfigure( 1, weight=1 )
         # Save for future reference
@@ -249,7 +250,6 @@ class Graph( Frame ):
     def addBar( self, yval ):
         "Add a new bar to our graph."
         percent = yval / self.ymax
-        height = percent * self.gheight
         c = self.graph
         x0 = self.xpos * self.barwidth
         x1 = x0 + self.barwidth
@@ -453,7 +453,7 @@ class Object( object ):
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    net = TreeNet( depth=2, fanout=4 )
+    net = TreeNet( depth=2, fanout=2 )
     net.start()
     app = ConsoleApp( net, width=4 )
     app.mainloop()

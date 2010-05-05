@@ -28,9 +28,8 @@ and bandwidth ('iperf'.)
 from subprocess import call
 from cmd import Cmd
 from os import isatty
-from select import poll, select, POLLIN
+from select import poll, POLLIN
 from sys import stdin
-from tty import setcbreak
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms

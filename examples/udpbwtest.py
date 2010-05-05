@@ -24,7 +24,7 @@ from time import time
 flush = sys.stdout.flush
 
 from mininet.log import lg
-from mininet.net import init, Mininet
+from mininet.net import Mininet
 from mininet.node import KernelSwitch
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun
@@ -32,7 +32,7 @@ from mininet.util import quietRun
 # bwtest support
 
 def parsebwtest( line,
-    r=re.compile( r'(\d+) s: in ([\d\.]+) Mbps, out ([\d\.]+) Mbps' ) ):
+    r=re.compile( r'(\d+) s: in ([\d\.]+) MB/s, out ([\d\.]+) MB/s' ) ):
     "Parse udpbwtest.c output, returning seconds, inbw, outbw."
     match = r.match( line )
     if match:
@@ -43,7 +43,7 @@ def parsebwtest( line,
 def printTotalHeader():
     "Print header for bandwidth stats."
     print
-    print "time(s)\thosts\ttotal in/out (Mbps)\tavg in/out (Mbps)"
+    print "time(s)\thosts\ttotal in/out (MB/s)\tavg in/out (MB/s)"
 
 # Annoyingly, pylint isn't smart enough to notice
 # when an unused variable is an iteration tuple
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     if not os.path.exists( './udpbwtest' ):
         raise Exception( 'Could not find udpbwtest in current directory.' )
-    network = Mininet( TreeTopo( depth=2, fanout=2 ), switch=KernelSwitch )
+    network = Mininet( TreeTopo( depth=1, fanout=8 ), switch=KernelSwitch )
     network.start()
     udpbwtest( network, seconds=10 )
     network.stop()

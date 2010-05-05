@@ -7,7 +7,7 @@ For a more complicated test example, see udpbwtest.py.
 
 from mininet.cli import CLI
 from mininet.log import lg, info
-from mininet.net import init, Mininet
+from mininet.net import Mininet
 from mininet.node import KernelSwitch
 from mininet.topolib import TreeTopo
 

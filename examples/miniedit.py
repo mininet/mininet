@@ -11,17 +11,14 @@ Development version - not entirely functional!
 Bob Lantz, April 2010
 """
 
-from Tkinter import *
+from Tkinter import Frame, Button, Label, Scrollbar, Canvas
+from Tkinter import Menu, BitmapImage, PhotoImage, Wm, Toplevel
 
 # someday: from ttk import *
 
 from mininet.log import setLogLevel
-from mininet.net import init, Mininet
-from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
-from mininet.node import Controller, NOX
-from mininet.topo import Topo
-from mininet.topolib import TreeTopo
-from mininet.util import quietRun, ipStr
+from mininet.net import Mininet
+from mininet.util import ipStr
 from mininet.term import makeTerm, cleanUpScreens
 
 class MiniEdit( Frame ):
@@ -189,15 +186,6 @@ class MiniEdit( Frame ):
         c = self.canvas
         return c.canvasy( y_root ) - c.winfo_rooty()
 
-    def widgetCenter( self, widget ):
-        "Return center of widget on our canvas."
-        c = self.canvas
-        x = self.canvasx( widget.winfo_rootx() )
-        y = self.canvasy( widget.winfo_rooty() )
-        w = widget.winfo_width()
-        h = widget.winfo_height()
-        return  x + w / 2, y + h / 2
-        
     # Toolbar
     
     def activate( self, toolName ):
@@ -347,6 +335,7 @@ class MiniEdit( Frame ):
         "Drag a link's endpoint to another node."
         if self.link is None:
             return
+        # Since drag starts in widget, we use root coords
         x = self.canvasx( event.x_root )
         y = self.canvasy( event.y_root )
         c = self.canvas
@@ -426,12 +415,12 @@ class MiniEdit( Frame ):
         item = self.widgetToItem[ w ]
         c.coords( item, x, y )
         # Adjust link positions
-        x0, y0 = self.widgetCenter( w )
         for dest in w.links:
             link = w.links[ dest ]
-            x1, y1 = self.widgetCenter( dest )
-            c.coords( link, x0, y0, x1, y1 )
-    
+            item = self.widgetToItem[ dest ]
+            x1, y1 = c.coords( item )
+            c.coords( link, x, y, x1, y1 )
+
     def startLink( self, event ):
         "Start a new link."
         if event.widget not in self.widgetToItem:
@@ -439,7 +428,7 @@ class MiniEdit( Frame ):
             return
         w = event.widget
         item = self.widgetToItem[ w ]
-        x, y = self.widgetCenter( w )
+        x, y = self.canvas.coords( item )
         self.link = self.canvas.create_line( x, y, x, y, width=4, 
             fill='blue', tag='link' )
         self.linkx, self.linky = x, y
@@ -464,6 +453,8 @@ class MiniEdit( Frame ):
         if self.link is None:
             return
         source = self.linkWidget
+        c = self.canvas
+        # Since we dragged from the widget, use root coords
         x, y = self.canvasx( event.x_root ), self.canvasy( event.y_root )
         target = self.findItem( x, y )
         dest = self.itemToWidget.get( target, None )
@@ -477,8 +468,7 @@ class MiniEdit( Frame ):
         if 'Host' in stags and 'Host' in dtags:
             self.releaseLink( event )
             return
-        x, y = self.widgetCenter( dest )
-        c = self.canvas
+        x, y = c.coords( target )
         c.coords( self.link, self.linkx, self.linky, x, y )
         self.addLink( source, dest )
 
@@ -562,7 +552,7 @@ class MiniEdit( Frame ):
             elif 'Host' in tags:
                 net.addHost( name, ip=ipStr( nodeNum ) )
             else:
-                exception( "Cannot create mystery node: " + name )
+                raise Exception( "Cannot create mystery node: " + name )
         # Make links
         for link in self.links.values():
             ( src, dst ) = link
