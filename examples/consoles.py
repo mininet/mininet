@@ -433,7 +433,7 @@ class ConsoleApp( Frame ):
         quietRun( 'killall -9 iperf' )
 
     def quit( self ):
-        "Stope everything and quit."
+        "Stop everything and quit."
         self.stop( wait=False)
         Frame.quit( self )
 
