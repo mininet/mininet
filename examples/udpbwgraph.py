@@ -20,17 +20,17 @@ from mininet.topolib import TreeTopo
 from mininet.util import quietRun
 
 # bwtest support
-    
+
 class Graph( Frame ):
 
     "Graph that we can add bars to over time."
-    
+
     def __init__( self, master=None,
         bg = 'white',
         gheight=200, gwidth=500,
         barwidth=10,
         ymax=3.5,):
-        
+
         Frame.__init__( self, master )
 
         self.bg = bg
@@ -41,12 +41,11 @@ class Graph( Frame ):
         self.xpos = 0
 
         # Create everything
-        self.title = self.graph = None
-        self.createWidgets()
+        self.title, self.graph, self.scale = self.createWidgets()
         self.updateScrollRegions()
         self.yview( 'moveto', '1.0' )
-        
-    def scale( self ):
+
+    def createScale( self ):
         "Create a and return a new canvas with scale markers."
         height = float( self.gheight )
         width = 25
@@ -60,22 +59,22 @@ class Graph( Frame ):
             ypos = height * ( 1 - float( y ) / ymax )
             scale.create_line( width, ypos, width - 10, ypos, fill=fill )
             scale.create_text( 10, ypos, text=str( y ), fill=fill )
-            
+
         return scale
-    
+
     def updateScrollRegions( self ):
         "Update graph and scale scroll regions."
         ofs = 20
         height = self.gheight + ofs
-        self.graph.configure( scrollregion=( 0, -ofs, 
+        self.graph.configure( scrollregion=( 0, -ofs,
             self.xpos * self.barwidth, height ) )
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
-        
+
     def yview( self, *args ):
         "Scroll both scale and graph."
         self.graph.yview( *args )
         self.scale.yview( *args )
-                
+
     def createWidgets( self ):
         "Create initial widget set."
 
@@ -83,14 +82,14 @@ class Graph( Frame ):
         title = Label( self, text="Bandwidth (Mb/s)", bg=self.bg )
         width = self.gwidth
         height = self.gheight
-        scale = self.scale()
+        scale = self.createScale()
         graph = Canvas( self, width=width, height=height, background=self.bg)
         xbar = Scrollbar( self, orient='horizontal', command=graph.xview )
         ybar = Scrollbar( self, orient='vertical', command=self.yview )
         graph.configure( xscrollcommand=xbar.set, yscrollcommand=ybar.set,
             scrollregion=(0, 0, width, height ) )
         scale.configure( yscrollcommand=ybar.set )
-        
+
         # Layout
         title.grid( row=0, columnspan=3, sticky='new')
         scale.grid( row=1, column=0, sticky='nsew' )
@@ -99,13 +98,8 @@ class Graph( Frame ):
         xbar.grid( row=2, column=0, columnspan=2, sticky='ew' )
         self.rowconfigure( 1, weight=1 )
         self.columnconfigure( 1, weight=1 )
+        return title, graph, scale
 
-        # Save for future reference
-        self.title = title
-        self.scale = scale
-        self.graph = graph
-        return graph
-            
     def addBar( self, yval ):
         "Add a new bar to our graph."
         percent = yval / self.ymax
@@ -123,7 +117,7 @@ class Graph( Frame ):
         "Add a bar for testing purposes."
         ms = 1000
         if self.xpos < 10:
-            self.addBar( self.xpos/10 * self.ymax  )
+            self.addBar( self.xpos / 10 * self.ymax  )
             self.after( ms, self.test )
 
     def setTitle( self, text ):
@@ -134,52 +128,49 @@ class Graph( Frame ):
 class Controls( Frame ):
 
     "Handy controls for configuring test."
-    
-    switches = { 
+
+    switches = {
         'Kernel Switch': KernelSwitch,
         'User Switch': UserSwitch,
         'Open vSwitch': OVSKernelSwitch
     }
-    
+
     controllers = {
         'Reference Controller': Controller,
         'NOX': NOX
     }
-    
-    def optionMenu( self, name, dict, initval, opts ):
-        "Add a new option menu."
-        var = StringVar()
-        var.set( findKey( dict, initval ) )
-        menu = OptionMenu( self, var, *dict )
-        menu.config( **opts )
-        menu.pack( fill='x' )
-        def value():
-            return dict[ var.get() ]
-        return value
 
-    def __init__( self, master, start, stop, quit ):
-    
+    def __init__( self, master, startFn, stopFn, quitFn ):
+
         Frame.__init__( self, master )
-        
+
         # Option menus
         opts = { 'font': 'Geneva 7 bold' }
-        self.switch = self.optionMenu( 'Switch', self.switches, 
+        self.switch = self.optionMenu( self.switches,
             KernelSwitch, opts )
-        self.controller = self.optionMenu( 'Controller', self.controllers, 
+        self.controller = self.optionMenu( self.controllers,
             Controller, opts)
-            
+
         # Spacer
         pk = { 'fill': 'x' }
         Label( self, **opts ).pack( **pk )
 
         # Buttons
-        self.start = Button( self, text='Start', command=start, **opts )
-        self.stop = Button( self, text='Stop', command=stop, **opts )
-        self.quit = Button( self, text='Quit', command=quit, **opts )
+        self.start = Button( self, text='Start', command=startFn, **opts )
+        self.stop = Button( self, text='Stop', command=stopFn, **opts )
+        self.quit = Button( self, text='Quit', command=quitFn, **opts )
         for button in ( self.start, self.stop, self.quit ):
             button.pack( **pk )
 
-        
+    def optionMenu( self, menuItems, initval, opts ):
+        "Add a new option menu. Returns function to get value."
+        var = StringVar()
+        var.set( findKey( menuItems, initval ) )
+        menu = OptionMenu( self, var, *menuItems )
+        menu.config( **opts )
+        menu.pack( fill='x' )
+        return lambda: menuItems[ var.get() ]
+
 def parsebwtest( line,
     r=re.compile( r'(\d+) s: in ([\d\.]+) MB/s, out ([\d\.]+) MB/s' ) ):
     "Parse udpbwtest.c output, returning seconds, inbw, outbw."
@@ -193,34 +184,41 @@ def parsebwtest( line,
 class UdpBwTest( Frame ):
     "Test and plot UDP bandwidth over time"
 
-    def __init__( self, topo, seconds=60, master=None ):
+    def __init__( self, topo, master=None ):
         "Start up and monitor udpbwtest on each of our hosts."
-        
+
         Frame.__init__( self, master )
 
         self.controls = Controls( self, self.start, self.stop, self.quit )
         self.graph = Graph( self )
-        
+
         # Layout
         self.controls.pack( side='left', expand=False, fill='y' )
         self.graph.pack( side='right', expand=True, fill='both' )
         self.pack( expand=True, fill='both' )
 
+        self.topo = topo
+        self.net = None
+        self.hosts = []
+        self.hostCount = 0
+        self.output = None
+        self.results = {}
         self.running = False
 
     def start( self ):
-        print "start"
-    
+        "Start test."
+
         if self.running:
             return
 
         switch = self.controls.switch()
-        controller = self.controls.controller() 
+        controller = self.controls.controller()
 
-        self.net = Mininet( topo, switch=switch, controller=controller )
+        self.net = Mininet( self.topo, switch=switch, 
+            controller=controller )
         self.hosts = self.net.hosts
         self.hostCount = len( self.hosts )
-        
+
         print "*** Starting network"
         self.net.start()
 
@@ -229,7 +227,7 @@ class UdpBwTest( Frame ):
         for host in hosts:
             ips = [ h.IP() for h in hosts if h != host ]
             host.cmdPrint( './udpbwtest ' + ' '.join( ips ) + ' &' )
-        
+
         print "*** Monitoring hosts"
         self.output = self.net.monitor( hosts, timeoutms=1 )
         self.results = {}
@@ -238,12 +236,12 @@ class UdpBwTest( Frame ):
 
     # Pylint isn't smart enough to understand iterator.next()
     # pylint: disable-msg=E1101
-    
+
     def updateGraph( self ):
         "Graph input bandwidth."
-        
+
         print "updateGraph"
-        
+
         if not self.running:
             return
 
@@ -269,20 +267,20 @@ class UdpBwTest( Frame ):
 
     def stop( self ):
         "Stop test."
-        
+
         print "*** Stopping udpbwtest processes"
         # We *really* don't want these things hanging around!
         quietRun( 'killall -9 udpbwtest' )
-        
+
         if not self.running:
             return
-            
+
         print "*** Stopping network"
         self.running = False
         self.net.stop()
-    
+
     def quit( self ):
-        print "*** Quitting"
+        "Quit app."
         self.stop()
         Frame.quit( self )
 
@@ -290,9 +288,9 @@ class UdpBwTest( Frame ):
 
 # Useful utilities
 
-def findKey( dict, value ):
-    "Find some key where dict[ key ] == value."
-    return [ key for key, val in dict.items() if val == value ][ 0 ]
+def findKey( d, value ):
+    "Find some key where d[ key ] == value."
+    return [ key for key, val in d.items() if val == value ][ 0 ]
 
 def assign( obj, **kwargs):
     "Set a bunch of fields in an object."
@@ -306,7 +304,7 @@ class Object( object ):
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    topo = TreeTopo( depth=1, fanout=2 )
-    app = UdpBwTest( topo )
+    app = UdpBwTest( topo=TreeTopo( depth=2, fanout=2 ) )
     app.mainloop()
-    
+
+

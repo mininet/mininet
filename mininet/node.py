@@ -95,6 +95,8 @@ class Node( object ):
         self.lastPid = None
         self.readbuf = ''
         self.waiting = False
+        # Stash additional information as desired
+        self.args = kwargs
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -186,7 +188,7 @@ class Node( object ):
         if self.lastPid:
             try:
                 os.kill( self.lastPid, sig )
-            except Exception:
+            except OSError:
                 pass
 
     def monitor( self, timeoutms=None ):
@@ -301,7 +303,7 @@ class Node( object ):
         if port1 is None:
             port1 = node1.newPort()
         if port2 is None:
-            port2 = node2.newPort() 
+            port2 = node2.newPort()
         intf1 = node1.intfName( port1 )
         intf2 = node2.intfName( port2 )
         makeIntfPair( intf1, intf2 )
@@ -410,14 +412,6 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
 
-    def monitor( self, *args, **kwargs ):
-        "Monitor a switch."
-        if not self.execed:
-            return Node.monitor( self, *args, **kwargs )
-        else:
-            return True, ''
-
-
 class UserSwitch( Switch ):
     "User-space switch."
 
@@ -458,7 +452,7 @@ class UserSwitch( Switch ):
 class KernelSwitch( Switch ):
     """Kernel-space switch.
        Currently only works in root namespace."""
-    
+
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name: name for switch
@@ -496,7 +490,7 @@ class KernelSwitch( Switch ):
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ofprotocol ' + self.dp +
-            ' tcp:%s:%d' %  ( controller.IP(), controller.port ) + 
+            ' tcp:%s:%d' %  ( controller.IP(), controller.port ) +
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
@@ -550,8 +544,8 @@ class OVSKernelSwitch( Switch ):
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%i' % ( controller.IP(),  controller.port ) + 
-            ' --fail=closed ' + self.opts + 
+            ' tcp:%s:%i' % ( controller.IP(),  controller.port ) +
+            ' --fail=closed ' + self.opts +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 

@@ -5,7 +5,9 @@ from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 
-from mininet.log import lg
+from mininet.log import error
+
+# Command execution support
 
 def run( cmd ):
     """Simple interface to subprocess.call()
@@ -17,13 +19,16 @@ def checkRun( cmd ):
        cmd: list of command params"""
     return check_call( cmd.split( ' ' ) )
 
+# pylint doesn't understand explicit type checking
+# pylint: disable-msg=E1103
+
 def quietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
        cmd: list of command params"""
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
-    if isinstance( cmd, str ):
-        cmd = cmd.split( ' ' )
+        if isinstance( cmd, str ):
+            cmd = cmd.split( ' ' )
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
     # select(), which can't handle
@@ -41,6 +46,22 @@ def quietRun( *cmd ):
         if popen.returncode != None:
             break
     return output
+
+# pylint: enable-msg=E1103
+# pylint: disable-msg=E1101,W0612
+
+def isShellBuiltin( cmd ):
+    "Return True if cmd is a bash builtin."
+    if isShellBuiltin.builtIns is None:
+        isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
+    space = cmd.find( ' ' )
+    if space > 0:
+        cmd = cmd[ :space]
+    return cmd in isShellBuiltin.builtIns
+
+isShellBuiltin.builtIns = None
+
+# pylint: enable-msg=E1101,W0612
 
 # Interface management
 #
@@ -78,7 +99,7 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         sleep( delaySecs )
         tries += 1
     if tries >= retries:
-        lg.error( "*** gave up after %i retries\n" % tries )
+        error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
 def moveIntfNoRetry( intf, node, printError=False ):
@@ -91,7 +112,7 @@ def moveIntfNoRetry( intf, node, printError=False ):
     links = node.cmd( 'ip link show' )
     if not ( ' %s:' % intf ) in links:
         if printError:
-            lg.error( '*** Error: moveIntf: ' + intf +
+            error( '*** Error: moveIntf: ' + intf +
                 ' not successfully moved to ' + node.name + '\n' )
         return False
     return True
@@ -112,10 +133,8 @@ def createLink( node1, node2, port1=None, port2=None ):
        returns: intf1 name, intf2 name"""
     return node1.linkTo( node2, port1, port2 )
 
-def fixLimits():
-    "Fix ridiculously small resource limits."
-    setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
-    setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
+
+# IP and Mac address formatting and parsing
 
 def _colonHex( val, bytes ):
     """Generate colon-hex string.
@@ -181,17 +200,10 @@ def makeNumeric( s ):
     else:
         return s
 
-# pylint: disable-msg=E1101,W0612
 
-def isShellBuiltin( cmd ):
-    "Return True if cmd is a bash builtin."
-    if isShellBuiltin.builtIns is None:
-        isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
-    space = cmd.find( ' ' )
-    if space > 0:
-        cmd = cmd[ :space]
-    return cmd in isShellBuiltin.builtIns
+# Other stuff we use
 
-isShellBuiltin.builtIns = None
-
-# pylint: enable-msg=E1101,W0612
+def fixLimits():
+    "Fix ridiculously small resource limits."
+    setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
+    setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )

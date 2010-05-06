@@ -29,18 +29,18 @@ from subprocess import call
 from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
-from sys import stdin
+import sys
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms
 from mininet.util import quietRun, isShellBuiltin
-        
+
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
 
     prompt = 'mininet> '
 
-    def __init__( self, mininet, stdin=stdin ):
+    def __init__( self, mininet, stdin=sys.stdin ):
         self.mn = mininet
         self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
         self.nodemap = {}  # map names to Node objects
@@ -75,7 +75,7 @@ class CLI( Cmd ):
     # must have the same interface
     # pylint: disable-msg=W0613,R0201
 
-    helpStr = ( 
+    helpStr = (
         'You may also send a command to a node using:\n'
         '  <node> command {args}\n'
         'For example:\n'
@@ -110,7 +110,9 @@ class CLI( Cmd ):
         for switch in self.mn.switches:
             output( switch.name, '<->' )
             for intf in switch.intfs.values():
-                node, name  = switch.connection.get( intf, ( None, 'Unknown ' ) )
+                # Ugly, but pylint wants it
+                name  = switch.connection.get( intf,
+                    ( None, 'Unknown ' ) )[ 1 ]
                 output( ' %s' % name )
             output( '\n' )
 
@@ -209,7 +211,7 @@ class CLI( Cmd ):
     def isatty( self ):
         "Is our standard input a tty?"
         return isatty( self.stdin.fileno() )
-        
+
     def do_noecho( self, line ):
         "Run an interactive command with echoing turned off."
         if self.isatty():
@@ -236,20 +238,16 @@ class CLI( Cmd ):
                     for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
-            node.sendCmd( rest )
-            self.waitForNode( node, isShellBuiltin( first ) )
+            builtin = isShellBuiltin( first )
+            print "builtin =", builtin
+            node.sendCmd( rest, printPid=( not builtin ) )
+            self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % first )
 
     # pylint: enable-msg=W0613,R0201
 
-    def isReadable( self, poller ):
-        "Check whether a single polled object is readable."
-        for fd, mask in poller.poll( 0 ):
-            if mask & POLLIN:
-                return True
-
-    def waitForNode( self, node, isShellBuiltin=False ):
+    def waitForNode( self, node ):
         "Wait for a node to finish, and  print its output."
         # Pollers
         nodePoller = poll()
@@ -264,10 +262,10 @@ class CLI( Cmd ):
         while True:
             try:
                 bothPoller.poll()
-                if self.isReadable( self.inPoller ):
+                if isReadable( self.inPoller ):
                     key = self.stdin.read( 1 )
                     node.write( key )
-                if self.isReadable( nodePoller ):
+                if isReadable( nodePoller ):
                     data = node.monitor()
                     output( data )
                 if not node.waiting:
@@ -275,3 +273,11 @@ class CLI( Cmd ):
             except KeyboardInterrupt:
                 node.sendInt()
 
+# Helper functions
+
+def isReadable( poller ):
+    "Check whether a Poll object has a readable fd."
+    for fdmask in poller.poll( 0 ):
+        mask = fdmask[ 1 ]
+        if mask & POLLIN:
+            return True

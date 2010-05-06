@@ -10,7 +10,7 @@ We monitor nodes in a couple of ways:
 
 - First, each individual node is monitored, and its output is added
   to its console window
-  
+
 - Second, each time a console window gets iperf output, it is parsed
   and accumulated. Once we have output for all consoles, a bar is
   added to the bandwidth graph.
@@ -36,7 +36,7 @@ from mininet.util import quietRun
 
 class Console( Frame ):
     "A simple console on a host."
-       
+
     def __init__( self, parent, net, node, height=10, width=32, title='Node' ):
         Frame.__init__( self, parent )
 
@@ -44,10 +44,10 @@ class Console( Frame ):
         self.node = node
         self.prompt = node.name + '# '
         self.height, self.width, self.title = height, width, title
-                
+
         # Initialize widget styles
         self.buttonStyle = { 'font': 'Monaco 7' }
-        self.textStyle = { 
+        self.textStyle = {
             'font': 'Monaco 7',
             'bg': 'black',
             'fg': 'green',
@@ -58,22 +58,22 @@ class Console( Frame ):
             'highlightcolor': 'green',
             'selectforeground': 'black',
             'selectbackground': 'green'
-        }    
+        }
 
         # Set up widgets
         self.text = self.makeWidgets( )
         self.bindEvents()
         self.sendCmd( 'export TERM=dumb' )
-        
+
         self.outputHook = None
-        
+
     def makeWidgets( self ):
         "Make a label, a text area, and a scroll bar."
 
         def newTerm( net=self.net, node=self.node, title=self.title ):
             "Pop up a new terminal window for a node."
             net.terms += makeTerms( [ node ], title )
-        label = Button( self, text=self.node.name, command=newTerm, 
+        label = Button( self, text=self.node.name, command=newTerm,
             **self.buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **self.textStyle )
@@ -99,7 +99,7 @@ class Console( Frame ):
     # We're not a terminal (yet?), so we ignore the following
     # control characters other than [\b\n\r]
     ignoreChars  = re.compile( r'[\x00-\x07\x09\x0b\x0c\x0e-\x1f]+' )
-    
+
     def append( self, text ):
         "Append something to our text frame."
         text = self.ignoreChars.sub( '', text )
@@ -114,7 +114,7 @@ class Console( Frame ):
         char = event.char
         if self.node.waiting:
             self.node.write( char )
-            
+
     def handleReturn( self, event ):
         "Handle a carriage return."
         cmd = self.text.get( 'insert linestart', 'insert lineend' )
@@ -127,24 +127,29 @@ class Console( Frame ):
         if pos >= 0:
             cmd = cmd[ pos + len( self.prompt ): ]
         self.sendCmd( cmd )
-        
+
+    # Callback ignores event
+    # pylint: disable-msg=W0613
     def handleInt( self, event=None ):
         "Handle control-c."
         self.node.sendInt()
-
+    # pylint: enable-msg=W0613
+    
     def sendCmd( self, cmd ):
         "Send a command to our node."
-        text, node = self.text, self.node
-        if not node.waiting:
-            node.sendCmd( cmd )
+        if not self.node.waiting:
+            self.node.sendCmd( cmd )
 
-    def handleReadable( self, file=None, mask=None, timeoutms=None ):
+    # Callback ignores fds
+    # pylint: disable-msg=W0613
+    def handleReadable( self, fds, timeoutms=None ):
         "Handle file readable event."
         data = self.node.monitor( timeoutms )
         self.append( data )
         if not self.node.waiting:
             # Print prompt
             self.append( self.prompt )
+    # pylint: enable-msg=W0613
 
     def waiting( self ):
         "Are we waiting for output?"
@@ -161,17 +166,17 @@ class Console( Frame ):
         "Clear all of our text."
         self.text.delete( '1.0', 'end' )
 
-            
+
 class Graph( Frame ):
 
     "Graph that we can add bars to over time."
-    
+
     def __init__( self, parent=None,
         bg = 'white',
         gheight=200, gwidth=500,
         barwidth=10,
         ymax=3.5,):
-        
+
         Frame.__init__( self, parent )
 
         self.bg = bg
@@ -182,57 +187,55 @@ class Graph( Frame ):
         self.xpos = 0
 
         # Create everything
-        self.title = self.graph = None
-        self.createWidgets()
+        self.title, self.scale, self.graph = self.createWidgets()
         self.updateScrollRegions()
         self.yview( 'moveto', '1.0' )
-        
-        
-    def scale( self ):
+
+    def createScale( self ):
         "Create a and return a new canvas with scale markers."
         height = float( self.gheight )
         width = 25
         ymax = self.ymax
-        scale = Canvas( self, width=width, height=height, background=self.bg )
-        fill = 'red'
+        scale = Canvas( self, width=width, height=height, 
+            background=self.bg )
+        opts = { 'fill': 'red' }
         # Draw scale line
-        scale.create_line( width - 1, height, width - 1, 0, fill=fill )
+        scale.create_line( width - 1, height, width - 1, 0, **opts )
         # Draw ticks and numbers
         for y in range( 0, int( ymax + 1 ) ):
             ypos = height * (1 - float( y ) / ymax )
-            scale.create_line( width, ypos, width - 10, ypos, fill=fill )
-            scale.create_text( 10, ypos, text=str( y ), fill=fill )
-            
+            scale.create_line( width, ypos, width - 10, ypos, **opts )
+            scale.create_text( 10, ypos, text=str( y ), **opts )
         return scale
-    
+
     def updateScrollRegions( self ):
         "Update graph and scale scroll regions."
         ofs = 20
         height = self.gheight + ofs
-        self.graph.configure( scrollregion=( 0, -ofs, 
+        self.graph.configure( scrollregion=( 0, -ofs,
             self.xpos * self.barwidth, height ) )
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
-        
+
     def yview( self, *args ):
-            "Scroll both scale and graph."
-            self.graph.yview( *args )
-            self.scale.yview( *args )
-                
+        "Scroll both scale and graph."
+        self.graph.yview( *args )
+        self.scale.yview( *args )
+
     def createWidgets( self ):
         "Create initial widget set."
 
         # Objects
-        title = Label( self, text="Bandwidth (Gb/s)", bg=self.bg )
+        title = Label( self, text='Bandwidth (Gb/s)', bg=self.bg )
         width = self.gwidth
         height = self.gheight
-        scale = self.scale()
+        scale = self.createScale()
         graph = Canvas( self, width=width, height=height, background=self.bg)
         xbar = Scrollbar( self, orient='horizontal', command=graph.xview )
         ybar = Scrollbar( self, orient='vertical', command=self.yview )
         graph.configure( xscrollcommand=xbar.set, yscrollcommand=ybar.set,
             scrollregion=(0, 0, width, height ) )
         scale.configure( yscrollcommand=ybar.set )
-        
+
         # Layout
         title.grid( row=0, columnspan=3, sticky='new')
         scale.grid( row=1, column=0, sticky='nsew' )
@@ -241,12 +244,8 @@ class Graph( Frame ):
         xbar.grid( row=2, column=0, columnspan=2, sticky='ew' )
         self.rowconfigure( 1, weight=1 )
         self.columnconfigure( 1, weight=1 )
-        # Save for future reference
-        self.title = title
-        self.scale = scale
-        self.graph = graph
-        return graph
-            
+        return title, scale, graph
+
     def addBar( self, yval ):
         "Add a new bar to our graph."
         percent = yval / self.ymax
@@ -279,6 +278,8 @@ class Graph( Frame ):
 
 class ConsoleApp( Frame ):
 
+    "Simple Tk consoles for Mininet."
+    
     menuStyle = { 'font': 'Geneva 7 bold' }
 
     def __init__( self, net, parent=None, width=4 ):
@@ -289,14 +290,14 @@ class ConsoleApp( Frame ):
         self.menubar = self.createMenuBar()
         cframe = self.cframe = Frame( self )
         self.consoles = {}  # consoles themselves
-        titles = { 
-            'hosts': 'Host', 
+        titles = {
+            'hosts': 'Host',
             'switches': 'Switch',
             'controllers': 'Controller'
         }
         for name in titles:
             nodes = getattr( net, name )
-            frame, consoles = self.createConsoles( 
+            frame, consoles = self.createConsoles(
                 cframe, nodes, width, titles[ name ] )
             self.consoles[ name ] = Object( frame=frame, consoles=consoles )
         self.selected = None
@@ -305,7 +306,7 @@ class ConsoleApp( Frame ):
         cleanUpScreens()
         # Close window gracefully
         Wm.wm_protocol( self.top, name='WM_DELETE_WINDOW', func=self.quit )
-        
+
         # Initialize graph
         graph = Graph( cframe )
         self.consoles[ 'graph' ] = Object( frame=graph, consoles=[ graph ] )
@@ -316,7 +317,9 @@ class ConsoleApp( Frame ):
         self.bw = 0
 
         self.pack( expand=True, fill='both' )
-     
+
+    # Update callback doesn't use console arg
+    # pylint: disable-msg=W0613
     def updateGraph( self, console, output ):
         "Update our graph."
         m = re.search( r'(\d+) Mbits/sec', output )
@@ -328,13 +331,15 @@ class ConsoleApp( Frame ):
             self.graph.addBar( self.bw )
             self.bw = 0
             self.updates = 0
+    # pylint: enable-msg=W0613
 
     def setOutputHook( self, fn=None, consoles=None ):
+        "Register fn as output hook [on specific consoles.]"
         if consoles is None:
             consoles = self.consoles[ 'hosts' ].consoles
         for console in consoles:
             console.outputHook = fn
-            
+
     def createConsoles( self, parent, nodes, width, title ):
         "Create a grid of consoles in a frame."
         f = Frame( parent )
@@ -342,7 +347,7 @@ class ConsoleApp( Frame ):
         consoles = []
         index = 0
         for node in nodes:
-            console = Console( f, net, node, title=title )
+            console = Console( f, self.net, node, title=title )
             consoles.append( console )
             row = index / width
             column = index % width
@@ -351,12 +356,12 @@ class ConsoleApp( Frame ):
             f.rowconfigure( row, weight=1 )
             f.columnconfigure( column, weight=1 )
         return f, consoles
-    
-    def select( self, set ):
-        "Select a set of consoles to display."
+
+    def select( self, groupName ):
+        "Select a group of consoles to display."
         if self.selected is not None:
             self.selected.frame.pack_forget()
-        self.selected = self.consoles[ set ]
+        self.selected = self.consoles[ groupName ]
         self.selected.frame.pack( expand=True, fill='both' )
 
     def createMenuBar( self ):
@@ -365,8 +370,8 @@ class ConsoleApp( Frame ):
         buttons = [
             ( 'Hosts', lambda: self.select( 'hosts' ) ),
             ( 'Switches', lambda: self.select( 'switches' ) ),
-            ( 'Controllers', lambda: self.select( 'controllers' ) ),                              
-            ( 'Graph', lambda: self.select( 'graph' ) ),            
+            ( 'Controllers', lambda: self.select( 'controllers' ) ),
+            ( 'Graph', lambda: self.select( 'graph' ) ),
             ( 'Ping', self.ping ),
             ( 'Iperf', self.iperf ),
             ( 'Interrupt', self.stop ),
@@ -378,12 +383,12 @@ class ConsoleApp( Frame ):
             b.pack( side='left' )
         f.pack( padx=4, pady=4, fill='x' )
         return f
-    
+
     def clear( self ):
         "Clear selection."
         for console in self.selected.consoles:
             console.clear()
-    
+
     def waiting( self, consoles=None ):
         "Are any of our hosts waiting for output?"
         if consoles is None:
@@ -453,8 +458,8 @@ class Object( object ):
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    net = TreeNet( depth=2, fanout=2 )
-    net.start()
-    app = ConsoleApp( net, width=4 )
+    network = TreeNet( depth=2, fanout=4 )
+    network.start()
+    app = ConsoleApp( network, width=4 )
     app.mainloop()
-    net.stop()
+    network.stop()

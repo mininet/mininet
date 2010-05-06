@@ -9,7 +9,7 @@ EXAMPLES = examples/*.py
 BIN = bin/mn
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 
-P8IGN = E251,E201,E302
+P8IGN = E251,E201,E302,E202
 
 codecheck: $(PYSRC)
 	pyflakes $(PYSRC)

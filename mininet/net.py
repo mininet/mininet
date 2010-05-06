@@ -100,26 +100,6 @@ from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
 
-DATAPATHS = [ 'kernel' ]  # [ 'user', 'kernel' ]
-
-
-def init():
-    "Initialize Mininet."
-    if init.inited:
-        return
-    if os.getuid() != 0:
-        # Note: this script must be run as root
-        # Perhaps we should do so automatically!
-        print "*** Mininet must run as root."
-        exit( 1 )
-    # If which produces no output, then mnexec is not in the path.
-    # May want to loosen this to handle mnexec in the current dir.
-    if not quietRun( 'which mnexec' ):
-        raise Exception( "Could not find mnexec - check $PATH" )
-    fixLimits()
-    
-init.inited = False
-
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
@@ -167,7 +147,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    
+
     def addHost( self, name, mac=None, ip=None ):
         """Add host.
            name: name of host to add
@@ -195,13 +175,13 @@ class Mininet( object ):
         self.nameToNode[ name ] = sw
         return sw
 
-    def addController( self, controller ):
+    def addController( self, name='c0', **kwargs ):
         """Add controller.
            controller: Controller class"""
-        controller_new = self.controller( 'c0' )
+        controller_new = self.controller( name, **kwargs )
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
-            self.nameToNode[ 'c0' ] = controller_new
+            self.nameToNode[ name ] = controller_new
 
     # Control network support:
     #
@@ -558,3 +538,27 @@ class Mininet( object ):
         result = CLI( self )
         self.stop()
         return result
+
+
+# pylint thinks inited is unused
+# pylint: disable-msg=W0612
+
+def init():
+    "Initialize Mininet."
+    if init.inited:
+        return
+    if os.getuid() != 0:
+        # Note: this script must be run as root
+        # Perhaps we should do so automatically!
+        print "*** Mininet must run as root."
+        exit( 1 )
+    # If which produces no output, then mnexec is not in the path.
+    # May want to loosen this to handle mnexec in the current dir.
+    if not quietRun( 'which mnexec' ):
+        raise Exception( "Could not find mnexec - check $PATH" )
+    fixLimits()
+    init.inited = True
+
+init.inited = False
+
+# pylint: enable-msg=W0612
