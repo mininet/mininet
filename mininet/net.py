@@ -147,7 +147,6 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-
     def addHost( self, name, mac=None, ip=None ):
         """Add host.
            name: name of host to add

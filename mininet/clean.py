@@ -52,4 +52,3 @@ def cleanup():
             sh( "ip link del " + link )
 
     info( "*** Cleanup complete.\n" )
-

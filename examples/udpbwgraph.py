@@ -214,7 +214,7 @@ class UdpBwTest( Frame ):
         switch = self.controls.switch()
         controller = self.controls.controller()
 
-        self.net = Mininet( self.topo, switch=switch, 
+        self.net = Mininet( self.topo, switch=switch,
             controller=controller )
         self.hosts = self.net.hosts
         self.hostCount = len( self.hosts )
@@ -252,7 +252,8 @@ class UdpBwTest( Frame ):
             seconds, inbw, outbw = parsebwtest( line )
             if seconds is None:
                 break
-            result = self.results.get( seconds, [] ) + [ ( host, inbw, outbw ) ]
+            result = self.results.get( seconds, [] ) + [
+                ( host, inbw, outbw ) ]
             self.results[ seconds ] = result
             if len( result ) == self.hostCount:
                 # Calculate total and update graph
@@ -260,7 +261,7 @@ class UdpBwTest( Frame ):
                 totalin = 0
                 for host, inbw, outbw in result:
                     totalin += inbw
-                self.graph.addBar( totalin * 8.0/1000.0 )
+                self.graph.addBar( totalin * 8.0 / 1000.0 )
                 print totalin
         # Fileevent might be better, but for now we just poll every 500ms
         self.graph.after( 500, self.updateGraph )
@@ -306,5 +307,3 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
     app = UdpBwTest( topo=TreeTopo( depth=2, fanout=2 ) )
     app.mainloop()
-
-

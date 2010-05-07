@@ -77,7 +77,8 @@ class Console( Frame ):
             **self.buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **self.textStyle )
-        ybar = Scrollbar( self, orient='vertical', width=7, command=text.yview )
+        ybar = Scrollbar( self, orient='vertical', width=7,
+            command=text.yview )
         text.configure( yscrollcommand=ybar.set )
         text.pack( side='left', expand=True, fill='both' )
         ybar.pack( side='right', fill='y' )
@@ -98,7 +99,7 @@ class Console( Frame ):
 
     # We're not a terminal (yet?), so we ignore the following
     # control characters other than [\b\n\r]
-    ignoreChars  = re.compile( r'[\x00-\x07\x09\x0b\x0c\x0e-\x1f]+' )
+    ignoreChars = re.compile( r'[\x00-\x07\x09\x0b\x0c\x0e-\x1f]+' )
 
     def append( self, text ):
         "Append something to our text frame."
@@ -134,7 +135,7 @@ class Console( Frame ):
         "Handle control-c."
         self.node.sendInt()
     # pylint: enable-msg=W0613
-    
+
     def sendCmd( self, cmd ):
         "Send a command to our node."
         if not self.node.waiting:
@@ -196,7 +197,7 @@ class Graph( Frame ):
         height = float( self.gheight )
         width = 25
         ymax = self.ymax
-        scale = Canvas( self, width=width, height=height, 
+        scale = Canvas( self, width=width, height=height,
             background=self.bg )
         opts = { 'fill': 'red' }
         # Draw scale line
@@ -268,7 +269,7 @@ class Graph( Frame ):
         "Add a bar for testing purposes."
         ms = 1000
         if self.xpos < 10:
-            self.addBar( self.xpos/10 * self.ymax  )
+            self.addBar( self.xpos / 10 * self.ymax  )
             self.after( ms, self.test )
 
     def setTitle( self, text ):
@@ -279,7 +280,7 @@ class Graph( Frame ):
 class ConsoleApp( Frame ):
 
     "Simple Tk consoles for Mininet."
-    
+
     menuStyle = { 'font': 'Geneva 7 bold' }
 
     def __init__( self, net, parent=None, width=4 ):

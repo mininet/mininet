@@ -437,7 +437,7 @@ class UserSwitch( Switch ):
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name  +
+            ' punix:/tmp/' + self.name +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:' + controller.IP() + ' --fail=closed ' + self.opts +
@@ -486,11 +486,11 @@ class KernelSwitch( Switch ):
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % ports )
         intfs = [ self.intfs[ port ] for port in ports ]
-        self.cmd( 'dpctl',  'addif', self.dp, ' '.join( intfs ) )
+        self.cmd( 'dpctl', 'addif', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ofprotocol ' + self.dp +
-            ' tcp:%s:%d' %  ( controller.IP(), controller.port ) +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         self.execed = False
@@ -540,11 +540,11 @@ class OVSKernelSwitch( Switch ):
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in ports ]
-        self.cmd( 'ovs-dpctl',  'add-if',  self.dp,  ' '.join( intfs ) )
+        self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%i' % ( controller.IP(),  controller.port ) +
+            ' tcp:%s:%i' % ( controller.IP(), controller.port ) +
             ' --fail=closed ' + self.opts +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
@@ -577,7 +577,7 @@ class Controller( Node ):
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.controller + ' ' + self.cargs +
-            ' 1>' + cout +  ' 2>' + cout + '&' )
+            ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):

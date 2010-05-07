@@ -67,7 +67,7 @@ class MiniEdit( Frame ):
 
         # Initialize node data
         self.nodeBindings = self.createNodeBindings()
-        self.nodePrefixes =  { 'Switch': 's', 'Host': 'h' }
+        self.nodePrefixes = { 'Switch': 's', 'Host': 'h' }
         self.widgetToItem = {}
         self.itemToWidget = {}
 
@@ -176,7 +176,8 @@ class MiniEdit( Frame ):
         "Update canvas scroll region to hold everything."
         bbox = self.canvas.bbox( 'all' )
         if bbox is not None:
-            self.canvas.configure( scrollregion=( 0, 0, bbox[ 2 ], bbox[ 3 ] ) )
+            self.canvas.configure( scrollregion=( 0, 0, bbox[ 2 ],
+                bbox[ 3 ] ) )
 
     def canvasx( self, x_root ):
         "Convert root x coordinate to canvas coordinate."
@@ -221,7 +222,7 @@ class MiniEdit( Frame ):
         # Commands
         for cmd, color in [ ( 'Stop', 'darkRed' ), ( 'Run', 'darkGreen' ) ]:
             doCmd = getattr( self, 'do' + cmd )
-            b = Button( toolbar, text=cmd, font=self.smallFont, 
+            b = Button( toolbar, text=cmd, font=self.smallFont,
                 fg=color, command=doCmd )
             b.pack( fill='x', side='bottom' )
 
@@ -324,7 +325,7 @@ class MiniEdit( Frame ):
         self.nodeCount += 1
         name = self.nodePrefixes[ node ] + str( self.nodeCount )
         icon = self.nodeIcon( node, name )
-        item = self.canvas.create_window( x, y, anchor='c', 
+        item = self.canvas.create_window( x, y, anchor='c',
             window=icon, tags=node )
         self.widgetToItem[ icon ] = item
         self.itemToWidget[ item ] = icon
@@ -449,21 +450,26 @@ class MiniEdit( Frame ):
         self.linkx, self.linky = x, y
         self.linkWidget = w
         self.linkItem = item
+
         # Link bindings
         # Selection still needs a bit of work overall
         # Callbacks ignore event
         # pylint: disable-msg=W0613
+
         def select( event, link=self.link ):
             "Select item on mouse entry."
             self.selectItem( link )
+
         def highlight( event, link=self.link ):
             "Highlight item on mouse entry."
             # self.selectItem( link )
             self.canvas.itemconfig( link, fill='green' )
+
         def unhighlight( event, link=self.link ):
             "Unhighlight item on mouse exit."
             self.canvas.itemconfig( link, fill='blue' )
             # self.selectItem( None )
+
         # pylint: disable-msg=W0613
         self.canvas.tag_bind( self.link, '<Enter>', highlight )
         self.canvas.tag_bind( self.link, '<Leave>', unhighlight )
@@ -520,7 +526,6 @@ class MiniEdit( Frame ):
         # Show (existing) window
         about.deiconify()
 
-
     def createToolImages( self ):
         "Create toolbar (and icon) images."
 
@@ -575,7 +580,7 @@ class MiniEdit( Frame ):
         # Make links
         for link in self.links.values():
             ( src, dst ) = link
-            srcName, dstName  = src[ 'text' ], dst[ 'text' ]
+            srcName, dstName = src[ 'text' ], dst[ 'text' ]
             src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
             src.linkTo( dst )
 
@@ -615,7 +620,7 @@ def miniEditImages():
     # Image data. Git will be unhappy. However, the alternative
     # is to keep track of separate binary files, which is also
     # unappealing.
-        
+
     return {
         'Select': BitmapImage(
             file='/usr/include/X11/bitmaps/left_ptr' ),
@@ -706,7 +711,3 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
     app = MiniEdit()
     app.mainloop()
-
-
-
-

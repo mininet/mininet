@@ -111,7 +111,7 @@ class CLI( Cmd ):
             output( switch.name, '<->' )
             for intf in switch.intfs.values():
                 # Ugly, but pylint wants it
-                name  = switch.connection.get( intf,
+                name = switch.connection.get( intf,
                     ( None, 'Unknown ' ) )[ 1 ]
                 output( ' %s' % name )
             output( '\n' )

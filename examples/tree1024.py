@@ -16,4 +16,3 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
     network = TreeNet( depth=2, fanout=32, switch=KernelSwitch )
     network.run( CLI, network )
-

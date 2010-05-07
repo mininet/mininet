@@ -58,4 +58,3 @@ def makeTerms( nodes, title='Node', term='xterm' ):
        title: base title for each
        returns: list of created terminal processes"""
     return [ makeTerm( node, title, term ) for node in nodes ]
-
