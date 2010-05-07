@@ -239,7 +239,6 @@ class CLI( Cmd ):
             rest = ' '.join( rest )
             # Run cmd on node:
             builtin = isShellBuiltin( first )
-            print "builtin =", builtin
             node.sendCmd( rest, printPid=( not builtin ) )
             self.waitForNode( node )
         else:

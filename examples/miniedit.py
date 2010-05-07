@@ -592,6 +592,7 @@ class MiniEdit( Frame ):
     def start( self ):
         "Start network."
         if self.net is None:
+            self.net = self.build()
             self.net.start()
 
     def stop( self ):

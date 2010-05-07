@@ -274,7 +274,7 @@ class Mininet( object ):
             pass
 
         info( '*** Adding controller\n' )
-        self.addController( self.controller )
+        self.addController( 'c0' )
         info( '*** Creating network\n' )
         info( '*** Adding hosts:\n' )
         for hostId in sorted( topo.hosts() ):
