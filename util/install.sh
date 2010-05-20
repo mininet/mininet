@@ -13,9 +13,9 @@ KERNEL_LOC=http://www.stanford.edu/~brandonh
 
 # Kernel params
 # These kernels have been tried:
-KERNEL_NAME=2.6.29.6-custom
+#KERNEL_NAME=2.6.29.6-custom
 #KERNEL_NAME=2.6.33-custom
-#KERNEL_NAME=2.6.33.1-custom
+KERNEL_NAME=2.6.33.1-custom
 #KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
@@ -94,14 +94,12 @@ function of {
 	git clone git://openflowswitch.org/openflow.git
 	cd ~/openflow
 	git fetch
-
-	# Get debianfix branch, which doesn't break on test deps install
-	# This is an optional step.
-	git checkout -b debianfix origin/debianfix
 	sudo regress/scripts/install_deps.pl
 
 	# Resume the install:
-	git checkout -b release/0.8.9 origin/release/0.8.9
+	#git checkout -b release/0.8.9 origin/release/0.8.9
+    # Use temp 0.8.9 branch that compiles:
+    git checkout -b devel/brandonh/nlfix origin/devel/brandonh/nlfix
 	./boot.sh
 	./configure --with-l26=/lib/modules/${KERNEL_NAME}
 	make
@@ -164,7 +162,9 @@ function nox {
 
 	#Install NOX:
 	cd ~/
-	git clone git://noxrepo.org/noxcore
+	#git clone git://noxrepo.org/noxcore
+	# Temporary tutorial repo
+	git clone git://openflowswitch.org/nox-tutorial noxcore
 	cd noxcore
 
 	# With later autoconf versions this doesn't quite work:
@@ -195,6 +195,12 @@ function other {
 	#a graphical git history viewer.
 	sudo apt-get install -y tcpdump tshark gitk
 
+    #Install common text editors
+    sudo apt-get install -y vim nano emacs
+
+    #Install NTP
+    sudo apt-get install -y ntp
+
 	#Set git to colorize everything.
 	git config --global color.diff auto
 	git config --global color.status auto
@@ -204,14 +210,10 @@ function other {
 	sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
 }
 
-# The OpenFlow ref kmod is broken with 2.6.33 and CONFIG_NET_NS=y.  This is a
-# reported bug: http://www.openflowswitch.org/bugs/openflow/ticket/82
 function of_33 {
 	echo "Installing OpenFlow..."
 	cd ~/
 	cd openflow
-	git checkout -b fix-2.6.33 origin/devel-0.8.9/fix-2.6.33
-	./boot.sh
 	./configure --with-l26=/lib/modules/${KERNEL_NAME}
 	make
 	sudo make install
@@ -289,14 +291,14 @@ function vm_clean {
 	sudo rm ~/.ssh/authorized_keys2
 
 	# Remove Mininet files
-	sudo rm -f /lib/modules/python2.5/site-packages/mininet*
-	sudo rm -f /usr/bin/mnexec
+	#sudo rm -f /lib/modules/python2.5/site-packages/mininet*
+	#sudo rm -f /usr/bin/mnexec
 
 	# Clear git changes
 	git config --global user.name "None"
 	git config --global user.email "None"
 
-	sudo rm -rf ~/mininet
+	#sudo rm -rf ~/mininet
 }
 
 function usage {
