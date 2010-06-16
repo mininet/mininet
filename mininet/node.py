@@ -440,7 +440,7 @@ class UserSwitch( Switch ):
             ' punix:/tmp/' + self.name +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) + 
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
