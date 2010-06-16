@@ -440,7 +440,8 @@ class UserSwitch( Switch ):
             ' punix:/tmp/' + self.name +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' tcp:' + controller.IP() + ' --fail=closed ' + self.opts +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) + 
+            ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
     def stop( self ):
@@ -544,7 +545,7 @@ class OVSKernelSwitch( Switch ):
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%i' % ( controller.IP(), controller.port ) +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
             ' --fail=closed ' + self.opts +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
