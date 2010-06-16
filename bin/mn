@@ -167,7 +167,7 @@ class MininetRunner( object ):
         opts.add_option( '--ip', type='string', default='127.0.0.1',
                         help='[ip address as a dotted decimal string for a'
                         'remote controller]' )
-        opts.add_option( '--port', type='string', default=6633,
+        opts.add_option( '--port', type='int', default=6633,
                         help='[port integer for a listening remote'
                         ' controller]' )
         opts.add_option( '--inNamespace', action='store_true',
