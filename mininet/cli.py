@@ -149,8 +149,23 @@ class CLI( Cmd ):
         self.mn.pingPair()
 
     def do_iperf( self, line ):
-        "Simple iperf TCP test between two hosts."
-        self.mn.iperf()
+        "Simple iperf TCP test between two (optionally specified) hosts."
+        args = line.split()
+        if not args:
+            self.mn.iperf()
+        elif len(args) == 2:
+            hosts = []
+            err = False
+            for arg in args:
+                if arg not in self.nodemap:
+                    err = True
+                    error( "node '%s' not in network\n" % arg )
+                else:
+                    hosts.append( self.nodemap[ arg ] )
+            if not err:
+                self.mn.iperf( hosts )
+        else:
+            error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
         "Simple iperf UDP test between two hosts."
