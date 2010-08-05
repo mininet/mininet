@@ -13,9 +13,7 @@ KERNEL_LOC=http://www.stanford.edu/~brandonh
 
 # Kernel params
 # These kernels have been tried:
-#KERNEL_NAME=2.6.29.6-custom
-#KERNEL_NAME=2.6.33-custom
-KERNEL_NAME=2.6.33.1-custom
+KERNEL_NAME=2.6.33.1-mininet
 #KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
@@ -25,12 +23,9 @@ KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers
 
-OVS_RELEASE=openvswitch-0.99.2
-#OVS_RELEASE=openvswitch
+OVS_RELEASE=openvswitch-1.0.1
 OVS_DIR=~/$OVS_RELEASE
 OVS_KMOD=openvswitch_mod.ko
-OF_DIR=~/openflow
-OF_KMOD=ofdatapath.ko
 
 function kernel {
 	echo "Install new kernel..."
@@ -81,7 +76,6 @@ function mn_deps {
 
 # The following will cause a full OF install, covering:
 # -user switch
-# -kernel switch
 # -dissector
 # The instructions below are an abbreviated version from
 # http://www.openflowswitch.org/wk/index.php/Debian_Install
@@ -93,15 +87,10 @@ function of {
 	sudo apt-get install -y git-core automake m4 pkg-config libtool make libc6-dev autoconf autotools-dev gcc
 	git clone git://openflowswitch.org/openflow.git
 	cd ~/openflow
-	git fetch
-	sudo regress/scripts/install_deps.pl
 
 	# Resume the install:
-	#git checkout -b release/0.8.9 origin/release/0.8.9
-    # Use temp 0.8.9 branch that compiles:
-    git checkout -b devel/brandonh/nlfix origin/devel/brandonh/nlfix
 	./boot.sh
-	./configure --with-l26=/lib/modules/${KERNEL_NAME}
+	./configure
 	make
 	sudo make install
 
@@ -134,11 +123,6 @@ function ovs {
 	sudo apt-get -y --force-yes install debian-backports-keyring
 	sudo apt-get -y --force-yes -t lenny-backports install autoconf
 
-	#Install OVS from git
-	#git clone git://openvswitch.org/openvswitch
-	#cd openvswitch
-	#./boot.sh
-
 	#Install OVS from release
 	cd ~/
 	wget http://openvswitch.org/releases/${OVS_RELEASE}.tar.gz
@@ -150,9 +134,9 @@ function ovs {
 	sudo make install
 }
 
-# Install NOX
+# Install NOX with tutorial files
 function nox {
-	echo "Install NOX..."
+	echo "Installing NOX w/tutorial files..."
 
 	#Install NOX deps:
 	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig libboost1.35-dev libxerces-c2-dev libssl-dev make
@@ -162,13 +146,11 @@ function nox {
 
 	#Install NOX:
 	cd ~/
-	#git clone git://noxrepo.org/noxcore
-	# Temporary tutorial repo
 	git clone git://openflowswitch.org/nox-tutorial noxcore
 	cd noxcore
 
 	# With later autoconf versions this doesn't quite work:
-	./boot.sh || true
+	./boot.sh --apps-core || true
 	# So use this instead:
 	autoreconf --install --force
 	mkdir build
@@ -183,6 +165,35 @@ function nox {
 	# To verify this install:
 	#cd ~/noxcore/build/src
     #./nox_core -v -i ptcp:
+}
+
+# Install OFtest
+function oftest {
+    echo "Installing oftest..."
+
+    #Install deps:
+    sudo apt-get install -y tcpdump python-scapy
+
+    #Install oftest:
+    cd ~/
+    git clone git://openflow.org/oftest
+    cd oftest
+    cd tools/munger
+    sudo make install
+}
+
+# Install cbench
+function cbench {
+    echo "Installing cbench..."
+    
+    sudo apt-get install -y libsnmp-dev
+    cd ~/
+    git clone git://www.openflow.org/oflops.git
+    cd oflops
+    sh boot.sh
+    ./configure --with-openflow-src-dir=/home/mininet/openflow
+    make
+    sudo make install || true # make install fails; force past this
 }
 
 function other {
@@ -208,60 +219,22 @@ function other {
 
 	#Reduce boot screen opt-out delay. Modify timeout in /boot/grub/menu.lst to 1:
 	sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
+
+    # Clean unneeded debs:
+    rm -f ~/linux-headers-* ~/linux-image-*
 }
 
-function of_33 {
-	echo "Installing OpenFlow..."
-	cd ~/
-	cd openflow
-	./configure --with-l26=/lib/modules/${KERNEL_NAME}
-	make
-	sudo make install
-}
-
-# OVS v0.99.2 does not build on 2.6.33, and the master branch of OVS includes
-# patches for OF1.0 support.  It doesn't look like there's a supported branch
-# for v0.99, so the script below applies a patch for this.
-# Since the patch is in a makefile, we'll have to steal the makefile builder,
-# boot.sh, from the OVS git repo.
-function ovs_33 {
-	echo "Installing OpenVSwitch..."
-	cd ~/
-	git clone git://openvswitch.org/openvswitch
-	cp openvswitch/boot.sh $OVS_RELEASE
-	rm -rf openvswitch
-	cd ~/$OVS_RELEASE
-	git apply ~/mininet/util/ovs-fix-2.6.33.patch
-	./boot.sh
-	./configure --with-l26=/lib/modules/${KERNEL_NAME}/build
-	make
-	sudo make install
-}
-
-function linux_33 {
-    kernel
-	of_33
-	ovs_33
-	modprobe
-
-	# Clean unneeded debs:
-	rm -f ~/linux-headers-* ~/linux-image-*
-}
-
-# Script to copy built OVS and OF kernel modules to where modprobe will
+# Script to copy built OVS kernel module to where modprobe will
 # find them automatically.  Removes the need to keep an environment variable
-# for each, and works nicely with multiple kernel versions.
+# for insmod usage, and works nicely with multiple kernel versions.
 #
-# The downside is that after each recompilation of OVS or OF you'll need to
+# The downside is that after each recompilation of OVS you'll need to
 # re-run this script.  If you're using only one kernel version, then it may be
 # a good idea to use a symbolic link in place of the copy below.
 function modprobe {
 	echo "Setting up modprobe for OVS kmod..."
+
 	sudo cp $OVS_DIR/datapath/linux-2.6/$OVS_KMOD $DRIVERS_DIR
-
-	echo "Setting up modprobe for OF kmod..."
-	sudo cp $OF_DIR/datapath/linux-2.6/$OF_KMOD $DRIVERS_DIR
-
 	sudo depmod -a ${KERNEL_NAME}
 }
 
@@ -273,6 +246,8 @@ function all {
 	ovs
 	modprobe
 	nox
+	oftest
+	cbench
 	other
 	echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
 	echo "Enjoy Mininet!"
@@ -310,7 +285,7 @@ if [ $# -eq 0 ]
 then
 	all
 else
-	while getopts 'acdfhkmntvxy' OPTION
+	while getopts 'acdfhkmntvx' OPTION
 	do
 	  case $OPTION in
 	  a)    all;;
@@ -324,7 +299,6 @@ else
 	  t)    other;;
 	  v)    ovs;;
 	  x)    nox;;
-	  y)    linux_33;;
 	  ?)    usage;;
 	  esac
 	done
