@@ -33,7 +33,7 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
          'single': SingleSwitchTopo,
          'tree': TreeTopo }
 
-SWITCHDEF = 'kernel'
+SWITCHDEF = 'ovsk'
 SWITCHES = { 'kernel': KernelSwitch,
             'user': UserSwitch,
             'ovsk': OVSKernelSwitch }
