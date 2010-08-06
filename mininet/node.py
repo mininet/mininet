@@ -433,11 +433,15 @@ class UserSwitch( Switch ):
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
+        mac_str = ''
+        if self.defaultMAC:
+            # ofdatapath expects a string of hex digits with no colons.
+            mac_str = ' -d ' + ''.join( self.defaultMAC.split( ':' ) )
         intfs = sorted( self.intfs.values() )
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name +
+            ' punix:/tmp/' + self.name + mac_str +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
@@ -533,9 +537,12 @@ class OVSKernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'ovs-dpctl add-dp ' + self.dp )
+        mac_str = ''
         if self.defaultMAC:
-            mac = self.defaultMAC
-            self.cmd( 'ifconfig', self.intf, 'hw', 'ether', mac )
+            # ovs-openflowd expects a string of exactly 16 hex digits with no
+            # colons.
+            mac_str = ' --datapath-id=0000' + \
+                      ''.join( self.defaultMAC.split( ':' ) ) + ' '
         ports = sorted( self.ports.values() )
         if len( ports ) != ports[ -1 ] + 1:
             raise Exception( 'only contiguous, zero-indexed port ranges'
@@ -546,7 +553,7 @@ class OVSKernelSwitch( Switch ):
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=closed ' + self.opts +
+            ' --fail=closed ' + self.opts + mac_str +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
