@@ -553,7 +553,7 @@ class OVSKernelSwitch( Switch ):
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=closed ' + self.opts + mac_str +
+            ' --fail=secure ' + self.opts + mac_str +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
