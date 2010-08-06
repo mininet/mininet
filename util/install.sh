@@ -131,7 +131,7 @@ function ovs {
 	#cd $OVS_RELEASE
 	git clone git://openvswitch.org/openvswitch
 	cd $OVS_RELEASE
-
+	./boot.sh
 	./configure --with-l26=/lib/modules/${KERNEL_NAME}/build
 	make
 	sudo make install
