@@ -547,7 +547,6 @@ class OVSKernelSwitch( Switch ):
             mac_str = ' --datapath-id=0000' + \
                       ''.join( self.defaultMAC.split( ':' ) ) + ' '
         ports = sorted( self.ports.values() )
-        print ports
         if len( ports ) != ports[ -1 ]:
             raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
