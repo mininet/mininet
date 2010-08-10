@@ -167,10 +167,25 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
-        "Simple iperf UDP test between two hosts."
+        "Simple iperf TCP test between two (optionally specified) hosts."
         args = line.split()
-        udpBw = args[ 0 ] if len( args ) else '10M'
-        self.mn.iperfUdp( udpBw )
+        if not args:
+            self.mn.iperf( l4Type='UDP' )
+        elif len(args) == 3:
+            udpBw = args[ 0 ]
+            hosts = []
+            err = False
+            for arg in args[ 1:3 ]:
+                if arg not in self.nodemap:
+                    err = True
+                    error( "node '%s' not in network\n" % arg )
+                else:
+                    hosts.append( self.nodemap[ arg ] )
+            if not err:
+                self.mn.iperf( hosts, l4Type='UDP', udpBw=udpBw )
+        else:
+            error( 'invalid number of args: iperfudp bw src dst\n' +
+                   'bw examples: 10M\n' )
 
     def do_intfs( self, line ):
         "List interfaces."

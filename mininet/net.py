@@ -505,10 +505,6 @@ class Mininet( object ):
         output( '*** Results: %s\n' % result )
         return result
 
-    def iperfUdp( self, udpBw='10M' ):
-        "Run iperf UDP test."
-        return self.iperf( l4Type='UDP', udpBw=udpBw )
-
     def configLinkStatus( self, src, dst, status ):
         """Change status of src <-> dst links.
            src: node name
