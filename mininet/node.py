@@ -52,6 +52,9 @@ from mininet.log import info, error, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
 
+PORT_BASE = 1  # Port numbering to start from.  OF > v0.9 is 1-indexed.
+
+
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
@@ -258,7 +261,7 @@ class Node( object ):
         "Return the next port number to allocate."
         if len( self.ports ) > 0:
             return max( self.ports.values() ) + 1
-        return 0
+        return PORT_BASE
 
     def addIntf( self, intf, port=None ):
         """Add an interface.
@@ -544,8 +547,9 @@ class OVSKernelSwitch( Switch ):
             mac_str = ' --datapath-id=0000' + \
                       ''.join( self.defaultMAC.split( ':' ) ) + ' '
         ports = sorted( self.ports.values() )
-        if len( ports ) != ports[ -1 ] + 1:
-            raise Exception( 'only contiguous, zero-indexed port ranges'
+        print ports
+        if len( ports ) != ports[ -1 ]:
+            raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in ports ]
         self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
