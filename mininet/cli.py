@@ -50,6 +50,7 @@ class CLI( Cmd ):
         self.stdin = stdin
         self.inPoller = poll()
         self.inPoller.register( stdin )
+        self.inputFile = None
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
         while True:
@@ -247,7 +248,26 @@ class CLI( Cmd ):
         if self.isatty():
             quietRun( 'stty -echo' )
         self.default( line )
-        # default() fixes tty
+        if self.isatty():
+            quietRun( 'stty echo' )
+
+    def do_source( self, line ):
+        "Read commands from an input file."
+        args = line.split()
+        if len(args) != 1:
+            error( 'usage: source <file>\n' )
+            return
+        try:
+            self.inputFile = open( args[ 0 ] )
+            while True:
+                line = self.inputFile.readline()
+                if len( line ) > 0:
+                    self.onecmd( line )
+                else:
+                    break
+        except IOError:
+            pass
+        self.inputFile = None
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
@@ -256,7 +276,7 @@ class CLI( Cmd ):
         corresponding IP addrs."""
 
         first, args, line = self.parseline( line )
-        if len(args) > 0 and args[ -1 ] == '\n':
+        if args and len(args) > 0 and args[ -1 ] == '\n':
             args = args[ :-1 ]
         rest = args.split( ' ' )
 
@@ -273,6 +293,7 @@ class CLI( Cmd ):
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % first )
+        
 
     # pylint: enable-msg=W0613,R0201
 
@@ -291,6 +312,12 @@ class CLI( Cmd ):
         while True:
             try:
                 bothPoller.poll()
+                if self.inputFile:
+                    key = self.inputFile.read( 1 )
+                    if key is not '':
+                        node.write(key)
+                    else:
+                        self.inputFile = None
                 if isReadable( self.inPoller ):
                     key = self.stdin.read( 1 )
                     node.write( key )
