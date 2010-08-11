@@ -266,7 +266,7 @@ class CLI( Cmd ):
                 else:
                     break
         except IOError:
-            pass
+            error( 'error reading file %s\n' % args[ 0 ] )
         self.inputFile = None
 
     def default( self, line ):
