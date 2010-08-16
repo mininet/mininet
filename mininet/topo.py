@@ -12,7 +12,7 @@ setup for testing, and can even be emulated with the Mininet package.
 '''
 
 from networkx.classes.graph import Graph
-
+from mininet.node import SWITCH_PORT_BASE
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -127,15 +127,18 @@ class Topo(object):
         @param src source switch DPID
         @param dst destination switch DPID
         '''
+        src_base = SWITCH_PORT_BASE if self.is_switch(src) else 0
+        dst_base = SWITCH_PORT_BASE if self.is_switch(dst) else 0
         if src not in self.ports:
             self.ports[src] = {}
         if dst not in self.ports[src]:
-            self.ports[src][dst] = len(self.ports[src])  # num outlinks
-
+            # num outlinks    
+            self.ports[src][dst] = len(self.ports[src]) + src_base
         if dst not in self.ports:
             self.ports[dst] = {}
         if src not in self.ports[dst]:
-            self.ports[dst][src] = len(self.ports[dst])  # num outlinks
+            # num outlinks 
+            self.ports[dst][src] = len(self.ports[dst]) + dst_base
 
     def node_enabled(self, dpid):
         '''Is node connected, admin on, powered on, and fault-free?
@@ -178,6 +181,11 @@ class Topo(object):
         '''
         return [str(self.id_gen(dpid = dpid)) for dpid in dpids]
 
+    def is_switch(self, n):
+        '''Returns true if node is a switch.'''
+        return self.node_info[n].is_switch
+
+
     def switches(self, enabled = True):
         '''Return switches.
 
@@ -185,12 +193,7 @@ class Topo(object):
 
         @return dpids list of dpids
         '''
-
-        def is_switch(n):
-            '''Returns true if node is a switch.'''
-            return self.node_info[n].is_switch
-
-        nodes = [n for n in self.g.nodes() if is_switch(n)]
+        nodes = [n for n in self.g.nodes() if self.is_switch(n)]
         return self.nodes_enabled(nodes, enabled)
 
     def hosts(self, enabled = True):

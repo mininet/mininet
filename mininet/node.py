@@ -48,12 +48,11 @@ import select
 from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
-from mininet.log import info, error, debug
+from mininet.log import info, error, warn, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
 
-PORT_BASE = 1  # Port numbering to start from.  OF > v0.9 is 1-indexed.
-
+SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -62,6 +61,8 @@ class Node( object ):
     inToNode = {}  # mapping of input fds to nodes
     outToNode = {}  # mapping of output fds to nodes
 
+    portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
+    
     def __init__( self, name, inNamespace=True,
         defaultMAC=None, defaultIP=None, **kwargs ):
         """name: name of node
@@ -261,7 +262,7 @@ class Node( object ):
         "Return the next port number to allocate."
         if len( self.ports ) > 0:
             return max( self.ports.values() ) + 1
-        return PORT_BASE
+        return self.portBase
 
     def addIntf( self, intf, port=None ):
         """Add an interface.
@@ -400,6 +401,8 @@ class Host( Node ):
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
+
+    portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
     def __init__( self, name, opts='', **kwargs):
         Node.__init__( self, name, **kwargs )
