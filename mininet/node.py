@@ -48,7 +48,7 @@ import select
 from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
-from mininet.log import info, error, warn, debug
+from mininet.log import info, error, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
 
@@ -62,7 +62,7 @@ class Node( object ):
     outToNode = {}  # mapping of output fds to nodes
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
-    
+
     def __init__( self, name, inNamespace=True,
         defaultMAC=None, defaultIP=None, **kwargs ):
         """name: name of node
@@ -93,6 +93,7 @@ class Node( object ):
         self.ports = {}  # dict of interface names to port numbers
                          # replace with Port objects, eventually ?
         self.ips = {}  # dict of interfaces to ip addresses as strings
+        self.macs = {}  # dict of interfacesto mac addresses as strings
         self.connection = {}  # remote node connected to each interface
         self.execed = False
         self.lastCmd = None
@@ -367,21 +368,50 @@ class Node( object ):
         self.cmd( 'ip route flush root 0/0' )
         return self.cmd( 'route add default ' + intf )
 
+    def defaultIntf( self ):
+        "Return interface for lowest port"
+        ports = self.intfs.keys()
+        if ports:
+            return self.intfs[ min( ports ) ]
+
+    _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
+    _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
+
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
-        if len( self.ips ) == 1:
-            return self.ips.values()[ 0 ]
-        if intf:
-            return self.ips.get( intf, None )
+        if intf is None:
+            intf = self.defaultIntf()
+        if intf and not self.waiting:
+            self.updateIP( intf )
+        return self.ips.get( intf, None )
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        if intf is None and len( self.intfs ) == 1:
-            intf = self.intfs.values()[ 0 ]
+        if intf is None:
+            intf = self.defaultIntf()
+        if intf and not self.waiting:
+            self.updateMAC( intf )
+        return self.macs.get( intf, None )
+
+    def updateIP( self, intf ):
+        "Update IP address for an interface"
+        assert not self.waiting
         ifconfig = self.cmd( 'ifconfig ' + intf )
-        macs = re.findall( '..:..:..:..:..:..', ifconfig )
-        if len( macs ) > 0:
-            return macs[ 0 ]
+        ips = self._ipMatchRegex.findall( ifconfig )
+        if ips:
+            self.ips[ intf ] = ips[ 0 ]
+        else:
+            self.ips[ intf ] = None
+
+    def updateMAC( self, intf ):
+        "Update MAC address for an interface"
+        assert not self.waiting
+        ifconfig = self.cmd( 'ifconfig ' + intf )
+        macs = self._macMatchRegex.findall( ifconfig )
+        if macs:
+            self.macs[ intf ] = macs[ 0 ]
+        else:
+            self.macs[ intf ] = None
 
     def intfIsUp( self, intf ):
         "Check if an interface is up."
