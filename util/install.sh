@@ -242,7 +242,9 @@ function other {
 	git config --global color.branch auto
 
 	#Reduce boot screen opt-out delay. Modify timeout in /boot/grub/menu.lst to 1:
-	sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
+    if [ "$DIST" = "Debian" ]; then
+        sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
+    fi
 
     # Clean unneeded debs:
     rm -f ~/linux-headers-* ~/linux-image-*
@@ -285,8 +287,8 @@ function vm_clean {
 	sudo rm -rf openvswitch*.tar.gz
 
 	# Remove sensistive files
-	history -c
-	rm ~/.bash_history # need to clear in memory and remove on disk
+	history -c  # note this won't work if you have multiple bash sessions
+	rm ~/.bash_history  # need to clear in memory and remove on disk
 	rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
 	sudo rm ~/.ssh/authorized_keys2
 
@@ -305,27 +307,27 @@ function vm_clean {
 }
 
 function usage {
-    printf "Usage: %s: [-acdfhkmntvxy] args\n" $(basename $0) >&2
+    printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
     
-    printf "This install script attempts to install useful packages\n" >&2
-    printf "for Mininet. It should (hopefully) work on Ubuntu 10.04 and\n" >&2
-    printf "Debian 5.0 (Lenny). If you run into trouble, try\n" >&2
-    printf "installing one thing at a time, and looking at the \n" >&2
-    printf "specific installation function in this script.\n" >&2
+    printf 'This install script attempts to install useful packages\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04 and\n' >&2
+    printf 'Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
+    printf 'installing one thing at a time, and looking at the \n' >&2
+    printf 'specific installation function in this script.\n\n' >&2
         
-    printf "\noptions:\n" >&2
-    printf "-a: install (A)ll packages - good luck!\n" >&2
-    printf "-c: (C)lean up after kernel install\n" >&2
-    printf "-d: (D)elete some sensitive files from a VM image\n" >&2    
-    printf "-f: install open(F)low\n" >&2
-    printf "-h: print this (H)elp message\n" >&2
-    printf "-k: install new (K)ernel\n" >&2
-    printf "-m: install Open vSwitch kernel (M)odule\n" >&2
-    printf "-n: install mini(N)et dependencies\nn" >&2
-    printf "-t: install o(T)her stuff\n" >&2
-    printf "-v: install open (V)switch\n" >&2
-    printf "-x: install NOX(X) OpenFlow contoller\n" >&2
-    printf "-y: install (A)ll packages\n" >&2    
+    printf 'options:\n' >&2
+    printf -- ' -a: (default) install (A)ll packages - good luck!\n' >&2
+    printf -- ' -c: (C)lean up after kernel install\n' >&2
+    printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2    
+    printf -- ' -f: install open(F)low\n' >&2
+    printf -- ' -h: print this (H)elp message\n' >&2
+    printf -- ' -k: install new (K)ernel\n' >&2
+    printf -- ' -m: install Open vSwitch kernel (M)odule\n' >&2
+    printf -- ' -n: install mini(N)et dependencies\n' >&2
+    printf -- ' -t: install o(T)her stuff\n' >&2
+    printf -- ' -v: install open (V)switch\n' >&2
+    printf -- ' -x: install NOX(X) OpenFlow contoller\n' >&2
+    printf -- ' -y: install (A)ll packages\n' >&2    
     
     exit 2
 }
