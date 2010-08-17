@@ -293,7 +293,6 @@ class CLI( Cmd ):
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % first )
-        
 
     # pylint: enable-msg=W0613,R0201
 
