@@ -132,12 +132,12 @@ class Topo(object):
         if src not in self.ports:
             self.ports[src] = {}
         if dst not in self.ports[src]:
-            # num outlinks    
+            # num outlinks
             self.ports[src][dst] = len(self.ports[src]) + src_base
         if dst not in self.ports:
             self.ports[dst] = {}
         if src not in self.ports[dst]:
-            # num outlinks 
+            # num outlinks
             self.ports[dst][src] = len(self.ports[dst]) + dst_base
 
     def node_enabled(self, dpid):
@@ -184,7 +184,6 @@ class Topo(object):
     def is_switch(self, n):
         '''Returns true if node is a switch.'''
         return self.node_info[n].is_switch
-
 
     def switches(self, enabled = True):
         '''Return switches.
