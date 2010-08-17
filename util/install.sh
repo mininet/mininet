@@ -4,7 +4,7 @@
 
 # Fail on error
 set -e
-
+ 
 # Fail on unset var usage
 set -o nounset
 
@@ -17,6 +17,7 @@ KERNEL_NAME=2.6.33.1-mininet
 #KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+DIST=UBUNTU  # Assume Ubuntu, not debian Lenny
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
@@ -33,8 +34,8 @@ function kernel {
 	sudo apt-get update
 
 	# The easy approach: download pre-built linux-image and linux-headers packages:
-	wget $KERNEL_LOC/$KERNEL_HEADERS
-	wget $KERNEL_LOC/$KERNEL_IMAGE
+	wget -c $KERNEL_LOC/$KERNEL_HEADERS
+	wget -c $KERNEL_LOC/$KERNEL_IMAGE
 
 	#Install custom linux headers and image:
 	sudo dpkg -i $KERNEL_IMAGE $KERNEL_HEADERS
@@ -109,7 +110,7 @@ function of {
 	sudo apt-get remove -y avahi-daemon
 
 	# Disable IPv6.  Add to /etc/modprobe.d/blacklist:
-	sudo sh -c "echo -e 'blacklist net-pf-10\nblacklist ipv6' >> /etc/modprobe.d/blacklist"
+	sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> /etc/modprobe.d/blacklist"
 }
 
 # Install OpenVSwitch
@@ -117,12 +118,14 @@ function of {
 function ovs {
 	echo "Installing OpenVSwitch..."
 
+    if [ "$DIST" = "LENNY" ]; then
 	#Install Autoconf 2.63+ backport from Debian Backports repo:
 	#Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
 	sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
 	sudo apt-get update
 	sudo apt-get -y --force-yes install debian-backports-keyring
 	sudo apt-get -y --force-yes -t lenny-backports install autoconf
+    fi
 
 	#Install OVS from release
 	cd ~/
@@ -132,7 +135,10 @@ function ovs {
 	git clone git://openvswitch.org/openvswitch
 	cd $OVS_RELEASE
 	./boot.sh
-	./configure --with-l26=/lib/modules/${KERNEL_NAME}/build
+    BUILDDIR=/lib/modules/${KERNEL_NAME}/build
+    mkdir -p $BUILDDIR
+    opts="--with-l26=$BUILDDIR"
+	./configure $opts
 	make
 	sudo make install
 }
@@ -142,8 +148,12 @@ function nox {
 	echo "Installing NOX w/tutorial files..."
 
 	#Install NOX deps:
-	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig libboost1.35-dev libxerces-c2-dev libssl-dev make
-
+	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig  libxerces-c2-dev libssl-dev make
+    if [ "$DIST" == "LENNY" ]; then
+        sudo apt-get -y install libboost1.35-dev
+    else
+        sudo apt-get -y install libboost1.40-dev
+    fi
 	#Install NOX optional deps:
 	sudo apt-get install -y libsqlite3-dev python-simplejson
 
@@ -288,14 +298,20 @@ function usage {
     exit 2
 }
 
+function lenny {
+    echo "Installing for Lenny"
+    DIST=LENNY
+}
+
 if [ $# -eq 0 ]
 then
 	all
 else
-	while getopts 'acdfhkmntvx' OPTION
+	while getopts 'lacdfhkmntvx' OPTION
 	do
 	  case $OPTION in
-	  a)    all;;
+      l)    lenny;;
+      a)    all;;
 	  c)    kernel_clean;;
 	  d)    vm_clean;;
 	  f)    of;;
