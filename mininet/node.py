@@ -511,7 +511,7 @@ class KernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( subtract = OVS_KMOD, add = OF_KMOD )
+        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
         pathCheck( 'ofprotocol' )
 
     def start( self, controllers ):
