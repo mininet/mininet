@@ -69,7 +69,7 @@ function mn_deps {
 	sudo apt-get install -y screen psmisc xterm ssh iperf iproute python-setuptools
 
 	#Add sysctl parameters as noted in the INSTALL file to increase kernel limits to support larger setups:
-	sudo su -c "cat /home/mininet/mininet/util/sysctl_addon >> /etc/sysctl.conf"
+	sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
 
 	#Load new sysctl settings:
 	sudo sysctl -p
@@ -194,7 +194,7 @@ function cbench {
     git clone git://www.openflow.org/oflops.git
     cd oflops
     sh boot.sh
-    ./configure --with-openflow-src-dir=/home/mininet/openflow
+    ./configure --with-openflow-src-dir=$HOME/openflow
     make
     sudo make install || true # make install fails; force past this
 }
