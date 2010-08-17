@@ -332,11 +332,6 @@ function usage {
     exit 2
 }
 
-function lenny {
-    echo "Installing for Lenny"
-    DIST=LENNY
-}
-
 if [ $# -eq 0 ]
 then
 	all
