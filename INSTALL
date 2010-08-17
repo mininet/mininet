@@ -1,13 +1,14 @@
 
 Preliminary Mininet Installation/Configuration Notes
 
-Alpha release, March 2010
+Pre-Beta release, August 2010
 
 ---
 
-(Disclaimer: this is an early alpha release; things may be broken!)
+(Disclaimer: we're still pre-beta - things may be broken!)
 
-The easiest way to get Mininet running is to start with one of our pre-built virtual machine images from:
+The easiest way to get Mininet running is to start with one of our pre-built 
+virtual machine images from:
 
 http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
@@ -36,22 +37,37 @@ compile kernels, apply patches, configure networks, write code, etc.. If
 this is unfamiliar territory, or if you run into trouble, we recommend
 using one of our pre-built virtual machine images (see above.)
 
+If you wish to try to create a VM to run Mininet, you may also wish
+to look at the Wiki page:
+
+http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
+
+0. Obtaining Mininet
+
+  If you're reading this, you've already done it, but the command to
+  download mininet is:
+   
+  git clone git://yuba.stanford.edu/mininet.git
+     
 1. Core Mininet installation
 
   The core Mininet installation requires gcc, make, python,
-  and setuptools.
+  and setuptools. On Ubuntu and Debian you may install them with:
+  
+  # aptitude install gcc make python setuptools
 
   To install Mininet itself, with root privileges:
-
+  
+  # cd mininet
   # make install
 
-  This places the mininet package in /usr/lib/python-2.5/site-packages/,
+  This places the mininet package in /usr/lib/python-*/site-packages/,
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
 
-2. Script-based kernel and OpenFlow installation for Debian
+2. Script-based kernel and OpenFlow installation for Ubuntu/Debian Lenny
 
-  If you are running debian-stable, you may be able to use the
+  If you are running Ubuntu 10.04 or Debian Lenny, you may be able to use the
   util/install.sh script to install a compatible Linux kernel as well as
   other software including the OpenFlow reference implementation, the Open
   vSwitch switch implementation, and the NOX OpenFlow controller. Assuming
@@ -63,20 +79,33 @@ using one of our pre-built virtual machine images (see above.)
   % sudo reboot  # to load new kernel
   % ~/mininet/util/install.sh -c  # to clean out unneeded kernel stuff
 
-  If install.sh cannot be used for some reason, the kernel and
+  This installs a lot of useful software, but it will take a while (20
+  minutes or more, depending on your network connection, computer, etc..)
+
+  If install.sh cannot be used for some reason, or if you don't want to
+  install all of these components (they're useful!), the kernel and
   OpenFlow software requirements are descibed in steps [3] and [4],
   which follow.
 
-  If you successfully used install.sh, proceed to step [5].
-
+  If you successfully used install.sh, congratulations! You're basically
+  done. Proceed to step [6] for additional advice.
+      
 3. Linux Kernel requirements
 
   Mininet requires a kernel built with network namespace support enabled,
-  i.e. with CONFIG_NET_NS=Y
+  i.e. with CONFIG_NET_NS=Y, such as the kernel shipped with
+  Ubuntu 10.04 LTS, currently 2.6.32. On Ubuntu 10.04, you should not need
+  to install or build a custom kernel, although 2.6.33+ is faster at
+  tearing down virtual ethernet pairs.
+
+  For Ubuntu and Debian, we provide a 2.6.33 kernel package which you may be
+  able to install using "util/install.sh -x". Note our kernel package
+  requires an ext2 or ext3 root file system, so it won't work if you have
+  a default Ubuntu install, which uses ext4.
   
-  If your kernel doesn't support it, you will need to build and install a 
-  kernel that does! >= 2.6.33 works better, but may be harder to get
-  working, depending on your Linux distribution.
+  If your kernel wasn't compiled with CONFIG_NET_NS=Y, you will need to 
+  build and install a  kernel that does! >= 2.6.33 works better, but may 
+  be harder to get working, depending on your Linux distribution.
   
   A script for building Debian packages for 2.6.33.1 is provided in
   mininet/util/kbuild. You may wish to read it, as it applies patches
@@ -102,23 +131,19 @@ using one of our pre-built virtual machine images (see above.)
 
   Mininet requires either the reference OpenFlow switch implementation
   (from openflowswitch.org) or Open vSwitch (openvswitch.org) to be
-  installed. "make test" requires the reference user and kernel space
-  implementations as well as Open vSwitch. Note the kernel implementation
-  is not currently included in OpenFlow 1.0.
-
-  To switch to the most recent OpenFlow 0.8.9 release branch (the most
-  recent one with full NOX support and kernel datapath support) in your
-  OpenFlow git tree:
-
-   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
+  installed. "make test" requires the reference user space
+  implementations as well as Open vSwitch. Note the reference kernel
+  implementation is not currently included in OpenFlow 1.0.
   
-  A patch to enable datapath.c to compile with recent kernels
-  is included in util/openflow-patches/datapath.patch.
+  On Ubuntu and  Debian, the install.sh script may be used with the '-f'
+  option to install the OpenFlow reference implementation, the '-v' option
+  to build Open vSwitch, and the '-m' option to install the Open vSwitch
+  kernel module into /lib/modules (note: you must build Open vSwitch first!)
   
   Mininet will automatically load and remove kernel module dependencies
   for supported switch types, using modprobe and rmmod - but these
-  modules must be in a location where modprobe can find them (i.e.
-  /lib/modules/...)
+  modules must be in a location where modprobe can find them (e.g.
+  something like /lib/modules/`uname -r`/kernel/drivers/net/)
 
   The reference OpenFlow controller (controller(8)) only supports 16
   switches by default! If you wish to run a network with more than 16
@@ -127,6 +152,9 @@ using one of our pre-built virtual machine images (see above.)
   as util/openflow-patches/controller.patch.
   
 5. Other software dependencies
+
+  On Ubuntu and Debian, other Mininet dependencies may be installed using
+  the '-n' option of the install.sh script.
 
   To run the iperf test, you need to install iperf:
 
@@ -141,6 +169,9 @@ using one of our pre-built virtual machine images (see above.)
   Some examples may have additional requirements - consult the specific
   example file for details.
   
+  The install.sh script has an '-x' option to install the version of
+  NOX from the OpenFlow tutorial.
+  
 6. Other notes and recommendations
 
   Mininet should be run either on a machine with
@@ -151,3 +182,26 @@ using one of our pre-built virtual machine images (see above.)
 Good luck!
 
 ---
+
+Historical information on OpenFlow 0.8.9 and the reference kernel module:
+
+  The kernel reference implementation has been deprecated, but it may
+  be possible to get it work with Mininet.
+  
+  To switch to the most recent OpenFlow 0.8.9 release branch (the most
+  recent one with full NOX support and kernel datapath support) in your
+  OpenFlow git tree:
+
+   git checkout -b release/0.8.9 remotes/origin/release/0.8.9
+  
+  A patch to enable datapath.c to compile with recent kernels
+  is included in util/openflow-patches/datapath.patch.
+  
+  In OpenFlow 1.0, switch port numbering starts at 1 (for better or for worse.)
+  To run with previous versions of OpenFlow, it may be necessary
+  to change SWITCH_PORT_BASE from 1 to 0 in node.py.
+
+  
+  
+  
+  
