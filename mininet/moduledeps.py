@@ -2,6 +2,7 @@
 
 from mininet.util import quietRun
 from mininet.log import info, error, debug
+from os import environ
 
 def lsmod():
     "Return output of lsmod."
@@ -54,3 +55,12 @@ def moduleDeps( subtract=None, add=None ):
                 exit( 1 )
         else:
             debug( '*** ' + mod + ' already loaded\n' )
+
+def pathCheck( *args ):
+    "Make sure each program in *args can be found in $PATH."
+    for arg in args:
+        if not quietRun( 'which ' + arg ):
+            error( 'Cannot find required executable %s -'
+                ' is it installed somewhere in your $PATH?\n(%s)\n' %
+                    ( arg, environ[ 'PATH' ] ) )
+            exit( 1 )
