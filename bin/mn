@@ -231,9 +231,9 @@ class MininetRunner( object ):
 
         test = self.options.test
         test = ALTSPELLING.get( test, test )
-        
+
         mn.start()
-        
+
         if test == 'none':
             pass
         elif test == 'all':
