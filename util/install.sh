@@ -17,12 +17,12 @@ KERNEL_NAME=2.6.33.1-mininet
 #KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-DIST=UBUNTU  # Assume Ubuntu, not debian Lenny
+DIST=`lsb_release -is`
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
-DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers
+DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
 #OVS_RELEASE=openvswitch-1.0.1
 OVS_RELEASE=openvswitch # release 1.0.1 doesn't work with veth pairs.
@@ -33,6 +33,13 @@ function kernel {
 	echo "Install new kernel..."
 	sudo apt-get update
 
+    # Until we build ext4 into our kernel image
+    ext2=`mount | head -1 | egrep 'ext2|ext3'`
+    if [ "$ext2" == "" ]; then
+        echo "Kernel package requires ext2 or ext3 root filesystem"
+        exit 1
+    fi
+    
 	# The easy approach: download pre-built linux-image and linux-headers packages:
 	wget -c $KERNEL_LOC/$KERNEL_HEADERS
 	wget -c $KERNEL_LOC/$KERNEL_IMAGE
@@ -118,13 +125,13 @@ function of {
 function ovs {
 	echo "Installing OpenVSwitch..."
 
-    if [ "$DIST" = "LENNY" ]; then
-	#Install Autoconf 2.63+ backport from Debian Backports repo:
-	#Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
-	sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
-	sudo apt-get update
-	sudo apt-get -y --force-yes install debian-backports-keyring
-	sudo apt-get -y --force-yes -t lenny-backports install autoconf
+    if [ "$DIST" = "Debian" ]; then
+        #Install Autoconf 2.63+ backport from Debian Backports repo:
+        #Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
+        sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
+        sudo apt-get update
+        sudo apt-get -y --force-yes install debian-backports-keyring
+        sudo apt-get -y --force-yes -t lenny-backports install autoconf
     fi
 
 	#Install OVS from release
@@ -149,10 +156,12 @@ function nox {
 
 	#Install NOX deps:
 	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig  libxerces-c2-dev libssl-dev make
-    if [ "$DIST" == "LENNY" ]; then
+    if [ "$DIST" == "Debian" ]; then
         sudo apt-get -y install libboost1.35-dev
-    else
-        sudo apt-get -y install libboost1.40-dev
+    elif [ "$DIST" == "Ubuntu" ]; then
+        sudo apt-get -y install python-dev libboost-dev 
+        sudo apt-get -y install libboost-filesystem-dev
+        sudo apt-get -y install libboost-test-dev
     fi
 	#Install NOX optional deps:
 	sudo apt-get install -y libsqlite3-dev python-simplejson
@@ -164,12 +173,14 @@ function nox {
 
 	# With later autoconf versions this doesn't quite work:
 	./boot.sh --apps-core || true
-	# So use this instead:
-	autoreconf --install --force
+    if [ "$DIST" == "Debian" ]; then
+        # So use this instead:
+        autoreconf --install --force
+    fi
 	mkdir build
 	cd build
 	../configure --with-python=yes
-	make
+    make
 	#make check
 
 	# Add NOX_CORE_DIR env var:
@@ -275,7 +286,7 @@ function vm_clean {
 
 	# Remove sensistive files
 	history -c
-	rm ~/.bash_history # history -c doesn't seem to work for some reason
+	rm ~/.bash_history # need to clear in memory and remove on disk
 	rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
 	sudo rm ~/.ssh/authorized_keys2
 
@@ -295,6 +306,27 @@ function vm_clean {
 
 function usage {
     printf "Usage: %s: [-acdfhkmntvxy] args\n" $(basename $0) >&2
+    
+    printf "This install script attempts to install useful packages\n" >&2
+    printf "for Mininet. It should (hopefully) work on Ubuntu 10.04 and\n" >&2
+    printf "Debian 5.0 (Lenny). If you run into trouble, try\n" >&2
+    printf "installing one thing at a time, and looking at the \n" >&2
+    printf "specific installation function in this script.\n" >&2
+        
+    printf "\noptions:\n" >&2
+    printf "-a: install (A)ll packages - good luck!\n" >&2
+    printf "-c: (C)lean up after kernel install\n" >&2
+    printf "-d: (D)elete some sensitive files from a VM image\n" >&2    
+    printf "-f: install open(F)low\n" >&2
+    printf "-h: print this (H)elp message\n" >&2
+    printf "-k: install new (K)ernel\n" >&2
+    printf "-m: install Open vSwitch kernel (M)odule\n" >&2
+    printf "-n: install mini(N)et dependencies\nn" >&2
+    printf "-t: install o(T)her stuff\n" >&2
+    printf "-v: install open (V)switch\n" >&2
+    printf "-x: install NOX(X) OpenFlow contoller\n" >&2
+    printf "-y: install (A)ll packages\n" >&2    
+    
     exit 2
 }
 
@@ -307,10 +339,9 @@ if [ $# -eq 0 ]
 then
 	all
 else
-	while getopts 'lacdfhkmntvx' OPTION
+	while getopts 'acdfhkmntvx' OPTION
 	do
 	  case $OPTION in
-      l)    lenny;;
       a)    all;;
 	  c)    kernel_clean;;
 	  d)    vm_clean;;
