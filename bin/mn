@@ -17,6 +17,7 @@ import sys
 import time
 
 from mininet.clean import cleanup
+from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
@@ -50,9 +51,11 @@ CONTROLLERS = { 'ref': Controller,
                'none': lambda name: None }
 
 # optional tests to run
-TESTS = [ 'cli', 'build', 'pingAll', 'pingPair', 'iperf', 'all', 'iperfUdp',
+TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
          'none' ]
 
+ALTSPELLING = { 'pingall': 'pingAll', 'pingpair': 'pingPair',
+    'iperfudp': 'iperfUdp', 'iperfUDP': 'iperfUdp' }
 
 def buildTopo( topo ):
     "Create topology from string with format (object, arg1, arg2,...)."
@@ -99,6 +102,7 @@ class MininetRunner( object ):
     def __init__( self ):
         "Init."
         self.options = None
+        self.args = None  # May be used someday for more CLI scripts
         self.validate = None
 
         self.parseArgs()
@@ -170,9 +174,14 @@ class MininetRunner( object ):
         opts.add_option( '--port', type='int', default=6633,
                         help='[port integer for a listening remote'
                         ' controller]' )
-        opts.add_option( '--inNamespace', action='store_true',
+        opts.add_option( '--innamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
-        self.options = opts.parse_args()[ 0 ]
+        opts.add_option( '--pre', type='string', default=None,
+                        help='[CLI script to run before tests]' )
+        opts.add_option( '--post', type='string', default=None,
+                        help='[CLI script to run after tests]' )
+
+        self.options, self.args = opts.parse_args()
 
     def setup( self ):
         "Setup and validate environment."
@@ -209,7 +218,7 @@ class MininetRunner( object ):
             self.validate( self.options )
 
         controllerParams = ControllerParams( '10.0.0.0', 8 )
-        inNamespace = self.options.inNamespace
+        inNamespace = self.options.innamespace
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
@@ -217,20 +226,29 @@ class MininetRunner( object ):
                      inNamespace=inNamespace,
                      xterms=xterms, autoSetMacs=mac,
                      autoStaticArp=arp )
+        if self.options.pre:
+            CLI( mn, script=self.options.pre )
 
         test = self.options.test
+        test = ALTSPELLING.get( test, test )
+        
+        mn.start()
+        
         if test == 'none':
-            mn.start()
-            mn.stop()
-        elif test == 'cli':
-            mn.interact()
+            pass
         elif test == 'all':
             mn.start()
             mn.ping()
             mn.iperf()
-            mn.stop()
+        elif test == 'cli':
+            CLI( mn )
         elif test != 'build':
-            mn.run( getattr( mn, test ) )
+            getattr( mn, test )()
+
+        if self.options.post:
+            CLI( mn, script=self.options.post )
+
+        mn.stop()
 
         elapsed = float( time.time() - start )
         info( 'completed in %0.3f seconds\n' % elapsed )

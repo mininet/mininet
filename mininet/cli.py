@@ -40,7 +40,7 @@ class CLI( Cmd ):
 
     prompt = 'mininet> '
 
-    def __init__( self, mininet, stdin=sys.stdin ):
+    def __init__( self, mininet, stdin=sys.stdin, script=None ):
         self.mn = mininet
         self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
         self.nodemap = {}  # map names to Node objects
@@ -50,9 +50,12 @@ class CLI( Cmd ):
         self.stdin = stdin
         self.inPoller = poll()
         self.inPoller.register( stdin )
-        self.inputFile = None
+        self.inputFile = script
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
+        if self.inputFile:
+            self.do_source( self.inputFile )
+            return
         while True:
             try:
                 # Make sure no nodes are still waiting
