@@ -64,6 +64,9 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   This places the mininet package in /usr/lib/python-*/site-packages/,
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
+  
+  On Ubuntu and Debian, Mininet's dependencies and core files may be 
+  installed using mininet/util/install.sh -n
 
 2. Script-based kernel and OpenFlow installation for Ubuntu/Debian Lenny
 
@@ -86,7 +89,18 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   install all of these components (they're useful!), the kernel and
   OpenFlow software requirements are descibed in steps [3] and [4],
   which follow.
-
+ 
+  Many different installation options are possible; probably the minimal
+  semi-useful configuration would be to install Mininet itself, kernel
+  support if necessary, and either the reference OpenFlow switch or 
+  Open vSwitch. This could be installed as follows, for example:
+  
+  % sudo ~/mininet/util/install.sh -knvm
+  
+  Respectively, this installs kernel support, core mininet dependencies,
+  Open vSwitch, and the Open vSwitch kernel module. If a new kernel was
+  installed, then a reboot may be required.
+  
   If you successfully used install.sh, congratulations! You're basically
   done. Proceed to step [6] for additional advice.
       
@@ -174,6 +188,9 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   
 6. Other notes and recommendations
 
+  If you did not install certain useful packages and you wish to later,
+  it may be possible to install them using install.sh.
+  
   Mininet should be run either on a machine with
   no other important processes, or on a virtual machine (recommended!)
   
