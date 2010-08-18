@@ -174,7 +174,7 @@ class Mininet( object ):
             sw = self.switch( name, listenPort=self.listenPort,
                 defaultMAC=mac, defaultIP=ip, dp=self.dps,
                 inNamespace=self.inNamespace )
-        if not self.inNamespace:
+        if not self.inNamespace and self.listenPort:
             self.listenPort += 1
         self.dps += 1
         self.switches.append( sw )
