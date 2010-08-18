@@ -65,10 +65,10 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   so that 'import mininet' will work, and installs the primary mn
   script (mn) as well as its helper utility (mnexec.)
   
-  On Ubuntu and Debian, Mininet's dependencies and core files may be 
+  On Ubuntu and Debian, Mininet's dependencies and core files may also be 
   installed using mininet/util/install.sh -n
 
-2. Script-based kernel and OpenFlow installation for Ubuntu/Debian Lenny
+2. Installation script for Ubuntu/Debian Lenny
 
   If you are running Ubuntu 10.04 or Debian Lenny, you may be able to use the
   util/install.sh script to install a compatible Linux kernel as well as
@@ -79,14 +79,14 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   options to install.sh; install.sh -h lists them all.
   
   Assuming the mininet source tree is installed in ~/mininet, the steps to run
-  install.sh to install everything we use for OpenFlow tutorials are:
+  install.sh to install EVERYTHING we use for OpenFlow tutorials are:
   
   % cd
   % time ~/mininet/util/install.sh  # installs tons of stuff
   % sudo reboot  # to load new kernel
   % ~/mininet/util/install.sh -c  # to clean out unneeded kernel stuff
 
-  This installs a lot of useful software, but it will take a while (20
+  This installs a lot of useful software, but it will take a while (30
   minutes or more, depending on your network connection, computer, etc..)
  
   Probably the minimal semi-useful configuration would be to install 
@@ -100,7 +100,8 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   Open vSwitch, and the Open vSwitch kernel module. If a new kernel was
   installed, then a reboot may be required.
 
-  If install.sh cannot be used for some reason, or if you don't want to
+  If install.sh cannot be used for some reason (e.g. you're on Fedora
+  or some other Linux - please don't say CentOS) or if you don't want to
   install all of these components (they're useful!), the kernel and
   OpenFlow software requirements are described in steps [3] and [4],
   which follow.
