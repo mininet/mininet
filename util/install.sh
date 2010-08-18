@@ -11,13 +11,21 @@ set -o nounset
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.stanford.edu/~brandonh
 
+DIST=`lsb_release -is`
+
 # Kernel params
 # These kernels have been tried:
-KERNEL_NAME=2.6.33.1-mininet
-#KERNEL_NAME=`uname -r`
-KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-DIST=`lsb_release -is`
+if [ "$DIST" = "Debian" ]; then
+    KERNEL_NAME=2.6.33.1-mininet
+    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+    KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+elif [ "$DIST" = "Ubuntu" ]; then
+    KERNEL_NAME=`uname -r`
+    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
+else
+    echo "Install.sh currently only supports Ubuntu and Debian."
+    exit 1
+fi
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
@@ -30,15 +38,10 @@ OVS_DIR=~/$OVS_RELEASE
 OVS_KMOD=openvswitch_mod.ko
 
 function kernel {
-	echo "Install new kernel..."
+	echo "Install Mininet-compatible kernel"
 	sudo apt-get update
-
-    # Until we build ext4 into our kernel image
-    ext2=`mount | head -1 | egrep 'ext2|ext3'`
-    if [ "$ext2" == "" ]; then
-        echo "Kernel package requires ext2 or ext3 root filesystem"
-        exit 1
-    fi
+    
+    if [ "$DIST" = "Debian" ]; then
     
 	# The easy approach: download pre-built linux-image and linux-headers packages:
 	wget -c $KERNEL_LOC/$KERNEL_HEADERS
@@ -59,6 +62,8 @@ function kernel {
 	sudo update-grub
 
 	# The default should be the new kernel. Otherwise, you may need to modify /boot/grub/menu.lst to set the default to the entry corresponding to the kernel you just installed.
+    fi
+
 }
 
 function kernel_clean {
@@ -132,6 +137,10 @@ function ovs {
         sudo apt-get update
         sudo apt-get -y --force-yes install debian-backports-keyring
         sudo apt-get -y --force-yes -t lenny-backports install autoconf
+    fi
+
+    if [ "$DIST" == "Ubuntu" ]; then
+        sudo apt-get -y install $KERNEL_HEADERS
     fi
 
 	#Install OVS from release
