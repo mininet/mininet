@@ -10,12 +10,12 @@ Pre-Beta version, August 2010
 The easiest way to get Mininet running is to start with one of our pre-built 
 virtual machine images from:
 
-http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
+http://openflow.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
 Once you have booted up the VM image, all you need to do to install
 Mininet into it is:
 
- git clone git://yuba.stanford.edu/mininet.git
+ git clone git://openflow.org/mininet.git
  cd mininet
  sudo make install
 
@@ -40,14 +40,14 @@ using one of our pre-built virtual machine images (see above.)
 If you wish to try to create a VM to run Mininet, you may also wish
 to look at the Wiki page:
 
-http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
+http://openflow.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
 
 0. Obtaining Mininet
 
   If you're reading this, you've already done it, but the command to
   download mininet is:
    
-  git clone git://yuba.stanford.edu/mininet.git
+  git clone git://openflow.org/mininet.git
      
 1. Core Mininet installation
 
