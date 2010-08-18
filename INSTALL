@@ -1,7 +1,7 @@
 
 Preliminary Mininet Installation/Configuration Notes
 
-Pre-Beta release, August 2010
+Pre-Beta version, August 2010
 
 ---
 
@@ -73,34 +73,38 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   If you are running Ubuntu 10.04 or Debian Lenny, you may be able to use the
   util/install.sh script to install a compatible Linux kernel as well as
   other software including the OpenFlow reference implementation, the Open
-  vSwitch switch implementation, and the NOX OpenFlow controller. Assuming
-  the mininet source tree is installed in ~/mininet, the steps to run
-  install.sh are as follows:
+  vSwitch switch implementation, and the NOX OpenFlow controller. 
 
+  Many different installation options are possible by passing different
+  options to install.sh; install.sh -h lists them all.
+  
+  Assuming the mininet source tree is installed in ~/mininet, the steps to run
+  install.sh to install everything we use for OpenFlow tutorials are:
+  
   % cd
-  % time ~/mininet/util/install.sh
+  % time ~/mininet/util/install.sh  # installs tons of stuff
   % sudo reboot  # to load new kernel
   % ~/mininet/util/install.sh -c  # to clean out unneeded kernel stuff
 
   This installs a lot of useful software, but it will take a while (20
   minutes or more, depending on your network connection, computer, etc..)
-
-  If install.sh cannot be used for some reason, or if you don't want to
-  install all of these components (they're useful!), the kernel and
-  OpenFlow software requirements are descibed in steps [3] and [4],
-  which follow.
  
-  Many different installation options are possible; probably the minimal
-  semi-useful configuration would be to install Mininet itself, kernel
-  support if necessary, and either the reference OpenFlow switch or 
-  Open vSwitch. This could be installed as follows, for example:
+  Probably the minimal semi-useful configuration would be to install 
+  Mininet itself, kernel support if necessary, and either the 
+  reference OpenFlow switch or Open vSwitch. This could be installed 
+  as follows:
   
   % sudo ~/mininet/util/install.sh -knvm
   
   Respectively, this installs kernel support, core mininet dependencies,
   Open vSwitch, and the Open vSwitch kernel module. If a new kernel was
   installed, then a reboot may be required.
-  
+
+  If install.sh cannot be used for some reason, or if you don't want to
+  install all of these components (they're useful!), the kernel and
+  OpenFlow software requirements are described in steps [3] and [4],
+  which follow.
+
   If you successfully used install.sh, congratulations! You're basically
   done. Proceed to step [6] for additional advice.
       
@@ -113,7 +117,7 @@ http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/MininetVMCreationNotes
   tearing down virtual ethernet pairs.
 
   For Ubuntu and Debian, we provide a 2.6.33 kernel package which you may be
-  able to install using "util/install.sh -x". Note our kernel package
+  able to install using "util/install.sh -k". Note our kernel package
   requires an ext2 or ext3 root file system, so it won't work if you have
   a default Ubuntu install, which uses ext4.
   
