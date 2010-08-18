@@ -441,6 +441,14 @@ class Switch( Node ):
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
 
+    def defaultIntf( self ):
+        "Return interface for HIGHEST port"
+        ports = self.intfs.keys()
+        if ports:
+            intf = self.intfs[ max( ports ) ]
+        print "RETURNING", intf
+        return intf
+
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
            cmd: string"""
@@ -481,7 +489,7 @@ class UserSwitch( Switch ):
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name + mac_str +
+            ' punix:/tmp/' + self.name + mac_str + ' --no-slicing ' +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
