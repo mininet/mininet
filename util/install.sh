@@ -78,7 +78,7 @@ function kernel_clean {
 
 # Install Mininet deps
 function mn_deps {
-	#Install dependencies:
+	echo "Installing Mininet dependencies"
 	sudo apt-get install -y screen psmisc xterm ssh iperf iproute python-setuptools
 
 	#Add sysctl parameters as noted in the INSTALL file to increase kernel limits to support larger setups:
@@ -86,6 +86,11 @@ function mn_deps {
 
 	#Load new sysctl settings:
 	sudo sysctl -p
+    
+    echo "Installing Mininet core"
+    pushd ~/mininet
+    sudo make install
+    popd
 }
 
 # The following will cause a full OF install, covering:
@@ -335,7 +340,7 @@ function usage {
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule\n' >&2
-    printf -- ' -n: install mini(N)et dependencies\n' >&2
+    printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -x: install NOX(X) OpenFlow contoller\n' >&2
