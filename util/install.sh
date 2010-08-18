@@ -79,7 +79,7 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
 	echo "Installing Mininet dependencies"
-	sudo apt-get install -y screen psmisc xterm ssh iperf iproute python-setuptools
+	sudo apt-get install -y gcc screen psmisc xterm ssh iperf iproute python-setuptools
 
 	#Add sysctl parameters as noted in the INSTALL file to increase kernel limits to support larger setups:
 	sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
