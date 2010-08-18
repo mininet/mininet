@@ -9,7 +9,7 @@ set -e
 set -o nounset
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
-KERNEL_LOC=http://www.stanford.edu/~brandonh
+KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
 DIST=`lsb_release -is`
 
