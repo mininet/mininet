@@ -562,7 +562,7 @@ class OVSKernelSwitch( Switch ):
         self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
-                " in the root namespace." )
+                " in the root namespace.\n" )
             exit( 1 )
 
     @staticmethod
