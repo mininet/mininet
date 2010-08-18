@@ -310,22 +310,23 @@ function vm_clean {
 
 	# Remove sensistive files
 	history -c  # note this won't work if you have multiple bash sessions
-	rm ~/.bash_history  # need to clear in memory and remove on disk
+	rm -f ~/.bash_history  # need to clear in memory and remove on disk
 	rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
-	sudo rm ~/.ssh/authorized_keys2
+	sudo rm -f ~/.ssh/authorized_keys2
 
 	# Remove Mininet files
 	#sudo rm -f /lib/modules/python2.5/site-packages/mininet*
 	#sudo rm -f /usr/bin/mnexec
 
 	# Clear optional dev script for SSH keychain load on boot
-	rm ~/.bash_profile
+	rm -f ~/.bash_profile
 
 	# Clear git changes
 	git config --global user.name "None"
 	git config --global user.email "None"
 
-	#sudo rm -rf ~/mininet
+	# Remove mininet install script
+	rm -f install-mininet.sh
 }
 
 function usage {
