@@ -287,11 +287,14 @@ function all {
 	mn_deps
 	of
 	ovs
-	modprobe
+    modprobe
 	nox
 	oftest
 	cbench
 	other
+    # BL Hack: for some annoying reason, the first depmod doesn't
+    # seem to take on Ubuntu, so do it once again for good measure!
+    modprobe
 	echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
 	echo "Enjoy Mininet!"
 }
