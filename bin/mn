@@ -176,6 +176,9 @@ class MininetRunner( object ):
                         ' controller]' )
         opts.add_option( '--innamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
+        opts.add_option( '--listenport', type='int', default=6634,
+                        help='[base port for passive switch listening'
+                        ' controller]' )
         opts.add_option( '--pre', type='string', default=None,
                         help='[CLI script to run before tests]' )
         opts.add_option( '--post', type='string', default=None,
@@ -222,10 +225,11 @@ class MininetRunner( object ):
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
+        listenPort = self.options.listenport
         mn = Mininet( topo, switch, host, controller, controllerParams,
                      inNamespace=inNamespace,
                      xterms=xterms, autoSetMacs=mac,
-                     autoStaticArp=arp )
+                     autoStaticArp=arp, listenPort=listenPort )
         if self.options.pre:
             CLI( mn, script=self.options.pre )
 

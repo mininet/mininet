@@ -108,7 +108,7 @@ class Mininet( object ):
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
-                 autoSetMacs=False, autoStaticArp=False ):
+                 autoSetMacs=False, autoStaticArp=False, listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: Switch class
@@ -120,7 +120,9 @@ class Mininet( object ):
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
            autoSetMacs: set MAC addrs from topo?
-           autoStaticArp: set all-pairs static MAC addrs?"""
+           autoStaticArp: set all-pairs static MAC addrs?
+           listenPort: base listening port to open; will be incremented for
+               each additional switch in the net if inNamespace=False"""
         self.switch = switch
         self.host = host
         self.controller = controller
@@ -131,6 +133,7 @@ class Mininet( object ):
         self.cleanup = cleanup
         self.autoSetMacs = autoSetMacs
         self.autoStaticArp = autoStaticArp
+        self.listenPort = listenPort
 
         self.hosts = []
         self.switches = []
@@ -162,13 +165,17 @@ class Mininet( object ):
         """Add switch.
            name: name of switch to add
            mac: default MAC address for kernel/OVS switch intf 0
-           returns: added switch"""
+           returns: added switch
+           side effect: increments the listenPort member variable."""
         if self.switch == UserSwitch:
-            sw = self.switch( name, defaultMAC=mac, defaultIP=ip,
-                inNamespace=self.inNamespace )
+            sw = self.switch( name, listenPort=self.listenPort,
+                defaultMAC=mac, defaultIP=ip, inNamespace=self.inNamespace )
         else:
-            sw = self.switch( name, defaultMAC=mac, defaultIP=ip, dp=self.dps,
+            sw = self.switch( name, listenPort=self.listenPort,
+                defaultMAC=mac, defaultIP=ip, dp=self.dps,
                 inNamespace=self.inNamespace )
+        if not self.inNamespace:
+            self.listenPort += 1
         self.dps += 1
         self.switches.append( sw )
         self.nameToNode[ name ] = sw

@@ -434,9 +434,12 @@ class Switch( Node ):
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
-    def __init__( self, name, opts='', **kwargs):
+    def __init__( self, name, opts='', listenPort=None, **kwargs):
         Node.__init__( self, name, **kwargs )
         self.opts = opts
+        self.listenPort = listenPort
+        if self.listenPort:
+            self.opts += ' --listen=ptcp:%i ' % self.listenPort
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
