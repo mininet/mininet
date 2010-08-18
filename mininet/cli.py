@@ -272,6 +272,20 @@ class CLI( Cmd ):
             error( 'error reading file %s\n' % args[ 0 ] )
         self.inputFile = None
 
+    def do_dpctl( self, line ):
+        "Run dpctl command on all switches."
+        args = line.split()
+        if len(args) == 0:
+            error( 'usage: dpctl command [arg1] [arg2] ...\n' )
+            return
+        if not self.mn.listenPort:
+            error( "can't run dpctl w/no passive listening port\n")
+            return
+        for sw in self.mn.switches:
+            output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
+            output( sw.cmd( 'dpctl ' + ' '.join(args) +
+                            ' tcp:127.0.0.1:%i' % sw.listenPort ) )
+
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
         Overridden to run shell commands when a node is the first CLI argument.
