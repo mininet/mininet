@@ -465,7 +465,8 @@ class UserSwitch( Switch ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
-        pathCheck( 'ofdatapath', 'ofprotocol' )
+        pathCheck( 'ofdatapath', 'ofprotocol', 
+            moduleName='the OpenFlow reference user switch (openflow.org)' )
 
     @staticmethod
     def setup():
@@ -521,8 +522,10 @@ class KernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
+        pathCheck( 'ofprotocol',
+            moduleName='the OpenFlow reference kernel switch'
+            ' (openflow.org) (NOTE: not available in OpenFlow 1.0!)' )
         moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
-        pathCheck( 'ofprotocol' )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -575,8 +578,9 @@ class OVSKernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( subtract = OF_KMOD, add = OVS_KMOD )
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd' )
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
+            moduleName='Open vSwitch (openvswitch.org)')
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
 
     def start( self, controllers ):
         "Start up kernel datapath."
