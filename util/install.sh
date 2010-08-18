@@ -127,7 +127,12 @@ function of {
 	sudo apt-get remove -y avahi-daemon
 
 	# Disable IPv6.  Add to /etc/modprobe.d/blacklist:
-	sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> /etc/modprobe.d/blacklist"
+    if [ "$DIST" = "Ubuntu" ]; then
+        BLACKLIST=/etc/modprobe.d/blacklist.conf
+    else
+        BLACKLIST=/etc/modprobe.d/blacklist
+    fi
+	sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
 }
 
 # Install OpenVSwitch
@@ -144,7 +149,7 @@ function ovs {
         sudo apt-get -y --force-yes -t lenny-backports install autoconf
     fi
 
-    if [ "$DIST" == "Ubuntu" ]; then
+    if [ "$DIST" = "Ubuntu" ]; then
         sudo apt-get -y install $KERNEL_HEADERS
     fi
 
@@ -170,9 +175,9 @@ function nox {
 
 	#Install NOX deps:
 	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig  libxerces-c2-dev libssl-dev make
-    if [ "$DIST" == "Debian" ]; then
+    if [ "$DIST" = "Debian" ]; then
         sudo apt-get -y install libboost1.35-dev
-    elif [ "$DIST" == "Ubuntu" ]; then
+    elif [ "$DIST" = "Ubuntu" ]; then
         sudo apt-get -y install python-dev libboost-dev 
         sudo apt-get -y install libboost-filesystem-dev
         sudo apt-get -y install libboost-test-dev
@@ -187,7 +192,7 @@ function nox {
 
 	# With later autoconf versions this doesn't quite work:
 	./boot.sh --apps-core || true
-    if [ "$DIST" == "Debian" ]; then
+    if [ "$DIST" = "Debian" ]; then
         # So use this instead:
         autoreconf --install --force
     fi
@@ -292,9 +297,6 @@ function all {
 	oftest
 	cbench
 	other
-    # BL Hack: for some annoying reason, the first depmod doesn't
-    # seem to take on Ubuntu, so do it once again for good measure!
-    modprobe
 	echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
 	echo "Enjoy Mininet!"
 }
