@@ -37,7 +37,7 @@ def moduleDeps( subtract=None, add=None ):
             info( '*** Removing ' + mod + '\n' )
             rmmodOutput = rmmod( mod )
             if rmmodOutput:
-                error( 'Error removing ' + mod + ': %s\n' % rmmodOutput )
+                error( 'Error removing ' + mod + ': <%s>\n' % rmmodOutput )
                 exit( 1 )
             if mod in lsmod():
                 error( 'Failed to remove ' + mod + '; still there!\n' )
@@ -48,7 +48,7 @@ def moduleDeps( subtract=None, add=None ):
             modprobeOutput = modprobe( mod )
             if modprobeOutput:
                 error( 'Error inserting ' + mod + '- is it installed?\n' +
-                    'Error was: %s\n' % modprobeOutput )
+                    'Error was: <%s>\n' % modprobeOutput )
             if mod not in lsmod():
                 error( 'Failed to insert ' + mod + '\n' )
                 exit( 1 )
