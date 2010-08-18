@@ -266,7 +266,10 @@ function modprobe {
 
 function all {
 	echo "Running all commands..."
-	kernel
+    if [ "$DIST" != "Ubuntu" ]; then
+        # Ubuntu ships with Mininet-compatible kernel
+        kernel
+    fi
 	mn_deps
 	of
 	ovs
