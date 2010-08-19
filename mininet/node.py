@@ -471,7 +471,8 @@ class UserSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( add=TUN )
+        if not os.path.exists( '/dev/net/tun' ):
+            moduleDeps( add=TUN )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
