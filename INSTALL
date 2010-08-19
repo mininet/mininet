@@ -2,31 +2,67 @@
 Preliminary Mininet Installation/Configuration Notes
 
 Pre-Beta version, August 2010
-
 ---
 
 (Disclaimer: we're still pre-beta - things may be broken!)
 
+The supported installation methods for Mininet Pre-Beta are 1) using
+a pre-built VM image, and 2) native installation on Ubuntu or Debian.
+(Other distributions may be supported in the future - if you would
+like to contribute an installation script, we would welcome it!)
+
+1. Easiest "install" - use our pre-built VM image!
+
 The easiest way to get Mininet running is to start with one of our pre-built 
 virtual machine images from:
 
-http://openflow.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
+ http://openflow.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
 
-Once you have booted up the VM image, all you need to do to install
-Mininet into it is:
+Boot up the VM image, log in, and follow the instructions on the wiki page.
 
- git clone git://openflow.org/mininet.git
- cd mininet
- sudo make install
+An additional advantage of using the VM image is that it doesn't mess with
+your native OS install or damage it in any way.
 
-At this point, it should be possible to run a simple Mininet configuration
-from the command line:
+2. Native installation for Ubuntu and Debian 5 (NEW for pre-beta!)
 
- sudo mn
+If you are running Ubuntu or Debian 5, you may be able to use our handy
+install.sh script, which is in mininet/util. 
 
-As an alternative, if you are Linux-savvy, do not wish to use the VM
-image, and wish to take on the challenge of installing Mininet and its
-dependencies from scratch, the requirements are described below.
+WARNING: install.sh is a bit intrusive and may possibly damage your OS 
+and/or home directory. Although we hope it won't do anything completely 
+terrible, you may want to look at the script before you run it, and you
+should make sure your system and home directory are backed up just in case!
+
+To install ALL of the software which we use for OpenFlow tutorials, you may
+use
+
+$ mininet/util/install.sh
+
+This takes about 20-30 minutes.
+
+Alternately, you can install just the pieces you need.
+
+We recommend the following steps, in order:
+
+a) On Debian 5, first install a Mininet-compatible kernel:
+    $ mininet/util/install.sh -k
+   Reboot and run 'uname -r' to make sure you're running the new kernel.
+   
+b) Install OpenFlow 1.0 and associated useful software
+    $ mininet/util/install.sh -f
+
+c) Install Open vSwitch
+    $ mininet/util/install.sh -f
+
+d) If you wish to install the version of NOX we use in the tutorial:
+    $ mininet/util/install.sh -x
+
+Good luck! Some additional installation notes are provided below, for
+the brave and/or Linux-savvy, or those who are trying to understand what
+is installed and why.
+
+p.s. Note that only one instance of Mininet is currently supported on a single
+machine - that's one reason we recommend using a VM to run it.
 
 ---
 
