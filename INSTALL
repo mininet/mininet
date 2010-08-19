@@ -47,18 +47,18 @@ We recommend the following steps, in order:
 a) On Debian 5, first install a Mininet-compatible kernel:
     $ mininet/util/install.sh -k
    Reboot and run 'uname -r' to make sure you're running the new kernel.
-   
-b) Install OpenFlow 1.0 and associated useful software
+
+b) Install mininet and its dependencies:
+    $ mininet/util/install.sh -n
+    
+c) Install OpenFlow 1.0 and associated useful software
     $ mininet/util/install.sh -f
 
-c) Install Open vSwitch and its kernel module
+d) Install Open vSwitch and its kernel module
     $ mininet/util/install.sh -vm
 
-d) If you wish to install the version of NOX we use in the tutorial:
+e) If you wish to install the version of NOX we use in the tutorial:
     $ mininet/util/install.sh -x
-
-e) Install mininet and its dependencies:
-    $ mininet/util/install.sh -n
 
 Good luck! Some additional installation notes are provided below, for
 the brave and/or Linux-savvy, or those who are trying to understand what
