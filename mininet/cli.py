@@ -328,7 +328,8 @@ class CLI( Cmd ):
         while True:
             try:
                 bothPoller.poll()
-                if self.inputFile:
+                # XXX BL: this doesn't quite do what we want.
+                if False and self.inputFile:
                     key = self.inputFile.read( 1 )
                     if key is not '':
                         node.write(key)
