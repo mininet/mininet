@@ -55,7 +55,7 @@ TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
          'none' ]
 
 ALTSPELLING = { 'pingall': 'pingAll', 'pingpair': 'pingPair',
-    'iperfudp': 'iperfUdp', 'iperfUDP': 'iperfUdp' }
+    'iperfudp': 'iperfUdp', 'iperfUDP': 'iperfUdp', 'prefixlen': 'prefixLen' }
 
 def buildTopo( topo ):
     "Create topology from string with format (object, arg1, arg2,...)."
@@ -185,7 +185,8 @@ class MininetRunner( object ):
                         help='[CLI script to run before tests]' )
         opts.add_option( '--post', type='string', default=None,
                         help='[CLI script to run after tests]' )
-
+        opts.add_option( '--prefixlen', type='int', default=8,
+                        help='[prefix length (e.g. /8) for automatic network configuration]' )
         self.options, self.args = opts.parse_args()
 
     def setup( self ):
@@ -222,7 +223,12 @@ class MininetRunner( object ):
         if self.validate:
             self.validate( self.options )
 
-        controllerParams = ControllerParams( '10.0.0.0', 8 )
+        # We should clarify what this is actually for...
+        # It seems like it should be default values for the
+        # *data* network, so it may be misnamed.
+        controllerParams = ControllerParams( '10.0.0.0', 
+            self.options.prefixlen)
+
         inNamespace = self.options.innamespace
         xterms = self.options.xterms
         mac = self.options.mac
