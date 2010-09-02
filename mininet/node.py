@@ -464,7 +464,7 @@ class UserSwitch( Switch ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
-        pathCheck( 'ofdatapath', 'ofprotocol', 
+        pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
 
     @staticmethod
@@ -621,10 +621,10 @@ class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
-    def __init__( self, name, inNamespace=False, controller='controller',
+    def __init__( self, name, inNamespace=False, command='controller',
                  cargs='-v ptcp:%d', cdir=None, defaultIP="127.0.0.1",
                  port=6633 ):
-        self.controller = controller
+        self.command = command
         self.cargs = cargs
         self.cdir = cdir
         self.port = port
@@ -634,17 +634,17 @@ class Controller( Node ):
     def start( self ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
-        pathCheck( self.controller )
+        pathCheck( self.command )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
-        self.cmd( self.controller + ' ' + self.cargs % self.port + 
+        self.cmd( self.command + ' ' + self.cargs % self.port +
             ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
         "Stop controller."
-        self.cmd( 'kill %' + self.controller )
+        self.cmd( 'kill %' + self.command )
         self.terminate()
 
     def IP( self, intf=None ):
@@ -682,7 +682,7 @@ class NOX( Controller ):
         noxCoreDir = os.environ[ 'NOX_CORE_DIR' ]
 
         Controller.__init__( self, name,
-            controller=noxCoreDir + '/nox_core',
+            command=noxCoreDir + '/nox_core',
             cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' % self.port +
                     ' '.join( noxArgs ),
             cdir=noxCoreDir, **kwargs )
