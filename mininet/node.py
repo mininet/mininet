@@ -200,7 +200,6 @@ class Node( object ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
            timeoutms: timeout in ms or None to wait indefinitely."""
-        assert self.waiting
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
@@ -623,7 +622,7 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, controller='controller',
-                 cargs='-v ptcp:', cdir=None, defaultIP="127.0.0.1",
+                 cargs='-v ptcp:%d', cdir=None, defaultIP="127.0.0.1",
                  port=6633 ):
         self.controller = controller
         self.cargs = cargs
@@ -639,7 +638,7 @@ class Controller( Node ):
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
-        self.cmd( self.controller + ' ' + self.cargs +
+        self.cmd( self.controller + ' ' + self.cargs % self.port + 
             ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
@@ -684,7 +683,7 @@ class NOX( Controller ):
 
         Controller.__init__( self, name,
             controller=noxCoreDir + '/nox_core',
-            cargs='--libdir=/usr/local/lib -v -i ptcp: ' +
+            cargs='--libdir=/usr/local/lib -v -i ptcp::%s ' % self.port +
                     ' '.join( noxArgs ),
             cdir=noxCoreDir, **kwargs )
 
