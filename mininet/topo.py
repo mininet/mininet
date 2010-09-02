@@ -11,7 +11,7 @@ A Topo object can be a topology database for NOX, can represent a physical
 setup for testing, and can even be emulated with the Mininet package.
 '''
 
-from networkx.classes.graph import Graph
+from networkx import Graph
 from mininet.node import SWITCH_PORT_BASE
 
 class NodeID(object):
