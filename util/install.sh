@@ -82,7 +82,8 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
 	echo "Installing Mininet dependencies"
-	sudo apt-get install -y gcc make screen psmisc xterm ssh iperf iproute python-setuptools
+	sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
+        python-setuptools python-networkx
 
 	#Add sysctl parameters as noted in the INSTALL file to increase kernel limits to support larger setups:
 	sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
@@ -144,6 +145,7 @@ function ovs {
 	echo "Installing OpenVSwitch..."
 
     if [ "$DIST" = "Debian" ]; then
+        sudo aptitude -y install pkg-config gcc make git-core python-dev libssl-dev
         #Install Autoconf 2.63+ backport from Debian Backports repo:
         #Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
         sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
@@ -165,7 +167,10 @@ function ovs {
 	cd $OVS_RELEASE
 	./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
-    mkdir -p $BUILDDIR
+    if [ ! -e $BUILDDIR ]; then
+        echo "Creating build directory $BUILDDIR"
+        sudo mkdir -p $BUILDDIR
+    fi
     opts="--with-l26=$BUILDDIR"
 	./configure $opts
 	make
@@ -352,7 +357,7 @@ function usage {
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
-    printf -- ' -x: install NOX(X) OpenFlow contoller\n' >&2
+    printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
     printf -- ' -y: install (A)ll packages\n' >&2    
     
     exit 2
