@@ -94,7 +94,7 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, UserSwitch, KernelSwitch, Controller
+from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
@@ -103,7 +103,7 @@ from mininet.term import cleanUpScreens, makeTerms
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
-    def __init__( self, topo=None, switch=KernelSwitch, host=Host,
+    def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                  controller=Controller,
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
@@ -181,13 +181,16 @@ class Mininet( object ):
         self.nameToNode[ name ] = sw
         return sw
 
-    def addController( self, name='c0', **kwargs ):
+    def addController( self, name='c0', Controller=None, **kwargs ):
         """Add controller.
-           controller: Controller class"""
-        controller_new = self.controller( name, **kwargs )
+           Controller: Controller class"""
+        if not Controller:
+            Controller = self.controller
+        controller_new = Controller( name, **kwargs )
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
+        return controller_new
 
     # Control network support:
     #
