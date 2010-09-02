@@ -181,12 +181,12 @@ class Mininet( object ):
         self.nameToNode[ name ] = sw
         return sw
 
-    def addController( self, name='c0', Controller=None, **kwargs ):
+    def addController( self, name='c0', controller=None, **kwargs ):
         """Add controller.
-           Controller: Controller class"""
-        if not Controller:
-            Controller = self.controller
-        controller_new = Controller( name, **kwargs )
+           controller: Controller class"""
+        if not controller:
+            controller = self.controller
+        controller_new = controller( name, **kwargs )
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
