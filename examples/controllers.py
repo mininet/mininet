@@ -20,6 +20,7 @@ def addHost( net, N ):
     return net.addHost( name, ip=ip )
 
 def multiControllerNet():
+    "Create a network with multiple controllers."
 
     net = Mininet( controller=Controller, switch=Switch)
 
@@ -36,13 +37,16 @@ def multiControllerNet():
     hosts2 = [ addHost( net, n ) for n in 5, 6 ]
 
     print "*** Creating links"
-    [ s1.linkTo( h ) for h in hosts1 ]
-    [ s2.linkTo( h ) for h in hosts2 ]
+    for h in hosts1:
+        s1.linkTo( h )
+    for h in hosts2:
+        s2.linkTo( h )
     s1.linkTo( s2 )
 
     print "*** Starting network"
     net.build()
-    [ controller.start() for controller in c1, c2 ]
+    c1.start()
+    c2.start()
     s1.start( [ c1 ] )
     s2.start( [ c2 ] )
 
