@@ -186,7 +186,8 @@ class MininetRunner( object ):
         opts.add_option( '--post', type='string', default=None,
                         help='[CLI script to run after tests]' )
         opts.add_option( '--prefixlen', type='int', default=8,
-                        help='[prefix length (e.g. /8) for automatic network configuration]' )
+                        help='[prefix length (e.g. /8) for automatic '
+                        'network configuration]' )
         self.options, self.args = opts.parse_args()
 
     def setup( self ):
@@ -226,7 +227,7 @@ class MininetRunner( object ):
         # We should clarify what this is actually for...
         # It seems like it should be default values for the
         # *data* network, so it may be misnamed.
-        controllerParams = ControllerParams( '10.0.0.0', 
+        controllerParams = ControllerParams( '10.0.0.0',
             self.options.prefixlen)
 
         inNamespace = self.options.innamespace
