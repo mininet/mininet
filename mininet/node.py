@@ -683,7 +683,7 @@ class NOX( Controller ):
 
         Controller.__init__( self, name,
             controller=noxCoreDir + '/nox_core',
-            cargs='--libdir=/usr/local/lib -v -i ptcp::%s ' % self.port +
+            cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' % self.port +
                     ' '.join( noxArgs ),
             cdir=noxCoreDir, **kwargs )
 
