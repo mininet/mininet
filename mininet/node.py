@@ -467,7 +467,6 @@ class UserSwitch( Switch ):
         pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
 
-
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
