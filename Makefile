@@ -23,5 +23,6 @@ install: mnexec
 	cp mnexec bin/
 	python setup.py install
 
-
+doc:
+	doxygen doxygen.cfg
 
