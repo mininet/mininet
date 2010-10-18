@@ -176,25 +176,19 @@ class MininetRunner( object ):
                         ' controller]' )
         opts.add_option( '--innamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
-<<<<<<< HEAD:bin/mn
-=======
         opts.add_option( '--listenport', type='int', default=6634,
                         help='[base port for passive switch listening'
                         ' controller]' )
         opts.add_option( '--nolistenport', action='store_true',
                         default=False, help="don't use passive listening port")
->>>>>>> of1.0:bin/mn
         opts.add_option( '--pre', type='string', default=None,
                         help='[CLI script to run before tests]' )
         opts.add_option( '--post', type='string', default=None,
                         help='[CLI script to run after tests]' )
-<<<<<<< HEAD:bin/mn
-
-=======
         opts.add_option( '--prefixlen', type='int', default=8,
                         help='[prefix length (e.g. /8) for automatic '
                         'network configuration]' )
->>>>>>> of1.0:bin/mn
+
         self.options, self.args = opts.parse_args()
 
     def setup( self ):
@@ -231,16 +225,12 @@ class MininetRunner( object ):
         if self.validate:
             self.validate( self.options )
 
-<<<<<<< HEAD:bin/mn
-        controllerParams = ControllerParams( '10.0.0.0', 8 )
-=======
         # We should clarify what this is actually for...
         # It seems like it should be default values for the
         # *data* network, so it may be misnamed.
         controllerParams = ControllerParams( '10.0.0.0',
             self.options.prefixlen)
 
->>>>>>> of1.0:bin/mn
         inNamespace = self.options.innamespace
         xterms = self.options.xterms
         mac = self.options.mac
@@ -251,11 +241,8 @@ class MininetRunner( object ):
         mn = Mininet( topo, switch, host, controller, controllerParams,
                      inNamespace=inNamespace,
                      xterms=xterms, autoSetMacs=mac,
-<<<<<<< HEAD:bin/mn
-                     autoStaticArp=arp )
-=======
                      autoStaticArp=arp, listenPort=listenPort )
->>>>>>> of1.0:bin/mn
+
         if self.options.pre:
             CLI( mn, script=self.options.pre )
 
