@@ -200,7 +200,6 @@ class Node( object ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
            timeoutms: timeout in ms or None to wait indefinitely."""
-        assert self.waiting
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
@@ -434,9 +433,19 @@ class Switch( Node ):
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
-    def __init__( self, name, opts='', **kwargs):
+    def __init__( self, name, opts='', listenPort=None, **kwargs):
         Node.__init__( self, name, **kwargs )
         self.opts = opts
+        self.listenPort = listenPort
+        if self.listenPort:
+            self.opts += ' --listen=ptcp:%i ' % self.listenPort
+
+    def defaultIntf( self ):
+        "Return interface for HIGHEST port"
+        ports = self.intfs.keys()
+        if ports:
+            intf = self.intfs[ max( ports ) ]
+        return intf
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
@@ -455,12 +464,15 @@ class UserSwitch( Switch ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
-        pathCheck( 'ofdatapath', 'ofprotocol' )
+        pathCheck( 'ofdatapath', 'ofprotocol',
+            moduleName='the OpenFlow reference user switch (openflow.org)' )
+
 
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( add=TUN )
+        if not os.path.exists( '/dev/net/tun' ):
+            moduleDeps( add=TUN )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
@@ -478,7 +490,7 @@ class UserSwitch( Switch ):
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name + mac_str +
+            ' punix:/tmp/' + self.name + mac_str + ' --no-slicing ' +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
@@ -511,8 +523,10 @@ class KernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( subtract = OVS_KMOD, add = OF_KMOD )
-        pathCheck( 'ofprotocol' )
+        pathCheck( 'ofprotocol',
+            moduleName='the OpenFlow reference kernel switch'
+            ' (openflow.org) (NOTE: not available in OpenFlow 1.0!)' )
+        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -559,14 +573,15 @@ class OVSKernelSwitch( Switch ):
         self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
-                " in the root namespace." )
+                " in the root namespace.\n" )
             exit( 1 )
 
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( subtract = OF_KMOD, add = OVS_KMOD )
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd' )
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
+            moduleName='Open vSwitch (openvswitch.org)')
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -607,10 +622,10 @@ class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
-    def __init__( self, name, inNamespace=False, controller='controller',
-                 cargs='-v ptcp:', cdir=None, defaultIP="127.0.0.1",
+    def __init__( self, name, inNamespace=False, command='controller',
+                 cargs='-v ptcp:%d', cdir=None, defaultIP="127.0.0.1",
                  port=6633 ):
-        self.controller = controller
+        self.command = command
         self.cargs = cargs
         self.cdir = cdir
         self.port = port
@@ -620,17 +635,17 @@ class Controller( Node ):
     def start( self ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
-        pathCheck( self.controller )
+        pathCheck( self.command )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
-        self.cmd( self.controller + ' ' + self.cargs +
+        self.cmd( self.command + ' ' + self.cargs % self.port +
             ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
         "Stop controller."
-        self.cmd( 'kill %' + self.controller )
+        self.cmd( 'kill %' + self.command )
         self.terminate()
 
     def IP( self, intf=None ):
@@ -668,8 +683,8 @@ class NOX( Controller ):
         noxCoreDir = os.environ[ 'NOX_CORE_DIR' ]
 
         Controller.__init__( self, name,
-            controller=noxCoreDir + '/nox_core',
-            cargs='--libdir=/usr/local/lib -v -i ptcp: ' +
+            command=noxCoreDir + '/nox_core',
+            cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' % self.port +
                     ' '.join( noxArgs ),
             cdir=noxCoreDir, **kwargs )
 

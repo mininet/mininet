@@ -37,7 +37,7 @@ def moduleDeps( subtract=None, add=None ):
             info( '*** Removing ' + mod + '\n' )
             rmmodOutput = rmmod( mod )
             if rmmodOutput:
-                error( 'Error removing ' + mod + '\n%s' % rmmodOutput )
+                error( 'Error removing ' + mod + ': "%s">\n' % rmmodOutput )
                 exit( 1 )
             if mod in lsmod():
                 error( 'Failed to remove ' + mod + '; still there!\n' )
@@ -47,20 +47,22 @@ def moduleDeps( subtract=None, add=None ):
             info( '*** Loading ' + mod + '\n' )
             modprobeOutput = modprobe( mod )
             if modprobeOutput:
-                error( 'Error inserting ' + mod + ';\n See INSTALL.\n%s' %
-                       modprobeOutput )
-                exit( 1 )
+                error( 'Error inserting ' + mod +
+                ' - is it installed and available via modprobe?\n' +
+                'Error was: "%s"\n' % modprobeOutput )
             if mod not in lsmod():
-                error( 'Failed to insert ' + mod + '\n' )
+                error( 'Failed to insert ' + mod + ' - quitting.\n' )
                 exit( 1 )
         else:
             debug( '*** ' + mod + ' already loaded\n' )
 
-def pathCheck( *args ):
+
+def pathCheck( *args, **kwargs ):
     "Make sure each program in *args can be found in $PATH."
+    moduleName = kwargs.get( 'moduleName', 'it' )
     for arg in args:
         if not quietRun( 'which ' + arg ):
-            error( 'Cannot find required executable %s -'
-                ' is it installed somewhere in your $PATH?\n(%s)\n' %
-                    ( arg, environ[ 'PATH' ] ) )
+            error( 'Cannot find required executable %s.\n' % arg +
+                'Please make sure that %s is installed ' % moduleName +
+                'and available in your $PATH:\n(%s)\n' % environ[ 'PATH' ] )
             exit( 1 )

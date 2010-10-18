@@ -448,8 +448,7 @@ class ConsoleApp( Frame ):
 
 def assign( obj, **kwargs ):
     "Set a bunch of fields in an object."
-    for name, value in kwargs.items():
-        setattr( obj, name, value )
+    obj.__dict__.update( kwargs )
 
 class Object( object ):
     "Generic object you can stuff junk into."

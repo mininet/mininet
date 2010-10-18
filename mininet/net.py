@@ -94,7 +94,7 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, UserSwitch, KernelSwitch, Controller
+from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
@@ -103,12 +103,12 @@ from mininet.term import cleanUpScreens, makeTerms
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
-    def __init__( self, topo=None, switch=KernelSwitch, host=Host,
+    def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                  controller=Controller,
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
-                 autoSetMacs=False, autoStaticArp=False ):
+                 autoSetMacs=False, autoStaticArp=False, listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: Switch class
@@ -120,7 +120,9 @@ class Mininet( object ):
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
            autoSetMacs: set MAC addrs from topo?
-           autoStaticArp: set all-pairs static MAC addrs?"""
+           autoStaticArp: set all-pairs static MAC addrs?
+           listenPort: base listening port to open; will be incremented for
+               each additional switch in the net if inNamespace=False"""
         self.switch = switch
         self.host = host
         self.controller = controller
@@ -131,6 +133,7 @@ class Mininet( object ):
         self.cleanup = cleanup
         self.autoSetMacs = autoSetMacs
         self.autoStaticArp = autoStaticArp
+        self.listenPort = listenPort
 
         self.hosts = []
         self.switches = []
@@ -162,25 +165,32 @@ class Mininet( object ):
         """Add switch.
            name: name of switch to add
            mac: default MAC address for kernel/OVS switch intf 0
-           returns: added switch"""
+           returns: added switch
+           side effect: increments the listenPort member variable."""
         if self.switch == UserSwitch:
-            sw = self.switch( name, defaultMAC=mac, defaultIP=ip,
-                inNamespace=self.inNamespace )
+            sw = self.switch( name, listenPort=self.listenPort,
+                defaultMAC=mac, defaultIP=ip, inNamespace=self.inNamespace )
         else:
-            sw = self.switch( name, defaultMAC=mac, defaultIP=ip, dp=self.dps,
+            sw = self.switch( name, listenPort=self.listenPort,
+                defaultMAC=mac, defaultIP=ip, dp=self.dps,
                 inNamespace=self.inNamespace )
+        if not self.inNamespace and self.listenPort:
+            self.listenPort += 1
         self.dps += 1
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
 
-    def addController( self, name='c0', **kwargs ):
+    def addController( self, name='c0', controller=None, **kwargs ):
         """Add controller.
            controller: Controller class"""
-        controller_new = self.controller( name, **kwargs )
+        if not controller:
+            controller = self.controller
+        controller_new = controller( name, **kwargs )
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
+        return controller_new
 
     # Control network support:
     #
