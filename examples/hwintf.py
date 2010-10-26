@@ -27,7 +27,7 @@ def checkIntf( intf ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
 
-    newIntf = 'veth1'
+    newIntf = 'eth1'
     info( '*** Checking', newIntf, '\n' )
     checkIntf( newIntf )
 
