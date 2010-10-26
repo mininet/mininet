@@ -9,7 +9,7 @@ For most tasks, the higher-level API will be preferable.
 """
 
 from mininet.net import init
-from mininet.node import Node, KernelSwitch
+from mininet.node import Node, OVSKernelSwitch
 from mininet.util import createLink
 from mininet.log import setLogLevel, info
 
@@ -32,27 +32,27 @@ def scratchNet( cname='controller', cargs='ptcp:' ):
     info( str( h0 ) + '\n' )
     info( str( h1 ) + '\n' )
 
-    info( "*** Starting network using kernel datapath\n" )
+    info( "*** Starting network using Open vSwitch kernel datapath\n" )
     controller.cmd( cname + ' ' + cargs + '&' )
-    switch.cmd( 'dpctl deldp nl:0' )
-    switch.cmd( 'dpctl adddp nl:0' )
+    switch.cmd( 'ovs-dpctl del-dp dp0' )
+    switch.cmd( 'ovs-dpctl add-dp dp0' )
     for intf in switch.intfs.values():
-        switch.cmd( 'dpctl addif nl:0 ' + intf )
-    switch.cmd( 'ofprotocol nl:0 tcp:localhost &' )
+        print switch.cmd( 'ovs-dpctl add-if dp0 ' + intf )
+    print switch.cmd( 'ovs-openflowd dp0 tcp:127.0.0.1 &' )
 
     info( "*** Running test\n" )
     h0.cmdPrint( 'ping -c1 ' + h1.IP() )
 
     info( "*** Stopping network\n" )
     controller.cmd( 'kill %' + cname )
-    switch.cmd( 'dpctl deldp nl:0' )
-    switch.cmd( 'kill %ofprotocol' )
+    switch.cmd( 'ovs-dpctl del-dp dp0' )
+    switch.cmd( 'kill %ovs-openflowd' )
     switch.deleteIntfs()
     info( '\n' )
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
     info( '*** Scratch network demo (kernel datapath)\n' )
-    KernelSwitch.setup()
+    OVSKernelSwitch.setup()
     init()
     scratchNet()

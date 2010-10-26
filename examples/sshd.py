@@ -19,7 +19,7 @@ demonstrates:
 from mininet.net import Mininet
 from mininet.cli import CLI
 from mininet.log import lg
-from mininet.node import Node, KernelSwitch
+from mininet.node import Node, OVSKernelSwitch
 from mininet.topolib import TreeTopo
 from mininet.util import createLink
 
@@ -67,5 +67,5 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D' ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info')
-    net = TreeNet( depth=1, fanout=4, switch=KernelSwitch )
+    net = TreeNet( depth=1, fanout=4, switch=OVSKernelSwitch )
     sshd( net )

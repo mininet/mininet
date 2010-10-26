@@ -10,7 +10,7 @@ def treePing64():
     "Run ping test on 64-node tree networks."
 
     results = {}
-    switches = { 'reference kernel': KernelSwitch,
+    switches = { # 'reference kernel': KernelSwitch,
         'reference user': UserSwitch,
         'Open vSwitch kernel': OVSKernelSwitch }
 

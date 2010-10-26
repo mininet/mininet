@@ -10,7 +10,7 @@ h1 <-> sN+1 <-> sN+2 .. sN+N-1
        |        |       |
        h2       h3      hN
 
-Note: by default, the reference controller only supports 16
+WARNING: by default, the reference controller only supports 16
 switches, so this test WILL NOT WORK unless you have recompiled
 your controller to support 100 switches (or more.)
 
@@ -27,7 +27,8 @@ import sys
 flush = sys.stdout.flush
 
 from mininet.net import init, Mininet
-from mininet.node import KernelSwitch, UserSwitch, OVSKernelSwitch
+# from mininet.node import KernelSwitch
+from mininet.node import UserSwitch, OVSKernelSwitch
 from mininet.topo import Topo, Node
 from mininet.log import lg
 
@@ -68,7 +69,7 @@ def linearBandwidthTest( lengths ):
     switchCount = max( lengths )
     hostCount = switchCount + 1
 
-    switches = { 'reference kernel': KernelSwitch,
+    switches = {  # 'reference kernel': KernelSwitch,
             'reference user': UserSwitch,
             'Open vSwitch kernel': OVSKernelSwitch }
 
@@ -104,8 +105,8 @@ def linearBandwidthTest( lengths ):
     print
 
 if __name__ == '__main__':
-    lg.setLogLevel( 'warning' )
+    lg.setLogLevel( 'info' )
     init()
-    sizes = [ 1, 10, 20 ]
+    sizes = [ 1, 10, 20, 40, 60, 80, 100 ]
     print "*** Running linearBandwidthTest", sizes
     linearBandwidthTest( sizes  )
