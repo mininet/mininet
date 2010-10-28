@@ -617,6 +617,64 @@ class OVSKernelSwitch( Switch ):
         self.deleteIntfs()
 
 
+class OVSUserSwitch( Switch ):
+    """Open VSwitch kernel-space switch.
+       Currently only works in the root namespace."""
+
+    def __init__( self, name, dp=None, **kwargs ):
+        """Init.
+           name: name for switch
+           dp: netlink id (0, 1, 2, ...)
+           defaultMAC: default MAC as unsigned int; random value if None"""
+        Switch.__init__( self, name, **kwargs )
+        self.dp = 'netdev@dp%i' % dp
+        self.intf = self.dp
+        if self.inNamespace:
+            error( "OVSUserSwitch currently only works"
+                " in the root namespace.\n" )
+            exit( 1 )
+
+    @staticmethod
+    def setup():
+        "Ensure any dependencies are loaded; if not, try to load them."
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
+            moduleName='Open vSwitch (openvswitch.org)')
+
+    def start( self, controllers ):
+        "Start up kernel datapath."
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        quietRun( 'ifconfig lo up' )
+        # Delete local datapath if it exists;
+        # then create a new one monitoring the given interfaces
+        # quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        # self.cmd( 'ovs-dpctl add-dp ' + self.dp )
+        mac_str = ''
+        if self.defaultMAC:
+            # ovs-openflowd expects a string of exactly 16 hex digits with no
+            # colons.
+            mac_str = ' --datapath-id=0000' + \
+                      ''.join( self.defaultMAC.split( ':' ) ) + ' '
+        ports = sorted( self.ports.values() )
+        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
+            raise Exception( 'only contiguous, one-indexed port ranges '
+                            'supported: %s' % self.intfs )
+        intfs = [ self.intfs[ port ] for port in ports ]
+        # self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
+        # Run protocol daemon
+        controller = controllers[ 0 ]
+        self.cmd( 'ovs-openflowd ' + self.dp + ' --ports=' + ','.join(intfs) +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' --fail=secure ' + self.opts + mac_str +
+            ' 1>' + ofplog + ' 2>' + ofplog + '&' )
+        self.execed = False
+
+    def stop( self ):
+        "Terminate kernel datapath."
+        # quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'kill %ovs-openflowd' )
+        self.deleteIntfs()
+
+
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
