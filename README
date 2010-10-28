@@ -3,10 +3,10 @@
                         or
 How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 
-Alpha release, March 2010
+Mininet 1.0rc0
 
 ---
-Welcome to the Mininet alpha release!
+Welcome to Mininet!
 
 Mininet creates OpenFlow test networks by using process-based
 virtualization and network namespaces.

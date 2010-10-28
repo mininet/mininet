@@ -1,12 +1,11 @@
 
 Preliminary Mininet Installation/Configuration Notes
 
-Pre-Beta version, August 2010
+Mininet 1.0rc0
+
 ---
 
-(Disclaimer: we're still pre-beta - things may be broken!)
-
-The supported installation methods for Mininet Pre-Beta are 1) using
+The supported installation methods for Mininet are 1) using
 a pre-built VM image, and 2) native installation on Ubuntu or Debian.
 (Other distributions may be supported in the future - if you would
 like to contribute an installation script, we would welcome it!)
@@ -14,21 +13,21 @@ like to contribute an installation script, we would welcome it!)
 1. Easiest "install" - use our pre-built VM image!
 
 The easiest way to get Mininet running is to start with one of our pre-built 
-virtual machine images from:
-
- http://openflow.org/foswiki/bin/view/OpenFlow/MininetGettingStarted
+virtual machine images from http://openflow.org/mininet
 
 Boot up the VM image, log in, and follow the instructions on the wiki page.
 
 An additional advantage of using the VM image is that it doesn't mess with
-your native OS install or damage it in any way.
+your native OS installation or damage it in any way.
 
-2. Native installation for Ubuntu and Debian 5 (NEW for pre-beta!)
+2. Native installation (experimental!) for Ubuntu and Debian 5
 
 If you are running Ubuntu or Debian 5, you may be able to use our handy
 install.sh script, which is in mininet/util. 
 
-WARNING: install.sh is a bit intrusive and may possibly damage your OS 
+WARNING: USE AT YOUR OWN RISK!
+
+install.sh is a bit intrusive and may possibly damage your OS 
 and/or home directory. Although we hope it won't do anything completely 
 terrible, you may want to look at the script before you run it, and you
 should make sure your system and home directory are backed up just in case!
