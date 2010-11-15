@@ -447,6 +447,12 @@ class Switch( Node ):
             intf = self.intfs[ max( ports ) ]
         return intf
 
+    def startIntfs( self ):
+        "Default function to start interfaces"
+        self.cmd("ifconfig lo up")
+        for intf in self.intfs.values():
+            self.cmdPrint("ifconfig " + intf + " up" )
+
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
            cmd: string"""
@@ -480,7 +486,7 @@ class UserSwitch( Switch ):
         controller = controllers[ 0 ]
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        self.cmd( 'ifconfig lo up' )
+        self.startIntfs()
         mac_str = ''
         if self.defaultMAC:
             # ofdatapath expects a string of hex digits with no colons.
@@ -530,7 +536,7 @@ class KernelSwitch( Switch ):
     def start( self, controllers ):
         "Start up reference kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
+        self.startIntfs()
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'dpctl deldp ' + self.dp )
@@ -585,7 +591,7 @@ class OVSKernelSwitch( Switch ):
     def start( self, controllers ):
         "Start up kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
+        self.startIntfs()
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
@@ -639,11 +645,13 @@ class OVSUserSwitch( Switch ):
         "Ensure any dependencies are loaded; if not, try to load them."
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
             moduleName='Open vSwitch (openvswitch.org)')
+        if not os.path.exists( '/dev/net/tun' ):
+            moduleDeps( add=TUN )
 
     def start( self, controllers ):
         "Start up kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
+        self.startIntfs()
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         # quietRun( 'ovs-dpctl del-dp ' + self.dp )
@@ -662,7 +670,7 @@ class OVSUserSwitch( Switch ):
         # self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmd( 'ovs-openflowd ' + self.dp + ' --ports=' + ','.join(intfs) +
+        self.cmd( 'ovs-openflowd -v ' + self.dp + ' --ports=' + ','.join(intfs) +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
             ' --fail=secure ' + self.opts + mac_str +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
