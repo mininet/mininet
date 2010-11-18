@@ -15,13 +15,9 @@ test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 
 # Kernel params
-# These kernels have been tried:
-<<<<<<< HEAD:util/install.sh
-KERNEL_NAME=2.6.33.1-mininet
-#KERNEL_NAME=`uname -r`
-KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+
 KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-=======
+
 if [ "$DIST" = "Debian" ]; then
     KERNEL_NAME=2.6.33.1-mininet
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
@@ -35,7 +31,6 @@ else
 fi
 
 echo "Detected Linux distribution: $DIST"
->>>>>>> of1.0:util/install.sh
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
@@ -161,24 +156,15 @@ function ovs {
         sudo apt-get -y --force-yes -t lenny-backports install autoconf
     fi
 
-<<<<<<< HEAD:util/install.sh
-=======
     if [ "$DIST" = "Ubuntu" ]; then
         sudo apt-get -y install $KERNEL_HEADERS
     fi
 
->>>>>>> of1.0:util/install.sh
 	#Install OVS from release
 	cd ~/
-	#wget http://openvswitch.org/releases/${OVS_RELEASE}.tar.gz
-	#tar xzf ${OVS_RELEASE}.tar.gz
-	#cd $OVS_RELEASE
 	git clone git://openvswitch.org/openvswitch
 	cd $OVS_RELEASE
 	./boot.sh
-<<<<<<< HEAD:util/install.sh
-	./configure --with-l26=/lib/modules/${KERNEL_NAME}/build
-=======
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
     if [ ! -e $BUILDDIR ]; then
         echo "Creating build directory $BUILDDIR"
@@ -186,7 +172,6 @@ function ovs {
     fi
     opts="--with-l26=$BUILDDIR"
 	./configure $opts
->>>>>>> of1.0:util/install.sh
 	make
 	sudo make install
 }
@@ -214,15 +199,10 @@ function nox {
 
 	# With later autoconf versions this doesn't quite work:
 	./boot.sh --apps-core || true
-<<<<<<< HEAD:util/install.sh
-	# So use this instead:
-	autoreconf --install --force
-=======
     if [ "$DIST" = "Debian" ]; then
         # So use this instead:
         autoreconf --install --force
     fi
->>>>>>> of1.0:util/install.sh
 	mkdir build
 	cd build
 	../configure --with-python=yes
@@ -261,11 +241,7 @@ function cbench {
     git clone git://www.openflow.org/oflops.git
     cd oflops
     sh boot.sh
-<<<<<<< HEAD:util/install.sh
-    ./configure --with-openflow-src-dir=/home/mininet/openflow
-=======
     ./configure --with-openflow-src-dir=$HOME/openflow
->>>>>>> of1.0:util/install.sh
     make
     sudo make install || true # make install fails; force past this
 }
@@ -292,14 +268,6 @@ function other {
 	git config --global color.branch auto
 
 	#Reduce boot screen opt-out delay. Modify timeout in /boot/grub/menu.lst to 1:
-<<<<<<< HEAD:util/install.sh
-	sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
-
-    # Clean unneeded debs:
-    rm -f ~/linux-headers-* ~/linux-image-*
-}
-
-=======
     if [ "$DIST" = "Debian" ]; then
         sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
     fi
@@ -308,7 +276,6 @@ function other {
     rm -f ~/linux-headers-* ~/linux-image-*
 }
 
->>>>>>> of1.0:util/install.sh
 # Script to copy built OVS kernel module to where modprobe will
 # find them automatically.  Removes the need to keep an environment variable
 # for insmod usage, and works nicely with multiple kernel versions.
@@ -349,13 +316,8 @@ function vm_clean {
 	sudo rm -rf openvswitch*.tar.gz
 
 	# Remove sensistive files
-<<<<<<< HEAD:util/install.sh
-	history -c
-	rm ~/.bash_history # history -c doesn't seem to work for some reason
-=======
 	history -c  # note this won't work if you have multiple bash sessions
 	rm -f ~/.bash_history  # need to clear in memory and remove on disk
->>>>>>> of1.0:util/install.sh
 	rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
 	sudo rm -f ~/.ssh/authorized_keys2
 
@@ -364,11 +326,7 @@ function vm_clean {
 	#sudo rm -f /usr/bin/mnexec
 
 	# Clear optional dev script for SSH keychain load on boot
-<<<<<<< HEAD:util/install.sh
-	rm ~/.bash_profile
-=======
 	rm -f ~/.bash_profile
->>>>>>> of1.0:util/install.sh
 
 	# Clear git changes
 	git config --global user.name "None"
