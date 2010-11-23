@@ -451,7 +451,7 @@ class Switch( Node ):
         "Default function to start interfaces"
         self.cmd("ifconfig lo up")
         for intf in self.intfs.values():
-            self.cmdPrint("ifconfig " + intf + " up" )
+            self.cmd("ifconfig " + intf + " up" )
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
