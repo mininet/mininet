@@ -22,7 +22,7 @@ OF_KMOD = 'ofdatapath'
 OVS_KMOD = 'openvswitch_mod'
 TUN = 'tun'
 
-def moduleDeps( subtract=None, add=None ):
+def moduleDeps( subtract=None, add=None, moduleName='it' ):
     """Handle module dependencies.
        subtract: string or list of module names to remove, if already loaded
        add: string or list of module names to add, if not already loaded"""
@@ -47,9 +47,10 @@ def moduleDeps( subtract=None, add=None ):
             info( '*** Loading ' + mod + '\n' )
             modprobeOutput = modprobe( mod )
             if modprobeOutput:
-                error( 'Error inserting ' + mod +
-                ' - is it installed and available via modprobe?\n' +
-                'Error was: "%s"\n' % modprobeOutput )
+                error( 'Error inserting ' + mod + '\n'
+                'Is %s installed and available via modprobe?\n' %
+                moduleName +
+                'Error was: "%s"\n' % modprobeOutput.strip() )
             if mod not in lsmod():
                 error( 'Failed to insert ' + mod + ' - quitting.\n' )
                 exit( 1 )
