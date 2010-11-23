@@ -528,10 +528,10 @@ class KernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ofprotocol',
-            moduleName='the OpenFlow reference kernel switch'
-            ' (openflow.org) (NOTE: not available in OpenFlow 1.0!)' )
-        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
+        moduleName=('the OpenFlow reference kernel switch'        
+                ' (openflow.org) (NOTE: not available in OpenFlow 1.0+!)' )
+        pathCheck( 'ofprotocol', moduleName=moduleName)
+        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD, moduleName=moduleName )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -584,9 +584,9 @@ class OVSKernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
-            moduleName='Open vSwitch (openvswitch.org)')
-        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+        moduleName='Open vSwitch (openvswitch.org)'
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd', moduleName=moduleName )
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD, moduleName=moduleName )
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -652,10 +652,6 @@ class OVSUserSwitch( Switch ):
         "Start up kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.startIntfs()
-        # Delete local datapath if it exists;
-        # then create a new one monitoring the given interfaces
-        # quietRun( 'ovs-dpctl del-dp ' + self.dp )
-        # self.cmd( 'ovs-dpctl add-dp ' + self.dp )
         mac_str = ''
         if self.defaultMAC:
             # ovs-openflowd expects a string of exactly 16 hex digits with no
@@ -670,7 +666,8 @@ class OVSUserSwitch( Switch ):
         # self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmd( 'ovs-openflowd -v ' + self.dp + ' --ports=' + ','.join(intfs) +
+        self.cmd( 'ovs-openflowd -v ' + self.dp +
+            ' --ports=' + ','.join(intfs) +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
             ' --fail=secure ' + self.opts + mac_str +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
