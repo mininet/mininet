@@ -42,9 +42,14 @@ def cleanup():
     info( "*** Removing excess kernel datapaths\n" )
     dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).split( '\n' )
     for dp in dps:
-        if dp != '':
+        if dp:
             sh( 'dpctl deldp ' + dp )
 
+    ovsdps = sh( "ovs-dpctl show | egrep '\w+@\w+:'" ).split( '\n' )
+    for dp in dps:
+        if dp:
+            sh( 'ovs-dpctl del-dp ' + dp )
+            
     info( "*** Removing all links of the pattern foo-ethX\n" )
     links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
     for link in links:
