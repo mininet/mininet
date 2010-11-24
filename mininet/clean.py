@@ -24,10 +24,10 @@ def cleanup():
     """Clean up junk which might be left over from old runs;
        do fast stuff before slow dp and link removal!"""
 
-    info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
+    info("*** Removing excess controllers/switches/pings/noxes"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd udpbwtest'
+    zombies += 'ovs-openflowd udpbwtest ovs-openflowd ovs-controller'
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
