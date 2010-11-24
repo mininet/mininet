@@ -47,6 +47,7 @@ HOSTS = { 'process': Host }
 CONTROLLERDEF = 'ref'
 # a and b are the name and inNamespace params.
 CONTROLLERS = { 'ref': Controller,
+               'ovs': lambda name: Controller( name, command='ovs-controller' ),
                'nox_dump': lambda name: NOX( name, 'packetdump' ),
                'nox_pysw': lambda name: NOX( name, 'pyswitch' ),
                'remote': lambda name: None,
