@@ -432,6 +432,7 @@ class Switch( Node ):
        an OpenFlow switch."""
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
+    dpctl = 'dpctl'
 
     def __init__( self, name, opts='', listenPort=None, **kwargs):
         Node.__init__( self, name, **kwargs )
@@ -568,6 +569,8 @@ class OVSKernelSwitch( Switch ):
     """Open VSwitch kernel-space switch.
        Currently only works in the root namespace."""
 
+    dpctl = 'ovs-ofctl'
+
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name: name for switch
@@ -626,6 +629,8 @@ class OVSKernelSwitch( Switch ):
 class OVSUserSwitch( Switch ):
     """Open VSwitch kernel-space switch.
        Currently only works in the root namespace."""
+
+    dpctl = 'ovs-ofctl'
 
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
