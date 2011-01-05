@@ -18,7 +18,7 @@ LEVELS = { 'debug': logging.DEBUG,
           'critical': logging.CRITICAL }
 
 # change this to logging.INFO to get printouts when running unit tests
-LOGLEVELDEFAULT = logging.WARNING
+LOGLEVELDEFAULT = OUTPUT
 
 #default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOGMSGFORMAT = '%(message)s'

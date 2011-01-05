@@ -10,6 +10,7 @@ from mininet.node import Host, Controller, ControllerParams
 # from mininet.node import KernelSwitch
 from mininet.node import UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
+from mininet.log import setLogLevel
 
 SWITCHES = { 'user': UserSwitch,
              'ovsk': OVSKernelSwitch,
@@ -56,4 +57,5 @@ class testLinear( unittest.TestCase ):
 
 
 if __name__ == '__main__':
+    setLogLevel('warning')
     unittest.main()

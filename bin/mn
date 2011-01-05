@@ -198,7 +198,8 @@ class MininetRunner( object ):
         if LEVELS[self.options.verbosity] > LEVELS['output']:
             print ( '*** WARNING: selected verbosity level (%s) will hide CLI '
                     'output!\n'
-                    'Please restart Mininet with -v [debug, info, output].' )
+                    'Please restart Mininet with -v [debug, info, output].'
+                    % self.options.verbosity )
         lg.setLogLevel( self.options.verbosity )
 
         # validate environment setup
