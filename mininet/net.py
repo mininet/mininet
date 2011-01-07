@@ -473,17 +473,22 @@ class Mininet( object ):
            iperfOutput: string
            returns: result string"""
         r = r'([\d\.]+ \w+/sec)'
-        m = re.search( r, iperfOutput )
+        m = re.findall( r, iperfOutput )
         if m:
-            return m.group( 1 )
+            return m[-1]
         else:
-            raise Exception( 'could not parse iperf output: ' + iperfOutput )
+            # was: raise Exception(...)
+            error( 'could not parse iperf output: ' + iperfOutput )
+            return ''
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
            returns: results two-element array of server and client speeds"""
+        if not quietRun( 'which telnet' ):
+            error( 'Cannot find telnet in $PATH - required for iperf test' )
+            return
         if not hosts:
             hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
@@ -503,6 +508,10 @@ class Mininet( object ):
         servout = ''
         while server.lastPid is None:
             servout += server.monitor()
+        while 'Connected' not in client.cmd(
+            'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
+            output('waiting for iperf to start up')
+            sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
         debug( 'Client output: %s\n' % cliout )
