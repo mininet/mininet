@@ -16,8 +16,6 @@ grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 
 # Kernel params
 
-KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-
 if [ "$DIST" = "Debian" ]; then
     KERNEL_NAME=2.6.33.1-mininet
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
