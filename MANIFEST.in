@@ -1,0 +1,2 @@
+include mnexec.c
+exclude bin/mnexec
