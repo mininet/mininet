@@ -165,7 +165,7 @@ function ovs {
 	./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
     if [ ! -e $BUILDDIR ]; then
-        echo "Creating build directory $BUILDDIR"
+        echo "Creating build sdirectory $BUILDDIR"
         sudo mkdir -p $BUILDDIR
     fi
     opts="--with-l26=$BUILDDIR"
