@@ -2,24 +2,31 @@
 
 "Setuptools params"
 
-from setuptools import setup, find_packages
-from os.path import join
-
-scripts = [ join( 'bin', filename ) for filename in [ 
-    'mn', 'mnexec' ] ]
+import os, setuptools
+import distutils.command.build_scripts
+import distutils.command.clean
+import distutils.ccompiler
 
 modname = distname = 'mininet'
 
-setup(
+class build_scripts(distutils.command.build_scripts.build_scripts):
+    def run(self):
+        distutils.ccompiler.new_compiler().link_executable(["mnexec.c"], "bin/mnexec")
+        distutils.command.build_scripts.build_scripts.run(self)
+
+class clean(distutils.command.clean.clean):
+    def run(self):
+        if os.path.exists("bin/mnexec"):
+            os.unlink("bin/mnexec")
+        distutils.command.clean.clean.run(self)
+
+setuptools.setup(
     name=distname,
     version='0.0.0',
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
-    packages=find_packages(exclude='test'),
-    long_description="""
-Insert longer description here.
-      """,
+    packages=setuptools.find_packages(exclude='test'),
     classifiers=[
           "License :: OSI Approved :: GNU General Public License (GPL)",
           "Programming Language :: Python",
@@ -33,5 +40,10 @@ Insert longer description here.
         'setuptools',
         'networkx'
     ],
-    scripts=scripts,
+    scripts=[
+        'bin/mn',
+        'bin/mnexec'
+    ],
+    cmdclass={"build_scripts": build_scripts,
+              "clean": clean}
 )
