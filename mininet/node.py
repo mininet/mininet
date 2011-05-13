@@ -218,15 +218,17 @@ class Node( object ):
             data = data.replace( chr( 127 ), '' )
         return data
 
-    def waitOutput( self, verbose=False ):
-        """Wait for a command to complete.
+    def waitOutput( self, verbose=False, pattern=None ):
+        """Wait for a command to complete or generate certain output.
            Completion is signaled by a sentinel character, ASCII(127)
-           appearing in the output stream.  Wait for the sentinel and return
-           the output, including trailing newline.
-           verbose: print output interactively"""
+           appearing in the output stream.  Wait for the sentinel or
+           output matched by a certain pattern, and return the output.
+           verbose: print output interactively
+           pattern: compiled regexp or None"""
         log = info if verbose else debug
         output = ''
-        while self.waiting:
+        while self.waiting and (pattern is None or
+                                not pattern.search(output)):
             data = self.monitor()
             output += data
             log( data )
