@@ -94,7 +94,7 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
+from mininet.node import Host, Switch, UserSwitch, OVSKernelSwitch, Controller
 from mininet.node import ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
@@ -546,6 +546,70 @@ class Mininet( object ):
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 
+    def attachHost( self, hostName, switchName ):
+        if hostName not in self.nameToNode:
+            error( 'host not in network: %s\n' % hostName )
+            return
+            
+        if switchName not in self.nameToNode:
+            error( 'switch not in network: %s\n' % switchName )
+            return
+            
+        host = self.nameToNode[hostName]
+        if not isinstance(host, Host):
+            error('%s is not a host' % hostName)
+            return
+            
+        sw = self.nameToNode[switchName]
+        if not isinstance(sw, Switch):
+            error('%s is not a switch' % switchName)
+            return
+            
+        if not isinstance(sw, OVSKernelSwitch):
+            error('attachHost only works with OVS kernel switches')
+            return
+            
+        hostIntf, swIntf = host.linkTo(sw)
+        
+        host.setIP( hostIntf, host.defaultIP, self.cparams.prefixLen )
+        host.setDefaultRoute( hostIntf )
+        if self.autoSetMacs:
+            host.setMAC( hostIntf, host.defaultMAC )
+        #if self.autoStaticArp:
+        #    for h in self.hosts:
+        #        if h != host:
+        #            host.setARP( ip=h.IP(), mac=h.MAC() )
+        #            h.setARP( ip=host.IP(), mac=host.MAC() )
+
+    
+    def detachHost( self, hostName, switchName=None ):
+        if hostName not in self.nameToNode:
+            error( 'host not in network: %s\n' % hostName )
+            return
+            
+        host = self.nameToNode[hostName]
+        if not isinstance(host, Host):
+            error('%s is not a host' % hostName)
+            return
+        
+        if switchName:
+            if switchName not in self.nameToNode:
+                error( 'switch not in network: %s\n' % switchName )
+                return
+                
+            sw = self.nameToNode[switchName]
+            if not isinstance(sw, Switch):
+                error('%s is not a switch' % switchName)
+                return
+                
+            if not isinstance(sw, OVSKernelSwitch):
+                error('attachHost only works with OVS kernel switches')
+                return
+        else:
+            sw = None
+            
+        host.unlinkFrom(sw)
+            
     def interact( self ):
         "Start network and run our simple CLI."
         self.start()
