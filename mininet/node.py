@@ -260,6 +260,12 @@ class Node( object ):
         "Construct a canonical interface name node-ethN for interface n."
         return self.name + '-eth' + repr( n )
 
+    def intfToPort(self, intf):
+        index = intf.rfind('-eth')
+        if index < 0:
+            return None
+        return int(intf[index + len('-eth'):])
+            
     def newPort( self ):
         "Return the next port number to allocate."
         if len( self.ports ) > 0:
@@ -319,6 +325,51 @@ class Node( object ):
         node2.registerIntf( intf2, node1, intf1 )
         return intf1, intf2
 
+    def unlinkFrom( self, node2=None ):
+        if node2:
+            unlinkList = [node2]
+        else:
+            unlinkList = [c[0] for c in self.connection.values()]
+        
+        for node in unlinkList:
+            self.deleteIntfsToNode(node)
+            node.deleteIntfsToNode(self)
+        
+    def deleteIntfsToNode( self, dstNode, dstPort=None ):
+        
+        dstIntf = dstNode.intfName(dstPort) if dstPort else None
+        intfs = []
+        for intf in self.connection.keys():
+            nextNode, nextIntf = self.connection[intf]
+            if dstIntf:
+                if nextIntf == dstIntf:
+                    intfs.append(intf)
+            elif nextNode == dstNode:
+                intfs.append(intf)
+
+        #connections = self.connectionsTo(dstNode)
+        #if dstPort:
+        #    dstIntf = dstNode.intfName(dstPort)
+        #    intfs = [connection[0] for connection in connections if connection[1] == dstIntf]
+        #else:
+        #    intfs = [connection[0] for connection in connections]
+        
+        for intf in intfs:
+            self.deleteIntf(intf)
+    
+    def deleteIntf(self, intf):
+        del self.connection[intf]
+        port = self.intfToPort(intf)
+        if port is not None:
+            del self.intfs[port]
+        del self.ports[intf]
+        
+        quietRun( 'ip link del ' + intf )
+        sleep( 0.001 )
+
+    def deletePort(self, port):
+        self.deleteIntf(self.intfName(port))
+        
     def deleteIntfs( self ):
         "Delete all of our interfaces."
         # In theory the interfaces should go away after we shut down.
@@ -624,7 +675,14 @@ class OVSKernelSwitch( Switch ):
         self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
 
-
+    def addIntf( self, intf, port ):
+        super(OVSKernelSwitch, self).addIntf(intf, port)
+        self.cmd( 'ovs-dpctl', 'add-if', self.dp, intf )
+    
+    def deleteIntf( self, intf ):
+        super(OVSKernelSwitch, self).deleteIntf(intf)
+        self.cmd( 'ovs-dpctl', 'del-if', self.dp, intf )
+        
 class OVSUserSwitch( Switch ):
     """Open VSwitch kernel-space switch.
        Currently only works in the root namespace."""
