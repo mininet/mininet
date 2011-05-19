@@ -76,12 +76,11 @@ class Node( object ):
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
-        cmd = [ 'mnexec', opts, 'bash', '-m' ]
+        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'], 'mnexec', opts, 'bash', '-m', '-p' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
             close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
-        self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
@@ -102,6 +101,11 @@ class Node( object ):
         self.waiting = False
         # Stash additional information as desired
         self.args = kwargs
+        x = ""
+        while "\n" not in x:
+            self.waitReadable()
+            x += self.read(1)
+        self.pid = int(x[1:-1])
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -149,7 +153,7 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
-        os.kill( self.pid, signal.SIGKILL )
+        quietRun( 'kill ' + str( self.pid ) )
         self.cleanup()
 
     def stop( self ):
