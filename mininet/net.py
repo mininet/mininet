@@ -625,16 +625,11 @@ def init():
     "Initialize Mininet."
     if init.inited:
         return
-    if os.getuid() != 0:
-        # Note: this script must be run as root
-        # Perhaps we should do so automatically!
-        print "*** Mininet must run as root."
-        exit( 1 )
     # If which produces no output, then mnexec is not in the path.
     # May want to loosen this to handle mnexec in the current dir.
     if not quietRun( 'which mnexec' ):
         raise Exception( "Could not find mnexec - check $PATH" )
-    fixLimits()
+    #fixLimits()
     init.inited = True
 
 init.inited = False
