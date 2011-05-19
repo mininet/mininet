@@ -4,6 +4,7 @@ from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
 from subprocess import call, check_call, Popen, PIPE, STDOUT
+import os
 
 from mininet.log import error
 
@@ -29,6 +30,7 @@ def quietRun( *cmd ):
         cmd = cmd[ 0 ]
         if isinstance( cmd, str ):
             cmd = cmd.split( ' ' )
+    cmd = ["sudo", "-E", "env", "PATH=%s" % os.environ["PATH"]] + cmd
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
     # select(), which can't handle
