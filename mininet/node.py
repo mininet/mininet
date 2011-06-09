@@ -42,6 +42,7 @@ Future enhancements:
 """
 
 import os
+import pty
 import re
 import signal
 import select
@@ -76,11 +77,16 @@ class Node( object ):
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
-        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'], 'mnexec', opts, 'bash', '-m', '-p' ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'],
+                'PS1=' + chr( 127 ), 'mnexec', opts, 'bash', '--norc' ]
+        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+        # in the subprocess and insulate it from signals (e.g. SIGINT)
+        # received by the parent
+        master, slave = pty.openpty()
+        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
             close_fds=False )
-        self.stdin = self.shell.stdin
-        self.stdout = self.shell.stdout
+        self.stdin = os.fdopen( master )
+        self.stdout = self.stdin
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
@@ -106,6 +112,7 @@ class Node( object ):
             self.waitReadable()
             x += self.read(1)
         self.pid = int(x[1:-1])
+        self.serial = 0
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -167,11 +174,25 @@ class Node( object ):
             self.pollOut.poll( timeoutms )
 
     def sendCmd( self, *args, **kwargs ):
-        """Send a command, followed by a command to echo a sentinel,
-           and return without waiting for the command to complete.
+        """Send a command, and return without waiting for the command
+           to complete.
            args: command and arguments, or string
            printPid: print command's PID?"""
         assert not self.waiting
+        self.serial += 1
+        self.write( 'echo __   %s   __\n' % self.serial )
+        match = '__ %s __' % self.serial
+        buf = ''
+        while True:
+            i = buf.find( match )
+            if i >= 0:
+                buf = buf[ i + len( match ): ]
+                break
+            buf += self.read( 1024 )
+        while True:
+            if chr( 127 ) in buf:
+                break
+            buf += self.read( 1024 )
         printPid = kwargs.get( 'printPid', True )
         if len( args ) > 0:
             cmd = args
@@ -180,25 +201,16 @@ class Node( object ):
         if not re.search( r'\w', cmd ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            separator = '&'
-            cmd = cmd[ :-1 ]
-        else:
-            separator = ';'
-            if printPid and not isShellBuiltin( cmd ):
-                cmd = 'mnexec -p ' + cmd
-        self.write( cmd + separator + ' printf "\\177" \n' )
+        if printPid and not isShellBuiltin( cmd ):
+            cmd = 'mnexec -p ' + cmd
+        self.write( cmd + '\n' )
         self.lastCmd = cmd
         self.lastPid = None
         self.waiting = True
 
     def sendInt( self, sig=signal.SIGINT ):
         "Interrupt running command."
-        if self.lastPid:
-            try:
-                os.kill( self.lastPid, sig )
-            except OSError:
-                pass
+        self.write( chr( 3 ) )
 
     def monitor( self, timeoutms=None ):
         """Monitor and return the output of a command.
