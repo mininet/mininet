@@ -345,10 +345,6 @@ class CLI( Cmd ):
         bothPoller = poll()
         bothPoller.register( self.stdin )
         bothPoller.register( node.stdout )
-        if self.isatty():
-            # Buffer by character, so that interactive
-            # commands sort of work
-            quietRun( 'stty -icanon min 1' )
         while True:
             try:
                 bothPoller.poll()
