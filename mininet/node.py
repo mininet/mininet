@@ -219,7 +219,7 @@ class Node( object ):
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
-        marker = chr( 1 ) + r'\d+\n'
+        marker = chr( 1 ) + r'\d+\r\n'
         if chr( 1 ) in data:
             markers = re.findall( marker, data )
             if markers:
