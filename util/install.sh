@@ -35,9 +35,8 @@ KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-#OVS_RELEASE=openvswitch-1.0.1
-OVS_RELEASE=openvswitch # release 1.0.1 doesn't work with veth pairs.
-OVS_DIR=~/$OVS_RELEASE
+OVS_RELEASE=v1.1.1
+OVS_DIR=~/openvswitch
 OVS_KMOD=openvswitch_mod.ko
 
 function kernel {
@@ -161,7 +160,8 @@ function ovs {
 	#Install OVS from release
 	cd ~/
 	git clone git://openvswitch.org/openvswitch
-	cd $OVS_RELEASE
+	cd $OVS_DIR
+    git checkout $OVS_RELEASE
 	./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
     if [ ! -e $BUILDDIR ]; then
