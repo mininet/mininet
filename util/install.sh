@@ -345,6 +345,7 @@ function usage {
         
     printf 'options:\n' >&2
     printf -- ' -a: (default) install (A)ll packages - good luck!\n' >&2
+    printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
     printf -- ' -c: (C)lean up after kernel install\n' >&2
     printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2    
     printf -- ' -f: install open(F)low\n' >&2
@@ -364,10 +365,11 @@ if [ $# -eq 0 ]
 then
 	all
 else
-	while getopts 'acdfhkmntvx' OPTION
+	while getopts 'abcdfhkmntvx' OPTION
 	do
 	  case $OPTION in
-      a)    all;;
+	  a)    all;;
+	  b)    cbench;;
 	  c)    kernel_clean;;
 	  d)    vm_clean;;
 	  f)    of;;
