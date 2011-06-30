@@ -238,6 +238,7 @@ function cbench {
     cd ~/
     git clone git://openflow.org/oflops.git
     cd oflops
+    sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
     ./configure --with-openflow-src-dir=$HOME/openflow
     make
