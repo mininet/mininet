@@ -236,7 +236,7 @@ function cbench {
     
     sudo apt-get install -y libsnmp-dev libpcap-dev
     cd ~/
-    git clone git://www.openflow.org/oflops.git
+    git clone git://openflow.org/oflops.git
     cd oflops
     sh boot.sh
     ./configure --with-openflow-src-dir=$HOME/openflow
