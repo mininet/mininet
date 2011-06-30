@@ -84,7 +84,7 @@ function mn_deps {
 	sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
         python-setuptools python-networkx
 
-    if [ "$DIST" = "Ubuntu" ] && grep '10.04' /etc/*release*; then
+    if [ "$DIST" = "Ubuntu" ] && [ "`lsb_release -sr`" = "10.04" ]; then
         echo "Upgrading networkx to avoid deprecation warning"
         sudo easy_install --upgrade networkx
     fi
