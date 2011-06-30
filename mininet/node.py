@@ -684,7 +684,7 @@ class OVSKernelSwitch( Switch ):
             raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in ports ]
-        self.cmdPrint( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
+        self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
