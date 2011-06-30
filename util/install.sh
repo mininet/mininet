@@ -115,6 +115,9 @@ function of {
 	git clone git://openflowswitch.org/openflow.git
 	cd ~/openflow
 
+    # Patch controller to handle more than 16 switches
+    patch -p1 < ~/mininet/util/openflow-patches/controller.patch
+
 	# Resume the install:
 	./boot.sh
 	./configure
