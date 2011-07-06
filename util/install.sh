@@ -11,8 +11,11 @@ set -o nounset
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
+DIST="not recognized."
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
+
+echo "Linux distribution: $DIST"
 
 # Kernel params
 
@@ -27,8 +30,6 @@ else
     echo "Install.sh currently only supports Ubuntu and Debian."
     exit 1
 fi
-
-echo "Detected Linux distribution: $DIST"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
