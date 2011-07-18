@@ -502,12 +502,18 @@ class Switch( Node ):
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
-    def __init__( self, name, opts='', listenPort=None, **kwargs):
+    def __init__( self, name, opts='', listenPort=None, dpid=None, **kwargs):
         Node.__init__( self, name, **kwargs )
         self.opts = opts
         self.listenPort = listenPort
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        if dpid:
+            self.dpid = dpid
+        elif self.defaultMAC:
+            self.dpid = "00:00:" + self.defaultMAC
+        else:
+            self.dpid = None
 
     def defaultIntf( self ):
         "Return interface for HIGHEST port"
@@ -753,6 +759,25 @@ class OVSUserSwitch( Switch ):
         "Terminate kernel datapath."
         # quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
+        self.deleteIntfs()
+
+class RemoteSwitch( Switch ):
+    "Switch created outside mininet."
+
+    def __init__( self, name, remotePorts, **kwargs ):
+        Switch.__init__( self, name, inNamespace=False, **kwargs )
+        self.remotePorts = remotePorts
+
+    @staticmethod
+    def setup():
+        pass
+
+    def start( self, controllers ):
+        self.startIntfs()
+        for port, intf in self.intfs.items():
+            self.cmd( 'brctl', 'addif', self.remotePorts[ port ], intf )
+
+    def stop(self):
         self.deleteIntfs()
 
 
