@@ -94,8 +94,8 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, Switch, UserSwitch, OVSKernelSwitch, Controller
-from mininet.node import ControllerParams
+from mininet.node import Host, Switch, UserSwitch, OVSKernelSwitch, RemoteSwitch
+from mininet.node import Controller, ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
@@ -177,6 +177,16 @@ class Mininet( object ):
         if not self.inNamespace and self.listenPort:
             self.listenPort += 1
         self.dps += 1
+        self.switches.append( sw )
+        self.nameToNode[ name ] = sw
+        return sw
+
+    def addRemoteSwitch( self, name, remotePorts, dpid=None ):
+        """Add a RemoteSwitch.
+           name: name of switch to add
+           remotePorts: kernel interface name for each switch port
+           returns: added switch"""
+        sw = RemoteSwitch( name, dpid=dpid, remotePorts=remotePorts )
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
