@@ -547,6 +547,8 @@ class UserSwitch( Switch ):
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
+        self.cmd( 'kill %ofdatapath' )
+        self.cmd( 'kill %ofprotocol' )
 
     @staticmethod
     def setup():
