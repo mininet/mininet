@@ -1,9 +1,9 @@
 
-    Mininet: A Simple Virtual Testbed for OpenFlow
+    Mininet: A Simple Virtual Testbed for OpenFlow/SDN
                         or
 How to Squeeze a 1024-node OpenFlow Network onto your Laptop
 
-Mininet 1.0rc0
+Mininet 1.0.0
 
 ---
 Welcome to Mininet!
@@ -74,9 +74,10 @@ Batteries are not included (yet!)
 However, some preliminary installation notes are included in the INSTALL
 file.
 
-Additionally, much useful information is available on the Mininet wiki:
+Additionally, much useful information, including a Mininet tutorial,
+is available on the Mininet wiki:
 
-http://www.openflowswitch.org/foswiki/bin/view/OpenFlow/Mininet
+http://openflow.org/mininet
 
 Enjoy, and good luck!
 

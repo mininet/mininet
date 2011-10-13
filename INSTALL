@@ -1,7 +1,7 @@
 
-Preliminary Mininet Installation/Configuration Notes
+Mininet Installation/Configuration Notes
 
-Mininet 1.0rc0
+Mininet 1.0.0
 
 ---
 
@@ -20,20 +20,22 @@ Boot up the VM image, log in, and follow the instructions on the wiki page.
 An additional advantage of using the VM image is that it doesn't mess with
 your native OS installation or damage it in any way.
 
-2. Native installation (experimental!) for Ubuntu and Debian 5
+2. Native installation (experimental!) for Ubuntu 10.04 LTS
 
-If you are running Ubuntu or Debian 5, you may be able to use our handy
-install.sh script, which is in mininet/util. 
+If you are running Ubuntu 10.04 LTS (or possibly Debian 5), you may be
+able to use our handy install.sh script, which is in mininet/util.
 
 WARNING: USE AT YOUR OWN RISK!
 
-install.sh is a bit intrusive and may possibly damage your OS 
-and/or home directory. Although we hope it won't do anything completely 
-terrible, you may want to look at the script before you run it, and you
-should make sure your system and home directory are backed up just in case!
+install.sh is a bit intrusive and may possibly damage your OS and/or
+home directory, by creating/modifying several directories such as
+mininet, openflow, openvswitch and noxcore. Although we hope it won't
+do anything completely terrible, you may want to look at the script
+before you run it, and you should make sure your system and home
+directory are backed up just in case!
 
-To install ALL of the software which we use for OpenFlow tutorials, you may
-use
+To install ALL of the software which we use for OpenFlow tutorials,
+you may use
 
 $ mininet/util/install.sh
 
@@ -43,9 +45,9 @@ Alternately, you can install just the pieces you need.
 
 We recommend the following steps, in order:
 
-a) On Debian 5, first install a Mininet-compatible kernel:
+[a) On Debian 5, first install a Mininet-compatible kernel:
     $ mininet/util/install.sh -k
-   Reboot and run 'uname -r' to make sure you're running the new kernel.
+   Reboot and run 'uname -r' to make sure you're running the new kernel.]
 
 b) Install mininet and its dependencies:
     $ mininet/util/install.sh -n
@@ -58,6 +60,10 @@ d) Install Open vSwitch and its kernel module
 
 e) If you wish to install the version of NOX we use in the tutorial:
     $ mininet/util/install.sh -x
+
+   Note: NOX development is progressing over time, so after you complete
+   the tutorial you may wish to install the latest and greatest NOX from
+   noxrepo.org.
 
 Good luck! Some additional installation notes are provided below, for
 the brave and/or Linux-savvy, or those who are trying to understand what
