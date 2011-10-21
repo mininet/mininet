@@ -131,6 +131,12 @@ function of {
 	make
 	sudo make install
 
+    # The OpenFlow wireshark plugin does not install to the correct dir.
+    # The correct way would be to fix the install script.
+    # For now, just copy it to the global WS plugin dir.
+    # Tested on Ubuntu 11.04.
+    cp /var/packet-openflow.so /usr/lib/wireshark/libwireshark0/plugins
+
 	# Copy coloring rules: OF is white-on-blue:
 	mkdir -p ~/.wireshark
 	cp ~/mininet/util/colorfilters ~/.wireshark
