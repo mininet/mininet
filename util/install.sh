@@ -153,12 +153,20 @@ function of {
     make
     sudo make install
 
+    # The OpenFlow wireshark plugin does not install to the correct dir.
+    # The correct way would be to fix the install script.
+    # For now, just copy it to the global WS plugin dir.
+    # Tested on Ubuntu 11.04.
+    if [ -e /var/packet-openflow.so ]; then
+        cp /var/packet-openflow.so /usr/lib/wireshark/libwireshark0/plugins
+    fi
+
     # Copy coloring rules: OF is white-on-blue:
     mkdir -p ~/.wireshark
     cp ~/mininet/util/colorfilters ~/.wireshark
 
     # Remove avahi-daemon, which may cause unwanted discovery packets to be 
-	# sent during tests, near link status changes:
+    # sent during tests, near link status changes:
     sudo apt-get remove -y avahi-daemon
 
     # Disable IPv6.  Add to /etc/modprobe.d/blacklist:
