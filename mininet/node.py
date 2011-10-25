@@ -42,6 +42,7 @@ Future enhancements:
 """
 
 import os
+import pty
 import re
 import signal
 import select
@@ -76,12 +77,16 @@ class Node( object ):
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
-        cmd = [ 'mnexec', opts, 'bash', '-m' ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'],
+                'PS1=' + chr( 127 ), 'mnexec', opts, 'bash', '--norc' ]
+        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+        # in the subprocess and insulate it from signals (e.g. SIGINT)
+        # received by the parent
+        master, slave = pty.openpty()
+        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
             close_fds=False )
-        self.stdin = self.shell.stdin
-        self.stdout = self.shell.stdout
-        self.pid = self.shell.pid
+        self.stdin = os.fdopen( master )
+        self.stdout = self.stdin
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
@@ -102,6 +107,12 @@ class Node( object ):
         self.waiting = False
         # Stash additional information as desired
         self.args = kwargs
+        x = ""
+        while "\n" not in x:
+            self.waitReadable()
+            x += self.read(1)
+        self.pid = int(x[1:-1])
+        self.serial = 0
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -149,7 +160,7 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
-        os.kill( self.pid, signal.SIGKILL )
+        quietRun( 'kill ' + str( self.pid ) )
         self.cleanup()
 
     def stop( self ):
@@ -163,11 +174,25 @@ class Node( object ):
             self.pollOut.poll( timeoutms )
 
     def sendCmd( self, *args, **kwargs ):
-        """Send a command, followed by a command to echo a sentinel,
-           and return without waiting for the command to complete.
+        """Send a command, and return without waiting for the command
+           to complete.
            args: command and arguments, or string
            printPid: print command's PID?"""
         assert not self.waiting
+        self.serial += 1
+        self.write( 'echo __   %s   __\n' % self.serial )
+        match = '__ %s __' % self.serial
+        buf = ''
+        while True:
+            i = buf.find( match )
+            if i >= 0:
+                buf = buf[ i + len( match ): ]
+                break
+            buf += self.read( 1024 )
+        while True:
+            if chr( 127 ) in buf:
+                break
+            buf += self.read( 1024 )
         printPid = kwargs.get( 'printPid', True )
         if len( args ) > 0:
             cmd = args
@@ -176,25 +201,16 @@ class Node( object ):
         if not re.search( r'\w', cmd ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            separator = '&'
-            cmd = cmd[ :-1 ]
-        else:
-            separator = ';'
-            if printPid and not isShellBuiltin( cmd ):
-                cmd = 'mnexec -p ' + cmd
-        self.write( cmd + separator + ' printf "\\177" \n' )
+        if printPid and not isShellBuiltin( cmd ):
+            cmd = 'mnexec -p ' + cmd
+        self.write( cmd + '\n' )
         self.lastCmd = cmd
         self.lastPid = None
         self.waiting = True
 
     def sendInt( self, sig=signal.SIGINT ):
         "Interrupt running command."
-        if self.lastPid:
-            try:
-                os.kill( self.lastPid, sig )
-            except OSError:
-                pass
+        self.write( chr( 3 ) )
 
     def monitor( self, timeoutms=None ):
         """Monitor and return the output of a command.
@@ -203,7 +219,7 @@ class Node( object ):
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
-        marker = chr( 1 ) + r'\d+\n'
+        marker = chr( 1 ) + r'\d+\r\n'
         if chr( 1 ) in data:
             markers = re.findall( marker, data )
             if markers:
@@ -218,15 +234,17 @@ class Node( object ):
             data = data.replace( chr( 127 ), '' )
         return data
 
-    def waitOutput( self, verbose=False ):
-        """Wait for a command to complete.
+    def waitOutput( self, verbose=False, pattern=None ):
+        """Wait for a command to complete or generate certain output.
            Completion is signaled by a sentinel character, ASCII(127)
-           appearing in the output stream.  Wait for the sentinel and return
-           the output, including trailing newline.
-           verbose: print output interactively"""
+           appearing in the output stream.  Wait for the sentinel or
+           output matched by a certain pattern, and return the output.
+           verbose: print output interactively
+           pattern: compiled regexp or None"""
         log = info if verbose else debug
         output = ''
-        while self.waiting:
+        while self.waiting and (pattern is None or
+                                not pattern.search(output)):
             data = self.monitor()
             output += data
             log( data )
@@ -258,6 +276,12 @@ class Node( object ):
         "Construct a canonical interface name node-ethN for interface n."
         return self.name + '-eth' + repr( n )
 
+    def intfToPort(self, intf):
+        index = intf.rfind('-eth')
+        if index < 0:
+            return None
+        return int(intf[index + len('-eth'):])
+            
     def newPort( self ):
         "Return the next port number to allocate."
         if len( self.ports ) > 0:
@@ -317,6 +341,51 @@ class Node( object ):
         node2.registerIntf( intf2, node1, intf1 )
         return intf1, intf2
 
+    def unlinkFrom( self, node2=None ):
+        if node2:
+            unlinkList = [node2]
+        else:
+            unlinkList = [c[0] for c in self.connection.values()]
+        
+        for node in unlinkList:
+            self.deleteIntfsToNode(node)
+            node.deleteIntfsToNode(self)
+        
+    def deleteIntfsToNode( self, dstNode, dstPort=None ):
+        
+        dstIntf = dstNode.intfName(dstPort) if dstPort else None
+        intfs = []
+        for intf in self.connection.keys():
+            nextNode, nextIntf = self.connection[intf]
+            if dstIntf:
+                if nextIntf == dstIntf:
+                    intfs.append(intf)
+            elif nextNode == dstNode:
+                intfs.append(intf)
+
+        #connections = self.connectionsTo(dstNode)
+        #if dstPort:
+        #    dstIntf = dstNode.intfName(dstPort)
+        #    intfs = [connection[0] for connection in connections if connection[1] == dstIntf]
+        #else:
+        #    intfs = [connection[0] for connection in connections]
+        
+        for intf in intfs:
+            self.deleteIntf(intf)
+    
+    def deleteIntf(self, intf):
+        del self.connection[intf]
+        port = self.intfToPort(intf)
+        if port is not None:
+            del self.intfs[port]
+        del self.ports[intf]
+        
+        quietRun( 'ip link del ' + intf )
+        sleep( 0.001 )
+
+    def deletePort(self, port):
+        self.deleteIntf(self.intfName(port))
+        
     def deleteIntfs( self ):
         "Delete all of our interfaces."
         # In theory the interfaces should go away after we shut down.
@@ -433,12 +502,18 @@ class Switch( Node ):
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
-    def __init__( self, name, opts='', listenPort=None, **kwargs):
+    def __init__( self, name, opts='', listenPort=None, dpid=None, **kwargs):
         Node.__init__( self, name, **kwargs )
         self.opts = opts
         self.listenPort = listenPort
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        if dpid:
+            self.dpid = dpid
+        elif self.defaultMAC:
+            self.dpid = "00:00:" + self.defaultMAC
+        else:
+            self.dpid = None
 
     def defaultIntf( self ):
         "Return interface for HIGHEST port"
@@ -446,6 +521,12 @@ class Switch( Node ):
         if ports:
             intf = self.intfs[ max( ports ) ]
         return intf
+
+    def startIntfs( self ):
+        "Default function to start interfaces"
+        self.cmd("ifconfig lo up")
+        for intf in self.intfs.values():
+            self.cmd("ifconfig " + intf + " up" )
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
@@ -466,6 +547,8 @@ class UserSwitch( Switch ):
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
+        self.cmd( 'kill %ofdatapath' )
+        self.cmd( 'kill %ofprotocol' )
 
     @staticmethod
     def setup():
@@ -480,7 +563,7 @@ class UserSwitch( Switch ):
         controller = controllers[ 0 ]
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        self.cmd( 'ifconfig lo up' )
+        self.startIntfs()
         mac_str = ''
         if self.defaultMAC:
             # ofdatapath expects a string of hex digits with no colons.
@@ -522,15 +605,15 @@ class KernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ofprotocol',
-            moduleName='the OpenFlow reference kernel switch'
-            ' (openflow.org) (NOTE: not available in OpenFlow 1.0!)' )
-        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
+        moduleName=('the OpenFlow reference kernel switch'        
+                ' (openflow.org) (NOTE: not available in OpenFlow 1.0+!)' )
+        pathCheck( 'ofprotocol', moduleName=moduleName)
+        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD, moduleName=moduleName )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
+        self.startIntfs()
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'dpctl deldp ' + self.dp )
@@ -578,14 +661,14 @@ class OVSKernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
-            moduleName='Open vSwitch (openvswitch.org)')
-        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+        moduleName='Open vSwitch (openvswitch.org)'
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd', moduleName=moduleName )
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD, moduleName=moduleName )
 
     def start( self, controllers ):
         "Start up kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
+        self.startIntfs()
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
@@ -614,6 +697,89 @@ class OVSKernelSwitch( Switch ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
+        self.deleteIntfs()
+
+    def addIntf( self, intf, port ):
+        super(OVSKernelSwitch, self).addIntf(intf, port)
+        self.cmd( 'ovs-dpctl', 'add-if', self.dp, intf )
+    
+    def deleteIntf( self, intf ):
+        super(OVSKernelSwitch, self).deleteIntf(intf)
+        self.cmd( 'ovs-dpctl', 'del-if', self.dp, intf )
+        
+class OVSUserSwitch( Switch ):
+    """Open VSwitch kernel-space switch.
+       Currently only works in the root namespace."""
+
+    def __init__( self, name, dp=None, **kwargs ):
+        """Init.
+           name: name for switch
+           dp: netlink id (0, 1, 2, ...)
+           defaultMAC: default MAC as unsigned int; random value if None"""
+        Switch.__init__( self, name, **kwargs )
+        self.dp = 'netdev@dp%i' % dp
+        self.intf = self.dp
+        if self.inNamespace:
+            error( "OVSUserSwitch currently only works"
+                " in the root namespace.\n" )
+            exit( 1 )
+
+    @staticmethod
+    def setup():
+        "Ensure any dependencies are loaded; if not, try to load them."
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
+            moduleName='Open vSwitch (openvswitch.org)')
+        if not os.path.exists( '/dev/net/tun' ):
+            moduleDeps( add=TUN )
+
+    def start( self, controllers ):
+        "Start up kernel datapath."
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        self.startIntfs()
+        mac_str = ''
+        if self.defaultMAC:
+            # ovs-openflowd expects a string of exactly 16 hex digits with no
+            # colons.
+            mac_str = ' --datapath-id=0000' + \
+                      ''.join( self.defaultMAC.split( ':' ) ) + ' '
+        ports = sorted( self.ports.values() )
+        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
+            raise Exception( 'only contiguous, one-indexed port ranges '
+                            'supported: %s' % self.intfs )
+        intfs = [ self.intfs[ port ] for port in ports ]
+        # self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
+        # Run protocol daemon
+        controller = controllers[ 0 ]
+        self.cmd( 'ovs-openflowd -v ' + self.dp +
+            ' --ports=' + ','.join(intfs) +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' --fail=secure ' + self.opts + mac_str +
+            ' 1>' + ofplog + ' 2>' + ofplog + '&' )
+        self.execed = False
+
+    def stop( self ):
+        "Terminate kernel datapath."
+        # quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'kill %ovs-openflowd' )
+        self.deleteIntfs()
+
+class RemoteSwitch( Switch ):
+    "Switch created outside mininet."
+
+    def __init__( self, name, remotePorts, **kwargs ):
+        Switch.__init__( self, name, inNamespace=False, **kwargs )
+        self.remotePorts = remotePorts
+
+    @staticmethod
+    def setup():
+        pass
+
+    def start( self, controllers ):
+        self.startIntfs()
+        for port, intf in self.intfs.items():
+            self.cmd( 'brctl', 'addif', self.remotePorts[ port ], intf )
+
+    def stop(self):
         self.deleteIntfs()
 
 

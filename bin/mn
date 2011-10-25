@@ -22,6 +22,7 @@ from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, init
 from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
+from mininet.node import OVSUserSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
 from mininet.util import makeNumeric
@@ -37,7 +38,8 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'kernel': KernelSwitch,
             'user': UserSwitch,
-            'ovsk': OVSKernelSwitch }
+            'ovsk': OVSKernelSwitch,
+            'ovsu': OVSUserSwitch }
 
 HOSTDEF = 'process'
 HOSTS = { 'process': Host }
@@ -45,6 +47,7 @@ HOSTS = { 'process': Host }
 CONTROLLERDEF = 'ref'
 # a and b are the name and inNamespace params.
 CONTROLLERS = { 'ref': Controller,
+               'ovs': lambda name: Controller( name, command='ovs-controller' ),
                'nox_dump': lambda name: NOX( name, 'packetdump' ),
                'nox_pysw': lambda name: NOX( name, 'pyswitch' ),
                'remote': lambda name: None,

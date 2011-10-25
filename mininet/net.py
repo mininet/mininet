@@ -94,8 +94,8 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
-from mininet.node import ControllerParams
+from mininet.node import Host, Switch, UserSwitch, OVSKernelSwitch, RemoteSwitch
+from mininet.node import Controller, ControllerParams
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
@@ -177,6 +177,16 @@ class Mininet( object ):
         if not self.inNamespace and self.listenPort:
             self.listenPort += 1
         self.dps += 1
+        self.switches.append( sw )
+        self.nameToNode[ name ] = sw
+        return sw
+
+    def addRemoteSwitch( self, name, remotePorts, dpid=None ):
+        """Add a RemoteSwitch.
+           name: name of switch to add
+           remotePorts: kernel interface name for each switch port
+           returns: added switch"""
+        sw = RemoteSwitch( name, dpid=dpid, remotePorts=remotePorts )
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
@@ -546,6 +556,70 @@ class Mininet( object ):
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 
+    def attachHost( self, hostName, switchName ):
+        if hostName not in self.nameToNode:
+            error( 'host not in network: %s\n' % hostName )
+            return
+            
+        if switchName not in self.nameToNode:
+            error( 'switch not in network: %s\n' % switchName )
+            return
+            
+        host = self.nameToNode[hostName]
+        if not isinstance(host, Host):
+            error('%s is not a host' % hostName)
+            return
+            
+        sw = self.nameToNode[switchName]
+        if not isinstance(sw, Switch):
+            error('%s is not a switch' % switchName)
+            return
+            
+        if not isinstance(sw, OVSKernelSwitch):
+            error('attachHost only works with OVS kernel switches')
+            return
+            
+        hostIntf, swIntf = host.linkTo(sw)
+        
+        host.setIP( hostIntf, host.defaultIP, self.cparams.prefixLen )
+        host.setDefaultRoute( hostIntf )
+        if self.autoSetMacs:
+            host.setMAC( hostIntf, host.defaultMAC )
+        #if self.autoStaticArp:
+        #    for h in self.hosts:
+        #        if h != host:
+        #            host.setARP( ip=h.IP(), mac=h.MAC() )
+        #            h.setARP( ip=host.IP(), mac=host.MAC() )
+
+    
+    def detachHost( self, hostName, switchName=None ):
+        if hostName not in self.nameToNode:
+            error( 'host not in network: %s\n' % hostName )
+            return
+            
+        host = self.nameToNode[hostName]
+        if not isinstance(host, Host):
+            error('%s is not a host' % hostName)
+            return
+        
+        if switchName:
+            if switchName not in self.nameToNode:
+                error( 'switch not in network: %s\n' % switchName )
+                return
+                
+            sw = self.nameToNode[switchName]
+            if not isinstance(sw, Switch):
+                error('%s is not a switch' % switchName)
+                return
+                
+            if not isinstance(sw, OVSKernelSwitch):
+                error('attachHost only works with OVS kernel switches')
+                return
+        else:
+            sw = None
+            
+        host.unlinkFrom(sw)
+            
     def interact( self ):
         "Start network and run our simple CLI."
         self.start()
@@ -561,16 +635,11 @@ def init():
     "Initialize Mininet."
     if init.inited:
         return
-    if os.getuid() != 0:
-        # Note: this script must be run as root
-        # Perhaps we should do so automatically!
-        print "*** Mininet must run as root."
-        exit( 1 )
     # If which produces no output, then mnexec is not in the path.
     # May want to loosen this to handle mnexec in the current dir.
     if not quietRun( 'which mnexec' ):
         raise Exception( "Could not find mnexec - check $PATH" )
-    fixLimits()
+    #fixLimits()
     init.inited = True
 
 init.inited = False
