@@ -8,12 +8,13 @@ import unittest
 from mininet.net import init, Mininet
 from mininet.node import Host, Controller, ControllerParams
 # from mininet.node import KernelSwitch
-from mininet.node import UserSwitch, OVSKernelSwitch
+from mininet.node import UserSwitch, OVSKernelSwitch, OVSUserSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
 
 SWITCHES = { 'user': UserSwitch,
              'ovsk': OVSKernelSwitch,
+             'ovsu': OVSUserSwitch,
             # 'kernel': KernelSwitch
 }
 
