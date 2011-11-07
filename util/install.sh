@@ -14,6 +14,11 @@ if [ -z $MININET_PREFIX ]; then
     MININET_PREFIX=`cd $SCRIPT_DIRECTORY/../.. && pwd`/
 fi
 
+if [ ! -d $MININET_PREFIX ]; then
+  echo "$MININET_PREFIX: is not a directory."
+  exit 1
+fi
+
 echo "Using $MININET_PREFIX as mininet's install directory."
 
 # Mininet's home directory.
