@@ -15,8 +15,8 @@ if [ -z $MININET_PREFIX ]; then
 fi
 
 if [ ! -d $MININET_PREFIX ]; then
-  echo "$MININET_PREFIX: is not a directory."
-  exit 1
+    echo "$MININET_PREFIX: is not a directory."
+    exit 1
 fi
 
 echo "Using $MININET_PREFIX as mininet's install directory."
