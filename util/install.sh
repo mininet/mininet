@@ -11,8 +11,22 @@ set -o nounset
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
+# Attempt to identify Linux release
+
+DIST=Unknown
+RELEASE=Unknown
+CODENAME=Unknown
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
+if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
+    sudo apt-get install -y lsb-release
+fi
+if which lsb_release &> /dev/null; then
+    DIST=`lsb_release -is`
+    RELEASE=`lsb_release -rs`
+    CODENAME=`lsb_release -cs`
+fi
+echo "Detected Linux distribution: $DIST $RELEASE $CODENAME"
 
 # Kernel params
 
@@ -21,14 +35,17 @@ if [ "$DIST" = "Debian" ]; then
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
     KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 elif [ "$DIST" = "Ubuntu" ]; then
-    KERNEL_NAME=`uname -r`
+    if [ "$RELEASE" = "10.04" ]; then
+        KERNEL_NAME='3.0.0-15-generic'
+    else
+        KERNEL_NAME=`uname -r`
+    fi
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
 else
     echo "Install.sh currently only supports Ubuntu and Debian."
     exit 1
 fi
 
-echo "Detected Linux distribution: $DIST"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
@@ -41,11 +58,9 @@ OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
 function kernel {
-    echo "Install Mininet-compatible kernel"
+    echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
-    
     if [ "$DIST" = "Debian" ]; then
-        
         # The easy approach: download pre-built linux-image and linux-headers packages:
         wget -c $KERNEL_LOC/$KERNEL_HEADERS
         wget -c $KERNEL_LOC/$KERNEL_IMAGE
@@ -68,7 +83,9 @@ function kernel {
         # /boot/grub/menu.lst to set the default to the entry corresponding to the
         # kernel you just installed.
     fi
-
+    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
+        sudo apt-get -y install linux-image-$KERNEL_NAME
+    fi
 }
 
 function kernel_clean {
@@ -87,7 +104,7 @@ function mn_deps {
     sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
         python-setuptools python-networkx
 
-    if [ "$DIST" = "Ubuntu" ] && [ "`lsb_release -sr`" = "10.04" ]; then
+    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
         echo "Upgrading networkx to avoid deprecation warning"
         sudo easy_install --upgrade networkx
     fi
@@ -157,7 +174,7 @@ function of {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Debian" && `lsb-release -c` == "lenny" ]; then
+    if [ "$DIST" = "Debian" ] && [ "$CODENAME" == "lenny" ]; then
         sudo aptitude -y install pkg-config gcc make git-core python-dev libssl-dev
         # Install Autoconf 2.63+ backport from Debian Backports repo:
         # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
@@ -311,10 +328,7 @@ function modprobe {
 
 function all {
     echo "Running all commands..."
-    if [ "$DIST" != "Ubuntu" ]; then
-        # Ubuntu ships with Mininet-compatible kernel
-        kernel
-    fi
+    kernel
     mn_deps
     of
     ovs
