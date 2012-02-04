@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mininet install script for Debian
+# Mininet install script for Ubuntu (and Debian Lenny)
 # Brandon Heller (brandonh@stanford.edu)
 
 # Fail on error
@@ -35,9 +35,10 @@ KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-OVS_RELEASE=v1.1.1
-OVS_DIR=~/openvswitch
-OVS_KMOD=openvswitch_mod.ko
+OVS_RELEASE=v1.2.2
+OVS_SRC=~/openvswitch
+OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
+OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
 function kernel {
     echo "Install Mininet-compatible kernel"
@@ -151,12 +152,12 @@ function of {
     sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
 }
 
-# Install OpenVSwitch
+# Install Open vSwitch
 # Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
 function ovs {
-    echo "Installing OpenVSwitch..."
+    echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Debian" ]; then
+    if [ "$DIST" = "Debian" && `lsb-release -c` == "lenny" ]; then
         sudo aptitude -y install pkg-config gcc make git-core python-dev libssl-dev
         # Install Autoconf 2.63+ backport from Debian Backports repo:
         # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
@@ -173,7 +174,7 @@ function ovs {
     # Install OVS from release
     cd ~/
     git clone git://openvswitch.org/openvswitch
-    cd $OVS_DIR
+    cd $OVS_SRC
     git checkout $OVS_RELEASE
     ./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
@@ -181,10 +182,14 @@ function ovs {
         echo "Creating build sdirectory $BUILDDIR"
         sudo mkdir -p $BUILDDIR
     fi
-    opts="--with-l26=$BUILDDIR"
-    ./configure $opts
+	opts="--with-linux=$BUILDDIR"
+	mkdir -p $OVS_BUILD
+	cd $OVS_BUILD
+    ../configure $opts
     make
     sudo make install
+	# openflowd is deprecated, but for now copy it in
+	sudo cp tests/test-openflowd /usr/local/bin/ovs-openflowd
 }
 
 # Install NOX with tutorial files
@@ -193,7 +198,7 @@ function nox {
 
     # Install NOX deps:
     sudo apt-get -y install autoconf automake g++ libtool python python-twisted \
-		swig  libxerces-c2-dev libssl-dev make
+		swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         sudo apt-get -y install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
@@ -204,21 +209,22 @@ function nox {
     # Install NOX optional deps:
     sudo apt-get install -y libsqlite3-dev python-simplejson
 
-    # Install NOX:
+    # Fetch NOX destiny
     cd ~/
-    git clone git://openflowswitch.org/nox-tutorial noxcore
+    git clone git://noxrepo.org/nox noxcore
     cd noxcore
+    git checkout -b destiny remotes/origin/destiny
 
-    # With later autoconf versions this doesn't quite work:
-    ./boot.sh --apps-core || true
-    if [ "$DIST" = "Debian" ]; then
-        # So use this instead:
-        autoreconf --install --force
-    fi
+    # Apply patches
+    git checkout -b tutorial-destiny
+    git am ~/mininet/util/nox-patches/*.patch
+
+    # Build
+    ./boot.sh
     mkdir build
     cd build
-    ../configure --with-python=yes
-    make
+    ../configure
+    make -j3
     #make check
 
     # Add NOX_CORE_DIR env var:
@@ -299,7 +305,7 @@ function other {
 function modprobe {
     echo "Setting up modprobe for OVS kmod..."
 
-    sudo cp $OVS_DIR/datapath/linux-2.6/$OVS_KMOD $DRIVERS_DIR
+    sudo cp $OVS_KMODS $DRIVERS_DIR
     sudo depmod -a ${KERNEL_NAME}
 }
 
@@ -353,11 +359,11 @@ function usage {
     printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
     
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04 and\n' >&2
-    printf 'Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04, 11.10\n' >&2
+    printf 'and Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
-        
+
     printf 'options:\n' >&2
     printf -- ' -a: (default) install (A)ll packages - good luck!\n' >&2
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
