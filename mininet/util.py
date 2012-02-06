@@ -2,10 +2,10 @@
 
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
-import select
+from select import poll, POLLIN
+from os import read
 from subprocess import call, check_call, Popen, PIPE, STDOUT
-
-from mininet.log import error
+from mininet.log import output, error
 
 # Command execution support
 
@@ -22,7 +22,7 @@ def checkRun( cmd ):
 # pylint doesn't understand explicit type checking
 # pylint: disable-msg=E1103
 
-def quietRun( *cmd ):
+def oldQuietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
        cmd: list of command params"""
     if len( cmd ) == 1:
@@ -34,7 +34,7 @@ def quietRun( *cmd ):
     # select(), which can't handle
     # high file descriptor numbers! poll() can, however.
     output = ''
-    readable = select.poll()
+    readable = poll()
     readable.register( popen.stdout )
     while True:
         while readable.poll():
@@ -46,6 +46,53 @@ def quietRun( *cmd ):
         if popen.returncode != None:
             break
     return output
+
+# This is a bit complicated, but it enables us to
+# monitor commount output as it is happening
+
+def errRun( *cmd, **kwargs  ):
+    """Run a command and return stdout, stderr and return code
+       cmd: string or list of command and args
+       stderr: STDOUT to merge stderr with stdout
+       shell: run command using shell
+       echo: monitor output to console"""
+    # Allow passing in a list or a string
+    if len( cmd ) == 1:
+        cmd = cmd[ 0 ]
+        if isinstance( cmd, str ):
+            cmd = cmd.split( ' ' )
+    # By default we separate stderr, don't run in a shell, and don't echo
+    stderr = kwargs.get( 'stderr', PIPE )
+    shell = kwargs.get( 'shell', False )
+    echo = kwargs.get( 'echo', False )
+    popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
+    # We use poll() because select() doesn't work with large fd numbers
+    out, err = '', ''
+    poller = poll()
+    poller.register( popen.stdout, POLLIN )
+    fdtofile = { popen.stdout.fileno(): popen.stdout }
+    if popen.stderr:
+        fdtofile[ popen.stderr.fileno() ] = popen.stderr
+        poller.register( popen.stderr, POLLIN )
+    while True:
+        readable = poller.poll()
+        for fd, event in readable:
+            f = fdtofile[ fd ]
+            data = f.read( 1024 )
+            if echo:
+                output( data )
+            if f == popen.stdout:
+                out += data
+            elif f == popen.stderr:
+                err += data
+        returncode = popen.poll()
+        if returncode is not None:
+           break
+    return out, err, returncode
+
+def quietRun( cmd, **kwargs ):
+    "Run a command and return merged stdout and stderr"
+    return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
 # pylint: enable-msg=E1103
 # pylint: disable-msg=E1101,W0612
