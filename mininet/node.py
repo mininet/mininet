@@ -49,7 +49,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
+from mininet.util import quietRun, errRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 
 SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
@@ -558,8 +558,8 @@ class KernelSwitch( Switch ):
         self.deleteIntfs()
 
 
-class OVSKernelSwitch( Switch ):
-    """Open VSwitch kernel-space switch.
+class OVSLegacyKernelSwitch( Switch ):
+    """Open VSwitch legacy kernel-space switch using ovs-openflowd.
        Currently only works in the root namespace."""
 
     def __init__( self, name, dp=None, **kwargs ):
@@ -615,6 +615,61 @@ class OVSKernelSwitch( Switch ):
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
+
+
+class OVSSwitch( Switch ):
+    "Open vSwitch switch. Depends on ovs-vsctl."
+
+    def __init__( self, name, dp=None, **kwargs ):
+        """Init.
+           name: name for switch
+           dp: netlink id (0, 1, 2, ...)
+           defaultMAC: default MAC as unsigned int; random value if None"""
+        Switch.__init__( self, name, **kwargs )
+        self.dp = 'dp%i' % dp
+
+    @staticmethod
+    def setup():
+        "Make sure Open vSwitch is installed and working"
+        pathCheck( 'ovs-vsctl', 
+            moduleName='Open vSwitch (openvswitch.org)')
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+        out, err, exitcode = errRun( 'ovs-vsctl -t 1 show' )
+        if exitcode:
+            error( out + err + 
+                   'ovs-vsctl exited with code %d\n' % exitcode +
+                   '*** Error connecting to ovs-db with ovs-vsctl\n'
+                   'Make sure that Open vSwitch is installed, '
+                   'that ovsdb-server is running, and that\n'
+                   '"ovs-vsctl show" works correctly.\n'
+                   'You may wish to try "service openvswitch-switch start".\n' )
+            exit( 1 )
+
+    def start( self, controllers ):
+        "Start up a new OVS OpenFlow switch using ovs-vsctl"
+        # Annoyingly, --if-exists option seems not to work
+        self.cmd( 'ovs-vsctl del-br ', self.dp )
+        self.cmd( 'ovs-vsctl add-br', self.dp )
+        self.cmd( 'ovs-vsctl set-fail-mode', self.dp, 'secure' )
+        # Add ports
+        ports = sorted( self.ports.values() )
+        intfs = [ self.intfs[ port ] for port in ports ]
+        # XXX: Ugly check - we should probably fix this!
+        if ports and ( len( ports ) != ports[ -1 ] + 1 - self.portBase ):
+            raise Exception( 'only contiguous, one-indexed port ranges '
+                            'supported: %s' % self.intfs )
+        for intf in intfs:
+            self.cmd( 'ovs-vsctl add-port', self.dp, intf )
+            self.cmd( 'ifconfig', intf, 'up' )
+        # Add controllers
+        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port ) for c in controllers ] )
+        self.cmd( 'ovs-vsctl set-controller', self.dp, clist )
+
+    def stop( self ):
+        "Terminate OVS switch."
+        self.cmd( 'ovs-vsctl del-br', self.dp )
+
+OVSKernelSwitch = OVSSwitch
 
 
 class Controller( Node ):
