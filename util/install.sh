@@ -17,34 +17,37 @@ KERNEL_LOC=http://www.openflow.org/downloads/mininet
 DIST=Unknown
 RELEASE=Unknown
 CODENAME=Unknown
+ARCH=`uname -m`
 
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
-    sudo apt-get install -y lsb-release
+    install='sudo apt-get -y install'
+    remove='sudo apt-get -y remove'
+    $install -y lsb-release
 fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
     RELEASE=`lsb_release -rs`
     CODENAME=`lsb_release -cs`
 fi
-echo "Detected Linux distribution: $DIST $RELEASE $CODENAME"
+echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
 # Kernel params
 
-if [ "$DIST" = "Debian" ]; then
-    KERNEL_NAME=2.6.33.1-mininet
-    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-    KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-elif [ "$DIST" = "Ubuntu" ]; then
+if [ "$DIST" = "Ubuntu" ]; then
     if [ "$RELEASE" = "10.04" ]; then
         KERNEL_NAME='3.0.0-15-generic'
     else
         KERNEL_NAME=`uname -r`
     fi
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
+elif [ "$DIST" = "Debian" ] && [ "$ARCH" = "i386" ] && [ "$CODENAME" = "lenny" ]; then
+    KERNEL_NAME=2.6.33.1-mininet
+    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+    KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 else
-    echo "Install.sh currently only supports Ubuntu and Debian."
+    echo "Install.sh currently only supports Ubuntu and Debian Lenny i386."
     exit 1
 fi
 
@@ -61,7 +64,10 @@ OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
-    if [ "$DIST" = "Debian" ]; then
+    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
+        $install linux-image-$KERNEL_NAME
+    fi
+    elif [ "$DIST" = "Debian" ]; then
         # The easy approach: download pre-built linux-image and linux-headers packages:
         wget -c $KERNEL_LOC/$KERNEL_HEADERS
         wget -c $KERNEL_LOC/$KERNEL_IMAGE
@@ -84,16 +90,13 @@ function kernel {
         # /boot/grub/menu.lst to set the default to the entry corresponding to the
         # kernel you just installed.
     fi
-    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
-        sudo apt-get -y install linux-image-$KERNEL_NAME
-    fi
 }
 
 function kernel_clean {
     echo "Cleaning kernel..."
 
     # To save disk space, remove previous kernel
-    sudo apt-get -y remove $KERNEL_IMAGE_OLD
+    $remove $KERNEL_IMAGE_OLD
 
     # Also remove downloaded packages:
     rm -f ~/linux-headers-* ~/linux-image-*
@@ -102,7 +105,7 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
+    $install gcc make screen psmisc xterm ssh iperf iproute \
         python-setuptools python-networkx
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
@@ -130,11 +133,10 @@ function mn_deps {
 # http://www.openflowswitch.org/wk/index.php/Debian_Install
 # ... modified to use Debian Lenny rather than unstable.
 function of {
-    echo "Installing OpenFlow and its tools..."
-
+    echo "Installing OpenFlow and OpenFlow WireShark dissector..."
     cd ~/
-    sudo apt-get install -y git-core automake m4 pkg-config libtool \
-		make libc6-dev autoconf autotools-dev gcc
+    $install git-core autoconf automake autotools-dev pkg-config \
+		make gcc libtool libc6-dev 
     git clone git://openflowswitch.org/openflow.git
     cd ~/openflow
 
@@ -148,7 +150,7 @@ function of {
     sudo make install
 
     # Install dissector:
-    sudo apt-get install -y wireshark libgtk2.0-dev
+    $install wireshark libgtk2.0-dev
     cd ~/openflow/utilities/wireshark_dissectors/openflow
     make
     sudo make install
@@ -167,7 +169,7 @@ function of {
 
     # Remove avahi-daemon, which may cause unwanted discovery packets to be 
     # sent during tests, near link status changes:
-    sudo apt-get remove -y avahi-daemon
+    $remove avahi-daemon
 
     # Disable IPv6.  Add to /etc/modprobe.d/blacklist:
     if [ "$DIST" = "Ubuntu" ]; then
@@ -183,23 +185,33 @@ function of {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Debian" ] && [ "$CODENAME" == "lenny" ]; then
-        sudo aptitude -y install pkg-config gcc make git-core python-dev libssl-dev
-        # Install Autoconf 2.63+ backport from Debian Backports repo:
-        # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
-        sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
-        sudo apt-get update
-        sudo apt-get -y --force-yes install debian-backports-keyring
-        sudo apt-get -y --force-yes -t lenny-backports install autoconf
+    if [ "$DIST" = "Ubuntu" ]; then
+        if [ `echo "$RELEASE >= 11.10" | bc` = 1 ]; then
+	    # Use upstream OVS packages
+	    $install openvswitch-switch openvswitch-controller
+            return
     fi
 
-    if [ "$DIST" = "Ubuntu" ]; then
-        sudo apt-get -y install $KERNEL_HEADERS
-    fi
+    $install $KERNEL_HEADERS
+    $install pkg-config gcc make python-dev libssl-dev libtool
+
+    if [ "$DIST" = "Debian" ]; then
+        if [ "$CODENAME" = "lenny" ]; then
+            $install git-core
+            # Install Autoconf 2.63+ backport from Debian Backports repo:
+            # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
+            sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
+            sudo apt-get update
+            sudo apt-get -y --force-yes install debian-backports-keyring
+            sudo apt-get -y --force-yes -t lenny-backports install autoconf
+        fi
+    else
+        $install git
+    fi    
 
     # Install OVS from release
     cd ~/
-    git clone git://openvswitch.org/openvswitch
+    git clone git://openvswitch.org/openvswitch $OVS_SRC
     cd $OVS_SRC
     git checkout $OVS_RELEASE
     ./boot.sh
@@ -208,14 +220,12 @@ function ovs {
         echo "Creating build sdirectory $BUILDDIR"
         sudo mkdir -p $BUILDDIR
     fi
-	opts="--with-linux=$BUILDDIR"
-	mkdir -p $OVS_BUILD
-	cd $OVS_BUILD
+    opts="--with-linux=$BUILDDIR"
+    mkdir -p $OVS_BUILD
+    cd $OVS_BUILD
     ../configure $opts
     make
     sudo make install
-	# openflowd is deprecated, but for now copy it in
-	sudo cp tests/test-openflowd /usr/local/bin/ovs-openflowd
 }
 
 # Install NOX with tutorial files
@@ -223,17 +233,17 @@ function nox {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    sudo apt-get -y install autoconf automake g++ libtool python python-twisted \
+    $install autoconf automake g++ libtool python python-twisted \
 		swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
-        sudo apt-get -y install libboost1.35-dev
+        $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        sudo apt-get -y install python-dev libboost-dev 
-        sudo apt-get -y install libboost-filesystem-dev
-        sudo apt-get -y install libboost-test-dev
+        $install python-dev libboost-dev 
+        $install libboost-filesystem-dev
+        $install libboost-test-dev
     fi
     # Install NOX optional deps:
-    sudo apt-get install -y libsqlite3-dev python-simplejson
+    $install libsqlite3-dev python-simplejson
 
     # Fetch NOX destiny
     cd ~/
@@ -266,7 +276,7 @@ function oftest {
     echo "Installing oftest..."
 
     # Install deps:
-    sudo apt-get install -y tcpdump python-scapy
+    $install tcpdump python-scapy
 
     # Install oftest:
     cd ~/
@@ -280,7 +290,7 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
     
-    sudo apt-get install -y libsnmp-dev libpcap-dev
+    $install libsnmp-dev libpcap-dev
     cd ~/
     git clone git://openflow.org/oflops.git
     cd oflops
@@ -299,13 +309,13 @@ function other {
 
     # Install tcpdump and tshark, cmd-line packet dump tools.  Also install gitk,
     # a graphical git history viewer.
-    sudo apt-get install -y tcpdump tshark gitk
+    $install tcpdump tshark gitk
 
     # Install common text editors
-    sudo apt-get install -y vim nano emacs
+    $install vim nano emacs
 
     # Install NTP
-    sudo apt-get install -y ntp
+    $install ntp
 
     # Set git to colorize everything.
     git config --global color.diff auto
