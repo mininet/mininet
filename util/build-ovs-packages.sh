@@ -40,13 +40,17 @@ echo "*** Retrieving OVS source"
 echo "*** Patching OVS source"
  # Not sure why this fails, but off it goes!
  sed -i -e 's/dh_strip/# dh_strip/' debian/rules
- # And this fails on 10.04
- if [ `lsb_release -rs` = "10.04" ]; then
+ if [ "$release" = "10.04" ]; then
+  # Lucid doesn't seem to have all the packages for ovsdbmonitor
   echo "*** Patching debian/rules to remove dh_python2"
   sed -i -e 's/dh_python2/dh_pysupport/' debian/rules
   echo "*** Not building ovsdbmonitor since it's too hard on 10.04"
   mv debian/ovsdbmonitor.install debian/ovsdbmonitor.install.backup
   sed -i -e 's/ovsdbmonitor.install/ovsdbmonitor.install.backup/' Makefile.in
+ else
+  # Install a bag of hurt for ovsdbmonitor
+  $install python-pyside.qtcore pyqt4-dev-tools python-twisted python-twisted-bin \
+   python-twisted-core python-twisted-conch python-anyjson python-zope.interface
  fi
 
 echo "*** Building OVS user packages"
