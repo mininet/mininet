@@ -7,7 +7,14 @@ set -u  # exit on undefined variable
 
 kvers=`uname -r`
 ksrc=/lib/modules/$kvers/build
-ovs=openvswitch-1.4.0
+dist=`lsb_release -is | tr [A-Z] [a-z]`
+release=`lsb_release -rs`
+arch=`uname -m`
+if [ "$arch" = "i686" ]; then arch=i386; fi
+if [ "$arch" = "x86_64" ]; then arch=amd64; fi
+
+overs=1.4.0
+ovs=openvswitch-$overs
 ovstgz=$ovs.tar.gz
 ovsurl=http://openvswitch.org/releases/$ovstgz
 
@@ -52,20 +59,26 @@ echo "*** Building OVS datapath kernel module package"
  ln -sf _debian/openvswitch.tar.gz .
  sudo make -f debian/rules.modules KSRC=$ksrc KVERS=$kvers binary-modules
 
-echo "*** User packages:"
- ls -l ~/*openvswitch*deb
+echo "*** Built the following packages:"
+ cd ~
+ ls -l *deb
 
-echo "*** Kernel packages:"
- ls -l /usr/src/*openvswitch*deb
+archive=$ovs-core-$dist-$release-$arch.tar
+ovsbase='common switch brcompat controller'
+echo "*** Packing up dkml pki $ovsbase .debs into:"
+echo "    $archive"
+ dppkg=openvswitch-datapath-dkms_$overs*all.deb
+ pkipkg=openvswitch-pki_$overs*all.deb
+ pkgs="$dppkg $pkipkg"
+ for component in $ovsbase; do
+  deb=(openvswitch-${component}_$overs*$arch.deb)
+  pkgs="$pkgs $deb"
+ done
+ rm -rf $archive
+ tar cf $archive $pkgs
+
+echo "*** Contents of archive $archive:"
+ tar tf $archive
 
 echo "*** Done (hopefully)"
-
-
-
-
-
-
-
-
-
 
