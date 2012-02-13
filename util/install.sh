@@ -39,6 +39,17 @@ OVS_RELEASE=v1.1.1
 OVS_DIR=~/openvswitch
 OVS_KMOD=openvswitch_mod.ko
 
+# Number of CPU's used for parallel build.
+PARALLE_MAKE=${PARALLE_MAKE:-'NO'}
+
+NUMBER_OF_CPUS=`grep processor /proc/cpuinfo  | cut -d " " -f 2 | tail -n 1`
+NUMBER_OF_CPUS=`expr $NUMBER_OF_CPUS + 1`
+if [ "$PARALLE_MAKE" = "YES" ]; then
+  MAKE="make -j$NUMBER_OF_CPUS"
+else
+  MAKE="make"
+fi
+
 function kernel {
 	echo "Install Mininet-compatible kernel"
 	sudo apt-get update
@@ -97,7 +108,7 @@ function mn_deps {
     
     echo "Installing Mininet core"
     pushd ~/mininet
-    sudo make install
+    sudo $MAKE install
     popd
 }
 
@@ -121,14 +132,14 @@ function of {
 	# Resume the install:
 	./boot.sh
 	./configure
-	make
-	sudo make install
+	$MAKE
+	sudo $MAKE install
 
 	# Install dissector:
 	sudo apt-get install -y wireshark libgtk2.0-dev
 	cd ~/openflow/utilities/wireshark_dissectors/openflow
-	make
-	sudo make install
+	$MAKE
+	sudo $MAKE install
 
 	# Copy coloring rules: OF is white-on-blue:
 	mkdir -p ~/.wireshark
@@ -178,8 +189,8 @@ function ovs {
     fi
     opts="--with-l26=$BUILDDIR"
 	./configure $opts
-	make
-	sudo make install
+	$MAKE
+	sudo $MAKE install
 }
 
 # Install NOX with tutorial files
@@ -212,7 +223,7 @@ function nox {
 	mkdir build
 	cd build
 	../configure --with-python=yes
-    make
+    $MAKE
 	#make check
 
 	# Add NOX_CORE_DIR env var:
@@ -235,7 +246,7 @@ function oftest {
     git clone git://openflow.org/oftest
     cd oftest
     cd tools/munger
-    sudo make install
+    sudo $MAKE install
 }
 
 # Install cbench
@@ -249,8 +260,8 @@ function cbench {
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
     ./configure --with-openflow-src-dir=$HOME/openflow
-    make
-    sudo make install || true # make install fails; force past this
+    $MAKE
+    sudo $MAKE install || true # make install fails; force past this
 }
 
 function other {
