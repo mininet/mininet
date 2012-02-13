@@ -270,6 +270,8 @@ function ovs {
     ../configure $opts
     make
     sudo make install
+
+    modprobe
 }
 
 function remove_ovs {
@@ -416,7 +418,6 @@ function all {
     mn_deps
     of
     ovs
-    modprobe
     nox
     oftest
     cbench
@@ -470,7 +471,7 @@ function usage {
     printf -- ' -f: install open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
-    printf -- ' -m: install Open vSwitch kernel (M)odule\n' >&2
+    printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
