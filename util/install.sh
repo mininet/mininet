@@ -212,7 +212,10 @@ function ovs {
         done
         echo PKGS $pkgs
         $pkginst $pkgs
+        # Switch can run on its own, but 
+        # Mininet should control the controller
         sudo service openvswitch-controller stop
+        sudo update-rc.d openvswitch-controller disable
         echo "Done (hopefully) installing packages"
         return
     fi
