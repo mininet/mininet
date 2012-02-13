@@ -19,7 +19,7 @@ RELEASE=Unknown
 CODENAME=Unknown
 ARCH=`uname -m`
 if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
-if [ "$ARCH" = "686" ]; then ARCH="i386"; fi
+if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
