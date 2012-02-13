@@ -27,9 +27,13 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     install='sudo apt-get -y install'
     remove='sudo apt-get -y remove'
     pkginst='sudo dpkg -i'
+    # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-        $install -y lsb-release
+        $install lsb-release
     fi
+    if ! which bc &> /dev/null; then
+        $install bc
+    fi 
 fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
