@@ -219,8 +219,12 @@ function ovs {
         $pkginst $pkgs
         # Switch can run on its own, but 
         # Mininet should control the controller
-        sudo service openvswitch-controller stop
-        sudo update-rc.d openvswitch-controller disable
+	if [ -e /etc/init.d/openvswitch-controller ]; then
+            if sudo service openvswitch-controller stop; then
+                echo "Stopped running controller"
+            fi
+            sudo update-rc.d openvswitch-controller disable
+        fi
         echo "Done (hopefully) installing packages"
         return
     fi
