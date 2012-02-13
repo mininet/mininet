@@ -176,7 +176,7 @@ function of {
     # Tested on Ubuntu 11.04.
     if [ -e /var/packet-openflow.so ]; then
         WS_DIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
-        cp /var/packet-openflow.so $WS_DIR/plugins/
+        sudo cp /var/packet-openflow.so $WS_DIR/plugins/
     fi
 
     # Copy coloring rules: OF is white-on-blue:
