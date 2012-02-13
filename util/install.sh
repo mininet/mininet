@@ -175,7 +175,8 @@ function of {
     # For now, just copy it to the global WS plugin dir.
     # Tested on Ubuntu 11.04.
     if [ -e /var/packet-openflow.so ]; then
-        cp /var/packet-openflow.so /usr/lib/wireshark/libwireshark0/plugins
+        WS_DIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
+        cp /var/packet-openflow.so $WS_DIR/plugins/
     fi
 
     # Copy coloring rules: OF is white-on-blue:
