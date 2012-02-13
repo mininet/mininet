@@ -18,13 +18,18 @@ DIST=Unknown
 RELEASE=Unknown
 CODENAME=Unknown
 ARCH=`uname -m`
+if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
+if [ "$ARCH" = "686" ]; then ARCH="i386"; fi
 
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     install='sudo apt-get -y install'
     remove='sudo apt-get -y remove'
-    $install -y lsb-release
+    pkginst='sudo dpkg -i'
+    if ! which lsb_release &> /dev/null; then
+        $install -y lsb-release
+    fi
 fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
@@ -51,13 +56,20 @@ else
     exit 1
 fi
 
+# More distribution info
+DIST_LC=`echo $DIST | tr [A-Z] [a-z]` # as lower case
+
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-OVS_RELEASE=v1.2.2
+OVS_RELEASE=1.4.0
+OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
+OVS_BUILDSUFFIX=-1
+OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_SRC=~/openvswitch
+OVS_TAG=v$OVS_RELEASE
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
@@ -66,14 +78,13 @@ function kernel {
     sudo apt-get update
     if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
         $install linux-image-$KERNEL_NAME
-    fi
     elif [ "$DIST" = "Debian" ]; then
         # The easy approach: download pre-built linux-image and linux-headers packages:
         wget -c $KERNEL_LOC/$KERNEL_HEADERS
         wget -c $KERNEL_LOC/$KERNEL_IMAGE
 
         # Install custom linux headers and image:
-        sudo dpkg -i $KERNEL_IMAGE $KERNEL_HEADERS
+        $pkginst $KERNEL_IMAGE $KERNEL_HEADERS
 
         # The next two steps are to work around a bug in newer versions of
         # kernel-package, which fails to add initrd images with the latest kernels.
@@ -185,11 +196,32 @@ function of {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Ubuntu" ]; then
-        if [ `echo "$RELEASE >= 11.10" | bc` = 1 ]; then
-	    # Use upstream OVS packages
-	    $install openvswitch-switch openvswitch-controller
+    # First see if we have packages
+    # XXX wget -c seems to fail from github/amazon s3
+    if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME; then
+	# Install dkms dependencies
+	$install patch dkms fakeroot
+        tar xf $OVS_PACKAGE_NAME
+        orig=`tar tf $OVS_PACKAGE_NAME`
+        # Now install packages in reasonable dependency order
+        order='common pki openvswitch-switch brcompat controller dkms'
+        pkgs=""
+        for p in $order; do
+            pkg=`echo "$orig" | grep $p`
+            pkgs="$pkgs $pkg"
+        done
+        echo PKGS $pkgs
+        $pkginst $pkgs
+        sudo service openvswitch-controller stop
+        echo "Done (hopefully) installing packages"
+        return
+    fi
+
+    # Otherwise try distribution's OVS packages
+    if [ "$DIST" = "Ubuntu" ] && [ `echo "$RELEASE >= 11.10" | bc` = 1 ]; then
+	if $install openvswitch-switch openvswitch-controller; then
             return
+        fi
     fi
 
     $install $KERNEL_HEADERS
@@ -213,7 +245,7 @@ function ovs {
     cd ~/
     git clone git://openvswitch.org/openvswitch $OVS_SRC
     cd $OVS_SRC
-    git checkout $OVS_RELEASE
+    git checkout $OVS_TAG
     ./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
     if [ ! -e $BUILDDIR ]; then
@@ -226,6 +258,27 @@ function ovs {
     ../configure $opts
     make
     sudo make install
+}
+
+function remove_ovs {
+    pkgs=`dpkg-query -l | grep openvswitch | awk '{ print $2;}'`
+    echo "Removing existing Open vSwitch packages:"
+    echo $pkgs
+    if ! $remove $pkgs; then
+        echo "Not all packages removed correctly"
+    fi
+    # For some reason this doesn't happen
+    if scripts=`ls /etc/init.d/*openvswitch* 2>/dev/null`; then
+        echo $scripts
+        for s in $scripts; do
+            s=$(basename $s)
+            echo SCRIPT $s
+            sudo service $s stop
+            sudo rm -f /etc/init.d/$s
+            sudo update-rc.d -f $s remove
+        done
+    fi
+    echo "Done removing OVS"
 }
 
 # Install NOX with tutorial files
@@ -407,6 +460,7 @@ function usage {
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
+    printf -- ' -r: remove existing Open vSwitch packages\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
@@ -419,7 +473,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmntvx' OPTION
+    while getopts 'abcdfhkmnrtvx' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -431,6 +485,7 @@ else
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
+      r)    remove_ovs;;
       t)    other;;
       v)    ovs;;
       x)    nox;;

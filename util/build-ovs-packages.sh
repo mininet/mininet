@@ -10,6 +10,7 @@ ksrc=/lib/modules/$kvers/build
 dist=`lsb_release -is | tr [A-Z] [a-z]`
 release=`lsb_release -rs`
 arch=`uname -m`
+buildsuffix=-1
 if [ "$arch" = "i686" ]; then arch=i386; fi
 if [ "$arch" = "x86_64" ]; then arch=amd64; fi
 
@@ -52,6 +53,8 @@ echo "*** Patching OVS source"
   $install python-pyside.qtcore pyqt4-dev-tools python-twisted python-twisted-bin \
    python-twisted-core python-twisted-conch python-anyjson python-zope.interface
  fi
+ # init script was written to assume that commands complete
+ sed -i -e 's/^set -e/#set -e/' debian/openvswitch-controller.init
 
 echo "*** Building OVS user packages"
  opts=--with-linux=/lib/modules/`uname -r`/build
@@ -67,15 +70,18 @@ echo "*** Built the following packages:"
  cd ~
  ls -l *deb
 
-archive=$ovs-core-$dist-$release-$arch.tar
-ovsbase='common switch brcompat controller'
-echo "*** Packing up dkml pki $ovsbase .debs into:"
+archive=ovs-$overs-core-$dist-$release-$arch$buildsuffix.tar
+ovsbase='common pki switch brcompat controller datapath-dkms'
+echo "*** Packing up $ovsbase .debs into:"
 echo "    $archive"
- dppkg=openvswitch-datapath-dkms_$overs*all.deb
- pkipkg=openvswitch-pki_$overs*all.deb
- pkgs="$dppkg $pkipkg"
+ pkgs=""
  for component in $ovsbase; do
-  deb=(openvswitch-${component}_$overs*$arch.deb)
+  if echo $component | egrep 'dkms|pki'; then
+    # Architecture-independent packages
+    deb=(openvswitch-${component}_$overs*all.deb)
+  else
+    deb=(openvswitch-${component}_$overs*$arch.deb)
+  fi
   pkgs="$pkgs $deb"
  done
  rm -rf $archive
