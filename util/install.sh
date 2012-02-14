@@ -201,6 +201,9 @@ function of {
 function ovs {
     echo "Installing Open vSwitch..."
 
+    # Required for module build/dkms install
+    $install $KERNEL_HEADERS
+
     # First see if we have packages
     # XXX wget -c seems to fail from github/amazon s3
     if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME; then
@@ -235,7 +238,6 @@ function ovs {
         fi
     fi
 
-    $install $KERNEL_HEADERS
     $install pkg-config gcc make python-dev libssl-dev libtool
 
     if [ "$DIST" = "Debian" ]; then
