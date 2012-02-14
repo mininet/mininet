@@ -70,7 +70,7 @@ DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
 OVS_RELEASE=1.4.0
 OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
-OVS_BUILDSUFFIX=-1
+OVS_BUILDSUFFIX=-2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_SRC=~/openvswitch
 OVS_TAG=v$OVS_RELEASE

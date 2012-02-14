@@ -10,7 +10,7 @@ ksrc=/lib/modules/$kvers/build
 dist=`lsb_release -is | tr [A-Z] [a-z]`
 release=`lsb_release -rs`
 arch=`uname -m`
-buildsuffix=-1
+buildsuffix=-2
 if [ "$arch" = "i686" ]; then arch=i386; fi
 if [ "$arch" = "x86_64" ]; then arch=amd64; fi
 
