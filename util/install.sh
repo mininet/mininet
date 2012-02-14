@@ -64,7 +64,7 @@ fi
 DIST_LC=`echo $DIST | tr [A-Z] [a-z]` # as lower case
 
 # Kernel Deb pkg to be removed:
-KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
+KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
@@ -111,7 +111,9 @@ function kernel_clean {
     echo "Cleaning kernel..."
 
     # To save disk space, remove previous kernel
-    $remove $KERNEL_IMAGE_OLD
+    if ! $remove $KERNEL_IMAGE_OLD; then
+        echo $KERNEL_IMAGE_OLD not installed.
+    endif
 
     # Also remove downloaded packages:
     rm -f ~/linux-headers-* ~/linux-image-*
