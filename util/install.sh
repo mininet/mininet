@@ -209,14 +209,12 @@ function ovs {
         tar xf $OVS_PACKAGE_NAME
         orig=`tar tf $OVS_PACKAGE_NAME`
         # Now install packages in reasonable dependency order
-        order='common pki openvswitch-switch brcompat controller dkms'
+        order='dkms common pki openvswitch-switch brcompat controller'
         pkgs=""
         for p in $order; do
             pkg=`echo "$orig" | grep $p`
-            pkgs="$pkgs $pkg"
+            $pkginst $pkg
         done
-        echo PKGS $pkgs
-        $pkginst $pkgs
         # Switch can run on its own, but 
         # Mininet should control the controller
 	if [ -e /etc/init.d/openvswitch-controller ]; then
@@ -275,7 +273,7 @@ function ovs {
 }
 
 function remove_ovs {
-    pkgs=`dpkg-query -l | grep openvswitch | awk '{ print $2;}'`
+    pkgs=`dpkg --get-selections | grep openvswitch | awk '{ print $1;}'`
     echo "Removing existing Open vSwitch packages:"
     echo $pkgs
     if ! $remove $pkgs; then
