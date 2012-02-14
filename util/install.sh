@@ -113,7 +113,7 @@ function kernel_clean {
     # To save disk space, remove previous kernel
     if ! $remove $KERNEL_IMAGE_OLD; then
         echo $KERNEL_IMAGE_OLD not installed.
-    endif
+    fi
 
     # Also remove downloaded packages:
     rm -f ~/linux-headers-* ~/linux-image-*
