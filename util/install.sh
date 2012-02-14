@@ -194,6 +194,7 @@ function of {
         BLACKLIST=/etc/modprobe.d/blacklist
     fi
     sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
+    cd ~
 }
 
 # Install Open vSwitch
@@ -206,6 +207,7 @@ function ovs {
 
     # First see if we have packages
     # XXX wget -c seems to fail from github/amazon s3
+    cd /tmp
     if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME; then
 	# Install dkms dependencies
 	$install patch dkms fakeroot
@@ -228,6 +230,7 @@ function ovs {
             sudo update-rc.d openvswitch-controller disable
         fi
         echo "Done (hopefully) installing packages"
+        cd ~
         return
     fi
 
