@@ -213,7 +213,8 @@ function ovs {
         pkgs=""
         for p in $order; do
             pkg=`echo "$orig" | grep $p`
-            $pkginst $pkg
+	    # Annoyingly, things seem to be missing without this flag
+            $pkginst --force-confmiss $pkg
         done
         # Switch can run on its own, but 
         # Mininet should control the controller
