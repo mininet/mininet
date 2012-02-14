@@ -209,8 +209,7 @@ function ovs {
     # XXX wget -c seems to fail from github/amazon s3
     cd /tmp
     if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME; then
-	# Install dkms dependencies
-	$install patch dkms fakeroot
+	$install patch dkms fakeroot python-argparse
         tar xf $OVS_PACKAGE_NAME
         orig=`tar tf $OVS_PACKAGE_NAME`
         # Now install packages in reasonable dependency order
