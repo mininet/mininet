@@ -24,6 +24,9 @@ cd mininet
 git checkout -b 1.4 origin/devel/ovs-1.4-compat
 cd
 time mininet/util/install.sh
+if ! grep NOX_CORE_DIR .bashrc; then
+  echo "export NOX_CORE_DIR=~/noxcore/build/src/" >> .bashrc
+fi
 echo <<EOF
 You may need to reboot and then:
 sudo dpkg-reconfigure openvswitch-datapath-dkms
