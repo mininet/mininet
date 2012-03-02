@@ -3,9 +3,9 @@
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN
-from os import read
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 from mininet.log import output, error
+import re
 
 # Command execution support
 
@@ -33,7 +33,7 @@ def oldQuietRun( *cmd ):
     # We can't use Popen.communicate() because it uses
     # select(), which can't handle
     # high file descriptor numbers! poll() can, however.
-    output = ''
+    out = ''
     readable = poll()
     readable.register( popen.stdout )
     while True:
@@ -41,11 +41,11 @@ def oldQuietRun( *cmd ):
             data = popen.stdout.read( 1024 )
             if len( data ) == 0:
                 break
-            output += data
+            out += data
         popen.poll()
         if popen.returncode != None:
             break
-    return output
+    return out
 
 # This is a bit complicated, but it enables us to
 # monitor commount output as it is happening
@@ -254,3 +254,9 @@ def fixLimits():
     "Fix ridiculously small resource limits."
     setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
     setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
+
+def natural( text ):
+    "To sort sanely/alphabetically: sorted( l, key=natural )"
+    def num( s ):
+        return int( s ) if s.isdigit() else text
+    return [  num( s ) for s in re.split( r'(\d+)', text ) ]
