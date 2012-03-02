@@ -107,8 +107,10 @@ class Console( Frame ):
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
+        outputHook = lambda x,y: True  # make pylint happy
         if self.outputHook:
-            self.outputHook( self, text )
+            outputHook = self.outputHook
+        outputHook( self, text )
 
     def handleKey( self, event ):
         "If it's an interactive command, send it to the node."
