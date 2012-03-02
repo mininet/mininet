@@ -17,6 +17,11 @@ codecheck: $(PYSRC)
 	pylint --rcfile=.pylint $(PYSRC)
 	pep8 --repeat --ignore=$(P8IGN) $(PYSRC)
 
+errcheck: $(PYSRC)
+	-echo "Running check for errors only"
+	pyflakes $(PYSRC)
+	pylint -E --rcfile=.pylint $(PYSRC)
+
 test: $(MININET) $(TEST)
 	-echo "Running tests"
 	mininet/test/test_nets.py
