@@ -16,7 +16,14 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
-from mininet.node import SWITCH_PORT_BASE
+from mininet.node import SWITCH_PORT_BASE, Host, OVSSwitch
+from mininet.link import Link
+
+# BL: it's hard to figure out how to do this right yet remain flexible
+# These classes will be used as the defaults if no class is passed
+# into either Topo() or Node()
+TopoDefaultNode = Host
+TopoDefaultSwitch = OVSSwitch
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -54,11 +61,12 @@ class NodeID(object):
         return "10.%i.%i.%i" % (hi, mid, lo)
 
 
-class Node(object):
+class Node( object ):
     '''Node-specific vertex metadata for a Topo object.'''
 
-    def __init__(self, connected = False, admin_on = True,
-                 power_on = True, fault = False, is_switch = True):
+    def __init__(self, connected=False, admin_on=True,
+                 power_on=True, fault=False, is_switch=True,
+                 cls=None, **params ):
         '''Init.
 
         @param connected actively connected to controller
@@ -66,18 +74,26 @@ class Node(object):
         @param power_on powered on or off
         @param fault fault seen on node
         @param is_switch switch or host
+        @param cls node class (e.g. Host, Switch)
+        @param params node parameters
         '''
         self.connected = connected
         self.admin_on = admin_on
         self.power_on = power_on
         self.fault = fault
         self.is_switch = is_switch
+        # Above should be deleted and replaced by the following
+        # BL: is_switch is a bit annoying if we can just specify
+        # the node class instead!!
+        self.cls = cls if cls else ( TopoDefaultSwitch if is_switch else TopoDefaultNode )
+        self.params = params if params else {}
 
 
 class Edge(object):
     '''Edge-specific metadata for a StructuredTopo graph.'''
 
-    def __init__(self, admin_on = True, power_on = True, fault = False):
+    def __init__(self, admin_on=True, power_on=True, fault=False,
+                 cls=Link, **params):
         '''Init.
 
         @param admin_on administratively on or off; defaults to True
@@ -87,31 +103,40 @@ class Edge(object):
         self.admin_on = admin_on
         self.power_on = power_on
         self.fault = fault
+        # Above should be deleted and replaced by the following
+        self.cls = cls
+        self.params = params
 
 
 class Topo(object):
     '''Data center network representation for structured multi-trees.'''
-
-    def __init__(self):
-        '''Create Topo object.
-
-        '''
+    
+    def __init__(self, node=Host, switch=None, link=Link):
+        """Create Topo object.
+           node: default node/host class
+           switch: default switch class
+           Link: default link class"""
         self.g = Graph()
         self.node_info = {}  # dpids hash to Node objects
         self.edge_info = {}  # (src_dpid, dst_dpid) tuples hash to Edge objects
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
         self.id_gen = NodeID  # class used to generate dpid
+        self.node = node
+        self.switch = switch
+        self.link = link
 
-    def add_node(self, dpid, node):
+    def add_node(self, dpid, node=None):
         '''Add Node to graph.
 
         @param dpid dpid
         @param node Node object
         '''
         self.g.add_node(dpid)
+        if not node:
+            node = Node( link=self.link )
         self.node_info[dpid] = node
 
-    def add_edge(self, src, dst, edge = None):
+    def add_edge(self, src, dst, edge=None):
         '''Add edge (Node, Node) to graph.
 
         @param src src dpid
@@ -121,7 +146,7 @@ class Topo(object):
         src, dst = tuple(sorted([src, dst]))
         self.g.add_edge(src, dst)
         if not edge:
-            edge = Edge()
+            edge = Edge( link=self.link )
         self.edge_info[(src, dst)] = edge
         self.add_port(src, dst)
 
@@ -276,6 +301,12 @@ class Topo(object):
             assert dst in self.ports and src in self.ports[dst]
             return (self.ports[src][dst], self.ports[dst][src])
 
+    def edgeInfo( self, src, dst ):
+        "Return edge metadata"
+        # BL: Perhaps this should be rethought or we should just use the
+        # dicts...
+        return self.edge_info[ ( src, dst ) ]
+
     def enable_edges(self):
         '''Enable all edges in the network graph.
 
@@ -321,7 +352,12 @@ class Topo(object):
         '''
         return self.id_gen(dpid = dpid).ip_str()
 
+    def nodeInfo( self, dpid ):
+        "Return metadata for node"
+        # BL: may wish to rethink this or just use dicts..
+        return self.node_info[ dpid ]
 
+    
 class SingleSwitchTopo(Topo):
     '''Single switch connected to k hosts.'''
 

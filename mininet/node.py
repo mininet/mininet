@@ -46,11 +46,11 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
-from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, errRun, makeIntfPair, moveIntf, isShellBuiltin
+from mininet.util import quietRun, errRun, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
+from mininet.link import Link
 
 SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
 
@@ -78,7 +78,7 @@ class Node( object ):
             opts += 'n'
         cmd = [ 'mnexec', opts, 'bash', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-            close_fds=False )
+            close_fds=True )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
         self.pid = self.shell.pid
@@ -89,12 +89,10 @@ class Node( object ):
         # using select.poll()
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
-        self.intfs = {}  # dict of port numbers to interface names
-        self.ports = {}  # dict of interface names to port numbers
+        self.intfs = {}  # dict of port numbers to interfaces
+        self.ports = {}  # dict of interfaces to port numbers
                          # replace with Port objects, eventually ?
-        self.ips = {}  # dict of interfaces to ip addresses as strings
-        self.macs = {}  # dict of interfacesto mac addresses as strings
-        self.connection = {}  # remote node connected to each interface
+        self.nameToIntf = {}  # dict of interface names to Intfs
         self.execed = False
         self.lastCmd = None
         self.lastPid = None
@@ -172,7 +170,7 @@ class Node( object ):
         if len( args ) > 0:
             cmd = args
         if not isinstance( cmd, str ):
-            cmd = ' '.join( cmd )
+            cmd = ' '.join( [ str( c ) for c in cmd ] )
         if not re.search( r'\w', cmd ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
@@ -254,10 +252,6 @@ class Node( object ):
     # the real interfaces are created as veth pairs, so we can't
     # make a single interface at a time.
 
-    def intfName( self, n ):
-        "Construct a canonical interface name node-ethN for interface n."
-        return self.name + '-eth' + repr( n )
-
     def newPort( self ):
         "Return the next port number to allocate."
         if len( self.ports ) > 0:
@@ -266,56 +260,45 @@ class Node( object ):
 
     def addIntf( self, intf, port=None ):
         """Add an interface.
-           intf: interface name (e.g. nodeN-ethM)
+           intf: interface
            port: port number (optional, typically OpenFlow port number)"""
         if port is None:
             port = self.newPort()
         self.intfs[ port ] = intf
         self.ports[ intf ] = port
-        #info( '\n' )
-        #info( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
+        self.nameToIntf[ intf.name ] = intf
+        info( '\n' )
+        info( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
         if self.inNamespace:
-            #info( 'moving w/inNamespace set\n' )
-            moveIntf( intf, self )
+            info( 'moving', intf, 'into namespace for', self.name, '\n' )
+            moveIntf( intf.name, self )
 
-    def registerIntf( self, intf, dstNode, dstIntf ):
-        "Register connection of intf to dstIntf on dstNode."
-        self.connection[ intf ] = ( dstNode, dstIntf )
+    def defaultIntf( self ):
+        "Return interface for lowest port"
+        ports = self.intfs.keys()
+        if ports:
+            return self.intfs[ min( ports ) ]
 
-    def connectionsTo( self, node):
-        "Return [(srcIntf, dstIntf)..] for connections to dstNode."
+    def intf( self, intf='' ):
+        """Return our interface object with given name,x
+           or default intf if name is empty"""
+        if not intf:
+            return self.defaultIntf()
+        elif type( intf) is str:
+            return self.nameToIntf[ intf ]
+        else:
+            return intf
+
+    def linksTo( self, node):
+        "Return [ link1, link2...] for all links from self to node."
         # We could optimize this if it is important
-        connections = []
-        for intf in self.connection.keys():
-            dstNode, dstIntf = self.connection[ intf ]
-            if dstNode == node:
-                connections.append( ( intf, dstIntf ) )
-        return connections
-
-    # This is a symmetric operation, but it makes sense to put
-    # the code here since it is tightly coupled to routines in
-    # this class. For a more symmetric API, you can use
-    # mininet.util.createLink()
-
-    def linkTo( self, node2, port1=None, port2=None ):
-        """Create link to another node, making two new interfaces.
-           node2: Node to link us to
-           port1: our port number (optional)
-           port2: node2 port number (optional)
-           returns: intf1 name, intf2 name"""
-        node1 = self
-        if port1 is None:
-            port1 = node1.newPort()
-        if port2 is None:
-            port2 = node2.newPort()
-        intf1 = node1.intfName( port1 )
-        intf2 = node2.intfName( port2 )
-        makeIntfPair( intf1, intf2 )
-        node1.addIntf( intf1, port1 )
-        node2.addIntf( intf2, port2 )
-        node1.registerIntf( intf1, node2, intf2 )
-        node2.registerIntf( intf2, node1, intf1 )
-        return intf1, intf2
+        links = []
+        for intf in self.intfs:
+            link = intf.link
+            nodes = ( link.intf1.node, link.intf2.node )
+            if self in nodes and node in nodes:
+                links.append( link )
+        return links
 
     def deleteIntfs( self ):
         "Delete all of our interfaces."
@@ -325,34 +308,16 @@ class Node( object ):
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
         for intf in self.intfs.values():
-            quietRun( 'ip link del ' + intf )
+            intf.delete()
             info( '.' )
-            # Does it help to sleep to let things run?
-            sleep( 0.001 )
 
-    def setMAC( self, intf, mac ):
-        """Set the MAC address for an interface.
-           mac: MAC address as string"""
-        result = self.cmd( 'ifconfig', intf, 'down' )
-        result += self.cmd( 'ifconfig', intf, 'hw', 'ether', mac )
-        result += self.cmd( 'ifconfig', intf, 'up' )
-        return result
+    # Routing support
 
     def setARP( self, ip, mac ):
         """Add an ARP entry.
            ip: IP address as string
            mac: MAC address as string"""
         result = self.cmd( 'arp', '-s', ip, mac )
-        return result
-
-    def setIP( self, intf, ip, prefixLen=8 ):
-        """Set the IP address for an interface.
-           intf: interface name
-           ip: IP address as a string
-           prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
-        ipSub = '%s/%d' % ( ip, prefixLen )
-        result = self.cmd( 'ifconfig', intf, ipSub, 'up' )
-        self.ips[ intf ] = ip
         return result
 
     def setHostRoute( self, ip, intf ):
@@ -365,62 +330,52 @@ class Node( object ):
         """Set the default route to go through intf.
            intf: string, interface name"""
         self.cmd( 'ip route flush root 0/0' )
-        return self.cmd( 'route add default ' + intf )
+        return self.cmd( 'route add default %s' % intf )
 
-    def defaultIntf( self ):
-        "Return interface for lowest port"
-        ports = self.intfs.keys()
-        if ports:
-            return self.intfs[ min( ports ) ]
+    # Convenience methods
 
-    _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
-    _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
+    def setMAC( self, mac, intf=''):
+        """Set the MAC address for an interface.
+           intf: intf or intf name
+           mac: MAC address as string"""
+        return self.intf( intf ).setMAC( mac )
+
+    def setIP( self, ip, prefixLen=8, intf='' ):
+        """Set the IP address for an interface.
+           intf: interface name
+           ip: IP address as a string
+           prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
+        # This should probably be rethought:
+        ipSub = '%s/%s' % ( ip, prefixLen )
+        return self.intf( intf ).setIP( ipSub )
 
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
-        if intf is None:
-            intf = self.defaultIntf()
-        if intf and not self.waiting:
-            self.updateIP( intf )
-        return self.ips.get( intf, None )
+        return self.intf( intf ).IP()
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        if intf is None:
-            intf = self.defaultIntf()
-        if intf and not self.waiting:
-            self.updateMAC( intf )
-        return self.macs.get( intf, None )
+        return self.intf( intf ).MAC()
 
-    def updateIP( self, intf ):
-        "Update IP address for an interface"
-        assert not self.waiting
-        ifconfig = self.cmd( 'ifconfig ' + intf )
-        ips = self._ipMatchRegex.findall( ifconfig )
-        if ips:
-            self.ips[ intf ] = ips[ 0 ]
-        else:
-            self.ips[ intf ] = None
-
-    def updateMAC( self, intf ):
-        "Update MAC address for an interface"
-        assert not self.waiting
-        ifconfig = self.cmd( 'ifconfig ' + intf )
-        macs = self._macMatchRegex.findall( ifconfig )
-        if macs:
-            self.macs[ intf ] = macs[ 0 ]
-        else:
-            self.macs[ intf ] = None
-
-    def intfIsUp( self, intf ):
+    def intfIsUp( self, intf=None ):
         "Check if an interface is up."
-        return 'UP' in self.cmd( 'ifconfig ' + intf )
+        return self.intf( intf ).isUp()
+
+    # This is here for backward compatibility
+    def linkTo( self, node, link=Link ):
+        """(Deprecated) Link to another node
+           replace with Link( node1, node2)"""
+        return link( self, node )
 
     # Other methods
+
+    def intfNames( self ):
+        "The names of our interfaces"
+        return [ str( i ) for i in sorted( self.ports.values() ) ]
+
     def __str__( self ):
-        intfs = sorted( self.intfs.values() )
         return '%s: IP=%s intfs=%s pid=%s' % (
-            self.name, self.IP(), ','.join( intfs ), self.pid )
+            self.name, self.IP(), ','.join( self.intfNames() ), self.pid )
 
 
 class Host( Node ):
@@ -623,10 +578,9 @@ class OVSSwitch( Switch ):
     def __init__( self, name, dp=None, **kwargs ):
         """Init.
            name: name for switch
-           dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        self.dp = 'dp%i' % dp
+        self.dp = name
 
     @staticmethod
     def setup():
@@ -671,7 +625,6 @@ class OVSSwitch( Switch ):
 
 OVSKernelSwitch = OVSSwitch
 
-
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
@@ -704,8 +657,9 @@ class Controller( Node ):
 
     def IP( self, intf=None ):
         "Return IP address of the Controller"
-        ip = Node.IP( self, intf=intf )
-        if ip is None:
+        if self.intfs:
+            ip = Node.IP( self, intf )
+        else:
             ip = self.defaultIP
         return ip
 

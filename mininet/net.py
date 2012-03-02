@@ -1,6 +1,6 @@
 """
 
-    Mininet: A simple networking testbed for OpenFlow!
+    Mininet: A simple networking testbed for OpenFlow/SDN!
 
 author: Bob Lantz (rlantz@cs.stanford.edu)
 author: Brandon Heller (brandonh@stanford.edu)
@@ -96,6 +96,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
 from mininet.node import ControllerParams
+from mininet.link import Link
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
@@ -104,16 +105,17 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                 controller=Controller,
+                 controller=Controller, link=Link,
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
-           switch: Switch class
-           host: Host class
-           controller: Controller class
+           switch: default Switch class
+           host: default Host class/constructor
+           controller: default Controller class/constructor
+           link: default Link class/constructor
            cparams: ControllerParams object
            build: build now from topo?
            xterms: if build now, spawn xterms?
@@ -126,6 +128,7 @@ class Mininet( object ):
         self.switch = switch
         self.host = host
         self.controller = controller
+        self.link = link
         self.cparams = cparams
         self.topo = topo
         self.inNamespace = inNamespace
@@ -150,30 +153,38 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def addHost( self, name, mac=None, ip=None ):
+    # BL Note:
+    # The specific items for host/switch/etc. should probably be
+    # handled in the node classes rather than here!!
+
+    def addHost( self, name, mac=None, ip=None, host=None, **params ):
         """Add host.
            name: name of host to add
            mac: default MAC address for intf 0
            ip: default IP address for intf 0
            returns: added host"""
-        host = self.host( name, defaultMAC=mac, defaultIP=ip )
-        self.hosts.append( host )
-        self.nameToNode[ name ] = host
-        return host
+        if not host:
+            host = self.host
+        defaults = { 'defaultMAC': mac, 'defaultIP': ip }
+        defaults.update( params )
+        h = host( name, **defaults)
+        self.hosts.append( h )
+        self.nameToNode[ name ] = h
+        return h
 
-    def addSwitch( self, name, mac=None, ip=None ):
+    def addSwitch( self, name, switch=None, **params ):
         """Add switch.
            name: name of switch to add
-           mac: default MAC address for kernel/OVS switch intf 0
            returns: added switch
-           side effect: increments the listenPort member variable."""
-        if self.switch == UserSwitch:
-            sw = self.switch( name, listenPort=self.listenPort,
-                defaultMAC=mac, defaultIP=ip, inNamespace=self.inNamespace )
-        else:
-            sw = self.switch( name, listenPort=self.listenPort,
-                defaultMAC=mac, defaultIP=ip, dp=self.dps,
-                inNamespace=self.inNamespace )
+           side effect: increments listenPort and dps ivars."""
+        defaults = { 'listenPort': self.listenPort, 
+                     'inNamespace': self.inNamespace }
+        if not switch:
+            switch = self.switch
+        if switch != UserSwitch:
+            defaults[ 'dps' ] = self.dps
+        defaults.update( params )
+        sw = self.switch( name, **defaults )
         if not self.inNamespace and self.listenPort:
             self.listenPort += 1
         self.dps += 1
@@ -181,12 +192,12 @@ class Mininet( object ):
         self.nameToNode[ name ] = sw
         return sw
 
-    def addController( self, name='c0', controller=None, **kwargs ):
+    def addController( self, name='c0', controller=None, **params ):
         """Add controller.
            controller: Controller class"""
         if not controller:
             controller = self.controller
-        controller_new = controller( name, **kwargs )
+        controller_new = controller( name, **params )
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
@@ -210,6 +221,9 @@ class Mininet( object ):
     # 4. Even if we dispense with this in general, it could still be
     #    useful for people who wish to simulate a separate control
     #    network (since real networks may need one!)
+    #
+    # 5. Basically nobody ever uses this method, so perhaps it should be moved
+    #    out of this core class.
 
     def configureControlNetwork( self ):
         "Configure control network."
@@ -221,8 +235,7 @@ class Mininet( object ):
     def configureRoutedControlNetwork( self, ip='192.168.123.1',
         prefixLen=16 ):
         """Configure a routed control network on controller and switches.
-           For use with the user datapath only right now.
-           """
+           For use with the user datapath only right now."""
         controller = self.controllers[ 0 ]
         info( controller.name + ' <->' )
         cip = ip
@@ -256,8 +269,8 @@ class Mininet( object ):
         "Configure a set of hosts."
         # params were: hosts, ips
         for host in self.hosts:
-            hintf = host.intfs[ 0 ]
-            host.setIP( hintf, host.defaultIP, self.cparams.prefixLen )
+            hintf = host.defaultIntf()
+            host.setIP( host.defaultIP, self.cparams.prefixLen, hintf )
             host.setDefaultRoute( hintf )
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
@@ -272,9 +285,11 @@ class Mininet( object ):
         def addNode( prefix, addMethod, nodeId ):
             "Add a host or a switch."
             name = prefix + topo.name( nodeId )
+            # MAC and IP should probably be from nodeInfo...
             mac = macColonHex( nodeId ) if self.setMacs else None
             ip = topo.ip( nodeId )
-            node = addMethod( name, mac=mac, ip=ip )
+            ni = topo.nodeInfo( nodeId )
+            node = addMethod( name, cls=ni.cls, mac=mac, ip=ip, **ni.params )
             self.idToNode[ nodeId ] = node
             info( name + ' ' )
 
@@ -291,12 +306,16 @@ class Mininet( object ):
             addNode( 'h', self.addHost, hostId )
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
-            addNode( 's', self.addSwitch, switchId )
+            addNode( 's', self.addSwitch, switchId)
         info( '\n*** Adding links:\n' )
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
             srcPort, dstPort = topo.port( srcId, dstId )
-            createLink( src, dst, srcPort, dstPort )
+            ei = topo.edgeInfo( srcId, dstId )
+            link, params = ei.cls, ei.params
+            if not link:
+                link = self.link
+            link( src, dst, srcPort, dstPort, **params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
         info( '\n' )
 
@@ -510,7 +529,7 @@ class Mininet( object ):
             servout += server.monitor()
         while 'Connected' not in client.cmd(
             'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
-            output('waiting for iperf to start up')
+            output('waiting for iperf to start up...')
             sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
