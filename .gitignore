@@ -1,3 +1,7 @@
 mnexec
 *.pyc
+*~
 mininet.egg-info
+build/*
+dist/*
+
