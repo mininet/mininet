@@ -5,8 +5,7 @@
 from setuptools import setup, find_packages
 from os.path import join
 
-scripts = [ join( 'bin', filename ) for filename in [ 
-    'mn', 'mnexec' ] ]
+scripts = [ join( 'bin', filename ) for filename in [ 'mn' ] ]
 
 modname = distname = 'mininet'
 
