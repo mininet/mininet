@@ -369,9 +369,13 @@ class Node( object ):
 
     # Other methods
 
+    def intfList( self ):
+        "List of our interfaces sorted by port number"
+        return [ self.intfs[ p ] for p in sorted( self.intfs.iterkeys() ) ]
+
     def intfNames( self ):
-        "The names of our interfaces"
-        return [ str( i ) for i in sorted( self.ports.values() ) ]
+        "The names of our interfaces sorted by port number"
+        return [ str( i ) for i in self.intfList() ]
 
     def __str__( self ):
         return '%s: IP=%s intfs=%s pid=%s' % (
