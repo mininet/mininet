@@ -61,10 +61,14 @@ def errRun( *cmd, **kwargs  ):
         cmd = cmd[ 0 ]
         if isinstance( cmd, str ):
             cmd = cmd.split( ' ' )
+    cmd = [ str( arg ) for arg in cmd ]
     # By default we separate stderr, don't run in a shell, and don't echo
     stderr = kwargs.get( 'stderr', PIPE )
     shell = kwargs.get( 'shell', False )
     echo = kwargs.get( 'echo', False )
+    if echo:
+        # cmd goes to stderr, output goes to stdout
+        info( cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers
     out, err = '', ''
@@ -89,6 +93,14 @@ def errRun( *cmd, **kwargs  ):
         if returncode is not None:
            break
     return out, err, returncode
+
+def errFail( *cmd, **kwargs ):
+    "Run a command using errRun and raise exception on nonzero exit"
+    out, err, ret = errRun( *cmd, **kwargs )
+    if ret:
+        raise Exception( "errFail: failed with return code %s"
+                         % ret )
+    return out, err, ret
 
 def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
@@ -260,3 +272,13 @@ def natural( text ):
     def num( s ):
         return int( s ) if s.isdigit() else text
     return [  num( s ) for s in re.split( r'(\d+)', text ) ]
+
+def numCores():
+    "Returns number of CPU cores based on /proc/cpuinfo"
+    if hasattr( numCores, 'ncores' ):
+        return numCores.ncores
+    try:
+        numCores.ncores = int( quietRun('grep -c processor /proc/cpuinfo') )
+    except ValueError:
+        return 0
+    return numCores.ncores
