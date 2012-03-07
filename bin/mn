@@ -20,7 +20,7 @@ from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, init
-from mininet.node import KernelSwitch, Host, Controller, ControllerParams, NOX
+from mininet.node import Host, Controller, ControllerParams, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
@@ -35,8 +35,7 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
          'tree': TreeTopo }
 
 SWITCHDEF = 'ovsk'
-SWITCHES = { 'kernel': KernelSwitch,
-            'user': UserSwitch,
+SWITCHES = { 'user': UserSwitch,
             'ovsk': OVSKernelSwitch }
 
 HOSTDEF = 'process'
