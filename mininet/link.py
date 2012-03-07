@@ -39,10 +39,12 @@ class BasicIntf( object ):
         self.name = name
         self.link = link
         self.mac, self.ip = None, None
+        # Add to node (and move ourselves if necessary )
+        node.addIntf( self )
         self.config( **kwargs )
 
     def cmd( self, *args, **kwargs ):
-        self.node.cmd( *args, **kwargs )
+        return self.node.cmd( *args, **kwargs )
 
     def ifconfig( self, *args ):
         "Configure ourselves using ifconfig"
@@ -93,22 +95,43 @@ class BasicIntf( object ):
         return "UP" in self.ifconfig()
 
 
-    # Map of config params to config methods
-    # Perhaps this could be more graceful, but it
-    # is flexible
-    configMap = { 'mac': 'setMAC', 
-                  'ip': 'setIP',
-                  'ifconfig': 'ifconfig' }
+    # The reason why we configure things in this way is so
+    # That the parameters can be listed and documented in
+    # the config method.
+    # Dealing with subclasses and superclasses is slightly
+    # annoying, but at least the information is there!
 
-    def config( self, **params ):
-        "Configure interface based on parameters"
-        self.__dict__.update(**params)
-        for name, value in params.iteritems():
-            method = self.configMap.get( name, None )
-            if method:
-                if type( value ) is str:
-                    value = value.split( ',' )
-                method( value )
+    def setParam( self, result, method, **param ):
+        """Internal method: configure single parameter
+           result: dict of results to update
+           method: config method
+           param: foo=bar (ignore if bar=None)"""
+        name, value = param.items()[ 0 ]
+        if value is None:
+            return
+        if type( value ) is list:
+            result[ name ] = getattr( self, method )( *value )
+        elif type( value ) is dict:
+            result[ name ] = getattr( self, method )( **value )
+        else:
+            result[ name ] = getattr( self, method )( value )
+
+    def config( self, mac=None, ip=None, ifconfig=None, 
+                defaultRoute=None, **params):
+        """Configure Node according to (optional) parameters:
+           mac: MAC address
+           ip: IP address
+           ifconfig: arbitrary interface configuration
+           Subclasses should override this method and call
+           the parent class's config(**params)"""
+        # If we were overriding this method, we would call
+        # the superclass config method here as follows:
+        # r = Parent.config( **params )
+        r = {}
+        self.setParam( r, 'setMAC', mac=mac )
+        self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'ifconfig', ifconfig=ifconfig )
+        return r
 
     def delete( self ):
         "Delete interface"
@@ -125,10 +148,10 @@ class TCIntf( BasicIntf ):
 
     def config( self, bw=None, delay=None, loss=0, disable_gro=True,
                 speedup=0, use_hfsc=False, use_tbf=False, enable_ecn=False,
-                enable_red=False, max_queue_size=1000, **kwargs ):
+                enable_red=False, max_queue_size=1000, **params ):
         "Configure the port and set its properties."
 
-        BasicIntf.config( self, **kwargs)
+        result = BasicIntf.config( self, **params)
 
         # disable GRO
         if disable_gro:
@@ -153,7 +176,7 @@ class TCIntf( BasicIntf ):
             delay = '0ms'
         
         if bw is not None and delay is not None:
-            info( self, '(bw %.2fMbit, delay %s, loss %d%%)\n' % 
+            info( self, '(bw %.2fMbit, delay %s, loss %d%%) ' % 
                  ( bw, delay, loss ) )
         
         # BL: hmm... what exactly is this???
@@ -209,8 +232,11 @@ class TCIntf( BasicIntf ):
             debug(" *** executing command: %s\n" % c)
             return self.cmd(c)
         
-        outputs = [ doConfigPort(cmd) for cmd in cmds ]
-        debug( "outputs: %s\n" % outputs )
+        tcoutputs = [ doConfigPort(cmd) for cmd in cmds ]
+        debug( "cmds:", cmds, '\n' )
+        debug( "outputs:", tcoutputs, '\n' )
+        result[ 'tcoutputs'] = tcoutputs
+        return result
 
 Intf = TCIntf
 
@@ -220,14 +246,18 @@ class Link( object ):
        Other types of links could be tunnels, link emulators, etc.."""
 
     def __init__( self, node1, node2, port1=None, port2=None, intfName1=None, intfName2=None,
-                  intf=Intf, params1={}, params2={} ):
+                  intf=Intf, cls1=None, cls2=None, params1={}, params2={} ):
         """Create veth link to another node, making two new interfaces.
            node1: first node
            node2: second node
            port1: node1 port number (optional)
            port2: node2 port number (optional)
+           intf: default interface class/constructor
+           cls1, cls2: optional interface-specific constructors
            intfName1: node1 interface name (optional)
-           intfName2: node2  interface name (optional)"""
+           intfName2: node2  interface name (optional)
+           params1: parameters for interface 1
+           params2: parameters for interface 2"""
         # This is a bit awkward; it seems that having everything in
         # params would be more orthogonal, but being able to specify
         # in-line arguments is more convenient!
@@ -240,11 +270,13 @@ class Link( object ):
         if not intfName2:
             intfName2 = self.intfName( node2, port2 )
         self.makeIntfPair( intfName1, intfName2 )
-        intf1 = intf( name=intfName1, node=node1, link=self, **params1  )
-        intf2 = intf( name=intfName2, node=node2, link=self, **params2 )
-        # Add to nodes
-        node1.addIntf( intf1 )
-        node2.addIntf( intf2 )
+        if not cls1:
+            cls1 = intf
+        if not cls2:
+            cls2 = intf
+        intf1 = cls1( name=intfName1, node=node1, link=self, **params1  )
+        intf2 = cls2( name=intfName2, node=node2, link=self, **params2 )
+        # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
 
     @classmethod
@@ -267,9 +299,3 @@ class Link( object ):
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
-
-
-
-
-    
-

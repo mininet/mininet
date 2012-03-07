@@ -94,8 +94,7 @@ from time import sleep
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, UserSwitch, OVSKernelSwitch, Controller
-from mininet.node import ControllerParams
+from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link
 from mininet.util import quietRun, fixLimits
 from mininet.util import createLink, macColonHex, ipStr, ipParse
@@ -106,7 +105,6 @@ class Mininet( object ):
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                  controller=Controller, link=Link,
-                 cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
@@ -116,12 +114,12 @@ class Mininet( object ):
            host: default Host class/constructor
            controller: default Controller class/constructor
            link: default Link class/constructor
-           cparams: ControllerParams object
+           ipBase: base IP address for hosts,
            build: build now from topo?
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
-           autoSetMacs: set MAC addrs from topo?
+           autoSetMacs: set MAC addrs from topo dpid?
            autoStaticArp: set all-pairs static MAC addrs?
            listenPort: base listening port to open; will be incremented for
                each additional switch in the net if inNamespace=False"""
@@ -129,7 +127,6 @@ class Mininet( object ):
         self.host = host
         self.controller = controller
         self.link = link
-        self.cparams = cparams
         self.topo = topo
         self.inNamespace = inNamespace
         self.xterms = xterms
@@ -141,13 +138,13 @@ class Mininet( object ):
         self.hosts = []
         self.switches = []
         self.controllers = []
+
         self.nameToNode = {}  # name to Node (Host/Switch) objects
         self.idToNode = {}  # dpid to Node (Host/Switch) objects
-        self.dps = 0  # number of created kernel datapaths
+
         self.terms = []  # list of spawned xterm processes
 
-        init()
-        switch.setup()
+        init()  # Initialize Mininet if necessary
 
         self.built = False
         if topo and build:
@@ -157,17 +154,15 @@ class Mininet( object ):
     # The specific items for host/switch/etc. should probably be
     # handled in the node classes rather than here!!
 
-    def addHost( self, name, mac=None, ip=None, host=None, **params ):
+    def addHost( self, name, host=None, **params ):
         """Add host.
            name: name of host to add
-           mac: default MAC address for intf 0
-           ip: default IP address for intf 0
+           host: custom host constructor (optional)
+           params: parameters for host
            returns: added host"""
         if not host:
             host = self.host
-        defaults = { 'defaultMAC': mac, 'defaultIP': ip }
-        defaults.update( params )
-        h = host( name, **defaults)
+        h = host( name, **params)
         self.hosts.append( h )
         self.nameToNode[ name ] = h
         return h
@@ -175,19 +170,17 @@ class Mininet( object ):
     def addSwitch( self, name, switch=None, **params ):
         """Add switch.
            name: name of switch to add
+           switch: custom switch constructor (optional)
            returns: added switch
-           side effect: increments listenPort and dps ivars."""
+           side effect: increments listenPort ivar ."""
         defaults = { 'listenPort': self.listenPort, 
                      'inNamespace': self.inNamespace }
+        defaults.update( params )
         if not switch:
             switch = self.switch
-        if switch != UserSwitch:
-            defaults[ 'dps' ] = self.dps
-        defaults.update( params )
         sw = self.switch( name, **defaults )
         if not self.inNamespace and self.listenPort:
             self.listenPort += 1
-        self.dps += 1
         self.switches.append( sw )
         self.nameToNode[ name ] = sw
         return sw
@@ -203,121 +196,80 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    # Control network support:
-    #
-    # Create an explicit control network. Currently this is only
-    # used by the user datapath configuration.
-    #
-    # Notes:
-    #
-    # 1. If the controller and switches are in the same (e.g. root)
-    #    namespace, they can just use the loopback connection.
-    #
-    # 2. If we can get unix domain sockets to work, we can use them
-    #    instead of an explicit control network.
-    #
-    # 3. Instead of routing, we could bridge or use 'in-band' control.
-    #
-    # 4. Even if we dispense with this in general, it could still be
-    #    useful for people who wish to simulate a separate control
-    #    network (since real networks may need one!)
-    #
-    # 5. Basically nobody ever uses this method, so perhaps it should be moved
-    #    out of this core class.
-
-    def configureControlNetwork( self ):
-        "Configure control network."
-        self.configureRoutedControlNetwork()
-
-    # We still need to figure out the right way to pass
-    # in the control network location.
-
-    def configureRoutedControlNetwork( self, ip='192.168.123.1',
-        prefixLen=16 ):
-        """Configure a routed control network on controller and switches.
-           For use with the user datapath only right now."""
-        controller = self.controllers[ 0 ]
-        info( controller.name + ' <->' )
-        cip = ip
-        snum = ipParse( ip )
-        for switch in self.switches:
-            info( ' ' + switch.name )
-            sintf, cintf = createLink( switch, controller )
-            snum += 1
-            while snum & 0xff in [ 0, 255 ]:
-                snum += 1
-            sip = ipStr( snum )
-            controller.setIP( cintf, cip, prefixLen )
-            switch.setIP( sintf, sip, prefixLen )
-            controller.setHostRoute( sip, cintf )
-            switch.setHostRoute( cip, sintf )
-        info( '\n' )
-        info( '*** Testing control network\n' )
-        while not controller.intfIsUp( cintf ):
-            info( '*** Waiting for', cintf, 'to come up\n' )
-            sleep( 1 )
-        for switch in self.switches:
-            while not switch.intfIsUp( sintf ):
-                info( '*** Waiting for', sintf, 'to come up\n' )
-                sleep( 1 )
-            if self.ping( hosts=[ switch, controller ] ) != 0:
-                error( '*** Error: control network test failed\n' )
-                exit( 1 )
-        info( '\n' )
-
     def configHosts( self ):
         "Configure a set of hosts."
-        # params were: hosts, ips
         for host in self.hosts:
-            hintf = host.defaultIntf()
-            host.setIP( host.defaultIP, self.cparams.prefixLen, hintf )
-            host.setDefaultRoute( hintf )
+            host.configDefault( defaultRoute=host.defaultIntf )
             # You're low priority, dude!
-            quietRun( 'renice +18 -p ' + repr( host.pid ) )
+            # BL: do we want to do this here or not?
+            # May not make sense if we have CPU lmiting...
+            # quietRun( 'renice +18 -p ' + repr( host.pid ) )
             info( host.name + ' ' )
         info( '\n' )
 
-    def buildFromTopo( self, topo ):
+    def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
            and up."""
 
+        if not topo:
+            topo = self.topo()
+
         def addNode( prefix, addMethod, nodeId ):
-            "Add a host or a switch."
+            "Add a host or a switch from topo"
             name = prefix + topo.name( nodeId )
-            # MAC and IP should probably be from nodeInfo...
-            mac = macColonHex( nodeId ) if self.setMacs else None
-            ip = topo.ip( nodeId )
             ni = topo.nodeInfo( nodeId )
-            node = addMethod( name, cls=ni.cls, mac=mac, ip=ip, **ni.params )
+            # Default IP and MAC addresses
+            defaults = { 'ip': topo.ip( nodeId ) }
+            if self.autoSetMacs:
+                defaults[ 'mac'] = macColonHex( nodeId ) 
+            defaults.update( ni.params )
+            node = addMethod( name, cls=ni.cls, **defaults )
             self.idToNode[ nodeId ] = node
             info( name + ' ' )
+
+        def addLink( srcId, dstId, link=None ):
+            "Add a link from topo"
+            src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
+            srcPort, dstPort = topo.port( srcId, dstId )
+            ei = topo.edgeInfo( srcId, dstId )
+            link = getattr( ei, 'cls', link )
+            params = ei.params
+            if not link:
+                link = self.link
+            info( '(%s, %s) ' % ( src.name, dst.name ) )
+            link( src, dst, srcPort, dstPort, **params )
 
         # Possibly we should clean up here and/or validate
         # the topo
         if self.cleanup:
             pass
 
-        info( '*** Adding controller\n' )
-        self.addController( 'c0' )
         info( '*** Creating network\n' )
+
+        if not self.controllers:
+            # Add a default controller
+            info( '*** Adding controller\n' )
+            self.addController( 'c0' )
+
         info( '*** Adding hosts:\n' )
         for hostId in sorted( topo.hosts() ):
             addNode( 'h', self.addHost, hostId )
+
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
-            addNode( 's', self.addSwitch, switchId)
+            addNode( 's', self.addSwitch, switchId )
+
         info( '\n*** Adding links:\n' )
         for srcId, dstId in sorted( topo.edges() ):
-            src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
-            srcPort, dstPort = topo.port( srcId, dstId )
-            ei = topo.edgeInfo( srcId, dstId )
-            link, params = ei.cls, ei.params
-            if not link:
-                link = self.link
-            link( src, dst, srcPort, dstPort, **params )
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
+            addLink( srcId, dstId )
+
         info( '\n' )
+
+
+    def configureControlNetwork( self ):
+        error( "configureControlNetwork: override in subclass, or use" 
+               "MininetWithControlNet class" )
 
     def build( self ):
         "Build mininet."
@@ -330,8 +282,6 @@ class Mininet( object ):
         self.configHosts()
         if self.xterms:
             self.startTerms()
-        if self.autoSetMacs:
-            self.setMacs()
         if self.autoStaticArp:
             self.staticArp()
         self.built = True
@@ -346,16 +296,9 @@ class Mininet( object ):
 
     def stopXterms( self ):
         "Kill each xterm."
-        # Kill xterms
         for term in self.terms:
             os.kill( term.pid, signal.SIGKILL )
         cleanUpScreens()
-
-    def setMacs( self ):
-        """Set MAC addrs to correspond to default MACs on hosts.
-           Assume that the host only has one interface."""
-        for host in self.hosts:
-            host.setMAC( host.intfs[ 0 ], host.defaultMAC )
 
     def staticArp( self ):
         "Add all-pairs ARP entries to remove the need to handle broadcast."
@@ -384,18 +327,19 @@ class Mininet( object ):
             self.stopXterms()
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
-            info( '%s ' % host.name )
+            info( host.name + ' ' )
             host.terminate()
         info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
-            info( switch.name )
+            info( switch.name + ' ' )
             switch.stop()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
+            info( controller.name + ' ' )
             controller.stop()
-        info( '*** Done\n' )
+        info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
         "Perform a complete start/test/stop cycle."
@@ -428,6 +372,9 @@ class Mininet( object ):
             # Return if non-blocking
             if not ready and timeoutms >= 0:
                 yield None, None
+
+    # XXX These test methods should be moved out of this class.
+    # Probably we should create a tests.py for them
 
     @staticmethod
     def _parsePing( pingOutput ):
@@ -543,6 +490,8 @@ class Mininet( object ):
         output( '*** Results: %s\n' % result )
         return result
 
+    # BL: I think this can be rewritten now that we have
+    # a real link class.
     def configLinkStatus( self, src, dst, status ):
         """Change status of src <-> dst links.
            src: node name
@@ -573,6 +522,70 @@ class Mininet( object ):
         return result
 
 
+class MininetWithControlNet( Mininet ):
+
+    """Control network support:
+
+       Create an explicit control network. Currently this is only
+       used/usable with the user datapath.
+
+       Notes:
+
+       1. If the controller and switches are in the same (e.g. root)
+          namespace, they can just use the loopback connection.
+
+       2. If we can get unix domain sockets to work, we can use them
+          instead of an explicit control network.
+
+       3. Instead of routing, we could bridge or use 'in-band' control.
+
+       4. Even if we dispense with this in general, it could still be
+          useful for people who wish to simulate a separate control
+          network (since real networks may need one!)
+
+       5. Basically nobody ever used this code, so it has been moved
+          into its own class."""
+
+    def configureControlNetwork( self ):
+        "Configure control network."
+        self.configureRoutedControlNetwork()
+
+    # We still need to figure out the right way to pass
+    # in the control network location.
+
+    def configureRoutedControlNetwork( self, ip='192.168.123.1',
+        prefixLen=16 ):
+        """Configure a routed control network on controller and switches.
+           For use with the user datapath only right now."""
+        controller = self.controllers[ 0 ]
+        info( controller.name + ' <->' )
+        cip = ip
+        snum = ipParse( ip )
+        for switch in self.switches:
+            info( ' ' + switch.name )
+            sintf, cintf = createLink( switch, controller )
+            snum += 1
+            while snum & 0xff in [ 0, 255 ]:
+                snum += 1
+            sip = ipStr( snum )
+            controller.setIP( cintf, cip, prefixLen )
+            switch.setIP( sintf, sip, prefixLen )
+            controller.setHostRoute( sip, cintf )
+            switch.setHostRoute( cip, sintf )
+        info( '\n' )
+        info( '*** Testing control network\n' )
+        while not controller.intfIsUp( cintf ):
+            info( '*** Waiting for', cintf, 'to come up\n' )
+            sleep( 1 )
+        for switch in self.switches:
+            while not switch.intfIsUp( sintf ):
+                info( '*** Waiting for', sintf, 'to come up\n' )
+                sleep( 1 )
+            if self.ping( hosts=[ switch, controller ] ) != 0:
+                error( '*** Error: control network test failed\n' )
+                exit( 1 )
+        info( '\n' )
+
 # pylint thinks inited is unused
 # pylint: disable-msg=W0612
 
@@ -585,10 +598,6 @@ def init():
         # Perhaps we should do so automatically!
         print "*** Mininet must run as root."
         exit( 1 )
-    # If which produces no output, then mnexec is not in the path.
-    # May want to loosen this to handle mnexec in the current dir.
-    if not quietRun( 'which mnexec' ):
-        raise Exception( "Could not find mnexec - check $PATH" )
     fixLimits()
     init.inited = True
 

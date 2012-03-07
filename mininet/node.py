@@ -48,7 +48,8 @@ import select
 from subprocess import Popen, PIPE, STDOUT
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, errRun, moveIntf, isShellBuiltin
+from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
+from mininet.util import numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link
 
@@ -58,21 +59,74 @@ class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
 
+    portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
+
+    def __init__( self, name, inNamespace=True, **params ):
+        """name: name of node
+           inNamespace: in network namespace?
+           params: Node parameters (see config() for details)"""
+
+        # Make sure class actually works
+        self.checkSetup()
+
+        self.name = name
+        self.inNamespace = inNamespace
+
+        # Stash configuration parameters for future reference
+        self.params = params
+
+        self.intfs = {}  # dict of port numbers to interfaces
+        self.ports = {}  # dict of interfaces to port numbers
+                         # replace with Port objects, eventually ?
+        self.nameToIntf = {}  # dict of interface names to Intfs
+
+        # Start command interpreter shell
+        self.shell = None
+        self.startShell()
+
+    # File descriptor to node mapping support
+    # Class variables and methods
+
     inToNode = {}  # mapping of input fds to nodes
     outToNode = {}  # mapping of output fds to nodes
 
-    portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
+    @classmethod
+    def fdToNode( cls, fd ):
+        """Return node corresponding to given file descriptor.
+           fd: file descriptor
+           returns: node"""
+        node = cls.outToNode.get( fd )
+        return node or cls.inToNode.get( fd )
 
-    def __init__( self, name, inNamespace=True,
-        defaultMAC=None, defaultIP=None, **kwargs ):
-        """name: name of node
-           inNamespace: in network namespace?
-           defaultMAC: default MAC address for intf 0
-           defaultIP: default IP address for intf 0"""
-        self.name = name
-        self.inNamespace = inNamespace
-        self.defaultIP = defaultIP
-        self.defaultMAC = defaultMAC
+    # Automatic class setup support
+
+    isSetup = False;
+
+    @classmethod
+    def checkSetup( cls ):
+        "Make sure our class and superclasses are set up"
+        while cls and not getattr( cls, 'isSetup', True ):
+            cls.setup()
+            cls.isSetup = True
+            # Make pylint happy
+            cls = getattr( type( cls ), '__base__', None )
+
+    @classmethod
+    def setup( cls ):
+        "Make sure our class dependencies are available"
+        pathCheck( 'mnexec', 'ifconfig',  moduleName='Mininet')
+
+    def cleanup( self ):
+        "Help python collect its garbage."
+        self.shell = None
+
+    # Command support via shell process in namespace
+
+    def startShell( self ):
+        "Start a shell process for running commands"
+        if self.shell:
+            error( "%s: shell is already running" )
+            return
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
@@ -89,31 +143,12 @@ class Node( object ):
         # using select.poll()
         self.outToNode[ self.stdout.fileno() ] = self
         self.inToNode[ self.stdin.fileno() ] = self
-        self.intfs = {}  # dict of port numbers to interfaces
-        self.ports = {}  # dict of interfaces to port numbers
-                         # replace with Port objects, eventually ?
-        self.nameToIntf = {}  # dict of interface names to Intfs
         self.execed = False
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
         self.waiting = False
-        # Stash additional information as desired
-        self.args = kwargs
 
-    @classmethod
-    def fdToNode( cls, fd ):
-        """Return node corresponding to given file descriptor.
-           fd: file descriptor
-           returns: node"""
-        node = Node.outToNode.get( fd )
-        return node or Node.inToNode.get( fd )
-
-    def cleanup( self ):
-        "Help python collect its garbage."
-        self.shell = None
-
-    # Subshell I/O, commands and control
     def read( self, bytes=1024 ):
         """Buffered read from node, non-blocking.
            bytes: maximum number of bytes to return"""
@@ -267,10 +302,10 @@ class Node( object ):
         self.intfs[ port ] = intf
         self.ports[ intf ] = port
         self.nameToIntf[ intf.name ] = intf
-        info( '\n' )
-        info( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
+        debug( '\n' )
+        debug( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
         if self.inNamespace:
-            info( 'moving', intf, 'into namespace for', self.name, '\n' )
+            debug( 'moving', intf, 'into namespace for', self.name, '\n' )
             moveIntf( intf.name, self )
 
     def defaultIntf( self ):
@@ -326,13 +361,15 @@ class Node( object ):
            intf: string, interface name"""
         return self.cmd( 'route add -host ' + ip + ' dev ' + intf )
 
-    def setDefaultRoute( self, intf ):
+    def setDefaultRoute( self, intf=None ):
         """Set the default route to go through intf.
            intf: string, interface name"""
+        if not intf:
+            intf = self.defaultIntf()
         self.cmd( 'ip route flush root 0/0' )
         return self.cmd( 'route add default %s' % intf )
 
-    # Convenience methods
+    # Convenience and configuration methods
 
     def setMAC( self, mac, intf=''):
         """Set the MAC address for an interface.
@@ -361,6 +398,49 @@ class Node( object ):
         "Check if an interface is up."
         return self.intf( intf ).isUp()
 
+    # The reason why we configure things in this way is so
+    # That the parameters can be listed and documented in
+    # the config method.
+    # Dealing with subclasses and superclasses is slightly
+    # annoying, but at least the information is there!
+
+    def setParam( self, results, method, **param ):
+        """Internal method: configure single parameter"""
+        name, value = param.items()[ 0 ]
+        f = getattr( self, method, None )
+        if not value or not f:
+            return
+        if type( value ) is list:
+            result = f( *value )
+        elif type( value ) is dict:
+            result = f( **value )
+        else:
+            result = f( value )
+        results[ name ] = result
+
+    def config( self, mac=None, ip=None, ifconfig=None, 
+                defaultRoute=None, **params):
+        """Configure Node according to (optional) parameters:
+           mac: MAC address for default interface
+           ip: IP address for default interface
+           ifconfig: arbitrary interface configuration
+           Subclasses should override this method and call
+           the parent class's config(**params)"""
+        # If we were overriding this method, we would call
+        # the superclass config method here as follows:
+        # r = Parent.config( **params )
+        r = {}
+        self.setParam( r, 'setMAC', mac=mac )
+        self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'ifconfig', ifconfig=ifconfig )
+        self.setParam( r, 'defaultRoute', defaultRoute=defaultRoute )
+        return r
+
+    def configDefault( self, **moreParams ):
+        "Configure with default parameters"
+        self.params.update( moreParams )
+        self.config( **self.params )
+
     # This is here for backward compatibility
     def linkTo( self, node, link=Link ):
         """(Deprecated) Link to another node
@@ -382,9 +462,94 @@ class Node( object ):
             self.name, self.IP(), ','.join( self.intfNames() ), self.pid )
 
 
-class Host( Node ):
-    "A host is simply a Node."
+class CPULimitedHost( Node ):
 
+    "CPU limited host"
+
+    def __init__( self, *args, **kwargs ):
+        Node.__init__( self, *args, **kwargs )
+        # Create a cgroup and move shell into it
+        cgroup = 'cpu,cpuacct:/' + self.name
+        errFail( 'cgcreate -g ' + cgroup )
+        errFail( 'cgclassify -g %s %s' % ( cgroup, self.pid ) )
+        self.sched = 'rt'
+        self.period_us = 10000
+        self.rtset = False
+
+    def cgroupSet( self, param, value, resource='cpu' ):
+        "Set a cgroup parameter and return its value"
+        cmd = 'cgset -r %s.%s=%s /%s' % (
+            resource, param, value, self.name )
+        return quietRun( cmd )
+
+    def cgroupGet( self, param, resource='cpu' ):
+        cmd = 'cgget -r %s.%s /%s' % (
+            resource, param, self.name )
+        return quietRun( cmd ).split()[ -1 ]
+
+    def chrt( self, prio=20 ):
+        "Set RT scheduling priority"
+        quietRun( 'chrt -p %s %s' % ( prio, self.pid ) )
+        result = quietRun( 'chrt -p %s' % self.pid )
+        firstline = result.split( '\n' )[ 0 ]
+        lastword = firstline.split( ' ' )[ -1 ]
+        return lastword
+
+    def setCPUFrac( self, f=-1 ):
+        "Set overall CPU fraction for this host"
+        if ( f < 0 or f is None):
+            # Reset to unlimited
+            f = -1
+        # Set new period and quota
+        pstr, qstr = 'rt_period_us', 'rt_runtime_us'
+        quota = int( self.period_us * f * numCores() )
+        self.cgroupSet( pstr, self.period_us )
+        nquota = int ( self.cgroupGet( qstr ) )
+        self.cgroupSet( qstr, quota )
+        nperiod = int( self.cgroupGet( pstr ) )
+        # Set RT priority
+        nchrt = self.chrt( prio=20 )
+        # Check to make sure it worked
+        if 'SCHED_RR' not in nchrt:
+            error( '*** error: could not assign SCHED_RR to %s\n' % self.name )
+        if nperiod != self.period_us:
+            error( '*** error: period is %s rather than %s\n' % (
+                    nperiod, self.period_us ) )
+        if nquota != quota:
+            error( '*** error: quota is %s rather than %s\n' % (
+                    nquota, quota ) )
+
+    def config( self, cpu=None, **params ):
+        """cpu: desired overall system CPU fraction
+           params: parameters for Node.config()"""
+        r = Node.config( self, **params )
+        self.setParam( r, 'setCPUFrac', cpu=cpu )
+        return r
+
+Host = CPULimitedHost
+
+
+# Some important things to note:
+#
+# The "IP" address which we assign to the switch is not
+# an "IP address for the switch" in the sense of IP routing.
+# Rather, it is the IP address for a control interface if
+# (and only if) you happen to be running the switch in a
+# namespace, which is something we currently don't support
+# for OVS!
+#
+# In general, you NEVER want to attempt to use Linux's
+# network stack (i.e. ifconfig) to "assign" an IP address or
+# MAC address to a switch data port. Instead, you "assign"
+# the IP and MAC addresses in the controller by specifying
+# packets that you want to receive or send. The "MAC" address
+# reported by ifconfig for a switch data port is essentially
+# meaningless.
+#
+# So, I'm tyring changing the API to make it
+# impossible to try this, since it will not work, since nobody
+# ever makes separate control networks in Mininet, and indeed
+# we don't even support running OVS in a namespace.
 
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
@@ -392,19 +557,31 @@ class Switch( Node ):
 
     portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
 
-    def __init__( self, name, opts='', listenPort=None, **kwargs):
-        Node.__init__( self, name, **kwargs )
+    def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
+        """dpid: dpid for switch (or None for default)
+           opts: additional switch options
+           listenPort: port to listen on for dpctl connections"""
+        Node.__init__( self, name, **params )
+        self.dpid = dpid if dpid else self.defaultDpid()
         self.opts = opts
         self.listenPort = listenPort
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        self.controlIntf = None
+
+    def defaultDpid( self ):
+        "Derive dpid from switch name, s1 -> 1"
+        dpid = int( re.findall( '\d+', self.name )[ 0 ] )
+        dpid = hex( dpid )[ 2: ]
+        dpid = '0' * ( 12 - len( dpid ) ) + dpid
+        return dpid
 
     def defaultIntf( self ):
-        "Return interface for HIGHEST port"
-        ports = self.intfs.keys()
-        if ports:
-            intf = self.intfs[ max( ports ) ]
-        return intf
+        "Return control interface, if any"
+        if not self.inNamespace:
+            error( "error: tried to access control interface of "
+                   " switch %s in root namespace" % self.name )
+        return self.controlIntf
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
@@ -440,15 +617,13 @@ class UserSwitch( Switch ):
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
-        mac_str = ''
-        if self.defaultMAC:
-            # ofdatapath expects a string of hex digits with no colons.
-            mac_str = ' -d ' + ''.join( self.defaultMAC.split( ':' ) )
-        intfs = sorted( self.intfs.values() )
+        ports = sorted( self.ports.values() )
+        intfs = [ str( self.intfs[ p ] ) for p in ports ]
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name + mac_str + ' --no-slicing ' +
+            ' punix:/tmp/' + self.name + ' -d ' + self.dpid + 
+            ' --no-slicing ' +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
@@ -458,61 +633,6 @@ class UserSwitch( Switch ):
     def stop( self ):
         "Stop OpenFlow reference user datapath."
         self.cmd( 'kill %ofdatapath' )
-        self.cmd( 'kill %ofprotocol' )
-        self.deleteIntfs()
-
-class KernelSwitch( Switch ):
-    """Kernel-space switch.
-       Currently only works in root namespace."""
-
-    def __init__( self, name, dp=None, **kwargs ):
-        """Init.
-           name: name for switch
-           dp: netlink id (0, 1, 2, ...)
-           defaultMAC: default MAC as string; random value if None"""
-        Switch.__init__( self, name, **kwargs )
-        self.dp = 'nl:%i' % dp
-        self.intf = 'of%i' % dp
-        if self.inNamespace:
-            error( "KernelSwitch currently only works"
-                " in the root namespace." )
-            exit( 1 )
-
-    @staticmethod
-    def setup():
-        "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ofprotocol',
-            moduleName='the OpenFlow reference kernel switch'
-            ' (openflow.org) (NOTE: not available in OpenFlow 1.0!)' )
-        moduleDeps( subtract=OVS_KMOD, add=OF_KMOD )
-
-    def start( self, controllers ):
-        "Start up reference kernel datapath."
-        ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
-        # Delete local datapath if it exists;
-        # then create a new one monitoring the given interfaces
-        quietRun( 'dpctl deldp ' + self.dp )
-        self.cmd( 'dpctl adddp ' + self.dp )
-        if self.defaultMAC:
-            self.cmd( 'ifconfig', self.intf, 'hw', 'ether', self.defaultMAC )
-        ports = sorted( self.ports.values() )
-        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
-            raise Exception( 'only contiguous, zero-indexed port ranges'
-                            'supported: %s' % ports )
-        intfs = [ self.intfs[ port ] for port in ports ]
-        self.cmd( 'dpctl', 'addif', self.dp, ' '.join( intfs ) )
-        # Run protocol daemon
-        controller = controllers[ 0 ]
-        self.cmd( 'ofprotocol ' + self.dp +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=closed ' + self.opts +
-            ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
-        self.execed = False
-
-    def stop( self ):
-        "Terminate kernel datapath."
-        quietRun( 'dpctl deldp ' + self.dp )
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
@@ -549,12 +669,6 @@ class OVSLegacyKernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'ovs-dpctl add-dp ' + self.dp )
-        mac_str = ''
-        if self.defaultMAC:
-            # ovs-openflowd expects a string of exactly 16 hex digits with no
-            # colons.
-            mac_str = ' --datapath-id=0000' + \
-                      ''.join( self.defaultMAC.split( ':' ) ) + ' '
         ports = sorted( self.ports.values() )
         if len( ports ) != ports[ -1 ] + 1 - self.portBase:
             raise Exception( 'only contiguous, one-indexed port ranges '
@@ -565,7 +679,8 @@ class OVSLegacyKernelSwitch( Switch ):
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=secure ' + self.opts + mac_str +
+            ' --fail=secure ' + self.opts + 
+            ' --datapath-id=' + self.dpid +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
@@ -579,13 +694,17 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, dp=None, **kwargs ):
+    def __init__( self, name, **params ):
         """Init.
            name: name for switch
            defaultMAC: default MAC as unsigned int; random value if None"""
-        Switch.__init__( self, name, **kwargs )
+        Switch.__init__( self, name, **params )
+        # self.dp is the text name for the datapath that
+        # we use for ovs-vsctl. This is different from the
+        # dpid, which is a 64-bit numerical value used by
+        # the openflow protocol.
         self.dp = name
-
+        
     @staticmethod
     def setup():
         "Make sure Open vSwitch is installed and working"
@@ -609,7 +728,6 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl del-br ', self.dp )
         self.cmd( 'ovs-vsctl add-br', self.dp )
         self.cmd( 'ovs-vsctl set-fail-mode', self.dp, 'secure' )
-        # Add ports
         ports = sorted( self.ports.values() )
         intfs = [ self.intfs[ port ] for port in ports ]
         # XXX: Ugly check - we should probably fix this!
@@ -629,19 +747,21 @@ class OVSSwitch( Switch ):
 
 OVSKernelSwitch = OVSSwitch
 
+
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, command='controller',
-                 cargs='-v ptcp:%d', cdir=None, defaultIP="127.0.0.1",
-                 port=6633 ):
+                 cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
+                 port=6633, **params ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
+        self.ip = ip
         self.port = port
         Node.__init__( self, name, inNamespace=inNamespace,
-            defaultIP=defaultIP )
+            ip=ip, **params  )
 
     def start( self ):
         """Start <controller> <args> on controller.
@@ -664,8 +784,12 @@ class Controller( Node ):
         if self.intfs:
             ip = Node.IP( self, intf )
         else:
-            ip = self.defaultIP
+            ip = self.ip
         return ip
+
+
+# BL: This really seems to be poorly specified,
+# so it's going to go away!
 
 class ControllerParams( object ):
     "Container for controller IP parameters."
