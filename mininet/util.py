@@ -4,7 +4,7 @@ from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN
 from subprocess import call, check_call, Popen, PIPE, STDOUT
-from mininet.log import output, error
+from mininet.log import output, info, error
 import re
 
 # Command execution support
@@ -282,3 +282,12 @@ def numCores():
     except ValueError:
         return 0
     return numCores.ncores
+
+def custom( cls, **params ):
+    "Returns customized constructor for class cls."
+    def customized( *args, **kwargs):
+        kwargs.update( params )
+        return cls( *args, **kwargs )
+    return customized
+
+    
