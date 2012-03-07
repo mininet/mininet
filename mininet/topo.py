@@ -18,11 +18,6 @@ setup for testing, and can even be emulated with the Mininet package.
 from networkx import Graph
 from mininet.node import SWITCH_PORT_BASE, Host, OVSSwitch
 
-# BL: it's hard to figure out how to do this right yet remain flexible
-# These classes will be used as the defaults if no class is passed
-# into either Topo() or Node()
-TopoDefaultNode = Host
-TopoDefaultSwitch = OVSSwitch
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -81,11 +76,13 @@ class Node( object ):
         self.power_on = power_on
         self.fault = fault
         self.is_switch = is_switch
-        # Above should be deleted and replaced by the following
-        # BL: is_switch is a bit annoying if we can just specify
-        # the node class instead!!
-        self.cls = cls if cls else ( TopoDefaultSwitch if is_switch else TopoDefaultNode )
-        self.params = params if params else {}
+        # BL: Above should mostly be deleted and replaced by the following
+        # is_switch is a bit annoying if we are already specifying
+        # a switch class!! Except that if cls is not specified,
+        # then Mininet() knows whether to create a switch or a host
+        # node and can call its own constructors...
+        self.cls = cls
+        self.params = params
 
 
 class Edge(object):
