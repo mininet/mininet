@@ -17,7 +17,6 @@ setup for testing, and can even be emulated with the Mininet package.
 
 from networkx import Graph
 from mininet.node import SWITCH_PORT_BASE, Host, OVSSwitch
-from mininet.link import Link
 
 # BL: it's hard to figure out how to do this right yet remain flexible
 # These classes will be used as the defaults if no class is passed
@@ -93,7 +92,7 @@ class Edge(object):
     '''Edge-specific metadata for a StructuredTopo graph.'''
 
     def __init__(self, admin_on=True, power_on=True, fault=False,
-                 cls=Link, **params):
+                 cls=None, **params):
         '''Init.
 
         @param admin_on administratively on or off; defaults to True
@@ -109,13 +108,17 @@ class Edge(object):
 
 
 class Topo(object):
-    '''Data center network representation for structured multi-trees.'''
+    """Data center network representation for structured multi-trees.
+       Note that the order of precedence is:
+       per-node/link classes and parameters
+       per-topo classes
+       per-network classes"""
     
-    def __init__(self, node=Host, switch=None, link=Link):
+    def __init__(self, node=None, switch=None, link=None):
         """Create Topo object.
-           node: default node/host class
-           switch: default switch class
-           Link: default link class"""
+           node: default node/host class (optional)
+           switch: default switch class (optional)
+           link: default link class (optional)"""
         self.g = Graph()
         self.node_info = {}  # dpids hash to Node objects
         self.edge_info = {}  # (src_dpid, dst_dpid) tuples hash to Edge objects
@@ -146,7 +149,7 @@ class Topo(object):
         src, dst = tuple(sorted([src, dst]))
         self.g.add_edge(src, dst)
         if not edge:
-            edge = Edge( link=self.link )
+            edge = Edge( cls=self.link )
         self.edge_info[(src, dst)] = edge
         self.add_port(src, dst)
 
