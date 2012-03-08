@@ -104,7 +104,7 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                 controller=Controller, link=Link,
+                 controller=Controller, link=Link, intf=None, 
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
@@ -114,6 +114,7 @@ class Mininet( object ):
            host: default Host class/constructor
            controller: default Controller class/constructor
            link: default Link class/constructor
+           intf: default Intf class/constructor
            ipBase: base IP address for hosts,
            build: build now from topo?
            xterms: if build now, spawn xterms?
@@ -123,11 +124,12 @@ class Mininet( object ):
            autoStaticArp: set all-pairs static MAC addrs?
            listenPort: base listening port to open; will be incremented for
                each additional switch in the net if inNamespace=False"""
+        self.topo = topo
         self.switch = switch
         self.host = host
         self.controller = controller
         self.link = link
-        self.topo = topo
+        self.intf = intf
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
@@ -199,12 +201,12 @@ class Mininet( object ):
     def configHosts( self ):
         "Configure a set of hosts."
         for host in self.hosts:
+            info( host.name + ' ' )
             host.configDefault( defaultRoute=host.defaultIntf )
             # You're low priority, dude!
             # BL: do we want to do this here or not?
             # May not make sense if we have CPU lmiting...
             # quietRun( 'renice +18 -p ' + repr( host.pid ) )
-            info( host.name + ' ' )
         info( '\n' )
 
     def buildFromTopo( self, topo=None ):
@@ -235,6 +237,8 @@ class Mininet( object ):
             ei = topo.edgeInfo( srcId, dstId )
             link = getattr( ei, 'cls', link )
             params = ei.params
+            if self.intf and not 'intf' in params:
+                params[ 'intf' ] = self.intf
             if not link:
                 link = self.link
             info( '(%s, %s) ' % ( src.name, dst.name ) )
@@ -446,6 +450,8 @@ class Mininet( object ):
             # was: raise Exception(...)
             error( 'could not parse iperf output: ' + iperfOutput )
             return ''
+
+    # XXX This should be cleaned up
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
         """Run iperf between two hosts.

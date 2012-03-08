@@ -127,9 +127,12 @@ class Node( object ):
         if self.shell:
             error( "%s: shell is already running" )
             return
+        # mnexec: (c)lose descriptors, (d)etach from tty,
+        # (p)rint pid, and run in (n)amespace 
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
+        # bash -m: enable job control
         cmd = [ 'mnexec', opts, 'bash', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
             close_fds=True )
@@ -405,10 +408,14 @@ class Node( object ):
     # annoying, but at least the information is there!
 
     def setParam( self, results, method, **param ):
-        """Internal method: configure single parameter"""
+        """Internal method: configure a *single* parameter
+           results: dict of results to update
+           method: config method name
+           param: arg=value (ignore if value=None)
+           value may also be list or dict"""
         name, value = param.items()[ 0 ]
         f = getattr( self, method, None )
-        if not value or not f:
+        if not f or value is None:
             return
         if type( value ) is list:
             result = f( *value )
@@ -417,6 +424,7 @@ class Node( object ):
         else:
             result = f( value )
         results[ name ] = result
+        return result
 
     def config( self, mac=None, ip=None, ifconfig=None, 
                 defaultRoute=None, **params):
@@ -462,7 +470,12 @@ class Node( object ):
             self.name, self.IP(), ','.join( self.intfNames() ), self.pid )
 
 
-class CPULimitedHost( Node ):
+class Host( Node ):
+    "A host is simply a Node"
+    pass
+
+
+class CPULimitedHost( Host ):
 
     "CPU limited host"
 
@@ -472,9 +485,8 @@ class CPULimitedHost( Node ):
         cgroup = 'cpu,cpuacct:/' + self.name
         errFail( 'cgcreate -g ' + cgroup )
         errFail( 'cgclassify -g %s %s' % ( cgroup, self.pid ) )
-        self.sched = 'rt'
-        self.period_us = 10000
-        self.rtset = False
+        self.period_us = kwargs.get( 'period_us', 10000 )
+        self.sched = kwargs.get( 'sched', 'rt' )
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
@@ -495,39 +507,72 @@ class CPULimitedHost( Node ):
         lastword = firstline.split( ' ' )[ -1 ]
         return lastword
 
-    def setCPUFrac( self, f=-1 ):
-        "Set overall CPU fraction for this host"
-        if ( f < 0 or f is None):
+    # BL comment:
+    # This may not be the right API, 
+    # since it doesn't specify CPU bandwidth in "absolute"
+    # units the way link bandwidth is specified.
+    # We should use MIPS or SPECINT or something instead.
+    # Alternatively, we should change from system fraction
+    # to CPU seconds per second, essentially assuming that
+    # all CPUs are the same.
+    
+    def setCPUFrac( self, f=-1, sched=None):
+        """Set overall CPU fraction for this host
+           f: CPU bandwidth limit (fraction)
+           sched: 'rt' or 'cfs'
+           Note 'cfs' requires CONFIG_CFS_BANDWIDTH"""
+        if not f:
+            return
+        if not sched:
+            sched = self.sched
+        period = self.period_us
+        if sched == 'rt':
+            pstr, qstr = 'rt_period_us', 'rt_runtime_us'
+            # RT uses system time for period and quota
+            quota = int( period * f * numCores() )
+        elif sched == 'cfs':
+            pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
+            # CFS uses wall clock time for period and CPU time for quota.
+            quota = int( self.period_us * f * numCores() )
+            if f > 0 and quota < 1000:
+                info( '*** setCPUFrac: quota too small - adjusting period\n' )
+                quota = 1000
+                period = int( quota / f / numCores() )
+        else:
+            return
+        if quota < 0:
             # Reset to unlimited
-            f = -1
-        # Set new period and quota
-        pstr, qstr = 'rt_period_us', 'rt_runtime_us'
-        quota = int( self.period_us * f * numCores() )
-        self.cgroupSet( pstr, self.period_us )
+            quota = -1
+        # Set cgroup's period and quota
+        self.cgroupSet( pstr, period )
         nquota = int ( self.cgroupGet( qstr ) )
         self.cgroupSet( qstr, quota )
         nperiod = int( self.cgroupGet( pstr ) )
-        # Set RT priority
-        nchrt = self.chrt( prio=20 )
-        # Check to make sure it worked
-        if 'SCHED_RR' not in nchrt:
-            error( '*** error: could not assign SCHED_RR to %s\n' % self.name )
+        # Make sure it worked
         if nperiod != self.period_us:
             error( '*** error: period is %s rather than %s\n' % (
                     nperiod, self.period_us ) )
         if nquota != quota:
             error( '*** error: quota is %s rather than %s\n' % (
                     nquota, quota ) )
+        if sched == 'rt':
+            # Set RT priority if necessary
+            nchrt = self.chrt( prio=20 )
+            # Nake sure it worked
+            if sched == 'SCHED_RR' not in nchrt:
+                error( '*** error: could not assign SCHED_RR to %s\n' % self.name )
+            info( '( period', nperiod, 'quota', nquota, nchrt, ') ' )
+        else:
+            info( '( period', nperiod, 'quota', nquota, ') ' )
 
-    def config( self, cpu=None, **params ):
+    def config( self, cpu=None, sched=None, **params ):
         """cpu: desired overall system CPU fraction
            params: parameters for Node.config()"""
         r = Node.config( self, **params )
+        # Was considering cpu={'cpu': cpu , 'sched': sched}, but
+        # that seems redundant
         self.setParam( r, 'setCPUFrac', cpu=cpu )
         return r
-
-Host = CPULimitedHost
-
 
 # Some important things to note:
 #
@@ -805,7 +850,7 @@ class ControllerParams( object ):
 class NOX( Controller ):
     "Controller to run a NOX application."
 
-    def __init__( self, name, noxArgs=None, **kwargs ):
+    def __init__( self, name, noxArgs=[], **kwargs ):
         """Init.
            name: name to give controller
            noxArgs: list of args, or single arg, to pass to NOX"""
