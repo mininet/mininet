@@ -94,27 +94,30 @@ class BasicIntf( object ):
         "Return whether interface is up"
         return "UP" in self.ifconfig()
 
-
     # The reason why we configure things in this way is so
     # That the parameters can be listed and documented in
     # the config method.
     # Dealing with subclasses and superclasses is slightly
     # annoying, but at least the information is there!
 
-    def setParam( self, result, method, **param ):
-        """Internal method: configure single parameter
-           result: dict of results to update
-           method: config method
-           param: foo=bar (ignore if bar=None)"""
+    def setParam( self, results, method, **param ):
+        """Internal method: configure a *single* parameter
+           results: dict of results to update
+           method: config method name
+           param: arg=value (ignore if value=None)
+           value may also be list or dict"""
         name, value = param.items()[ 0 ]
-        if value is None:
+        f = getattr( self, method, None )
+        if not f or value is None:
             return
         if type( value ) is list:
-            result[ name ] = getattr( self, method )( *value )
+            result = f( *value )
         elif type( value ) is dict:
-            result[ name ] = getattr( self, method )( **value )
+            result = f( **value )
         else:
-            result[ name ] = getattr( self, method )( value )
+            result = f( value )
+        results[ name ] = result
+        return result
 
     def config( self, mac=None, ip=None, ifconfig=None, 
                 defaultRoute=None, **params):
