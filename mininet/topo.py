@@ -16,8 +16,6 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
-from mininet.node import SWITCH_PORT_BASE
-
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -156,8 +154,8 @@ class Topo(object):
         @param src source switch DPID
         @param dst destination switch DPID
         '''
-        src_base = SWITCH_PORT_BASE if self.is_switch(src) else 0
-        dst_base = SWITCH_PORT_BASE if self.is_switch(dst) else 0
+        src_base = 1 if self.is_switch(src) else 0
+        dst_base = 1 if self.is_switch(dst) else 0
         if src not in self.ports:
             self.ports[src] = {}
         if dst not in self.ports[src]:
