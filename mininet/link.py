@@ -1,5 +1,4 @@
 """
-
 link.py: interface and link abstractions for mininet
 
 It seems useful to bundle functionality for interfaces into a single
@@ -19,6 +18,10 @@ Basic division of labor:
   Intfs: know how to configure themselves
   Links: know how to connect nodes together
 
+Intf: basic interface object that can configure itself
+TCIntf: interface with bandwidth limiting and delay via tc
+
+Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
@@ -26,7 +29,7 @@ from mininet.util import makeIntfPair
 from time import sleep
 import re
 
-class BasicIntf( object ):
+class Intf( object ):
 
     "Basic interface object that can configure itself."
 
@@ -146,7 +149,7 @@ class BasicIntf( object ):
         return self.name
 
 
-class TCIntf( BasicIntf ):
+class TCIntf( Intf ):
     "Interface customized by tc (traffic control) utility"  
 
     def config( self, bw=None, delay=None, loss=0, disable_gro=True,
@@ -154,7 +157,7 @@ class TCIntf( BasicIntf ):
                 enable_red=False, max_queue_size=1000, **params ):
         "Configure the port and set its properties."
 
-        result = BasicIntf.config( self, **params)
+        result = Intf.config( self, **params)
 
         # disable GRO
         if disable_gro:
@@ -241,7 +244,6 @@ class TCIntf( BasicIntf ):
         result[ 'tcoutputs'] = tcoutputs
         return result
 
-Intf = TCIntf
 
 class Link( object ):
     
