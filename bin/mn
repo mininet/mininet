@@ -38,7 +38,7 @@ def customNode( constructors, argStr ):
                ( cname, constructors.keys() ) )
     def custom( *args, **params ):
         params.update( kwargs )
-        print 'CONSTRUCTOR', constructor, 'ARGS', args, 'PARAMS', params
+        # print 'CONSTRUCTOR', constructor, 'ARGS', args, 'PARAMS', params
         return constructor( *args, **params )
     return custom
 
