@@ -53,8 +53,6 @@ from mininet.util import numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link
 
-SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
-
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
@@ -482,17 +480,28 @@ class CPULimitedHost( Host ):
     def __init__( self, *args, **kwargs ):
         Node.__init__( self, *args, **kwargs )
         # Create a cgroup and move shell into it
-        cgroup = 'cpu,cpuacct:/' + self.name
-        errFail( 'cgcreate -g ' + cgroup )
-        errFail( 'cgclassify -g %s %s' % ( cgroup, self.pid ) )
+        self.cgroup = 'cpu,cpuacct:/' + self.name
+        errFail( 'cgcreate -g ' + self.cgroup )
+        errFail( 'cgclassify -g %s %s' % ( self.cgroup, self.pid ) )
         self.period_us = kwargs.get( 'period_us', 10000 )
         self.sched = kwargs.get( 'sched', 'rt' )
+
+    def cleanup( self ):
+        "Clean up our cgroup"
+        Host.cleanup( self )
+        debug( '*** deleting cgroup', self.cgroup, '\n' )
+        errFail( 'cgdelete -r ' + self.cgroup )
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
         cmd = 'cgset -r %s.%s=%s /%s' % (
             resource, param, value, self.name )
-        return quietRun( cmd )
+        out = quietRun( cmd )
+        nvalue = int( self.cgroupGet( param, resource ) )
+        if nvalue != value:
+            error( '*** error: cgroupSet: %s set to %s instead of %s\n'
+                   % ( param, nvalue, value ) )
+        return nvalue
 
     def cgroupGet( self, param, resource='cpu' ):
         cmd = 'cgget -r %s.%s /%s' % (
@@ -505,7 +514,28 @@ class CPULimitedHost( Host ):
         result = quietRun( 'chrt -p %s' % self.pid )
         firstline = result.split( '\n' )[ 0 ]
         lastword = firstline.split( ' ' )[ -1 ]
+        if lastword != 'SCHED_RR':
+            error( '*** error: could not assign SCHED_RR to %s\n' % self.name )
         return lastword
+
+    def rtInfo( self, f ):
+        "Internal method: return parameters for RT bandwidth"
+        pstr, qstr = 'rt_period_us', 'rt_runtime_us'
+        # RT uses wall clock time for period and quota
+        quota = int( self.period_us * f * numCores() )
+        return pstr, qstr, self.period_us, quota
+
+    def cfsInfo( self, f):
+        "Internal method: return parameters for CFS bandwidth"
+        pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
+        # CFS uses wall clock time for period and CPU time for quota.
+        quota = int( self.period_us * f * numCores() )
+        period = self.period_us
+        if f > 0 and quota < 1000:
+            debug( '(cfsInfo: increasing default period) ' )
+            quota = 1000
+            period = int( quota / f / numCores() )
+        return pstr, qstr, period, quota
 
     # BL comment:
     # This may not be the right API, 
@@ -515,7 +545,7 @@ class CPULimitedHost( Host ):
     # Alternatively, we should change from system fraction
     # to CPU seconds per second, essentially assuming that
     # all CPUs are the same.
-    
+
     def setCPUFrac( self, f=-1, sched=None):
         """Set overall CPU fraction for this host
            f: CPU bandwidth limit (fraction)
@@ -525,45 +555,22 @@ class CPULimitedHost( Host ):
             return
         if not sched:
             sched = self.sched
-        period = self.period_us
         if sched == 'rt':
-            pstr, qstr = 'rt_period_us', 'rt_runtime_us'
-            # RT uses system time for period and quota
-            quota = int( period * f * numCores() )
+            pstr, qstr, period, quota = self.rtInfo( f )
         elif sched == 'cfs':
-            pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
-            # CFS uses wall clock time for period and CPU time for quota.
-            quota = int( self.period_us * f * numCores() )
-            if f > 0 and quota < 1000:
-                info( '*** setCPUFrac: quota too small - adjusting period\n' )
-                quota = 1000
-                period = int( quota / f / numCores() )
+            pstr, qstr, period, quota = self.cfsInfo( f )
         else:
             return
         if quota < 0:
             # Reset to unlimited
             quota = -1
         # Set cgroup's period and quota
-        self.cgroupSet( pstr, period )
-        nquota = int ( self.cgroupGet( qstr ) )
-        self.cgroupSet( qstr, quota )
-        nperiod = int( self.cgroupGet( pstr ) )
-        # Make sure it worked
-        if nperiod != self.period_us:
-            error( '*** error: period is %s rather than %s\n' % (
-                    nperiod, self.period_us ) )
-        if nquota != quota:
-            error( '*** error: quota is %s rather than %s\n' % (
-                    nquota, quota ) )
+        nperiod = self.cgroupSet( pstr, period )
+        nquota = self.cgroupSet( qstr, quota )
         if sched == 'rt':
             # Set RT priority if necessary
             nchrt = self.chrt( prio=20 )
-            # Nake sure it worked
-            if sched == 'SCHED_RR' not in nchrt:
-                error( '*** error: could not assign SCHED_RR to %s\n' % self.name )
-            info( '( period', nperiod, 'quota', nquota, nchrt, ') ' )
-        else:
-            info( '( period', nperiod, 'quota', nquota, ') ' )
+        info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
     def config( self, cpu=None, sched=None, **params ):
         """cpu: desired overall system CPU fraction
@@ -591,16 +598,20 @@ class CPULimitedHost( Host ):
 # reported by ifconfig for a switch data port is essentially
 # meaningless.
 #
-# So, I'm tyring changing the API to make it
+# So, I'm trying changing the API to make it
 # impossible to try this, since it will not work, since nobody
 # ever makes separate control networks in Mininet, and indeed
 # we don't even support running OVS in a namespace.
+#
+# Note if we have a separate control network, then it does
+# make sense to have s1-eth0 as s1's control network interface,
+# and we should set controlIntf accordingly.
 
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
-    portBase = SWITCH_PORT_BASE  # 0 for OF < 1.0, 1 for OF >= 1.0
+    portBase = 1  # Switches start with port 1 in OpenFlow
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
         """dpid: dpid for switch (or None for default)
