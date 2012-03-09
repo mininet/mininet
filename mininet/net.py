@@ -146,7 +146,7 @@ class Mininet( object ):
 
         self.terms = []  # list of spawned xterm processes
 
-        init()  # Initialize Mininet if necessary
+        Mininet.init()  # Initialize Mininet if necessary
 
         self.built = False
         if topo and build:
@@ -527,6 +527,21 @@ class Mininet( object ):
         self.stop()
         return result
 
+    inited = False
+    
+    @classmethod
+    def init( cls ):
+        "Initialize Mininet"
+        if cls.inited:
+            return
+        if os.getuid() != 0:
+            # Note: this script must be run as root
+            # Perhaps we should do so automatically!
+            print "*** Mininet must run as root."
+            exit( 1 )
+        fixLimits()
+        cls.inited = True
+
 
 class MininetWithControlNet( Mininet ):
 
@@ -592,21 +607,4 @@ class MininetWithControlNet( Mininet ):
                 exit( 1 )
         info( '\n' )
 
-# pylint thinks inited is unused
-# pylint: disable-msg=W0612
 
-def init():
-    "Initialize Mininet."
-    if init.inited:
-        return
-    if os.getuid() != 0:
-        # Note: this script must be run as root
-        # Perhaps we should do so automatically!
-        print "*** Mininet must run as root."
-        exit( 1 )
-    fixLimits()
-    init.inited = True
-
-init.inited = False
-
-# pylint: enable-msg=W0612

@@ -19,13 +19,14 @@ import time
 from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, warn
-from mininet.net import Mininet, init
+from mininet.net import Mininet
 from mininet.node import Host, CPULimitedHost, Controller, OVSController, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.link import Intf, TCIntf
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
 from mininet.util import makeNumeric, custom
+
 
 def customNode( constructors, argStr ):
     "Return custom Node constructor based on argStr"
@@ -45,7 +46,6 @@ def customNode( constructors, argStr ):
                   constructor, args, newargs )
         return constructor( name, *newargs, **params )
     return custom
-
 
 
 # built in topologies, created only when run
@@ -228,9 +228,6 @@ class MininetRunner( object ):
                     'Please restart Mininet with -v [debug, info, output].'
                     % self.options.verbosity )
         lg.setLogLevel( self.options.verbosity )
-
-        # validate environment setup
-        init()
 
     def begin( self ):
         "Create and run mininet."

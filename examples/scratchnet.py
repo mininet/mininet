@@ -8,13 +8,13 @@ but it exposes the configuration details and allows customization.
 For most tasks, the higher-level API will be preferable.
 """
 
-from mininet.net import init
-from mininet.node import Node, OVSKernelSwitch
+from mininet.net import Mininet
+from mininet.node import Node
 from mininet.util import createLink
 from mininet.log import setLogLevel, info
 
 def scratchNet( cname='controller', cargs='ptcp:' ):
-    "Create network from scratch using kernel switch."
+    "Create network from scratch using Open vSwitch."
 
     info( "*** Creating nodes\n" )
     controller = Node( 'c0', inNamespace=False )
@@ -53,6 +53,5 @@ def scratchNet( cname='controller', cargs='ptcp:' ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
     info( '*** Scratch network demo (kernel datapath)\n' )
-    OVSKernelSwitch.setup()
-    init()
+    Mininet.init()
     scratchNet()

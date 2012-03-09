@@ -5,8 +5,8 @@
 
 import unittest
 
-from mininet.net import init, Mininet
-from mininet.node import Host, Controller, ControllerParams
+from mininet.net import Mininet
+from mininet.node import Host, Controller
 from mininet.node import UserSwitch, OVSKernelSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
@@ -21,7 +21,6 @@ class testSingleSwitch( unittest.TestCase ):
 
     def testMinimal( self ):
         "Ping test with both datapaths on minimal topology"
-        init()
         for switch in SWITCHES.values():
             mn = Mininet( SingleSwitchTopo(), switch, Host, Controller )
             dropped = mn.run( mn.ping )
@@ -29,7 +28,6 @@ class testSingleSwitch( unittest.TestCase ):
 
     def testSingle5( self ):
         "Ping test with both datapaths on 5-host single-switch topology"
-        init()
         for switch in SWITCHES.values():
             mn = Mininet( SingleSwitchTopo( k=5 ), switch, Host, Controller )
             dropped = mn.run( mn.ping )
@@ -41,7 +39,6 @@ class testLinear( unittest.TestCase ):
 
     def testLinear5( self ):
         "Ping test with both datapaths on a 5-switch topology"
-        init()
         for switch in SWITCHES.values():
             mn = Mininet( LinearTopo( k=5 ), switch, Host, Controller )
             dropped = mn.run( mn.ping )

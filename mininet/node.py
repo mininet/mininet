@@ -499,7 +499,7 @@ class CPULimitedHost( Host ):
         "Set a cgroup parameter and return its value"
         cmd = 'cgset -r %s.%s=%s /%s' % (
             resource, param, value, self.name )
-        out = quietRun( cmd )
+        quietRun( cmd )
         nvalue = int( self.cgroupGet( param, resource ) )
         if nvalue != value:
             error( '*** error: cgroupSet: %s set to %s instead of %s\n'
@@ -568,11 +568,11 @@ class CPULimitedHost( Host ):
             # Reset to unlimited
             quota = -1
         # Set cgroup's period and quota
-        nperiod = self.cgroupSet( pstr, period )
-        nquota = self.cgroupSet( qstr, quota )
+        self.cgroupSet( pstr, period )
+        self.cgroupSet( qstr, quota )
         if sched == 'rt':
             # Set RT priority if necessary
-            nchrt = self.chrt( prio=20 )
+            self.chrt( prio=20 )
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
     def config( self, cpu=None, sched=None, **params ):

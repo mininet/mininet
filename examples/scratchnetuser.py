@@ -10,7 +10,7 @@ For most tasks, the higher-level API will be preferable.
 This version uses the user datapath and an explicit control network.
 """
 
-from mininet.net import init
+from mininet.net import Mininet
 from mininet.node import Node
 from mininet.util import createLink
 from mininet.log import setLogLevel, info
@@ -64,5 +64,5 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
     info( '*** Scratch network demo (user datapath)\n' )
-    init()
+    Mininet.init()
     scratchNetUser()

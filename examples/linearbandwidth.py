@@ -26,7 +26,7 @@ of switches, this example demonstrates:
 import sys
 flush = sys.stdout.flush
 
-from mininet.net import init, Mininet
+from mininet.net import Mininet
 # from mininet.node import KernelSwitch
 from mininet.node import UserSwitch, OVSKernelSwitch
 from mininet.topo import Topo, Node
@@ -106,7 +106,6 @@ def linearBandwidthTest( lengths ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
-    init()
     sizes = [ 1, 10, 20, 40, 60, 80, 100 ]
     print "*** Running linearBandwidthTest", sizes
     linearBandwidthTest( sizes  )
