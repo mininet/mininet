@@ -33,11 +33,11 @@ class Intf( object ):
 
     "Basic interface object that can configure itself."
 
-    def __init__( self, node, name=None, link=None, **kwargs ):
-        """node: owning node (where this intf most likely lives)
-           name: interface name (e.g. h1-eth0)
-           link: parent link if any
-           other arguments are used to configure link parameters"""
+    def __init__( self, name, node=None, link=None, **kwargs ):
+        """name: interface name (e.g. h1-eth0)
+           node: owning node (where this intf most likely lives)
+           link: parent link if we're part of a link
+           other arguments are passed to config()"""
         self.node = node
         self.name = name
         self.link = link
@@ -152,9 +152,9 @@ class Intf( object ):
 class TCIntf( Intf ):
     "Interface customized by tc (traffic control) utility"  
 
-    def config( self, bw=None, delay=None, loss=0, disable_gro=True,
+    def config( self, bw=None, delay=None, loss=None, disable_gro=True,
                 speedup=0, use_hfsc=False, use_tbf=False, enable_ecn=False,
-                enable_red=False, max_queue_size=1000, **params ):
+                enable_red=False, max_queue_size=None, **params ):
         "Configure the port and set its properties."
 
         result = Intf.config( self, **params)
@@ -163,7 +163,8 @@ class TCIntf( Intf ):
         if disable_gro:
             self.cmd( 'ethtool -K %s gro off' % self )
         
-        if bw is None and not delay and not loss:
+        if ( bw is None and not delay and not loss 
+             and max_queue_size is None ):
             return
 
         if bw and ( bw < 0 or bw > 1000 ):
@@ -177,59 +178,65 @@ class TCIntf( Intf ):
         if loss and ( loss < 0 or loss > 100 ):
             error( 'Bad loss percentage', loss, '%%\n' )
             return
-        
-        if delay is None:
-            delay = '0ms'
-        
-        if bw is not None and delay is not None:
-            info( self, '(bw %.2fMbit, delay %s, loss %d%%) ' % 
-                 ( bw, delay, loss ) )
-        
-        # BL: hmm... what exactly is this???
-        # This seems kind of brittle
-        if speedup > 0 and self.node.name[0:2] == 'sw':
-            bw = speedup
+
+        # Ugly but functional
+        stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
+                  ( [ '%s delay' % delay ] if delay is not None else [] ) +
+                  ( ['%d%% loss' % loss ] if loss is not None else [] ) +
+                  ( [ 'ECN' ] if enable_ecn  else [ 'RED' ] if enable_red else [] ) )
+        info( '(' + ' '.join( stuff ) + ') ' )
+
+        cmds = [ '%s qdisc del dev %s root' ]
 
         tc = 'tc' # was getCmd( 'tc' )
 
         # Bandwidth control algorithms
-        if use_hfsc:
-            cmds = [ '%s qdisc del dev %s root',
-                     '%s qdisc add dev %s root handle 1:0 hfsc default 1' ]
-            if bw is not None:
-                cmds.append( '%s class add dev %s parent 1:0 classid 1:1 hfsc sc ' +
-                            'rate %fMbit ul rate %fMbit' % ( bw, bw ) )
-        elif use_tbf:
-            latency_us = 10 * 1500 * 8 / bw
-            cmds = ['%s qdisc del dev %s root',
-                    '%s qdisc add dev %s root handle 1: tbf ' +
-                    'rate %fMbit burst 15000 latency %fus' % (bw, latency_us) ]
+        if bw is None:
+            parent = ' root '
         else:
-            cmds = [ '%s qdisc del dev %s root',
-                     '%s qdisc add dev %s root handle 1:0 htb default 1',
-                     '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                     'rate %fMbit burst 15k' % bw ]
+            parent = ' parent 1:1 '
+            # BL: hmm... this seems a bit brittle
+            if speedup > 0 and self.node.name[0:2] == 'sw':
+                bw = speedup
+            if use_hfsc:
+                cmds += [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
+                          '%s class add dev %s parent 1:0 classid 1:1 hfsc sc ' +
+                                'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
+            elif use_tbf:
+                latency_us = 10 * 1500 * 8 / bw
+                cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
+                        'rate %fMbit burst 15000 latency %fus' % (bw, latency_us) ]
+            else:
+                cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
+                         '%s class add dev %s parent 1:0 classid 1:1 htb ' +
+                         'rate %fMbit burst 15k' % bw ]
+            parent = ' parent 1:1 '
 
-        # ECN or RED
-        if enable_ecn:
-            info( 'Enabling ECN\n' )
-            cmds += [ '%s qdisc add dev %s parent 1:1 '+
-                      'handle 10: red limit 1000000 '+
-                      'min 20000 max 25000 avpkt 1000 '+
-                      'burst 20 '+
-                      'bandwidth %fmbit probability 1 ecn' % bw ]
-        elif enable_red:
-            info( 'Enabling RED\n' )
-            cmds += [ '%s qdisc add dev %s parent 1:1 '+
-                      'handle 10: red limit 1000000 '+
-                      'min 20000 max 25000 avpkt 1000 '+
-                      'burst 20 '+
-                      'bandwidth %fmbit probability 1' % bw ]
-        else:
-            cmds += [ '%s qdisc add dev %s parent 1:1 handle 10:0 netem ' +
-                     'delay ' + '%s' % delay + ' loss ' + '%d' % loss + 
-                     ' limit %d' % (max_queue_size) ]
-        
+            # ECN or RED
+            if enable_ecn:
+                cmds += [ '%s qdisc add dev %s' + parent +
+                          'handle 10: red limit 1000000 '+
+                          'min 20000 max 25000 avpkt 1000 '+
+                          'burst 20 '+
+                          'bandwidth %fmbit probability 1 ecn' % bw ]
+                parent = ' parent 10: '
+            elif enable_red:
+                cmds += [ '%s qdisc add dev %s' + parent +
+                          'handle 10: red limit 1000000 '+
+                          'min 20000 max 25000 avpkt 1000 '+
+                          'burst 20 '+
+                          'bandwidth %fmbit probability 1' % bw ]
+                parent = ' parent 10: '
+            
+        # Delay/loss/max queue size
+        netemargs = '%s%s%s' % (
+            'delay %s ' % delay if delay is not None else '',
+            'loss %d ' % loss if loss is not None else '',
+            'limit %d' % max_queue_size if max_queue_size is not None else '' )
+        if netemargs:
+            cmds += [ '%s qdisc add dev %s ' + parent + ' netem ' + 
+                      netemargs ]
+
         # Execute all the commands in the container
         debug("at map stage w/cmds: %s\n" % cmds)
         
