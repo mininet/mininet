@@ -18,7 +18,7 @@ import time
 
 from mininet.clean import cleanup
 from mininet.cli import CLI
-from mininet.log import lg, LEVELS, info
+from mininet.log import lg, LEVELS, info, warn
 from mininet.net import Mininet, init
 from mininet.node import Host, CPULimitedHost, Controller, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
@@ -29,18 +29,24 @@ from mininet.util import makeNumeric, custom
 
 def customNode( constructors, argStr ):
     "Return custom Node constructor based on argStr"
-    cname, noargs, kwargs = splitArgs( argStr )
+    cname, newargs, kwargs = splitArgs( argStr )
     constructor = constructors.get( cname, None )
-    if noargs:
-        raise Exception( "please specify keyword  arguments for " + cname )
+    #if args:
+    #    raise Exception( "please specify keyword  arguments for " + cname )
     if not constructor:
         raise Exception( "error: %s is unknown - please specify one of %s" %
                ( cname, constructors.keys() ) )
-    def custom( *args, **params ):
+    def custom( name, *args, **params ):
         params.update( kwargs )
-        # print 'CONSTRUCTOR', constructor, 'ARGS', args, 'PARAMS', params
-        return constructor( *args, **params )
+        if not newargs:
+            return constructor( name, *args, **params )
+        if args:
+            warn( 'warning: %s replacing %s with %s\n',
+                  constructor, args, newargs )
+        return constructor( name, *newargs, **params )
     return custom
+
+
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'

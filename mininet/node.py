@@ -50,7 +50,7 @@ import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
 
-from mininet.log import info, error, debug
+from mininet.log import info, error, warn, debug
 from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
 from mininet.util import numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
@@ -864,13 +864,15 @@ class ControllerParams( object ):
 class NOX( Controller ):
     "Controller to run a NOX application."
 
-    def __init__( self, name, noxArgs=[], **kwargs ):
+    def __init__( self, name, *noxArgs, **kwargs ):
         """Init.
            name: name to give controller
-           noxArgs: list of args, or single arg, to pass to NOX"""
+           noxArgs: arguments (strings) to pass to NOX"""
         if not noxArgs:
+            warn( 'warning: no NOX modules specified; '
+                  'running packetdump only\n' )
             noxArgs = [ 'packetdump' ]
-        elif type( noxArgs ) != list:
+        elif type( noxArgs ) not in ( list, tuple ):
             noxArgs = [ noxArgs ]
 
         if 'NOX_CORE_DIR' not in os.environ:
