@@ -20,7 +20,7 @@ from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, warn
 from mininet.net import Mininet, init
-from mininet.node import Host, CPULimitedHost, Controller, NOX
+from mininet.node import Host, CPULimitedHost, Controller, OVSController, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
 from mininet.link import Intf, TCIntf
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
@@ -67,9 +67,10 @@ HOSTS = { 'proc': Host,
 
 CONTROLLERDEF = 'ref'
 CONTROLLERS = { 'ref': Controller,
-               'nox': NOX, 
-               'remote': RemoteController,
-               'none': lambda name: None }
+                'ovsc': OVSController,
+                'nox': NOX, 
+                'remote': RemoteController,
+                'none': lambda name: None }
 
 INTFDEF = 'default'
 INTFS = { 'default': Intf,

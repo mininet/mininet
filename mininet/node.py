@@ -847,6 +847,12 @@ class Controller( Node ):
         return ip
 
 
+class OVSController( Controller ):
+    "Open vSwitch controller"
+    def __init__( self, name, command='ovs-controller', **kwargs ):
+        Controller.__init__( self, name, command=command, **kwargs )
+
+
 # BL: This really seems to be poorly specified,
 # so it's going to go away!
 
