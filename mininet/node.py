@@ -386,17 +386,20 @@ class Node( object ):
            intf: interface name
            ip: IP address as a string
            prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
-        # This should probably be rethought:
-        ipSub = '%s/%s' % ( ip, prefixLen )
-        return self.intf( intf ).setIP( ipSub )
+        # This should probably be rethought
+        if '/' not in ip:
+            ip = '%s/%s' % ( ip, prefixLen )
+        return self.intf( intf ).setIP( ip )
 
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
-        return self.intf( intf ).IP()
+        i = self.intf( intf )
+        return self.intf( i ).IP() if i else None
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        return self.intf( intf ).MAC()
+        i = self.intf( intf )
+        return self.intf( i ).MAC() if i else None
 
     def intfIsUp( self, intf=None ):
         "Check if an interface is up."

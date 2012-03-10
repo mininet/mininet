@@ -183,15 +183,6 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
 
-def createLink( node1, node2, port1=None, port2=None ):
-    """Create a link between nodes, making an interface for each.
-       node1: Node object
-       node2: Node object
-       port1: node1 port number (optional)
-       port2: node2 port number (optional)
-       returns: intf1 name, intf2 name"""
-    return node1.linkTo( node2, port1, port2 )
-
 
 # IP and Mac address formatting and parsing
 

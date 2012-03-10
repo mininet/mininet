@@ -10,10 +10,13 @@ For most tasks, the higher-level API will be preferable.
 
 from mininet.net import Mininet
 from mininet.node import Node
-from mininet.util import createLink
+from mininet.link import Link
 from mininet.log import setLogLevel, info
+from mininet.util import quietRun
 
-def scratchNet( cname='controller', cargs='ptcp:' ):
+from time import sleep
+
+def scratchNet( cname='controller', cargs='-v ptcp:' ):
     "Create network from scratch using Open vSwitch."
 
     info( "*** Creating nodes\n" )
@@ -23,30 +26,38 @@ def scratchNet( cname='controller', cargs='ptcp:' ):
     h1 = Node( 'h1' )
 
     info( "*** Creating links\n" )
-    createLink( node1=h0, node2=switch, port1=0, port2=0 )
-    createLink( node1=h1, node2=switch, port1=0, port2=1 )
+    Link( h0, switch )
+    Link( h1, switch )
 
     info( "*** Configuring hosts\n" )
-    h0.setIP( h0.intfs[ 0 ], '192.168.123.1', 24 )
-    h1.setIP( h1.intfs[ 0 ], '192.168.123.2', 24 )
+    h0.setIP( '192.168.123.1/24' )
+    h1.setIP( '192.168.123.2/24' )
     info( str( h0 ) + '\n' )
     info( str( h1 ) + '\n' )
 
-    info( "*** Starting network using Open vSwitch kernel datapath\n" )
+    info( "*** Starting network using Open vSwitch\n" )
     controller.cmd( cname + ' ' + cargs + '&' )
-    switch.cmd( 'ovs-dpctl del-dp dp0' )
-    switch.cmd( 'ovs-dpctl add-dp dp0' )
+    switch.cmd( 'ovs-vsctl del-br dp0' )
+    switch.cmd( 'ovs-vsctl add-br dp0' )
     for intf in switch.intfs.values():
-        print switch.cmd( 'ovs-dpctl add-if dp0 ' + intf )
-    print switch.cmd( 'ovs-openflowd dp0 tcp:127.0.0.1 &' )
+        print switch.cmd( 'ovs-vsctl add-port dp0 %s' % intf )
+
+    # Note: controller and switch are in root namespace, and we
+    # can connect via loopback interface
+    switch.cmd( 'ovs-vsctl set-controller dp0 tcp:127.0.0.1:6633' )
+
+    info( '*** Waiting for switch to connect to controller' )
+    while 'is_connected' not in quietRun( 'ovs-vsctl show' ):
+        sleep( 1 )
+        info( '.' )
+    info( '\n' )
 
     info( "*** Running test\n" )
     h0.cmdPrint( 'ping -c1 ' + h1.IP() )
 
     info( "*** Stopping network\n" )
     controller.cmd( 'kill %' + cname )
-    switch.cmd( 'ovs-dpctl del-dp dp0' )
-    switch.cmd( 'kill %ovs-openflowd' )
+    switch.cmd( 'ovs-vsctl del-br dp0' )
     switch.deleteIntfs()
     info( '\n' )
 

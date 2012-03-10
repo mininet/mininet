@@ -12,8 +12,13 @@ This version uses the user datapath and an explicit control network.
 
 from mininet.net import Mininet
 from mininet.node import Node
-from mininet.util import createLink
+from mininet.link import Link
 from mininet.log import setLogLevel, info
+
+def linkIntfs( node1, node2 ):
+    "Create link from node1 to node2 and return intfs"
+    link = Link( node1, node2 )
+    return link.intf1, link.intf2
 
 def scratchNetUser( cname='controller', cargs='ptcp:' ):
     "Create network from scratch using user switch."
@@ -28,17 +33,17 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     switch = Node( 's0')
     h0 = Node( 'h0' )
     h1 = Node( 'h1' )
-    cintf, sintf = createLink( controller, switch )
-    h0intf, sintf1 = createLink( h0, switch )
-    h1intf, sintf2 = createLink( h1, switch )
+    cintf, sintf = linkIntfs( controller, switch )
+    h0intf, sintf1 = linkIntfs( h0, switch )
+    h1intf, sintf2 = linkIntfs( h1, switch )
 
     info( '*** Configuring control network\n' )
-    controller.setIP( cintf, '10.0.123.1', 24 )
-    switch.setIP( sintf, '10.0.123.2', 24 )
+    controller.setIP( '10.0.123.1/24', cintf )
+    switch.setIP( '10.0.123.2/24', sintf)
 
     info( '*** Configuring hosts\n' )
-    h0.setIP( h0intf, '192.168.123.1', 24 )
-    h1.setIP( h1intf, '192.168.123.2', 24 )
+    h0.setIP( '192.168.123.1/24', h0intf )
+    h1.setIP( '192.168.123.2/24', h1intf )
 
     info( '*** Network state:\n' )
     for node in controller, switch, h0, h1:
@@ -47,7 +52,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     info( '*** Starting controller and user datapath\n' )
     controller.cmd( cname + ' ' + cargs + '&' )
     switch.cmd( 'ifconfig lo 127.0.0.1' )
-    intfs = [ sintf1, sintf2 ]
+    intfs = map( str, [ sintf1, sintf2 ] )
     switch.cmd( 'ofdatapath -i ' + ','.join( intfs ) + ' ptcp: &' )
     switch.cmd( 'ofprotocol tcp:' + controller.IP() + ' tcp:localhost &' )
 

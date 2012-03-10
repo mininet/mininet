@@ -21,7 +21,7 @@ from mininet.cli import CLI
 from mininet.log import lg
 from mininet.node import Node, OVSKernelSwitch
 from mininet.topolib import TreeTopo
-from mininet.util import createLink
+from mininet.link import Link
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
@@ -37,13 +37,13 @@ def connectToRootNS( network, switch, ip, prefixLen, routes ):
       routes: host networks to route to"""
     # Create a node in root namespace and link to switch 0
     root = Node( 'root', inNamespace=False )
-    intf = createLink( root, switch )[ 0 ]
-    root.setIP( intf, ip, prefixLen )
+    intf = Link( root, switch ).intf1
+    root.setIP( ip, prefixLen, intf )
     # Start network that now includes link to root namespace
     network.start()
     # Add routes from root ns to hosts
     for route in routes:
-        root.cmd( 'route add -net ' + route + ' dev ' + intf )
+        root.cmd( 'route add -net ' + route + ' dev ' + str( intf ) )
 
 def sshd( network, cmd='/usr/sbin/sshd', opts='-D' ):
     "Start a network, connect it to root ns, and run sshd on all hosts."

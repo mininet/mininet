@@ -6,14 +6,17 @@ from mininet.node import Host
 
 print "*** Creating nodes"
 h1 = Host( 'h1' )
+
 root = Host( 'root', inNamespace=False )
 
 print "*** Creating links"
 h1.linkTo( root )
 
+print h1
+
 print "*** Configuring nodes"
-h1.setIP( h1.intfs[ 0 ], '10.0.0.1', 8 )
-root.setIP( root.intfs[ 0 ], '10.0.0.2', 8 )
+h1.setIP( '10.0.0.1', 8 )
+root.setIP( '10.0.0.2', 8 )
 
 print "*** Creating banner file"
 f = open( '/tmp/%s.banner' % h1.name, 'w' )

@@ -95,6 +95,8 @@ class Intf( object ):
 
     def isUp( self, set=False ):
         "Return whether interface is up"
+        if set:
+            self.ifconfig( 'up' )
         return "UP" in self.ifconfig()
 
     # The reason why we configure things in this way is so
@@ -123,7 +125,7 @@ class Intf( object ):
         return result
 
     def config( self, mac=None, ip=None, ifconfig=None, 
-                defaultRoute=None, **params):
+                defaultRoute=None, up=True, **params):
         """Configure Node according to (optional) parameters:
            mac: MAC address
            ip: IP address
@@ -136,6 +138,7 @@ class Intf( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'isUp', up=up )
         self.setParam( r, 'ifconfig', ifconfig=ifconfig )
         return r
 

@@ -97,7 +97,7 @@ from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link
 from mininet.util import quietRun, fixLimits
-from mininet.util import createLink, macColonHex, ipStr, ipParse
+from mininet.util import macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
 
 class Mininet( object ):
@@ -584,7 +584,7 @@ class MininetWithControlNet( Mininet ):
         snum = ipParse( ip )
         for switch in self.switches:
             info( ' ' + switch.name )
-            sintf, cintf = createLink( switch, controller )
+            sintf, cintf = self.link( switch, controller )
             snum += 1
             while snum & 0xff in [ 0, 255 ]:
                 snum += 1
