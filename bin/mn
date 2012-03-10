@@ -192,6 +192,8 @@ class MininetRunner( object ):
                         help='|'.join( TESTS ) )
         opts.add_option( '--xterms', '-x', action='store_true',
                         default=False, help='spawn xterms for each node' )
+        opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
+                         help='base IP address for hosts' )
         opts.add_option( '--mac', action='store_true',
                         default=False, help='automatically set host MACs' )
         opts.add_option( '--arp', action='store_true',
@@ -248,6 +250,7 @@ class MininetRunner( object ):
             self.validate( self.options )
 
         inNamespace = self.options.innamespace
+        ipBase = self.options.ipbase
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
@@ -257,6 +260,7 @@ class MininetRunner( object ):
         mn = Mininet( topo=topo, 
                       switch=switch, host=host, controller=controller, 
                       intf=intf,
+                      ipBase=ipBase,
                       inNamespace=inNamespace,
                       xterms=xterms, autoSetMacs=mac,
                       autoStaticArp=arp, listenPort=listenPort )

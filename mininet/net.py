@@ -97,7 +97,7 @@ from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link
 from mininet.util import quietRun, fixLimits
-from mininet.util import macColonHex, ipStr, ipParse
+from mininet.util import macColonHex, ipStr, ipParse, netParse
 from mininet.term import cleanUpScreens, makeTerms
 
 class Mininet( object ):
@@ -105,7 +105,7 @@ class Mininet( object ):
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                  controller=Controller, link=Link, intf=None, 
-                 build=True, xterms=False, cleanup=False,
+                 build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
         """Create Mininet object.
@@ -130,6 +130,7 @@ class Mininet( object ):
         self.controller = controller
         self.link = link
         self.intf = intf
+        self.ipBase = ipBase
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
@@ -214,6 +215,8 @@ class Mininet( object ):
            At the end of this function, everything should be connected
            and up."""
 
+        ipBaseNum, prefixLen = netParse( self.ipBase )
+
         if not topo:
             topo = self.topo()
 
@@ -222,7 +225,9 @@ class Mininet( object ):
             name = prefix + topo.name( nodeId )
             ni = topo.nodeInfo( nodeId )
             # Default IP and MAC addresses
-            defaults = { 'ip': topo.ip( nodeId ) }
+            defaults = { 'ip': topo.ip( nodeId,
+                                        ipBaseNum=ipBaseNum,
+                                        prefixLen=prefixLen ) }
             if self.autoSetMacs:
                 defaults[ 'mac'] = macColonHex( nodeId ) 
             defaults.update( ni.params )

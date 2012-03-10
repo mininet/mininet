@@ -204,19 +204,19 @@ def macColonHex( mac ):
        returns: macStr MAC colon-hex string"""
     return _colonHex( mac, 6 )
 
-def ipStr( ip ):
+def ipStr( ip, defaultNet=10 ):
     """Generate IP address string from an unsigned int.
        ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
        returns: ip address string w.x.y.z, or 10.x.y.z if w==0"""
-    w = ( ip & 0xff000000 ) >> 24
+    w = ( ip >> 24 ) & 0xff
     w = 10 if w == 0 else w
-    x = ( ip & 0xff0000 ) >> 16
-    y = ( ip & 0xff00 ) >> 8
+    x = ( ip  >> 16 ) & 0xff
+    y = ( ip  >> 8 ) & 0xff
     z = ip & 0xff
     return "%i.%i.%i.%i" % ( w, x, y, z )
 
 def ipNum( w, x, y, z ):
-    """Generate unsigned int from components ofIP address
+    """Generate unsigned int from components of IP address
        returns: w << 24 | x << 16 | y << 8 | z"""
     return  ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
 
@@ -224,6 +224,15 @@ def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
     return ipNum( *args )
+
+def netParse( ipstr ):
+    """Parse an IP network specification, returning
+       address and prefix len as unsigned ints"""
+    prefixLen = 0
+    if '/' in ipstr:
+        ip, pf = ipstr.split( '/' )
+        prefixLen = int( pf )
+    return ipParse( ip ), prefixLen
 
 def checkInt( s ):
     "Check if input string is an int"

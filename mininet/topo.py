@@ -16,6 +16,7 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
+from util import netParse, ipStr
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -42,15 +43,22 @@ class NodeID(object):
         '''
         return str(self.dpid)
 
-    def ip_str(self):
+    def ip_str(self, ipBase=None, prefixLen=8, ipBaseNum=0x0a000000):
         '''Name conversion.
-
+        ipBase: optional base IP address string
+        prefixLen: optional IP prefix length
+        ipBaseNum: option base IP address as int
         @return ip ip as string
         '''
-        hi = (self.dpid & 0xff0000) >> 16
-        mid = (self.dpid & 0xff00) >> 8
-        lo = self.dpid & 0xff
-        return "10.%i.%i.%i" % (hi, mid, lo)
+        if ipBase:
+            ipnum, prefixLen = netParse( ipBase )
+        else:
+            ipBaseNum = ipBaseNum
+        # Ugly but functional
+        assert self.dpid < ( 1 << ( 32 - prefixLen ) )
+        mask = 0xffffffff ^ ( ( 1 << prefixLen ) - 1 )
+        ipnum = self.dpid + ( ipBaseNum & mask )
+        return ipStr( ipnum )
 
 
 class Node( object ):
@@ -109,11 +117,12 @@ class Topo(object):
        per-topo classes
        per-network classes"""
     
-    def __init__(self, node=None, switch=None, link=None):
+    def __init__(self, node=None, switch=None, link=None ):
         """Create Topo object.
            node: default node/host class (optional)
            switch: default switch class (optional)
-           link: default link class (optional)"""
+           link: default link class (optional)
+           ipBase: default IP address base (optional)"""
         self.g = Graph()
         self.node_info = {}  # dpids hash to Node objects
         self.edge_info = {}  # (src_dpid, dst_dpid) tuples hash to Edge objects
@@ -342,13 +351,13 @@ class Topo(object):
         '''
         return self.id_gen(dpid = dpid).name_str()
 
-    def ip(self, dpid):
+    def ip(self, dpid, **params):
         '''Get IP dotted-decimal string of node ID.
-
         @param dpid DPID of host or switch
+        @param params: params to pass to ip_str
         @return ip_str
         '''
-        return self.id_gen(dpid = dpid).ip_str()
+        return self.id_gen(dpid = dpid).ip_str(**params)
 
     def nodeInfo( self, dpid ):
         "Return metadata for node"
