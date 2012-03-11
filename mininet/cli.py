@@ -77,7 +77,7 @@ class CLI( Cmd ):
     # Disable pylint "Unused argument: 'arg's'" messages, as well as
     # "method could be a function" warning, since each CLI function
     # must have the same interface
-    # pylint: disable-msg=W0613,R0201
+    # pylint: disable-msg=R0201
 
     helpStr = (
         'You may also send a command to a node using:\n'
@@ -104,12 +104,12 @@ class CLI( Cmd ):
         if line is '':
             output( self.helpStr )
 
-    def do_nodes( self, line ):
+    def do_nodes( self, _line ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    def do_net( self, line ):
+    def do_net( self, _line ):
         "List network connections."
         for switch in self.mn.switches:
             output( switch.name, '<->' )
@@ -143,11 +143,11 @@ class CLI( Cmd ):
 
     # pylint: enable-msg=W0703
 
-    def do_pingall( self, line ):
+    def do_pingall( self, _line ):
         "Ping between all hosts."
         self.mn.pingAll()
 
-    def do_pingpair( self, line ):
+    def do_pingpair( self, _line ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
 
@@ -191,13 +191,13 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperfudp bw src dst\n' +
                    'bw examples: 10M\n' )
 
-    def do_intfs( self, line ):
+    def do_intfs( self, _line ):
         "List interfaces."
         for node in self.nodelist:
             output( '%s: %s\n' %
                 ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
 
-    def do_dump( self, line ):
+    def do_dump( self, _line ):
         "Dump node info."
         for node in self.nodelist:
             output( '%s\n' % node )
@@ -229,7 +229,7 @@ class CLI( Cmd ):
         "Spawn gnome-terminal(s) for the given node(s)."
         self.do_xterm( line, term='gterm' )
 
-    def do_exit( self, line ):
+    def do_exit( self, _line ):
         "Exit"
         return 'exited by user command'
 
@@ -311,7 +311,7 @@ class CLI( Cmd ):
         else:
             error( '*** Unknown command: %s\n' % first )
 
-    # pylint: enable-msg=W0613,R0201
+    # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
         "Wait for a node to finish, and  print its output."

@@ -13,10 +13,12 @@ from mininet.log import setLogLevel
 from time import sleep
 
 def testLinkLimit( net, bw ):
+    "Run bandwidth limit test"
     print '*** Testing network %.2f Mbps bandwidth limit' % bw
     net.iperf( )
 
 def testCpuLimit( net, cpu ):
+    "run CPU limit test"
     pct = cpu * 100
     print '*** Testing CPU %.0f%% bandwidth limit' % pct
     h1, h2 = net.hosts
@@ -25,8 +27,9 @@ def testCpuLimit( net, cpu ):
     pid1 = h1.cmd( 'echo $!' ).strip()
     pid2 = h2.cmd( 'echo $!' ).strip()
     cmd = 'ps -p %s,%s -o pid,%%cpu,args' % ( pid1, pid2 )
-    for i in range( 0, 5):
-        sleep( 1 ) 
+    # It's a shame that this is what pylint prefers
+    for _ in range( 5 ):
+        sleep( 1 )
         print quietRun( cmd ).strip()
     h1.cmd( 'kill %1')
     h2.cmd( 'kill %1')

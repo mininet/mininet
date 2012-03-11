@@ -107,7 +107,7 @@ class Console( Frame ):
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
-        outputHook = lambda x,y: True  # make pylint happy
+        outputHook = lambda x, y: True  # make pylint happier
         if self.outputHook:
             outputHook = self.outputHook
         outputHook( self, text )
@@ -132,27 +132,22 @@ class Console( Frame ):
         self.sendCmd( cmd )
 
     # Callback ignores event
-    # pylint: disable-msg=W0613
-    def handleInt( self, event=None ):
+    def handleInt( self, _event=None ):
         "Handle control-c."
         self.node.sendInt()
-    # pylint: enable-msg=W0613
 
     def sendCmd( self, cmd ):
         "Send a command to our node."
         if not self.node.waiting:
             self.node.sendCmd( cmd )
 
-    # Callback ignores fds
-    # pylint: disable-msg=W0613
-    def handleReadable( self, fds, timeoutms=None ):
+    def handleReadable( self, _fds, timeoutms=None ):
         "Handle file readable event."
         data = self.node.monitor( timeoutms )
         self.append( data )
         if not self.node.waiting:
             # Print prompt
             self.append( self.prompt )
-    # pylint: enable-msg=W0613
 
     def waiting( self ):
         "Are we waiting for output?"
@@ -321,9 +316,7 @@ class ConsoleApp( Frame ):
 
         self.pack( expand=True, fill='both' )
 
-    # Update callback doesn't use console arg
-    # pylint: disable-msg=W0613
-    def updateGraph( self, console, output ):
+    def updateGraph( self, _console, output ):
         "Update our graph."
         m = re.search( r'(\d+) Mbits/sec', output )
         if not m:
@@ -334,7 +327,6 @@ class ConsoleApp( Frame ):
             self.graph.addBar( self.bw )
             self.bw = 0
             self.updates = 0
-    # pylint: enable-msg=W0613
 
     def setOutputHook( self, fn=None, consoles=None ):
         "Register fn as output hook [on specific consoles.]"

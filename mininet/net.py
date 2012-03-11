@@ -104,7 +104,7 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                 controller=Controller, link=Link, intf=None, 
+                 controller=Controller, link=Link, intf=None,
                  build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
@@ -176,7 +176,7 @@ class Mininet( object ):
            switch: custom switch constructor (optional)
            returns: added switch
            side effect: increments listenPort ivar ."""
-        defaults = { 'listenPort': self.listenPort, 
+        defaults = { 'listenPort': self.listenPort,
                      'inNamespace': self.inNamespace }
         defaults.update( params )
         if not switch:
@@ -229,7 +229,7 @@ class Mininet( object ):
                                         ipBaseNum=ipBaseNum,
                                         prefixLen=prefixLen ) }
             if self.autoSetMacs:
-                defaults[ 'mac'] = macColonHex( nodeId ) 
+                defaults[ 'mac'] = macColonHex( nodeId )
             defaults.update( ni.params )
             node = addMethod( name, cls=ni.cls, **defaults )
             self.idToNode[ nodeId ] = node
@@ -275,17 +275,16 @@ class Mininet( object ):
 
         info( '\n' )
 
-
     def configureControlNetwork( self ):
-        error( "configureControlNetwork: override in subclass, or use" 
-               "MininetWithControlNet class" )
+        "Control net config hook: override in subclass"
+        raise Exception( 'configureControlNetwork: '
+               'should be overriden in subclass', self )
 
     def build( self ):
         "Build mininet."
         if self.topo:
             self.buildFromTopo( self.topo )
-        if self.inNamespace:
-            info( '*** Configuring control network\n' )
+        if ( self.inNamespace ):
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
@@ -533,7 +532,7 @@ class Mininet( object ):
         return result
 
     inited = False
-    
+
     @classmethod
     def init( cls ):
         "Initialize Mininet"
@@ -541,7 +540,8 @@ class Mininet( object ):
             return
         if os.getuid() != 0:
             # Note: this script must be run as root
-            # Perhaps we should do so automatically!
+            # Probably we should only sudo when we need
+            # to as per Big Switch's patch
             print "*** Mininet must run as root."
             exit( 1 )
         fixLimits()
@@ -570,7 +570,11 @@ class MininetWithControlNet( Mininet ):
           network (since real networks may need one!)
 
        5. Basically nobody ever used this code, so it has been moved
-          into its own class."""
+          into its own class.
+
+       6. Ultimately we may wish to extend this to allow us to create a
+          control network which every node's control interface is
+          attached to."""
 
     def configureControlNetwork( self ):
         "Configure control network."
@@ -589,27 +593,27 @@ class MininetWithControlNet( Mininet ):
         snum = ipParse( ip )
         for switch in self.switches:
             info( ' ' + switch.name )
-            sintf, cintf = self.link( switch, controller )
+            link = self.link( switch, controller, port1=0 )
+            sintf, cintf = link.intf1, link.intf2
+            switch.controlIntf = sintf
             snum += 1
             while snum & 0xff in [ 0, 255 ]:
                 snum += 1
             sip = ipStr( snum )
-            controller.setIP( cintf, cip, prefixLen )
-            switch.setIP( sintf, sip, prefixLen )
+            cintf.setIP( cip, prefixLen )
+            sintf.setIP( sip, prefixLen )
             controller.setHostRoute( sip, cintf )
             switch.setHostRoute( cip, sintf )
         info( '\n' )
         info( '*** Testing control network\n' )
-        while not controller.intfIsUp( cintf ):
+        while not cintf.isUp():
             info( '*** Waiting for', cintf, 'to come up\n' )
             sleep( 1 )
         for switch in self.switches:
-            while not switch.intfIsUp( sintf ):
+            while not sintf.isUp():
                 info( '*** Waiting for', sintf, 'to come up\n' )
                 sleep( 1 )
             if self.ping( hosts=[ switch, controller ] ) != 0:
                 error( '*** Error: control network test failed\n' )
                 exit( 1 )
         info( '\n' )
-
-

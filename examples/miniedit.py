@@ -299,14 +299,11 @@ class MiniEdit( Frame ):
         # Delete from view
         self.canvas.delete( item )
 
-    # Callback ignores event
-    # pylint: disable-msg=W0613
-    def deleteSelection( self, event ):
+    def deleteSelection( self, _event ):
         "Delete the selected item."
         if self.selection is not None:
             self.deleteItem( self.selection )
         self.selectItem( None )
-    # pylint: enable-msg=W0613
 
     def nodeIcon( self, node, name ):
         "Create a new node icon."
@@ -350,14 +347,11 @@ class MiniEdit( Frame ):
         c = self.canvas
         c.coords( self.link, self.linkx, self.linky, x, y )
 
-    # Callback ignores event
-    # pylint: disable-msg=W0613
-    def releaseLink( self, event ):
+    def releaseLink( self, _event ):
         "Give up on the current link."
         if self.link is not None:
             self.canvas.delete( self.link )
         self.linkWidget = self.linkItem = self.link = None
-    # pylint: enable-msg=W0613
 
     # Generic node handlers
 
@@ -385,12 +379,9 @@ class MiniEdit( Frame ):
         "Select node on entry."
         self.selectNode( event )
 
-    # Callback ignores event
-    # pylint: disable-msg=W0613
-    def leaveNode( self, event ):
+    def leaveNode( self, _event ):
         "Restore old selection on exit."
         self.selectItem( self.lastSelection )
-    # pylint: enable-msg=W0613
 
     def clickNode( self, event ):
         "Node click handler."
@@ -454,23 +445,21 @@ class MiniEdit( Frame ):
         # Link bindings
         # Selection still needs a bit of work overall
         # Callbacks ignore event
-        # pylint: disable-msg=W0613
 
-        def select( event, link=self.link ):
+        def select( _event, link=self.link ):
             "Select item on mouse entry."
             self.selectItem( link )
 
-        def highlight( event, link=self.link ):
+        def highlight( _event, link=self.link ):
             "Highlight item on mouse entry."
             # self.selectItem( link )
             self.canvas.itemconfig( link, fill='green' )
 
-        def unhighlight( event, link=self.link ):
+        def unhighlight( _event, link=self.link ):
             "Unhighlight item on mouse exit."
             self.canvas.itemconfig( link, fill='blue' )
             # self.selectItem( None )
 
-        # pylint: disable-msg=W0613
         self.canvas.tag_bind( self.link, '<Enter>', highlight )
         self.canvas.tag_bind( self.link, '<Leave>', unhighlight )
         self.canvas.tag_bind( self.link, '<ButtonPress-1>', select )
@@ -602,7 +591,7 @@ class MiniEdit( Frame ):
         cleanUpScreens()
         self.net = None
 
-    def xterm( self, ignore=None ):
+    def xterm( self, _=None ):
         "Make an xterm when a button is pressed."
         if ( self.selection is None or
              self.net is None or

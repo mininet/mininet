@@ -81,8 +81,14 @@ class Node( object ):
                          # replace with Port objects, eventually ?
         self.nameToIntf = {}  # dict of interface names to Intfs
 
+        # Make pylint happy
+        ( self.shell, self.execed, self.pid, self.stdin, self.stdout,
+          self.lastPid, self.lastCmd, self.pollOut ) = (
+            None, None, None, None, None, None, None, None )
+        self.waiting = False
+        self.readbuf = ''
+
         # Start command interpreter shell
-        self.shell = None
         self.startShell()
 
     # File descriptor to node mapping support
@@ -99,28 +105,6 @@ class Node( object ):
         node = cls.outToNode.get( fd )
         return node or cls.inToNode.get( fd )
 
-    # Automatic class setup support
-
-    isSetup = False;
-
-    @classmethod
-    def checkSetup( cls ):
-        "Make sure our class and superclasses are set up"
-        while cls and not getattr( cls, 'isSetup', True ):
-            cls.setup()
-            cls.isSetup = True
-            # Make pylint happy
-            cls = getattr( type( cls ), '__base__', None )
-
-    @classmethod
-    def setup( cls ):
-        "Make sure our class dependencies are available"
-        pathCheck( 'mnexec', 'ifconfig',  moduleName='Mininet')
-
-    def cleanup( self ):
-        "Help python collect its garbage."
-        self.shell = None
-
     # Command support via shell process in namespace
 
     def startShell( self ):
@@ -129,7 +113,7 @@ class Node( object ):
             error( "%s: shell is already running" )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace 
+        # (p)rint pid, and run in (n)amespace
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
@@ -153,19 +137,23 @@ class Node( object ):
         self.readbuf = ''
         self.waiting = False
 
-    def read( self, bytes=1024 ):
+    def cleanup( self ):
+        "Help python collect its garbage."
+        self.shell = None
+
+    def read( self, maxbytes=1024 ):
         """Buffered read from node, non-blocking.
-           bytes: maximum number of bytes to return"""
+           maxbytes: maximum number of bytes to return"""
         count = len( self.readbuf )
-        if count < bytes:
-            data = os.read( self.stdout.fileno(), bytes - count )
+        if count < maxbytes:
+            data = os.read( self.stdout.fileno(), maxbytes - count )
             self.readbuf += data
-        if bytes >= len( self.readbuf ):
+        if maxbytes >= len( self.readbuf ):
             result = self.readbuf
             self.readbuf = ''
         else:
-            result = self.readbuf[ :bytes ]
-            self.readbuf = self.readbuf[ bytes: ]
+            result = self.readbuf[ :maxbytes ]
+            self.readbuf = self.readbuf[ maxbytes: ]
         return result
 
     def readline( self ):
@@ -307,7 +295,7 @@ class Node( object ):
         self.ports[ intf ] = port
         self.nameToIntf[ intf.name ] = intf
         debug( '\n' )
-        debug( 'added intf %s:%d to node %s\n' % ( intf,port, self.name ) )
+        debug( 'added intf %s:%d to node %s\n' % ( intf, port, self.name ) )
         if self.inNamespace:
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
             moveIntf( intf.name, self )
@@ -363,7 +351,7 @@ class Node( object ):
         """Add route to host.
            ip: IP address as dotted decimal
            intf: string, interface name"""
-        return self.cmd( 'route add -host ' + ip + ' dev ' + intf )
+        return self.cmd( 'route add -host', ip, 'dev', intf )
 
     def setDefaultRoute( self, intf=None ):
         """Set the default route to go through intf.
@@ -430,8 +418,8 @@ class Node( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None, ifconfig=None, 
-                defaultRoute=None, **params):
+    def config( self, mac=None, ip=None, ifconfig=None,
+                defaultRoute=None, **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address for default interface
            ip: IP address for default interface
@@ -440,7 +428,7 @@ class Node( object ):
            the parent class's config(**params)"""
         # If we were overriding this method, we would call
         # the superclass config method here as follows:
-        # r = Parent.config( **params )
+        # r = Parent.config( **_params )
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
@@ -473,6 +461,24 @@ class Node( object ):
         return '%s: IP=%s intfs=%s pid=%s' % (
             self.name, self.IP(), ','.join( self.intfNames() ), self.pid )
 
+    # Automatic class setup support
+
+    isSetup = False
+
+    @classmethod
+    def checkSetup( cls ):
+        "Make sure our class and superclasses are set up"
+        while cls and not getattr( cls, 'isSetup', True ):
+            cls.setup()
+            cls.isSetup = True
+            # Make pylint happy
+            cls = getattr( type( cls ), '__base__', None )
+
+    @classmethod
+    def setup( cls ):
+        "Make sure our class dependencies are available"
+        pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
+
 
 class Host( Node ):
     "A host is simply a Node"
@@ -484,7 +490,7 @@ class CPULimitedHost( Host ):
     "CPU limited host"
 
     def __init__( self, *args, **kwargs ):
-        Node.__init__( self, *args, **kwargs )
+        Host.__init__( self, *args, **kwargs )
         # Create a cgroup and move shell into it
         self.cgroup = 'cpu,cpuacct:/' + self.name
         errFail( 'cgcreate -g ' + self.cgroup )
@@ -510,6 +516,7 @@ class CPULimitedHost( Host ):
         return nvalue
 
     def cgroupGet( self, param, resource='cpu' ):
+        "Return value of cgroup parameter"
         cmd = 'cgget -r %s.%s /%s' % (
             resource, param, self.name )
         return quietRun( cmd ).split()[ -1 ]
@@ -544,7 +551,7 @@ class CPULimitedHost( Host ):
         return pstr, qstr, period, quota
 
     # BL comment:
-    # This may not be the right API, 
+    # This may not be the right API,
     # since it doesn't specify CPU bandwidth in "absolute"
     # units the way link bandwidth is specified.
     # We should use MIPS or SPECINT or something instead.
@@ -578,7 +585,7 @@ class CPULimitedHost( Host ):
             self.chrt( prio=20 )
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
-    def config( self, cpu=None, sched=None, **params ):
+    def config( self, cpu=None, **params ):
         """cpu: desired overall system CPU fraction
            params: parameters for Node.config()"""
         r = Node.config( self, **params )
@@ -665,8 +672,8 @@ class UserSwitch( Switch ):
         pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
 
-    @staticmethod
-    def setup():
+    @classmethod
+    def setup( cls ):
         "Ensure any dependencies are loaded; if not, try to load them."
         if not os.path.exists( '/dev/net/tun' ):
             moduleDeps( add=TUN )
@@ -684,7 +691,7 @@ class UserSwitch( Switch ):
         if self.inNamespace:
             intfs = intfs[ :-1 ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name + ' -d ' + self.dpid + 
+            ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
             ' --no-slicing ' +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
@@ -716,8 +723,8 @@ class OVSLegacyKernelSwitch( Switch ):
                 " in the root namespace.\n" )
             exit( 1 )
 
-    @staticmethod
-    def setup():
+    @classmethod
+    def setup( cls ):
         "Ensure any dependencies are loaded; if not, try to load them."
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
             moduleName='Open vSwitch (openvswitch.org)')
@@ -741,7 +748,7 @@ class OVSLegacyKernelSwitch( Switch ):
         controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=secure ' + self.opts + 
+            ' --fail=secure ' + self.opts +
             ' --datapath-id=' + self.dpid +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
@@ -766,26 +773,34 @@ class OVSSwitch( Switch ):
         # dpid, which is a 64-bit numerical value used by
         # the openflow protocol.
         self.dp = name
-        
-    @staticmethod
-    def setup():
+        if self.inNamespace:
+            error( "OVSSwitch currently only works"
+                " in the root namespace.\n" )
+            exit( 1 )
+
+    @classmethod
+    def setup( cls ):
         "Make sure Open vSwitch is installed and working"
-        pathCheck( 'ovs-vsctl', 
+        pathCheck( 'ovs-vsctl',
             moduleName='Open vSwitch (openvswitch.org)')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
         out, err, exitcode = errRun( 'ovs-vsctl -t 1 show' )
         if exitcode:
-            error( out + err + 
+            error( out + err +
                    'ovs-vsctl exited with code %d\n' % exitcode +
                    '*** Error connecting to ovs-db with ovs-vsctl\n'
                    'Make sure that Open vSwitch is installed, '
                    'that ovsdb-server is running, and that\n'
                    '"ovs-vsctl show" works correctly.\n'
-                   'You may wish to try "service openvswitch-switch start".\n' )
+                   'You may wish to try '
+                   '"service openvswitch-switch start".\n' )
             exit( 1 )
 
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
+        if self.inNamespace:
+            raise Exception( 
+                'OVS kernel switch does not work in a namespace' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br ', self.dp )
         self.cmd( 'ovs-vsctl add-br', self.dp )
@@ -800,7 +815,8 @@ class OVSSwitch( Switch ):
             self.cmd( 'ovs-vsctl add-port', self.dp, intf )
             self.cmd( 'ifconfig', intf, 'up' )
         # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port ) for c in controllers ] )
+        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
+                            for c in controllers ] )
         self.cmd( 'ovs-vsctl set-controller', self.dp, clist )
 
     def stop( self ):

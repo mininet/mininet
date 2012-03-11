@@ -41,30 +41,35 @@ class Intf( object ):
         self.node = node
         self.name = name
         self.link = link
-        self.mac, self.ip = None, None
+        self.mac, self.ip, self.prefixLen = None, None, None
         # Add to node (and move ourselves if necessary )
         node.addIntf( self )
         self.config( **kwargs )
 
     def cmd( self, *args, **kwargs ):
+        "Run a command in our owning node"
         return self.node.cmd( *args, **kwargs )
 
     def ifconfig( self, *args ):
         "Configure ourselves using ifconfig"
         return self.cmd( 'ifconfig', self.name, *args )
 
-    def setIP( self, ipstr ):
+    def setIP( self, ipstr, prefixLen=None ):
         """Set our IP address"""
         # This is a sign that we should perhaps rethink our prefix
-        # mechanism
-        self.ip, self.prefixLen = ipstr.split( '/' )
-        return self.ifconfig( ipstr, 'up' )
+        # mechanism and/or the way we specify IP addresses
+        if '/' in ipstr:
+            self.ip, self.prefixLen = ipstr.split( '/' )
+            return self.ifconfig( ipstr, 'up' )
+        else:
+            self.ip, self.prefixLen = ipstr, prefixLen
+            return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
 
     def setMAC( self, macstr ):
         """Set the MAC address for an interface.
            macstr: MAC address as string"""
         self.mac = macstr
-        return ( self.ifconfig( 'down' ) + 
+        return ( self.ifconfig( 'down' ) +
                  self.ifconfig( 'hw', 'ether', macstr ) +
                  self.ifconfig( 'up' ) )
 
@@ -78,13 +83,13 @@ class Intf( object ):
         self.ip = ips[ 0 ] if ips else None
         return self.ip
 
-    def updateMAC( self, intf ):
+    def updateMAC( self ):
         "Return updated MAC address based on ifconfig"
         ifconfig = self.ifconfig()
         macs = self._macMatchRegex.findall( ifconfig )
         self.mac = macs[ 0 ] if macs else None
         return self.mac
-    
+
     def IP( self ):
         "Return IP address"
         return self.ip
@@ -93,9 +98,9 @@ class Intf( object ):
         "Return MAC address"
         return self.mac
 
-    def isUp( self, set=False ):
+    def isUp( self, setUp=False ):
         "Return whether interface is up"
-        if set:
+        if setUp:
             self.ifconfig( 'up' )
         return "UP" in self.ifconfig()
 
@@ -124,8 +129,8 @@ class Intf( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None, ifconfig=None, 
-                defaultRoute=None, up=True, **params):
+    def config( self, mac=None, ip=None, ifconfig=None,
+                up=True, **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address
            ip: IP address
@@ -153,7 +158,83 @@ class Intf( object ):
 
 
 class TCIntf( Intf ):
-    "Interface customized by tc (traffic control) utility"  
+    """Interface customized by tc (traffic control) utility
+       Allows specification of bandwidth limits (various methods)
+       as well as delay, loss and max queue length"""
+
+    def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
+                enable_ecn=False, enable_red=False ):
+        "Return tc commands to set bandwidth"
+
+        cmds, parent = [], ' root '
+
+        if bw and ( bw < 0 or bw > 1000 ):
+            error( 'Bandwidth', bw, 'is outside range 0..1000 Mbps\n' )
+
+        elif bw is not None:
+            # BL: this seems a bit brittle...
+            if ( speedup > 0 and
+                 self.node.name[0:2] == 'sw' ):
+                bw = speedup
+            if use_hfsc:
+                cmds = [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
+                          'class add dev %s parent 1:0 classid 1:1 hfsc sc '
+                          + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
+            elif use_tbf:
+                latency_us = 10 * 1500 * 8 / bw
+                cmds = ['%s qdisc add dev %s root handle 1: tbf ' +
+                        'rate %fMbit burst 15000 latency %fus' %
+                         (bw, latency_us) ]
+            else:
+                cmds = [ '%s qdisc add dev %s root handle 1:0 htb default 1',
+                         '%s class add dev %s parent 1:0 classid 1:1 htb ' +
+                         'rate %fMbit burst 15k' % bw ]
+            parent = ' parent 1:1 '
+
+            # ECN or RED
+            if enable_ecn:
+                cmds = [ '%s qdisc add dev %s' + parent +
+                          'handle 10: red limit 1000000 ' +
+                          'min 20000 max 25000 avpkt 1000 ' +
+                          'burst 20 ' +
+                          'bandwidth %fmbit probability 1 ecn' % bw ]
+                parent = ' parent 10: '
+            elif enable_red:
+                cmds = [ '%s qdisc add dev %s' + parent +
+                          'handle 10: red limit 1000000 ' +
+                          'min 20000 max 25000 avpkt 1000 ' +
+                          'burst 20 ' +
+                          'bandwidth %fmbit probability 1' % bw ]
+                parent = ' parent 10: '
+
+        return cmds, parent
+
+    @staticmethod
+    def delayCmds( parent, delay=None, loss=None,
+                   max_queue_size=None ):
+        "Internal method: return tc commands for delay and loss"
+        cmds = []
+        if delay and delay < 0:
+            error( 'Negative delay', delay, '\n' )
+        elif loss and ( loss < 0 or loss > 100 ):
+            error( 'Bad loss percentage', loss, '%%\n' )
+        else:
+            # Delay/loss/max queue size
+            netemargs = '%s%s%s' % (
+                'delay %s ' % delay if delay is not None else '',
+                'loss %d ' % loss if loss is not None else '',
+                'limit %d' % max_queue_size if max_queue_size is not None
+                 else '' )
+            if netemargs:
+                cmds = [ '%s qdisc add dev %s ' + parent + ' netem ' +
+                          netemargs ]
+        return cmds
+
+    def tc( self, cmd, tc='tc' ):
+        "Execute tc command for our interface"
+        c = cmd % (tc, self)  # Add in tc command and our name
+        debug(" *** executing command: %s\n" % c)
+        return self.cmd( c )
 
     def config( self, bw=None, delay=None, loss=None, disable_gro=True,
                 speedup=0, use_hfsc=False, use_tbf=False, enable_ecn=False,
@@ -162,106 +243,58 @@ class TCIntf( Intf ):
 
         result = Intf.config( self, **params)
 
-        # disable GRO
+        # Disable GRO
         if disable_gro:
             self.cmd( 'ethtool -K %s gro off' % self )
-        
-        if ( bw is None and not delay and not loss 
+
+        # Optimization: return if nothing else to configure
+        # Question: what happens if we want to reset things?
+        if ( bw is None and not delay and not loss
              and max_queue_size is None ):
             return
 
-        if bw and ( bw < 0 or bw > 1000 ):
-            error( 'Bandwidth', bw, 'is outside range 0..1000 Mbps\n' )
-            return
-            
-        if delay and delay < 0:
-            error( 'Negative delay', delay, '\n' )
-            return
+        # Clear existing configuration
+        cmds = [ '%s qdisc del dev %s root' ]
 
-        if loss and ( loss < 0 or loss > 100 ):
-            error( 'Bad loss percentage', loss, '%%\n' )
-            return
+        # Bandwidth limits via various methods
+        bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
+                                 use_hfsc=use_hfsc, use_tbf=use_tbf,
+                                 enable_ecn=enable_ecn,
+                                 enable_red=enable_red )
+        cmds += bwcmds
 
-        # Ugly but functional
+        # Delay/loss/max_queue_size using netem
+        cmds += self.delayCmds( delay=delay, loss=loss,
+                                 max_queue_size=max_queue_size,
+                                 parent=parent )
+
+        # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( ['%d%% loss' % loss ] if loss is not None else [] ) +
-                  ( [ 'ECN' ] if enable_ecn  else [ 'RED' ] if enable_red else [] ) )
+                  ( [ 'ECN' ] if enable_ecn  else [ 'RED' ]
+                    if enable_red else [] ) )
         info( '(' + ' '.join( stuff ) + ') ' )
 
-        cmds = [ '%s qdisc del dev %s root' ]
-
-        tc = 'tc' # was getCmd( 'tc' )
-
-        # Bandwidth control algorithms
-        if bw is None:
-            parent = ' root '
-        else:
-            parent = ' parent 1:1 '
-            # BL: hmm... this seems a bit brittle
-            if speedup > 0 and self.node.name[0:2] == 'sw':
-                bw = speedup
-            if use_hfsc:
-                cmds += [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
-                          '%s class add dev %s parent 1:0 classid 1:1 hfsc sc ' +
-                                'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
-            elif use_tbf:
-                latency_us = 10 * 1500 * 8 / bw
-                cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
-                        'rate %fMbit burst 15000 latency %fus' % (bw, latency_us) ]
-            else:
-                cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
-                         '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                         'rate %fMbit burst 15k' % bw ]
-            parent = ' parent 1:1 '
-
-            # ECN or RED
-            if enable_ecn:
-                cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit 1000000 '+
-                          'min 20000 max 25000 avpkt 1000 '+
-                          'burst 20 '+
-                          'bandwidth %fmbit probability 1 ecn' % bw ]
-                parent = ' parent 10: '
-            elif enable_red:
-                cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit 1000000 '+
-                          'min 20000 max 25000 avpkt 1000 '+
-                          'burst 20 '+
-                          'bandwidth %fmbit probability 1' % bw ]
-                parent = ' parent 10: '
-            
-        # Delay/loss/max queue size
-        netemargs = '%s%s%s' % (
-            'delay %s ' % delay if delay is not None else '',
-            'loss %d ' % loss if loss is not None else '',
-            'limit %d' % max_queue_size if max_queue_size is not None else '' )
-        if netemargs:
-            cmds += [ '%s qdisc add dev %s ' + parent + ' netem ' + 
-                      netemargs ]
-
-        # Execute all the commands in the container
+        # Execute all the commands in our node
         debug("at map stage w/cmds: %s\n" % cmds)
-        
-        def doConfigPort(s):
-            c = s % (tc, self)
-            debug(" *** executing command: %s\n" % c)
-            return self.cmd(c)
-        
-        tcoutputs = [ doConfigPort(cmd) for cmd in cmds ]
+        tcoutputs = [ self.tc(cmd) for cmd in cmds ]
         debug( "cmds:", cmds, '\n' )
         debug( "outputs:", tcoutputs, '\n' )
         result[ 'tcoutputs'] = tcoutputs
+
         return result
 
 
 class Link( object ):
-    
+
     """A basic link is just a veth pair.
        Other types of links could be tunnels, link emulators, etc.."""
 
-    def __init__( self, node1, node2, port1=None, port2=None, intfName1=None, intfName2=None,
-                  intf=Intf, cls1=None, cls2=None, params1={}, params2={} ):
+    def __init__( self, node1, node2, port1=None, port2=None,
+                  intfName1=None, intfName2=None,
+                  intf=Intf, cls1=None, cls2=None, params1=None,
+                  params2=None ):
         """Create veth link to another node, making two new interfaces.
            node1: first node
            node2: second node
@@ -284,13 +317,21 @@ class Link( object ):
             intfName1 = self.intfName( node1, port1 )
         if not intfName2:
             intfName2 = self.intfName( node2, port2 )
+
         self.makeIntfPair( intfName1, intfName2 )
+
         if not cls1:
             cls1 = intf
         if not cls2:
             cls2 = intf
+        if not params1:
+            params1 = {}
+        if not params2:
+            params2 = {}
+
         intf1 = cls1( name=intfName1, node=node1, link=self, **params1  )
         intf2 = cls2( name=intfName2, node=node2, link=self, **params2 )
+
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
 
@@ -304,7 +345,8 @@ class Link( object ):
         """Create pair of interfaces
            intf1: name of interface 1
            intf2: name of interface 2
-           (override this class method [and possibly delete()] to change link type)"""
+           (override this class method [and possibly delete()]
+           to change link type)"""
         makeIntfPair( intf1, intf2  )
 
     def delete( self ):

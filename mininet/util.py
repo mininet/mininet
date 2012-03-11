@@ -47,10 +47,11 @@ def oldQuietRun( *cmd ):
             break
     return out
 
+
 # This is a bit complicated, but it enables us to
 # monitor commount output as it is happening
 
-def errRun( *cmd, **kwargs  ):
+def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
        stderr: STDOUT to merge stderr with stdout
@@ -80,7 +81,10 @@ def errRun( *cmd, **kwargs  ):
         poller.register( popen.stderr, POLLIN )
     while True:
         readable = poller.poll()
+        # Tell pylint to ignore unused variable event
+        # pylint: disable-msg=W0612
         for fd, event in readable:
+            # pylint: enable-msg=W0612
             f = fdtofile[ fd ]
             data = f.read( 1024 )
             if echo:
@@ -91,7 +95,7 @@ def errRun( *cmd, **kwargs  ):
                 err += data
         returncode = popen.poll()
         if returncode is not None:
-           break
+            break
     return out, err, returncode
 
 def errFail( *cmd, **kwargs ):
@@ -186,13 +190,13 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
 
 # IP and Mac address formatting and parsing
 
-def _colonHex( val, bytes ):
+def _colonHex( val, bytecount ):
     """Generate colon-hex string.
        val: input as unsigned int
-       bytes: number of bytes to convert
+       bytescount: number of bytes to convert
        returns: chStr colon-hex string"""
     pieces = []
-    for i in range( bytes - 1, -1, -1 ):
+    for i in range( bytecount - 1, -1, -1 ):
         piece = ( ( 0xff << ( i * 8 ) ) & val ) >> ( i * 8 )
         pieces.append( '%02x' % piece )
     chStr = ':'.join( pieces )
@@ -204,14 +208,14 @@ def macColonHex( mac ):
        returns: macStr MAC colon-hex string"""
     return _colonHex( mac, 6 )
 
-def ipStr( ip, defaultNet=10 ):
+def ipStr( ip ):
     """Generate IP address string from an unsigned int.
        ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
        returns: ip address string w.x.y.z, or 10.x.y.z if w==0"""
     w = ( ip >> 24 ) & 0xff
     w = 10 if w == 0 else w
-    x = ( ip  >> 16 ) & 0xff
-    y = ( ip  >> 8 ) & 0xff
+    x = ( ip >> 16 ) & 0xff
+    y = ( ip >> 8 ) & 0xff
     z = ip & 0xff
     return "%i.%i.%i.%i" % ( w, x, y, z )
 
@@ -270,6 +274,7 @@ def fixLimits():
 def natural( text ):
     "To sort sanely/alphabetically: sorted( l, key=natural )"
     def num( s ):
+        "Convert text segment to int if necessary"
         return int( s ) if s.isdigit() else text
     return [  num( s ) for s in re.split( r'(\d+)', text ) ]
 
@@ -286,8 +291,7 @@ def numCores():
 def custom( cls, **params ):
     "Returns customized constructor for class cls."
     def customized( *args, **kwargs):
+        "Customized constructor"
         kwargs.update( params )
         return cls( *args, **kwargs )
     return customized
-
-    

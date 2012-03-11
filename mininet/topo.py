@@ -16,7 +16,7 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
-from util import netParse, ipStr
+from mininet.util import netParse, ipStr
 
 class NodeID(object):
     '''Topo node identifier.'''
@@ -116,7 +116,7 @@ class Topo(object):
        per-node/link classes and parameters
        per-topo classes
        per-network classes"""
-    
+
     def __init__(self, node=None, switch=None, link=None ):
         """Create Topo object.
            node: default node/host class (optional)
@@ -364,7 +364,7 @@ class Topo(object):
         # BL: may wish to rethink this or just use dicts..
         return self.node_info[ dpid ]
 
-    
+
 class SingleSwitchTopo(Topo):
     '''Single switch connected to k hosts.'''
 
