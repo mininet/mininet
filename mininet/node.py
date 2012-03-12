@@ -54,7 +54,7 @@ from mininet.log import info, error, warn, debug
 from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
 from mininet.util import numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
-from mininet.link import Link
+from mininet.link import Link, Intf
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -316,16 +316,19 @@ class Node( object ):
         else:
             return intf
 
-    def linksTo( self, node):
-        "Return [ link1, link2...] for all links from self to node."
+    def connectionsTo( self, node):
+        "Return [ intf1, intf2... ] for all intfs that connect self to node."
         # We could optimize this if it is important
-        links = []
-        for intf in self.intfs:
+        connections = []
+        for intf in self.intfList():
             link = intf.link
-            nodes = ( link.intf1.node, link.intf2.node )
-            if self in nodes and node in nodes:
-                links.append( link )
-        return links
+            if link:
+                node1, node2 = link.intf1.node, link.intf2.node
+                if node1 == self and node2 == node:
+                    connections += [ ( intf, link.intf2 ) ]
+                elif node1 == node and node2 == self:
+                    connections += [ ( intf, link.intf1 ) ]
+        return connections
 
     def deleteIntfs( self ):
         "Delete all of our interfaces."
@@ -418,8 +421,8 @@ class Node( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None, ifconfig=None,
-                defaultRoute=None, **_params ):
+    def config( self, mac=None, ip=None,
+                defaultRoute=None, lo='up', **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address for default interface
            ip: IP address for default interface
@@ -432,8 +435,9 @@ class Node( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
-        self.setParam( r, 'ifconfig', ifconfig=ifconfig )
         self.setParam( r, 'defaultRoute', defaultRoute=defaultRoute )
+        # This should be examined
+        self.cmd( 'ifconfig lo ' + lo )
         return r
 
     def configDefault( self, **moreParams ):
@@ -457,9 +461,16 @@ class Node( object ):
         "The names of our interfaces sorted by port number"
         return [ str( i ) for i in self.intfList() ]
 
+    def __repr__( self ):
+        "More informative string representation"
+        intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
+                        for i in self.intfList() ] ) )
+        return '<%s %s: %s pid=%s> ' % (
+                self.__class__.__name__, self.name, intfs, self.pid )
+
     def __str__( self ):
-        return '%s: IP=%s intfs=%s pid=%s' % (
-            self.name, self.IP(), ','.join( self.intfNames() ), self.pid )
+        "Abbreviated string representation"
+        return self.name
 
     # Automatic class setup support
 
@@ -634,9 +645,8 @@ class Switch( Node ):
         self.dpid = dpid if dpid else self.defaultDpid()
         self.opts = opts
         self.listenPort = listenPort
-        if self.listenPort:
-            self.opts += ' --listen=ptcp:%i ' % self.listenPort
-        self.controlIntf = None
+        if not self.inNamespace:
+            self.controlIntf = Intf( 'lo', self )
 
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
@@ -646,11 +656,11 @@ class Switch( Node ):
         return dpid
 
     def defaultIntf( self ):
-        "Return control interface, if any"
-        if not self.inNamespace:
-            error( "error: tried to access control interface of "
-                   " switch %s in root namespace" % self.name )
-        return self.controlIntf
+        "Return control interface"
+        if self.controlIntf:
+            return self.controlIntf
+        else:
+            return Node.defaultIntf( self )
 
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
@@ -662,6 +672,13 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
 
+    def __repr__( self ):
+        "More informative string representation"
+        intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
+                        for i in self.intfList() ] ) )
+        return '<%s %s: %s pid=%s> ' % (
+                self.__class__.__name__, self.name, intfs, self.pid )
+
 class UserSwitch( Switch ):
     "User-space switch."
 
@@ -671,12 +688,21 @@ class UserSwitch( Switch ):
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
             moduleName='the OpenFlow reference user switch (openflow.org)' )
+        if self.listenPort:
+            self.opts += ' --listen=ptcp:%i ' % self.listenPort
 
     @classmethod
     def setup( cls ):
         "Ensure any dependencies are loaded; if not, try to load them."
         if not os.path.exists( '/dev/net/tun' ):
             moduleDeps( add=TUN )
+
+    def dpctl( self, *args ):
+        "Run dpctl command"
+        if not self.listenPort:
+            return "can't run dpctl w/no passive listening port"
+        return self.cmdPrint( 'dpctl ' + ' '.join( args ) +
+                         ' tcp:127.0.0.1:%i' % self.listenPort )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
@@ -736,7 +762,7 @@ class OVSLegacyKernelSwitch( Switch ):
         quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
-        quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'ovs-dpctl add-dp ' + self.dp )
         ports = sorted( self.ports.values() )
         if len( ports ) != ports[ -1 ] + 1 - self.portBase:
@@ -768,15 +794,6 @@ class OVSSwitch( Switch ):
            name: name for switch
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **params )
-        # self.dp is the text name for the datapath that
-        # we use for ovs-vsctl. This is different from the
-        # dpid, which is a 64-bit numerical value used by
-        # the openflow protocol.
-        self.dp = name
-        if self.inNamespace:
-            error( "OVSSwitch currently only works"
-                " in the root namespace.\n" )
-            exit( 1 )
 
     @classmethod
     def setup( cls ):
@@ -796,32 +813,47 @@ class OVSSwitch( Switch ):
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
 
+    def dpctl( self, *args ):
+        "Run ovs-dpctl command"
+        return self.cmd( 'ovs-dpctl', args[ 0 ], self, *args[ 1: ] )
+
+    def attach( self, intf ):
+        "Connect a data port"
+        self.cmd( 'ovs-vsctl add-port', self, intf )
+        self.cmd( 'ifconfig', intf, 'up' )
+
+    def detach( self, intf ):
+        "Disconnect a data port"
+        self.cmd( 'ovs-vsctl del-port', self, intf )
+
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
-            raise Exception( 
+            raise Exception(
                 'OVS kernel switch does not work in a namespace' )
+        # We should probably call config instead, but this
+        # requires some rethinking...
+        self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
-        self.cmd( 'ovs-vsctl del-br ', self.dp )
-        self.cmd( 'ovs-vsctl add-br', self.dp )
-        self.cmd( 'ovs-vsctl set-fail-mode', self.dp, 'secure' )
-        ports = sorted( self.ports.values() )
-        intfs = [ self.intfs[ port ] for port in ports ]
+        self.cmd( 'ovs-vsctl del-br', self )
+        self.cmd( 'ovs-vsctl add-br', self )
+        self.cmd( 'ovs-vsctl set-fail-mode', self, 'secure' )
         # XXX: Ugly check - we should probably fix this!
+        ports = sorted( self.ports.values() )
         if ports and ( len( ports ) != ports[ -1 ] + 1 - self.portBase ):
             raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
-        for intf in intfs:
-            self.cmd( 'ovs-vsctl add-port', self.dp, intf )
-            self.cmd( 'ifconfig', intf, 'up' )
+        for intf in self.intfList():
+            if not intf.IP():
+                self.attach( intf )
         # Add controllers
         clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
                             for c in controllers ] )
-        self.cmd( 'ovs-vsctl set-controller', self.dp, clist )
+        self.cmd( 'ovs-vsctl set-controller', self, clist )
 
     def stop( self ):
         "Terminate OVS switch."
-        self.cmd( 'ovs-vsctl del-br', self.dp )
+        self.cmd( 'ovs-vsctl del-br', self )
 
 OVSKernelSwitch = OVSSwitch
 
@@ -864,6 +896,12 @@ class Controller( Node ):
         else:
             ip = self.ip
         return ip
+
+    def __repr__( self ):
+        "More informative string representation"
+        return '<%s %s: %s:%s pid=%s> ' % (
+                self.__class__.__name__, self.name,
+                self.IP(), self.port, self.pid )
 
 
 class OVSController( Controller ):

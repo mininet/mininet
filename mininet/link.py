@@ -104,6 +104,14 @@ class Intf( object ):
             self.ifconfig( 'up' )
         return "UP" in self.ifconfig()
 
+    def rename( self, newname ):
+        "Rename interface"
+        self.ifconfig( 'down' )
+        result = self.cmd( 'ip link set', self.name, 'name', newname )
+        self.name = newname
+        self.ifconfig( 'up' )
+        return result
+
     # The reason why we configure things in this way is so
     # That the parameters can be listed and documented in
     # the config method.
@@ -145,6 +153,8 @@ class Intf( object ):
         self.setParam( r, 'setIP', ip=ip )
         self.setParam( r, 'isUp', up=up )
         self.setParam( r, 'ifconfig', ifconfig=ifconfig )
+        self.updateIP()
+        self.updateMAC()
         return r
 
     def delete( self ):

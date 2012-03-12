@@ -484,10 +484,11 @@ class Mininet( object ):
         servout = ''
         while server.lastPid is None:
             servout += server.monitor()
-        while 'Connected' not in client.cmd(
-            'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
-            output('waiting for iperf to start up...')
-            sleep(.5)
+        if l4Type == 'TCP':
+            while 'Connected' not in client.cmd(
+                'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
+                output('waiting for iperf to start up...')
+                sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
         debug( 'Client output: %s\n' % cliout )
@@ -512,15 +513,18 @@ class Mininet( object ):
         elif dst not in self.nameToNode:
             error( 'dst not in network: %s\n' % dst )
         else:
-            srcNode, dstNode = self.nameToNode[ src ], self.nameToNode[ dst ]
-            connections = srcNode.connectionsTo( dstNode )
+            if type( src ) is str:
+                src = self.nameToNode[ src ]
+            if type( dst ) is str:
+                dst = self.nameToNode[ dst ]
+            connections = src.connectionsTo( dst )
             if len( connections ) == 0:
                 error( 'src and dst not connected: %s %s\n' % ( src, dst) )
             for srcIntf, dstIntf in connections:
-                result = srcNode.cmd( 'ifconfig', srcIntf, status )
+                result = srcIntf.ifconfig( status )
                 if result:
                     error( 'link src status change failed: %s\n' % result )
-                result = dstNode.cmd( 'ifconfig', dstIntf, status )
+                result = dstIntf.ifconfig( status )
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 

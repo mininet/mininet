@@ -109,15 +109,20 @@ class CLI( Cmd ):
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
+    @staticmethod
+    def dump_connections( node ):
+        "Helper method: dump connections to node"
+        for intf in node.intfList():
+            if intf.link:
+                intfs = [ intf.link.intf1, intf.link.intf2 ]
+                intfs.remove( intf )
+                output( ' %s' % intfs[ 0 ].node )
+
     def do_net( self, _line ):
         "List network connections."
-        for switch in self.mn.switches:
-            output( switch.name, '<->' )
-            for intf in switch.intfs.values():
-                # Ugly, but pylint wants it
-                name = switch.connection.get( intf,
-                    ( None, 'Unknown ' ) )[ 1 ]
-                output( ' %s' % name )
+        for node in self.nodelist:
+            output( node.name, '<->' )
+            self.dump_connections( node )
             output( '\n' )
 
     def do_sh( self, line ):
@@ -195,12 +200,12 @@ class CLI( Cmd ):
         "List interfaces."
         for node in self.nodelist:
             output( '%s: %s\n' %
-                ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
+                ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
         "Dump node info."
         for node in self.nodelist:
-            output( '%s\n' % node )
+            output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
         "Bring link(s) between two nodes up or down."
@@ -275,16 +280,12 @@ class CLI( Cmd ):
     def do_dpctl( self, line ):
         "Run dpctl command on all switches."
         args = line.split()
-        if len(args) == 0:
+        if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
-            return
-        if not self.mn.listenPort:
-            error( "can't run dpctl w/no passive listening port\n")
             return
         for sw in self.mn.switches:
             output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
-            output( sw.cmd( 'dpctl ' + ' '.join(args) +
-                            ' tcp:127.0.0.1:%i' % sw.listenPort ) )
+            output( sw.dpctl( *args ) )
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
@@ -293,6 +294,8 @@ class CLI( Cmd ):
         corresponding IP addrs."""
 
         first, args, line = self.parseline( line )
+        if not args:
+            return
         if args and len(args) > 0 and args[ -1 ] == '\n':
             args = args[ :-1 ]
         rest = args.split( ' ' )

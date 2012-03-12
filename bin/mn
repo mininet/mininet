@@ -208,7 +208,7 @@ class MininetRunner( object ):
                         'remote controller' )
         opts.add_option( '--innamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
-        opts.add_option( '--listenport', type='int', default=6634,
+        opts.add_option( '--listenport', type='int', default=6635,
                          help='base port for passive switch listening' )
         opts.add_option( '--nolistenport', action='store_true',
                         default=False, help="don't use passive listening port")
