@@ -33,7 +33,7 @@ class Intf( object ):
 
     "Basic interface object that can configure itself."
 
-    def __init__( self, name, node=None, link=None, **kwargs ):
+    def __init__( self, name, node=None, port=None, link=None, **kwargs ):
         """name: interface name (e.g. h1-eth0)
            node: owning node (where this intf most likely lives)
            link: parent link if we're part of a link
@@ -43,7 +43,7 @@ class Intf( object ):
         self.link = link
         self.mac, self.ip, self.prefixLen = None, None, None
         # Add to node (and move ourselves if necessary )
-        node.addIntf( self )
+        node.addIntf( self, port=port )
         self.config( **kwargs )
 
     def cmd( self, *args, **kwargs ):
@@ -162,6 +162,9 @@ class Intf( object ):
         self.cmd( 'ip link del ' + self.name )
         # Does it help to sleep to let things run?
         sleep( 0.001 )
+
+    def __repr__( self ):
+        return '<%s %s>' % ( self.__class__.__name__, self.name )
 
     def __str__( self ):
         return self.name
@@ -339,8 +342,10 @@ class Link( object ):
         if not params2:
             params2 = {}
 
-        intf1 = cls1( name=intfName1, node=node1, link=self, **params1  )
-        intf2 = cls2( name=intfName2, node=node2, link=self, **params2 )
+        intf1 = cls1( name=intfName1, node=node1, port=port1,
+                      link=self, **params1  )
+        intf2 = cls2( name=intfName2, node=node2, port=port2,
+                      link=self, **params2 )
 
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
