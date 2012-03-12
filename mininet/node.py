@@ -646,7 +646,7 @@ class Switch( Node ):
         self.opts = opts
         self.listenPort = listenPort
         if not self.inNamespace:
-            self.controlIntf = Intf( 'lo', self )
+            self.controlIntf = Intf( 'lo', self, port=0 )
 
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
@@ -700,8 +700,8 @@ class UserSwitch( Switch ):
     def dpctl( self, *args ):
         "Run dpctl command"
         if not self.listenPort:
-            return "can't run dpctl w/no passive listening port"
-        return self.cmdPrint( 'dpctl ' + ' '.join( args ) +
+            return "can't run dpctl without passive listening port"
+        return self.cmd( 'dpctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
 
     def start( self, controllers ):
@@ -712,10 +712,7 @@ class UserSwitch( Switch ):
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
-        ports = sorted( self.ports.values() )
-        intfs = [ str( self.intfs[ p ] ) for p in ports ]
-        if self.inNamespace:
-            intfs = intfs[ :-1 ]
+        intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
             ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
             ' --no-slicing ' +
@@ -764,11 +761,7 @@ class OVSLegacyKernelSwitch( Switch ):
         # then create a new one monitoring the given interfaces
         self.cmd( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'ovs-dpctl add-dp ' + self.dp )
-        ports = sorted( self.ports.values() )
-        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
-            raise Exception( 'only contiguous, one-indexed port ranges '
-                            'supported: %s' % self.intfs )
-        intfs = [ self.intfs[ port ] for port in ports ]
+        intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         controller = controllers[ 0 ]
@@ -838,11 +831,6 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl del-br', self )
         self.cmd( 'ovs-vsctl add-br', self )
         self.cmd( 'ovs-vsctl set-fail-mode', self, 'secure' )
-        # XXX: Ugly check - we should probably fix this!
-        ports = sorted( self.ports.values() )
-        if ports and ( len( ports ) != ports[ -1 ] + 1 - self.portBase ):
-            raise Exception( 'only contiguous, one-indexed port ranges '
-                            'supported: %s' % self.intfs )
         for intf in self.intfList():
             if not intf.IP():
                 self.attach( intf )
