@@ -1,0 +1,298 @@
+From 5c9610ffb88c89b0f36359ad3c7547831482a3ff Mon Sep 17 00:00:00 2001
+From: Bob Lantz <rlantz@cs.stanford.edu>
+Date: Fri, 3 Feb 2012 14:48:58 -0800
+Subject: [PATCH] OpenFlow tutorial port nox-destiny.
+
+---
+ src/nox/coreapps/examples/Makefile.am            |    2 +-
+ src/nox/coreapps/examples/tutorial/Makefile.am   |   25 ++++
+ src/nox/coreapps/examples/tutorial/meta.json     |   12 ++
+ src/nox/coreapps/examples/tutorial/pytutorial.py |   67 +++++++++++
+ src/nox/coreapps/examples/tutorial/tutorial.cc   |  134 ++++++++++++++++++++++
+ 5 files changed, 239 insertions(+), 1 deletions(-)
+ create mode 100644 src/nox/coreapps/examples/tutorial/Makefile.am
+ create mode 100644 src/nox/coreapps/examples/tutorial/__init__.py
+ create mode 100644 src/nox/coreapps/examples/tutorial/meta.json
+ create mode 100644 src/nox/coreapps/examples/tutorial/pytutorial.py
+ create mode 100644 src/nox/coreapps/examples/tutorial/tutorial.cc
+
+diff --git a/src/nox/coreapps/examples/Makefile.am b/src/nox/coreapps/examples/Makefile.am
+index 126f32e..1a0458c 100644
+--- a/src/nox/coreapps/examples/Makefile.am
++++ b/src/nox/coreapps/examples/Makefile.am
+@@ -1,6 +1,6 @@
+ include ../../../Make.vars 
+ 
+-SUBDIRS = t
++SUBDIRS = tutorial t
+ 
+ EXTRA_DIST =\
+ 	meta.json\
+diff --git a/src/nox/coreapps/examples/tutorial/Makefile.am b/src/nox/coreapps/examples/tutorial/Makefile.am
+new file mode 100644
+index 0000000..51cf921
+--- /dev/null
++++ b/src/nox/coreapps/examples/tutorial/Makefile.am
+@@ -0,0 +1,25 @@
++include ../../../../Make.vars 
++
++EXTRA_DIST =\
++	meta.xml \
++	__init__.py \
++	pytutorial.py
++
++if PY_ENABLED
++AM_CPPFLAGS += $(PYTHON_CPPFLAGS)
++endif # PY_ENABLED 
++
++pkglib_LTLIBRARIES =		\
++	tutorial.la
++
++tutorial_la_CPPFLAGS = $(AM_CPPFLAGS) -I $(top_srcdir)/src/nox -I $(top_srcdir)/src/nox/coreapps/
++tutorial_la_SOURCES = tutorial.cc
++tutorial_la_LDFLAGS = -module -export-dynamic
++
++NOX_RUNTIMEFILES = meta.json \
++	__init__.py \
++	pytutorial.py
++
++all-local: nox-all-local
++clean-local: nox-clean-local 
++install-exec-hook: nox-install-local
+diff --git a/src/nox/coreapps/examples/tutorial/__init__.py b/src/nox/coreapps/examples/tutorial/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/src/nox/coreapps/examples/tutorial/meta.json b/src/nox/coreapps/examples/tutorial/meta.json
+new file mode 100644
+index 0000000..7a9f227
+--- /dev/null
++++ b/src/nox/coreapps/examples/tutorial/meta.json
+@@ -0,0 +1,12 @@
++{
++    "components": [
++        {
++            "name": "tutorial",
++            "library": "tutorial" 
++        },
++        {
++            "name": "pytutorial",
++            "python": "nox.coreapps.examples.tutorial.pytutorial" 
++        }
++    ]
++}
+diff --git a/src/nox/coreapps/examples/tutorial/pytutorial.py b/src/nox/coreapps/examples/tutorial/pytutorial.py
+new file mode 100644
+index 0000000..1e21c0b
+--- /dev/null
++++ b/src/nox/coreapps/examples/tutorial/pytutorial.py
+@@ -0,0 +1,67 @@
++# Tutorial Controller
++# Starts as a hub, and your job is to turn this into a learning switch.
++
++import logging
++
++from nox.lib.core import *
++import nox.lib.openflow as openflow
++from nox.lib.packet.ethernet import ethernet
++from nox.lib.packet.packet_utils import mac_to_str, mac_to_int
++
++log = logging.getLogger('nox.coreapps.tutorial.pytutorial')
++
++
++class pytutorial(Component):
++
++    def __init__(self, ctxt):
++        Component.__init__(self, ctxt)
++        # Use this table to store MAC addresses in the format of your choice;
++        # Functions already imported, including mac_to_str, and mac_to_int,
++        # should prove useful for converting the byte array provided by NOX
++        # for packet MAC destination fields.
++        # This table is initialized to empty when your module starts up.
++        self.mac_to_port = {} # key: MAC addr; value: port
++
++    def learn_and_forward(self, dpid, inport, packet, buf, bufid):
++        """Learn MAC src port mapping, then flood or send unicast."""
++        
++        # Initial hub behavior: flood packet out everything but input port.
++        # Comment out the line below when starting the exercise.
++        self.send_openflow(dpid, bufid, buf, openflow.OFPP_FLOOD, inport)
++
++        # Starter psuedocode for learning switch exercise below: you'll need to
++        # replace each pseudocode line with more specific Python code.
++
++        # Learn the port for the source MAC
++        #self.mac_to_port = <fill in>
++        #if (destination MAC of the packet is known):
++            # Send unicast packet to known output port
++            #self.send_openflow( <fill in params> )
++            # Later, only after learning controller works: 
++            # push down flow entry and remove the send_openflow command above.
++            #self.install_datapath_flow( <fill in params> )
++        #else:
++            #flood packet out everything but the input port
++            #self.send_openflow(dpid, bufid, buf, openflow.OFPP_FLOOD, inport)
++
++    def packet_in_callback(self, dpid, inport, reason, len, bufid, packet):
++        """Packet-in handler""" 
++        if not packet.parsed:
++            log.debug('Ignoring incomplete packet')
++        else:
++            self.learn_and_forward(dpid, inport, packet, packet.arr, bufid)    
++
++        return CONTINUE
++
++    def install(self):
++        self.register_for_packet_in(self.packet_in_callback)
++    
++    def getInterface(self):
++        return str(pytutorial)
++
++def getFactory():
++    class Factory:
++        def instance(self, ctxt):
++            return pytutorial(ctxt)
++
++    return Factory()
+diff --git a/src/nox/coreapps/examples/tutorial/tutorial.cc b/src/nox/coreapps/examples/tutorial/tutorial.cc
+new file mode 100644
+index 0000000..e7240cc
+--- /dev/null
++++ b/src/nox/coreapps/examples/tutorial/tutorial.cc
+@@ -0,0 +1,134 @@
++#include "component.hh"
++#include "config.h"
++#include "packet-in.hh"
++#include "flow.hh"
++#include "assert.hh"
++#include "netinet++/ethernetaddr.hh"
++#include "netinet++/ethernet.hh"
++#include <boost/shared_array.hpp>
++#include <boost/bind.hpp>
++#ifdef LOG4CXX_ENABLED
++#include <boost/format.hpp>
++#include "log4cxx/logger.h"
++#else
++#include "vlog.hh"
++#endif
++
++using namespace std;
++using namespace vigil;
++using namespace vigil::container;
++
++namespace
++{
++  static Vlog_module lg("tutorial");
++ 
++  /** Learning switch.
++   */
++  class tutorial
++    : public Component 
++  {
++  public:
++    /** Constructor.
++     */
++    tutorial(const Context* c, const json_object* node)
++      : Component(c) 
++    { }
++    
++    /** Configuration.
++     * Add handler for packet-in event.
++     */
++    void configure(const Configuration*) 
++    {
++      register_handler<Packet_in_event>
++	(boost::bind(&tutorial::handle, this, _1));
++    }
++    
++    /** Just simply install.
++     */
++    void install() 
++    {
++      lg.dbg(" Install called ");
++    }
++
++    /** Function to setup flow.
++     */
++    void setup_flow(Flow& flow, datapathid datapath_id , 
++		    uint32_t buffer_id, uint16_t out_port)
++    {
++      ofp_flow_mod* ofm;
++      size_t size = sizeof *ofm + sizeof(ofp_action_output);
++      boost::shared_array<char> raw_of(new char[size]);
++      ofm = (ofp_flow_mod*) raw_of.get();
++
++      ofm->header.version = OFP_VERSION;
++      ofm->header.type = OFPT_FLOW_MOD;
++      ofm->header.length = htons(size);
++      ofm->match.wildcards = htonl(0);
++      ofm->match.in_port = htons(flow.in_port);
++      ofm->match.dl_vlan = flow.dl_vlan;
++      memcpy(ofm->match.dl_src, flow.dl_src.octet, sizeof ofm->match.dl_src);
++      memcpy(ofm->match.dl_dst, flow.dl_dst.octet, sizeof ofm->match.dl_dst);
++      ofm->match.dl_type = flow.dl_type;
++      ofm->match.nw_src = flow.nw_src;
++      ofm->match.nw_dst = flow.nw_dst;
++      ofm->match.nw_proto = flow.nw_proto;
++      ofm->match.tp_src = flow.tp_src;
++      ofm->match.tp_dst = flow.tp_dst;
++      ofm->command = htons(OFPFC_ADD);
++      ofm->buffer_id = htonl(buffer_id);
++      ofm->idle_timeout = htons(5);
++      ofm->hard_timeout = htons(OFP_FLOW_PERMANENT);
++      ofm->priority = htons(OFP_DEFAULT_PRIORITY);
++      ofp_action_output& action = *((ofp_action_output*)ofm->actions);
++      memset(&action, 0, sizeof(ofp_action_output));
++      action.type = htons(OFPAT_OUTPUT);
++      action.len = htons(sizeof(ofp_action_output));
++      action.max_len = htons(0);
++      action.port = htons(out_port);
++      send_openflow_command(datapath_id, &ofm->header, true);
++    }
++
++    /** Function to handle packets.
++     * @param datapath_id datapath id of switch
++     * @param in_port port packet is received
++     * @param buffer_id buffer id of packet
++     * @param source source mac address in host order
++     * @param destination destination mac address in host order
++     */
++    void handle_packet(datapathid datapath_id, uint16_t in_port, uint32_t buffer_id, 
++		       uint64_t source, uint64_t destination)
++    {
++      send_openflow_packet(datapath_id, buffer_id, OFPP_FLOOD,
++			   in_port, true);
++    }
++
++    /** Packet-on handler.
++     */
++    Disposition handle(const Event& e)
++    {
++      const Packet_in_event& pi = assert_cast<const Packet_in_event&>(e);
++      uint32_t buffer_id = pi.buffer_id;
++      Flow flow(pi.in_port, *pi.get_buffer());
++
++      // drop LLDP packets
++      if (flow.dl_type == ethernet::LLDP)
++        return CONTINUE;
++
++      // pass handle of unicast packet, else flood
++      if (!flow.dl_src.is_multicast())
++	handle_packet(pi.datapath_id, pi.in_port, buffer_id, 
++		      flow.dl_src.hb_long(), flow.dl_dst.hb_long());
++      else
++	send_openflow_packet(pi.datapath_id, buffer_id, OFPP_FLOOD,
++			     pi.in_port, true);
++      
++      return CONTINUE;
++    }
++    
++  private:
++};
++
++REGISTER_COMPONENT(container::Simple_component_factory<tutorial>,
++                   tutorial);
++
++} // unnamed namespace
+-- 
+1.7.5.4
+

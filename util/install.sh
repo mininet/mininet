@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mininet install script for Debian
+# Mininet install script for Ubuntu (and Debian Lenny)
 # Brandon Heller (brandonh@stanford.edu)
 
 # Fail on error
@@ -11,8 +11,22 @@ set -o nounset
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
+# Attempt to identify Linux release
+
+DIST=Unknown
+RELEASE=Unknown
+CODENAME=Unknown
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
+if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
+    sudo apt-get install -y lsb-release
+fi
+if which lsb_release &> /dev/null; then
+    DIST=`lsb_release -is`
+    RELEASE=`lsb_release -rs`
+    CODENAME=`lsb_release -cs`
+fi
+echo "Detected Linux distribution: $DIST $RELEASE $CODENAME"
 
 # Kernel params
 
@@ -21,79 +35,86 @@ if [ "$DIST" = "Debian" ]; then
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
     KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
 elif [ "$DIST" = "Ubuntu" ]; then
-    KERNEL_NAME=`uname -r`
+    if [ "$RELEASE" = "10.04" ]; then
+        KERNEL_NAME='3.0.0-15-generic'
+    else
+        KERNEL_NAME=`uname -r`
+    fi
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
 else
     echo "Install.sh currently only supports Ubuntu and Debian."
     exit 1
 fi
 
-echo "Detected Linux distribution: $DIST"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-OVS_RELEASE=v1.1.1
-OVS_DIR=~/openvswitch
-OVS_KMOD=openvswitch_mod.ko
+OVS_RELEASE=v1.2.2
+OVS_SRC=~/openvswitch
+OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
+OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
 function kernel {
-	echo "Install Mininet-compatible kernel"
-	sudo apt-get update
-    
+    echo "Install Mininet-compatible kernel if necessary"
+    sudo apt-get update
     if [ "$DIST" = "Debian" ]; then
-    
-	# The easy approach: download pre-built linux-image and linux-headers packages:
-	wget -c $KERNEL_LOC/$KERNEL_HEADERS
-	wget -c $KERNEL_LOC/$KERNEL_IMAGE
+        # The easy approach: download pre-built linux-image and linux-headers packages:
+        wget -c $KERNEL_LOC/$KERNEL_HEADERS
+        wget -c $KERNEL_LOC/$KERNEL_IMAGE
 
-	#Install custom linux headers and image:
-	sudo dpkg -i $KERNEL_IMAGE $KERNEL_HEADERS
+        # Install custom linux headers and image:
+        sudo dpkg -i $KERNEL_IMAGE $KERNEL_HEADERS
 
-	# The next two steps are to work around a bug in newer versions of
-	# kernel-package, which fails to add initrd images with the latest kernels.
-	# See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=525032
-	# Generate initrd image if the .deb didn't install it:
-	if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
-		sudo update-initramfs -c -k ${KERNEL_NAME}
-	fi
-	
-	# Ensure /boot/grub/menu.lst boots with initrd image:
-	sudo update-grub
+        # The next two steps are to work around a bug in newer versions of
+        # kernel-package, which fails to add initrd images with the latest kernels.
+        # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=525032
+        # Generate initrd image if the .deb didn't install it:
+        if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
+            sudo update-initramfs -c -k ${KERNEL_NAME}
+        fi
+        
+        # Ensure /boot/grub/menu.lst boots with initrd image:
+        sudo update-grub
 
-	# The default should be the new kernel. Otherwise, you may need to modify /boot/grub/menu.lst to set the default to the entry corresponding to the kernel you just installed.
+        # The default should be the new kernel. Otherwise, you may need to modify 
+        # /boot/grub/menu.lst to set the default to the entry corresponding to the
+        # kernel you just installed.
     fi
-
+    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
+        sudo apt-get -y install linux-image-$KERNEL_NAME
+    fi
 }
 
 function kernel_clean {
-	echo "Cleaning kernel..."
+    echo "Cleaning kernel..."
 
-	# To save disk space, remove previous kernel
-	sudo apt-get -y remove $KERNEL_IMAGE_OLD
+    # To save disk space, remove previous kernel
+    sudo apt-get -y remove $KERNEL_IMAGE_OLD
 
-	#Also remove downloaded packages:
-	rm -f ~/linux-headers-* ~/linux-image-*
+    # Also remove downloaded packages:
+    rm -f ~/linux-headers-* ~/linux-image-*
 }
 
 # Install Mininet deps
 function mn_deps {
-	echo "Installing Mininet dependencies"
-	sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
+    echo "Installing Mininet dependencies"
+    sudo aptitude install -y gcc make screen psmisc xterm ssh iperf iproute \
         python-setuptools python-networkx
 
-    if [ "$DIST" = "Ubuntu" ] && [ "`lsb_release -sr`" = "10.04" ]; then
+    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
         echo "Upgrading networkx to avoid deprecation warning"
         sudo easy_install --upgrade networkx
     fi
 
-	#Add sysctl parameters as noted in the INSTALL file to increase kernel limits to support larger setups:
-	sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
+    # Add sysctl parameters as noted in the INSTALL file to increase kernel 
+    # limits to support larger setups:
+    sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
 
-	#Load new sysctl settings:
-	sudo sysctl -p
+    # Load new sysctl settings:
+    sudo sysctl -p
     
     echo "Installing Mininet core"
     pushd ~/mininet
@@ -108,53 +129,55 @@ function mn_deps {
 # http://www.openflowswitch.org/wk/index.php/Debian_Install
 # ... modified to use Debian Lenny rather than unstable.
 function of {
-	echo "Installing OpenFlow and its tools..."
+    echo "Installing OpenFlow and its tools..."
 
-	cd ~/
-	sudo apt-get install -y git-core automake m4 pkg-config libtool make libc6-dev autoconf autotools-dev gcc
-	git clone git://openflowswitch.org/openflow.git
-	cd ~/openflow
+    cd ~/
+    sudo apt-get install -y git-core automake m4 pkg-config libtool \
+		make libc6-dev autoconf autotools-dev gcc
+    git clone git://openflowswitch.org/openflow.git
+    cd ~/openflow
 
     # Patch controller to handle more than 16 switches
     patch -p1 < ~/mininet/util/openflow-patches/controller.patch
 
-	# Resume the install:
-	./boot.sh
-	./configure
-	make
-	sudo make install
+    # Resume the install:
+    ./boot.sh
+    ./configure
+    make
+    sudo make install
 
-	# Install dissector:
-	sudo apt-get install -y wireshark libgtk2.0-dev
-	cd ~/openflow/utilities/wireshark_dissectors/openflow
-	make
-	sudo make install
+    # Install dissector:
+    sudo apt-get install -y wireshark libgtk2.0-dev
+    cd ~/openflow/utilities/wireshark_dissectors/openflow
+    make
+    sudo make install
 
-	# Copy coloring rules: OF is white-on-blue:
-	mkdir -p ~/.wireshark
-	cp ~/mininet/util/colorfilters ~/.wireshark
+    # Copy coloring rules: OF is white-on-blue:
+    mkdir -p ~/.wireshark
+    cp ~/mininet/util/colorfilters ~/.wireshark
 
-	# Remove avahi-daemon, which may cause unwanted discovery packets to be sent during tests, near link status changes:
-	sudo apt-get remove -y avahi-daemon
+    # Remove avahi-daemon, which may cause unwanted discovery packets to be 
+	# sent during tests, near link status changes:
+    sudo apt-get remove -y avahi-daemon
 
-	# Disable IPv6.  Add to /etc/modprobe.d/blacklist:
+    # Disable IPv6.  Add to /etc/modprobe.d/blacklist:
     if [ "$DIST" = "Ubuntu" ]; then
         BLACKLIST=/etc/modprobe.d/blacklist.conf
     else
         BLACKLIST=/etc/modprobe.d/blacklist
     fi
-	sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
+    sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
 }
 
-# Install OpenVSwitch
+# Install Open vSwitch
 # Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
 function ovs {
-	echo "Installing OpenVSwitch..."
+    echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Debian" ]; then
+    if [ "$DIST" = "Debian" ] && [ "$CODENAME" == "lenny" ]; then
         sudo aptitude -y install pkg-config gcc make git-core python-dev libssl-dev
-        #Install Autoconf 2.63+ backport from Debian Backports repo:
-        #Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
+        # Install Autoconf 2.63+ backport from Debian Backports repo:
+        # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
         sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
         sudo apt-get update
         sudo apt-get -y --force-yes install debian-backports-keyring
@@ -165,29 +188,34 @@ function ovs {
         sudo apt-get -y install $KERNEL_HEADERS
     fi
 
-	#Install OVS from release
-	cd ~/
-	git clone git://openvswitch.org/openvswitch
-	cd $OVS_DIR
+    # Install OVS from release
+    cd ~/
+    git clone git://openvswitch.org/openvswitch
+    cd $OVS_SRC
     git checkout $OVS_RELEASE
-	./boot.sh
+    ./boot.sh
     BUILDDIR=/lib/modules/${KERNEL_NAME}/build
     if [ ! -e $BUILDDIR ]; then
         echo "Creating build sdirectory $BUILDDIR"
         sudo mkdir -p $BUILDDIR
     fi
-    opts="--with-l26=$BUILDDIR"
-	./configure $opts
-	make
-	sudo make install
+	opts="--with-linux=$BUILDDIR"
+	mkdir -p $OVS_BUILD
+	cd $OVS_BUILD
+    ../configure $opts
+    make
+    sudo make install
+	# openflowd is deprecated, but for now copy it in
+	sudo cp tests/test-openflowd /usr/local/bin/ovs-openflowd
 }
 
 # Install NOX with tutorial files
 function nox {
-	echo "Installing NOX w/tutorial files..."
+    echo "Installing NOX w/tutorial files..."
 
-	#Install NOX deps:
-	sudo apt-get -y install autoconf automake g++ libtool python python-twisted swig  libxerces-c2-dev libssl-dev make
+    # Install NOX deps:
+    sudo apt-get -y install autoconf automake g++ libtool python python-twisted \
+		swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         sudo apt-get -y install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
@@ -195,31 +223,32 @@ function nox {
         sudo apt-get -y install libboost-filesystem-dev
         sudo apt-get -y install libboost-test-dev
     fi
-	#Install NOX optional deps:
-	sudo apt-get install -y libsqlite3-dev python-simplejson
+    # Install NOX optional deps:
+    sudo apt-get install -y libsqlite3-dev python-simplejson
 
-	#Install NOX:
-	cd ~/
-	git clone git://openflowswitch.org/nox-tutorial noxcore
-	cd noxcore
+    # Fetch NOX destiny
+    cd ~/
+    git clone git://noxrepo.org/nox noxcore
+    cd noxcore
+    git checkout -b destiny remotes/origin/destiny
 
-	# With later autoconf versions this doesn't quite work:
-	./boot.sh --apps-core || true
-    if [ "$DIST" = "Debian" ]; then
-        # So use this instead:
-        autoreconf --install --force
-    fi
-	mkdir build
-	cd build
-	../configure --with-python=yes
-    make
-	#make check
+    # Apply patches
+    git checkout -b tutorial-destiny
+    git am ~/mininet/util/nox-patches/*.patch
 
-	# Add NOX_CORE_DIR env var:
-	sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=~/noxcore/build/src|' ~/.bashrc
+    # Build
+    ./boot.sh
+    mkdir build
+    cd build
+    ../configure
+    make -j3
+    #make check
 
-	# To verify this install:
-	#cd ~/noxcore/build/src
+    # Add NOX_CORE_DIR env var:
+    sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=~/noxcore/build/src|' ~/.bashrc
+
+    # To verify this install:
+    #cd ~/noxcore/build/src
     #./nox_core -v -i ptcp:
 }
 
@@ -227,10 +256,10 @@ function nox {
 function oftest {
     echo "Installing oftest..."
 
-    #Install deps:
+    # Install deps:
     sudo apt-get install -y tcpdump python-scapy
 
-    #Install oftest:
+    # Install oftest:
     cd ~/
     git clone git://openflow.org/oftest
     cd oftest
@@ -254,27 +283,27 @@ function cbench {
 }
 
 function other {
-	echo "Doing other setup tasks..."
+    echo "Doing other setup tasks..."
 
-	#Enable command auto completion using sudo; modify ~/.bashrc:
-	sed -i -e 's|# for examples$|&\ncomplete -cf sudo|' ~/.bashrc
+    # Enable command auto completion using sudo; modify ~/.bashrc:
+    sed -i -e 's|# for examples$|&\ncomplete -cf sudo|' ~/.bashrc
 
-	#Install tcpdump and tshark, cmd-line packet dump tools.  Also install gitk,
-	#a graphical git history viewer.
-	sudo apt-get install -y tcpdump tshark gitk
+    # Install tcpdump and tshark, cmd-line packet dump tools.  Also install gitk,
+    # a graphical git history viewer.
+    sudo apt-get install -y tcpdump tshark gitk
 
-    #Install common text editors
+    # Install common text editors
     sudo apt-get install -y vim nano emacs
 
-    #Install NTP
+    # Install NTP
     sudo apt-get install -y ntp
 
-	#Set git to colorize everything.
-	git config --global color.diff auto
-	git config --global color.status auto
-	git config --global color.branch auto
+    # Set git to colorize everything.
+    git config --global color.diff auto
+    git config --global color.status auto
+    git config --global color.branch auto
 
-	#Reduce boot screen opt-out delay. Modify timeout in /boot/grub/menu.lst to 1:
+    # Reduce boot screen opt-out delay. Modify timeout in /boot/grub/menu.lst to 1:
     if [ "$DIST" = "Debian" ]; then
         sudo sed -i -e 's/^timeout.*$/timeout         1/' /boot/grub/menu.lst
     fi
@@ -291,67 +320,64 @@ function other {
 # re-run this script.  If you're using only one kernel version, then it may be
 # a good idea to use a symbolic link in place of the copy below.
 function modprobe {
-	echo "Setting up modprobe for OVS kmod..."
+    echo "Setting up modprobe for OVS kmod..."
 
-	sudo cp $OVS_DIR/datapath/linux-2.6/$OVS_KMOD $DRIVERS_DIR
-	sudo depmod -a ${KERNEL_NAME}
+    sudo cp $OVS_KMODS $DRIVERS_DIR
+    sudo depmod -a ${KERNEL_NAME}
 }
 
 function all {
-	echo "Running all commands..."
-    if [ "$DIST" != "Ubuntu" ]; then
-        # Ubuntu ships with Mininet-compatible kernel
-        kernel
-    fi
-	mn_deps
-	of
-	ovs
+    echo "Running all commands..."
+    kernel
+    mn_deps
+    of
+    ovs
     modprobe
-	nox
-	oftest
-	cbench
-	other
-	echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
-	echo "Enjoy Mininet!"
+    nox
+    oftest
+    cbench
+    other
+    echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
+    echo "Enjoy Mininet!"
 }
 
 # Restore disk space and remove sensitive files before shipping a VM.
 function vm_clean {
-	echo "Cleaning VM..."
-	sudo apt-get clean
-	sudo rm -rf /tmp/*
-	sudo rm -rf openvswitch*.tar.gz
+    echo "Cleaning VM..."
+    sudo apt-get clean
+    sudo rm -rf /tmp/*
+    sudo rm -rf openvswitch*.tar.gz
 
-	# Remove sensistive files
-	history -c  # note this won't work if you have multiple bash sessions
-	rm -f ~/.bash_history  # need to clear in memory and remove on disk
-	rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
-	sudo rm -f ~/.ssh/authorized_keys2
+    # Remove sensistive files
+    history -c  # note this won't work if you have multiple bash sessions
+    rm -f ~/.bash_history  # need to clear in memory and remove on disk
+    rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
+    sudo rm -f ~/.ssh/authorized_keys*
 
-	# Remove Mininet files
-	#sudo rm -f /lib/modules/python2.5/site-packages/mininet*
-	#sudo rm -f /usr/bin/mnexec
+    # Remove Mininet files
+    #sudo rm -f /lib/modules/python2.5/site-packages/mininet*
+    #sudo rm -f /usr/bin/mnexec
 
-	# Clear optional dev script for SSH keychain load on boot
-	rm -f ~/.bash_profile
+    # Clear optional dev script for SSH keychain load on boot
+    rm -f ~/.bash_profile
 
-	# Clear git changes
-	git config --global user.name "None"
-	git config --global user.email "None"
+    # Clear git changes
+    git config --global user.name "None"
+    git config --global user.email "None"
 
-	# Remove mininet install script
-	rm -f install-mininet.sh
+    # Remove mininet install script
+    rm -f install-mininet.sh
 }
 
 function usage {
     printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
     
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04 and\n' >&2
-    printf 'Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04, 11.10\n' >&2
+    printf 'and Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
-        
+
     printf 'options:\n' >&2
     printf -- ' -a: (default) install (A)ll packages - good luck!\n' >&2
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
@@ -372,25 +398,25 @@ function usage {
 
 if [ $# -eq 0 ]
 then
-	all
+    all
 else
-	while getopts 'abcdfhkmntvx' OPTION
-	do
-	  case $OPTION in
-	  a)    all;;
-	  b)    cbench;;
-	  c)    kernel_clean;;
-	  d)    vm_clean;;
-	  f)    of;;
-	  h)	usage;;
-	  k)    kernel;;
-	  m)    modprobe;;
-	  n)    mn_deps;;
-	  t)    other;;
-	  v)    ovs;;
-	  x)    nox;;
-	  ?)    usage;;
-	  esac
-	done
-	shift $(($OPTIND - 1))
+    while getopts 'abcdfhkmntvx' OPTION
+    do
+      case $OPTION in
+      a)    all;;
+      b)    cbench;;
+      c)    kernel_clean;;
+      d)    vm_clean;;
+      f)    of;;
+      h)    usage;;
+      k)    kernel;;
+      m)    modprobe;;
+      n)    mn_deps;;
+      t)    other;;
+      v)    ovs;;
+      x)    nox;;
+      ?)    usage;;
+      esac
+    done
+    shift $(($OPTIND - 1))
 fi
