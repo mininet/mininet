@@ -116,19 +116,19 @@ class Node( object ):
         self.shell = None
 
     # Subshell I/O, commands and control
-    def read( self, bytes=1024 ):
+    def read( self, maxbytes=1024 ):
         """Buffered read from node, non-blocking.
-           bytes: maximum number of bytes to return"""
+           maxbytes: maximum number of bytes to return"""
         count = len( self.readbuf )
-        if count < bytes:
-            data = os.read( self.stdout.fileno(), bytes - count )
+        if count < maxbytes:
+            data = os.read( self.stdout.fileno(), maxbytes - count )
             self.readbuf += data
-        if bytes >= len( self.readbuf ):
+        if maxbytes >= len( self.readbuf ):
             result = self.readbuf
             self.readbuf = ''
         else:
-            result = self.readbuf[ :bytes ]
-            self.readbuf = self.readbuf[ bytes: ]
+            result = self.readbuf[ :maxbytes ]
+            self.readbuf = self.readbuf[ maxbytes: ]
         return result
 
     def readline( self ):

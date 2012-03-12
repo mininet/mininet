@@ -602,7 +602,7 @@ class MiniEdit( Frame ):
         cleanUpScreens()
         self.net = None
 
-    def xterm( self, ignore=None ):
+    def xterm( self, _ignore=None ):
         "Make an xterm when a button is pressed."
         if ( self.selection is None or
              self.net is None or

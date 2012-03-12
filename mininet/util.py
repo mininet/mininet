@@ -136,13 +136,13 @@ def createLink( node1, node2, port1=None, port2=None ):
 
 # IP and Mac address formatting and parsing
 
-def _colonHex( val, bytes ):
+def _colonHex( val, count ):
     """Generate colon-hex string.
        val: input as unsigned int
-       bytes: number of bytes to convert
+       count: number of bytes to convert
        returns: chStr colon-hex string"""
     pieces = []
-    for i in range( bytes - 1, -1, -1 ):
+    for i in range( count - 1, -1, -1 ):
         piece = ( ( 0xff << ( i * 8 ) ) & val ) >> ( i * 8 )
         pieces.append( '%02x' % piece )
     chStr = ':'.join( pieces )
