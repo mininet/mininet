@@ -607,12 +607,14 @@ class CPULimitedHost( Host ):
 
 # Some important things to note:
 #
-# The "IP" address which we assign to the switch is not
+# The "IP" address which setIP() assigns to the switch is not
 # an "IP address for the switch" in the sense of IP routing.
-# Rather, it is the IP address for a control interface if
-# (and only if) you happen to be running the switch in a
-# namespace, which is something we currently don't support
-# for OVS!
+# Rather, it is the IP address for the control interface,
+# on the control network, and it is only relevant to the
+# controller. If you are running in the root namespace
+# (which is the only way to run OVS at the moment), the
+# control interface is the loopback interface, and you
+# normally never want to change its IP address!
 #
 # In general, you NEVER want to attempt to use Linux's
 # network stack (i.e. ifconfig) to "assign" an IP address or
@@ -620,16 +622,8 @@ class CPULimitedHost( Host ):
 # the IP and MAC addresses in the controller by specifying
 # packets that you want to receive or send. The "MAC" address
 # reported by ifconfig for a switch data port is essentially
-# meaningless.
-#
-# So, I'm trying changing the API to make it
-# impossible to try this, since it will not work, since nobody
-# ever makes separate control networks in Mininet, and indeed
-# we don't even support running OVS in a namespace.
-#
-# Note if we have a separate control network, then it does
-# make sense to have s1-eth0 as s1's control network interface,
-# and we should set controlIntf accordingly.
+# meaningless. It is important to understand this if you
+# want to create a functional router using OpenFlow.
 
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
@@ -896,20 +890,6 @@ class OVSController( Controller ):
     "Open vSwitch controller"
     def __init__( self, name, command='ovs-controller', **kwargs ):
         Controller.__init__( self, name, command=command, **kwargs )
-
-
-# BL: This really seems to be poorly specified,
-# so it's going to go away!
-
-class ControllerParams( object ):
-    "Container for controller IP parameters."
-
-    def __init__( self, ip, prefixLen ):
-        """Init.
-           ip: string, controller IP address
-           prefixLen: prefix length, e.g. 8 for /8, covering 16M"""
-        self.ip = ip
-        self.prefixLen = prefixLen
 
 
 class NOX( Controller ):
