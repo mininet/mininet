@@ -28,7 +28,7 @@ setuptools.setup(
     author_email='rlantz@cs.stanford.edu',
     packages=setuptools.find_packages(exclude='test'),
     classifiers=[
-          "License :: OSI Approved :: GNU General Public License (GPL)",
+          "License :: OSI Approved :: BSD",
           "Programming Language :: Python",
           "Development Status :: 4 - Beta",
           "Intended Audience :: Developers",
