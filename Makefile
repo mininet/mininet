@@ -21,9 +21,11 @@ test: $(MININET) $(TEST)
 	-echo "Running tests"
 	mininet/test/test_nets.py
 
-install: mnexec
-	cp mnexec bin/
+install:
 	python setup.py install
+
+develop:
+	python setup.py develop
 
 doc:
 	doxygen doxygen.cfg
