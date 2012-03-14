@@ -91,6 +91,7 @@ import re
 import select
 import signal
 from time import sleep
+from subprocess import check_output
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -561,8 +562,12 @@ def init():
     "Initialize Mininet."
     if init.inited:
         return
-    # If which produces no output, then mnexec is not in the path.
-    # May want to loosen this to handle mnexec in the current dir.
+    # Make sure we can sudo without a password
+    try:
+        check_output( [ 'sudo', '-n', 'echo' ] )
+    except:
+        raise Exception( "Could not run sudo -n echo - check /etc/sudoers" )
+    # Make sure mnexec is in our path
     if not quietRun( 'which mnexec' ):
         raise Exception( "Could not find mnexec - check $PATH" )
     fixLimits()
