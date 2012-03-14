@@ -565,7 +565,7 @@ def init():
     # May want to loosen this to handle mnexec in the current dir.
     if not quietRun( 'which mnexec' ):
         raise Exception( "Could not find mnexec - check $PATH" )
-    #fixLimits()
+    fixLimits()
     init.inited = True
 
 init.inited = False
