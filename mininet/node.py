@@ -76,7 +76,8 @@ class Node( object ):
         opts = '-cdp'
         if self.inNamespace:
             opts += 'n'
-        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'], 'mnexec', opts, 'bash', '-m', '-p' ]
+        cmd = [ 'sudo', '-E', 'env', 'PATH=%s' % os.environ['PATH'],
+                'mnexec', opts, 'bash', '-m', '-p' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
             close_fds=False )
         self.stdin = self.shell.stdin
