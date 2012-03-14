@@ -101,11 +101,8 @@ class Node( object ):
         self.waiting = False
         # Stash additional information as desired
         self.args = kwargs
-        x = ""
-        while "\n" not in x:
-            self.waitReadable()
-            x += self.read(1)
-        self.pid = int(x[1:-1])
+        # Read pid from mnexec
+        self.pid = int( self.readline()[ 1: ] )
 
     @classmethod
     def fdToNode( cls, fd ):
