@@ -169,7 +169,7 @@ class Mininet( object ):
         self.nextIP += 1
         defaults.update( params )
         if not cls:
-            cls  = self.host
+            cls = self.host
         h = cls( name, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
@@ -204,7 +204,7 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    def addLink( self, src, dst, srcPort=None, dstPort=None, 
+    def addLink( self, src, dst, srcPort=None, dstPort=None,
                  cls=None, **params ):
         "Add a link from topo"
         if self.intf and not 'intf' in params:
