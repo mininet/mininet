@@ -16,7 +16,7 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
-from mininet.util import netParse, ipStr, irange, natural, naturalSeq
+from mininet.util import irange, natural, naturalSeq
 
 class Topo(object):
     "Data center network representation for structured multi-trees."
@@ -38,7 +38,7 @@ class Topo(object):
         """Add Node to graph.
            add_node('name', dict) <or> add_node('name', **opts)
            name: name
-           args: dict of node options 
+           args: dict of node options
            opts: node options"""
         self.g.add_node(name)
         if args and type(args[0]) is dict:
@@ -50,7 +50,7 @@ class Topo(object):
         """Convenience method: Add host to graph.
            add_host('name', dict) <or> add_host('name', **opts)
            name: name
-           args: dict of node options 
+           args: dict of node options
            opts: node options"""
         if not opts and self.hopts:
             opts = self.hopts
@@ -60,7 +60,7 @@ class Topo(object):
         """Convenience method: Add switch to graph.
            add_switch('name', dict) <or> add_switch('name', **opts)
            name: name
-           args: dict of node options 
+           args: dict of node options
            opts: node options"""
         if not opts and self.sopts:
             opts = self.sopts
@@ -102,7 +102,7 @@ class Topo(object):
         if src not in self.ports[dst]:
             # num outlinks
             self.ports[dst][src] = len(self.ports[dst]) + dst_base
-    
+
     def nodes(self, sort=True):
         "Return nodes in graph"
         if sort:
@@ -113,7 +113,7 @@ class Topo(object):
     def is_switch(self, n):
         '''Returns true if node is a switch.'''
         info = self.node_info[n]
-        return info and info['is_switch']
+        return info and info.get('is_switch', False)
 
     def switches(self, sort=True):
         '''Return switches.
@@ -163,6 +163,7 @@ class Topo(object):
         return info if info is not None else {}
 
     def setNodeInfo( self, name, info ):
+        "Set metadata (dict) for node"
         self.node_info[ name ] = info
 
     @staticmethod
