@@ -371,3 +371,14 @@ class Link( object ):
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
+
+class TCLink( Link ):
+    "Link with symmetric TC interfaces configured via opts"
+    def __init__( self, node1, node2, port1=None, port2=None,
+                  intfName1=None, intfName2=None, **params ):
+        Link.__init__( self, node1, node2, port1=None, port2=None,
+                       intfName1=None, intfName2=None,
+                       cls1=TCIntf,
+                       cls2=TCIntf,
+                       params1=params,
+                       params2=params)

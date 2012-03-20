@@ -22,7 +22,7 @@ from mininet.log import lg, LEVELS, info, warn
 from mininet.net import Mininet, MininetWithControlNet
 from mininet.node import Host, CPULimitedHost, Controller, OVSController, NOX
 from mininet.node import RemoteController, UserSwitch, OVSKernelSwitch
-from mininet.link import Intf, TCIntf
+from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
 from mininet.util import makeNumeric, custom
@@ -74,9 +74,9 @@ CONTROLLERS = { 'ref': Controller,
                 'remote': RemoteController,
                 'none': lambda name: None }
 
-INTFDEF = 'default'
-INTFS = { 'default': Intf,
-          'tc': TCIntf }
+LINKDEF = 'default'
+LINKS = { 'default': Link,
+          'tc': TCLink }
 
 
 # optional tests to run
@@ -182,7 +182,7 @@ class MininetRunner( object ):
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
         addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
-        addDictOption( opts, INTFS, INTFDEF, 'intf' )
+        addDictOption( opts, LINKS, LINKDEF, 'link' )
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
 
         opts.add_option( '--clean', '-c', action='store_true',
@@ -246,7 +246,7 @@ class MininetRunner( object ):
         switch = customNode( SWITCHES, self.options.switch )
         host = customNode( HOSTS, self.options.host )
         controller = customNode( CONTROLLERS, self.options.controller )
-        intf = customNode( INTFS, self.options.intf )
+        link = customNode( LINKS, self.options.link )
 
         if self.validate:
             self.validate( self.options )
@@ -262,7 +262,7 @@ class MininetRunner( object ):
             listenPort = self.options.listenport
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller,
-                  intf=intf,
+                  link=link,
                   ipBase=ipBase,
                   inNamespace=inNamespace,
                   xterms=xterms, autoSetMacs=mac,
