@@ -97,7 +97,7 @@ from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link
 from mininet.util import quietRun, fixLimits
-from mininet.util import macColonHex, ipStr, ipParse, netParse
+from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
 class Mininet( object ):
@@ -131,6 +131,8 @@ class Mininet( object ):
         self.link = link
         self.intf = intf
         self.ipBase = ipBase
+        self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
+        self.nextIP = 1  # start for address allocation
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
@@ -143,7 +145,6 @@ class Mininet( object ):
         self.controllers = []
 
         self.nameToNode = {}  # name to Node (Host/Switch) objects
-        self.idToNode = {}  # dpid to Node (Host/Switch) objects
 
         self.terms = []  # list of spawned xterm processes
 
@@ -153,35 +154,39 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    # BL Note:
-    # The specific items for host/switch/etc. should probably be
-    # handled in the node classes rather than here!!
-
-    def addHost( self, name, host=None, **params ):
+    def addHost( self, name, cls=None, **params ):
         """Add host.
            name: name of host to add
-           host: custom host constructor (optional)
+           cls: custom host class/constructor (optional)
            params: parameters for host
            returns: added host"""
-        if not host:
-            host = self.host
-        h = host( name, **params)
+        # Default IP and MAC addresses
+        defaults = { 'ip': ipAdd( self.nextIP,
+                                  ipBaseNum=self.ipBaseNum,
+                                  prefixLen=self.prefixLen ) }
+        if self.autoSetMacs:
+            defaults[ 'mac'] = macColonHex( self.nextIP )
+        self.nextIP += 1
+        defaults.update( params )
+        if not cls:
+            cls  = self.host
+        h = cls( name, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
         return h
 
-    def addSwitch( self, name, switch=None, **params ):
+    def addSwitch( self, name, cls=None, **params ):
         """Add switch.
            name: name of switch to add
-           switch: custom switch constructor (optional)
+           cls: custom switch class/constructor (optional)
            returns: added switch
            side effect: increments listenPort ivar ."""
         defaults = { 'listenPort': self.listenPort,
                      'inNamespace': self.inNamespace }
         defaults.update( params )
-        if not switch:
-            switch = self.switch
-        sw = self.switch( name, **defaults )
+        if not cls:
+            cls = self.switch
+        sw = cls( name, **defaults )
         if not self.inNamespace and self.listenPort:
             self.listenPort += 1
         self.switches.append( sw )
@@ -199,6 +204,15 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
+    def addLink( self, src, dst, srcPort=None, dstPort=None, 
+                 cls=None, **params ):
+        "Add a link from topo"
+        if self.intf and not 'intf' in params:
+            params[ 'intf' ] = self.intf
+        if not cls:
+            cls = self.link
+        return cls( src, dst, srcPort, dstPort, **params )
+
     def configHosts( self ):
         "Configure a set of hosts."
         for host in self.hosts:
@@ -215,40 +229,6 @@ class Mininet( object ):
            At the end of this function, everything should be connected
            and up."""
 
-        ipBaseNum, prefixLen = netParse( self.ipBase )
-
-        if not topo:
-            topo = self.topo()
-
-        def addNode( prefix, addMethod, nodeId ):
-            "Add a host or a switch from topo"
-            name = prefix + topo.name( nodeId )
-            ni = topo.nodeInfo( nodeId )
-            # Default IP and MAC addresses
-            defaults = { 'ip': topo.ip( nodeId,
-                                        ipBaseNum=ipBaseNum,
-                                        prefixLen=prefixLen ) }
-            if self.autoSetMacs:
-                defaults[ 'mac'] = macColonHex( nodeId )
-            defaults.update( ni.params )
-            node = addMethod( name, cls=ni.cls, **defaults )
-            self.idToNode[ nodeId ] = node
-            info( name + ' ' )
-
-        def addLink( srcId, dstId, link=None ):
-            "Add a link from topo"
-            src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
-            srcPort, dstPort = topo.port( srcId, dstId )
-            ei = topo.edgeInfo( srcId, dstId )
-            link = getattr( ei, 'cls', link )
-            params = ei.params
-            if self.intf and not 'intf' in params:
-                params[ 'intf' ] = self.intf
-            if not link:
-                link = self.link
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
-            link( src, dst, srcPort, dstPort, **params )
-
         # Possibly we should clean up here and/or validate
         # the topo
         if self.cleanup:
@@ -262,16 +242,22 @@ class Mininet( object ):
             self.addController( 'c0' )
 
         info( '*** Adding hosts:\n' )
-        for hostId in sorted( topo.hosts() ):
-            addNode( 'h', self.addHost, hostId )
+        for hostName in topo.hosts():
+            self.addHost( hostName, **topo.nodeInfo( hostName ) )
+            info( hostName + ' ' )
 
         info( '\n*** Adding switches:\n' )
-        for switchId in sorted( topo.switches() ):
-            addNode( 's', self.addSwitch, switchId )
+        for switchName in topo.switches():
+            self.addSwitch( switchName, **topo.nodeInfo( switchName) )
+            info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
-        for srcId, dstId in sorted( topo.edges() ):
-            addLink( srcId, dstId )
+        for srcName, dstName in topo.links(sort=True):
+            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
+            srcPort, dstPort = topo.port( srcName, dstName )
+            self.addLink( src, dst, srcPort, dstPort,
+                          **topo.linkInfo( srcName, dstName ) )
+            info( '(%s, %s) ' % ( src.name, dst.name ) )
 
         info( '\n' )
 

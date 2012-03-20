@@ -16,146 +16,73 @@ setup for testing, and can even be emulated with the Mininet package.
 # from networkx.classes.graph import Graph
 
 from networkx import Graph
-from mininet.util import netParse, ipStr
-
-class NodeID(object):
-    '''Topo node identifier.'''
-
-    def __init__(self, dpid = None):
-        '''Init.
-
-        @param dpid dpid
-        '''
-        # DPID-compatible hashable identifier: opaque 64-bit unsigned int
-        self.dpid = dpid
-
-    def __str__(self):
-        '''String conversion.
-
-        @return str dpid as string
-        '''
-        return str(self.dpid)
-
-    def name_str(self):
-        '''Name conversion.
-
-        @return name name as string
-        '''
-        return str(self.dpid)
-
-    def ip_str(self, ipBase=None, prefixLen=8, ipBaseNum=0x0a000000):
-        '''Name conversion.
-        ipBase: optional base IP address string
-        prefixLen: optional IP prefix length
-        ipBaseNum: option base IP address as int
-        @return ip ip as string
-        '''
-        if ipBase:
-            ipnum, prefixLen = netParse( ipBase )
-        else:
-            ipBaseNum = ipBaseNum
-        # Ugly but functional
-        assert self.dpid < ( 1 << ( 32 - prefixLen ) )
-        mask = 0xffffffff ^ ( ( 1 << prefixLen ) - 1 )
-        ipnum = self.dpid + ( ipBaseNum & mask )
-        return ipStr( ipnum )
-
-
-class Node( object ):
-    '''Node-specific vertex metadata for a Topo object.'''
-
-    def __init__(self, connected=False, admin_on=True,
-                 power_on=True, fault=False, is_switch=True,
-                 cls=None, **params ):
-        '''Init.
-
-        @param connected actively connected to controller
-        @param admin_on administratively on or off
-        @param power_on powered on or off
-        @param fault fault seen on node
-        @param is_switch switch or host
-        @param cls node class (e.g. Host, Switch)
-        @param params node parameters
-        '''
-        self.connected = connected
-        self.admin_on = admin_on
-        self.power_on = power_on
-        self.fault = fault
-        self.is_switch = is_switch
-        # BL: Above should mostly be deleted and replaced by the following
-        # is_switch is a bit annoying if we are already specifying
-        # a switch class!! Except that if cls is not specified,
-        # then Mininet() knows whether to create a switch or a host
-        # node and can call its own constructors...
-        self.cls = cls
-        self.params = params
-
-
-class Edge(object):
-    '''Edge-specific metadata for a StructuredTopo graph.'''
-
-    def __init__(self, admin_on=True, power_on=True, fault=False,
-                 cls=None, **params):
-        '''Init.
-
-        @param admin_on administratively on or off; defaults to True
-        @param power_on powered on or off; defaults to True
-        @param fault fault seen on edge; defaults to False
-        '''
-        self.admin_on = admin_on
-        self.power_on = power_on
-        self.fault = fault
-        # Above should be deleted and replaced by the following
-        self.cls = cls
-        self.params = params
-
+from mininet.util import netParse, ipStr, irange, natural, naturalSeq
 
 class Topo(object):
-    """Data center network representation for structured multi-trees.
-       Note that the order of precedence is:
-       per-node/link classes and parameters
-       per-topo classes
-       per-network classes"""
+    "Data center network representation for structured multi-trees."
 
-    def __init__(self, node=None, switch=None, link=None ):
-        """Create Topo object.
-           node: default node/host class (optional)
-           switch: default switch class (optional)
-           link: default link class (optional)
-           ipBase: default IP address base (optional)"""
+    def __init__(self, hopts=None, sopts=None, lopts=None):
+        """Topo object:
+           hinfo: default host options
+           sopts: default switch options
+           lopts: default link options"""
         self.g = Graph()
-        self.node_info = {}  # dpids hash to Node objects
-        self.edge_info = {}  # (src_dpid, dst_dpid) tuples hash to Edge objects
+        self.node_info = {}
+        self.link_info = {}  # (src, dst) tuples hash to EdgeInfo objects
+        self.hopts = {} if hopts is None else hopts
+        self.sopts = {} if sopts is None else lopts
+        self.lopts = {} if lopts is None else lopts
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
-        self.id_gen = NodeID  # class used to generate dpid
-        self.node = node
-        self.switch = switch
-        self.link = link
 
-    def add_node(self, dpid, node=None):
-        '''Add Node to graph.
+    def add_node(self, name, *args, **opts):
+        """Add Node to graph.
+           add_node('name', dict) <or> add_node('name', **opts)
+           name: name
+           args: dict of node options 
+           opts: node options"""
+        self.g.add_node(name)
+        if args and type(args[0]) is dict:
+            opts = args[0]
+        self.node_info[name] = opts
+        return name
 
-        @param dpid dpid
-        @param node Node object
-        '''
-        self.g.add_node(dpid)
-        if not node:
-            node = Node( link=self.link )
-        self.node_info[dpid] = node
+    def add_host(self, name, *args, **opts):
+        """Convenience method: Add host to graph.
+           add_host('name', dict) <or> add_host('name', **opts)
+           name: name
+           args: dict of node options 
+           opts: node options"""
+        if not opts and self.hopts:
+            opts = self.hopts
+        return self.add_node(name, *args, **opts)
 
-    def add_edge(self, src, dst, edge=None):
-        '''Add edge (Node, Node) to graph.
+    def add_switch(self, name, **opts):
+        """Convenience method: Add switch to graph.
+           add_switch('name', dict) <or> add_switch('name', **opts)
+           name: name
+           args: dict of node options 
+           opts: node options"""
+        if not opts and self.sopts:
+            opts = self.sopts
+        result = self.add_node(name, is_switch=True, **opts)
+        return result
 
-        @param src src dpid
-        @param dst dst dpid
-        @param edge Edge object
-        '''
-        src, dst = tuple(sorted([src, dst]))
+    def add_link(self, src, dst, *args, **opts):
+        """Add link (Node, Node) to topo.
+           add_link(src, dst, dict) <or> add_link(src, dst, **opts)
+           src: src name
+           dst: dst name
+           args: dict of node options
+           params: link parameters"""
+        src, dst = sorted([src, dst], key=naturalSeq)
         self.g.add_edge(src, dst)
-        if not edge:
-            edge = Edge( cls=self.link )
-        self.edge_info[(src, dst)] = edge
+        if args and type(args[0]) is dict:
+            opts = args[0]
+        if not opts and self.sopts:
+            opts = self.sopts
+        self.link_info[(src, dst)] = opts
         self.add_port(src, dst)
+        return src, dst
 
     def add_port(self, src, dst):
         '''Generate port mapping for new edge.
@@ -175,131 +102,48 @@ class Topo(object):
         if src not in self.ports[dst]:
             # num outlinks
             self.ports[dst][src] = len(self.ports[dst]) + dst_base
-
-    def node_enabled(self, dpid):
-        '''Is node connected, admin on, powered on, and fault-free?
-
-        @param dpid dpid
-
-        @return bool node is enabled
-        '''
-        ni = self.node_info[dpid]
-        return ni.connected and ni.admin_on and ni.power_on and not ni.fault
-
-    def nodes_enabled(self, dpids, enabled = True):
-        '''Return subset of enabled nodes
-
-        @param dpids list of dpids
-        @param enabled only return enabled nodes?
-
-        @return dpids filtered list of dpids
-        '''
-        if enabled:
-            return [n for n in dpids if self.node_enabled(n)]
+    
+    def nodes(self, sort=True):
+        "Return nodes in graph"
+        if sort:
+            return sorted( self.g.nodes(), key=natural )
         else:
-            return dpids
-
-    def nodes(self, enabled = True):
-        '''Return graph nodes.
-
-        @param enabled only return enabled nodes?
-
-        @return dpids list of dpids
-        '''
-        return self.nodes_enabled(self.g.nodes(), enabled)
-
-    def nodes_str(self, dpids):
-        '''Return string of custom-encoded nodes.
-
-        @param dpids list of dpids
-
-        @return str string
-        '''
-        return [str(self.id_gen(dpid = dpid)) for dpid in dpids]
+            return self.g.nodes()
 
     def is_switch(self, n):
         '''Returns true if node is a switch.'''
-        return self.node_info[n].is_switch
+        info = self.node_info[n]
+        return info and info['is_switch']
 
-    def switches(self, enabled = True):
+    def switches(self, sort=True):
         '''Return switches.
-
-        @param enabled only return enabled nodes?
-
+        sort: sort switches alphabetically
         @return dpids list of dpids
         '''
-        nodes = [n for n in self.g.nodes() if self.is_switch(n)]
-        return self.nodes_enabled(nodes, enabled)
+        return [n for n in self.nodes(sort) if self.is_switch(n)]
 
-    def hosts(self, enabled = True):
+    def hosts(self, sort=True):
         '''Return hosts.
-
-        @param enabled only return enabled nodes?
-
+        sort: sort hosts alphabetically
         @return dpids list of dpids
         '''
+        return [n for n in self.nodes(sort) if not self.is_switch(n)]
 
-        def is_host(n):
-            '''Returns true if node is a host.'''
-            return not self.node_info[n].is_switch
-
-        nodes = [n for n in self.g.nodes() if is_host(n)]
-        return self.nodes_enabled(nodes, enabled)
-
-    def edge_enabled(self, edge):
-        '''Is edge admin on, powered on, and fault-free?
-
-        @param edge (src, dst) dpid tuple
-
-        @return bool edge is enabled
+    def links(self, sort=True):
+        '''Return links.
+        sort: sort links alphabetically
+        @return links list of name pairs
         '''
-        src, dst = edge
-        src, dst = tuple(sorted([src, dst]))
-        ei = self.edge_info[tuple(sorted([src, dst]))]
-        return ei.admin_on and ei.power_on and not ei.fault
-
-    def edges_enabled(self, edges, enabled = True):
-        '''Return subset of enabled edges
-
-        @param edges list of edges
-        @param enabled only return enabled edges?
-
-        @return edges filtered list of edges
-        '''
-        if enabled:
-            return [e for e in edges if self.edge_enabled(e)]
+        if not sort:
+            return self.g.edges()
         else:
-            return edges
-
-    def edges(self, enabled = True):
-        '''Return edges.
-
-        @param enabled only return enabled edges?
-
-        @return edges list of dpid pairs
-        '''
-        return self.edges_enabled(self.g.edges(), enabled)
-
-    def edges_str(self, dpid_pairs):
-        '''Return string of custom-encoded node pairs.
-
-        @param dpid_pairs list of dpid pairs (src, dst)
-
-        @return str string
-        '''
-        edges = []
-        for pair in dpid_pairs:
-            src, dst = pair
-            src = str(self.id_gen(dpid = src))
-            dst = str(self.id_gen(dpid = dst))
-            edges.append((src, dst))
-        return edges
+            return sorted( self.g.edges(), key=naturalSeq )
 
     def port(self, src, dst):
         '''Get port number.
 
-        @param src source switch DPID
-        @param dst destination switch DPID
+        @param src source switch name
+        @param dst destination switch name
         @return tuple (src_port, dst_port):
             src_port: port on source switch leading to the destination switch
             dst_port: port on destination switch leading to the source switch
@@ -308,84 +152,41 @@ class Topo(object):
             assert dst in self.ports and src in self.ports[dst]
             return (self.ports[src][dst], self.ports[dst][src])
 
-    def edgeInfo( self, src, dst ):
-        "Return edge metadata"
-        # BL: Perhaps this should be rethought or we should just use the
-        # dicts...
-        return self.edge_info[ ( src, dst ) ]
+    def linkInfo( self, src, dst ):
+        "Return link metadata"
+        src, dst = sorted((src, dst), key=naturalSeq)
+        return self.link_info[(src, dst)]
 
-    def enable_edges(self):
-        '''Enable all edges in the network graph.
+    def nodeInfo( self, name ):
+        "Return metadata (dict) for node"
+        info = self.node_info[ name ]
+        return info if info is not None else {}
 
-        Set admin on, power on, and fault off.
-        '''
-        for e in self.g.edges():
-            src, dst = e
-            ei = self.edge_info[tuple(sorted([src, dst]))]
-            ei.admin_on = True
-            ei.power_on = True
-            ei.fault = False
+    def setNodeInfo( self, name, info ):
+        self.node_info[ name ] = info
 
-    def enable_nodes(self):
-        '''Enable all nodes in the network graph.
-
-        Set connected on, admin on, power on, and fault off.
-        '''
-        for node in self.g.nodes():
-            ni = self.node_info[node]
-            ni.connected = True
-            ni.admin_on = True
-            ni.power_on = True
-            ni.fault = False
-
-    def enable_all(self):
-        '''Enable all nodes and edges in the network graph.'''
-        self.enable_nodes()
-        self.enable_edges()
-
-    def name(self, dpid):
-        '''Get string name of node ID.
-
-        @param dpid DPID of host or switch
-        @return name_str string name with no dashes
-        '''
-        return self.id_gen(dpid = dpid).name_str()
-
-    def ip(self, dpid, **params):
-        '''Get IP dotted-decimal string of node ID.
-        @param dpid DPID of host or switch
-        @param params: params to pass to ip_str
-        @return ip_str
-        '''
-        return self.id_gen(dpid = dpid).ip_str(**params)
-
-    def nodeInfo( self, dpid ):
-        "Return metadata for node"
-        # BL: may wish to rethink this or just use dicts..
-        return self.node_info[ dpid ]
-
+    @staticmethod
+    def sorted( items ):
+        "Items sorted in natural (i.e. alphabetical) order"
+        return sorted(items, key=natural)
 
 class SingleSwitchTopo(Topo):
     '''Single switch connected to k hosts.'''
 
-    def __init__(self, k = 2, enable_all = True):
+    def __init__(self, k=2, **opts):
         '''Init.
 
         @param k number of hosts
         @param enable_all enables all nodes and switches?
         '''
-        super(SingleSwitchTopo, self).__init__()
+        super(SingleSwitchTopo, self).__init__(**opts)
 
         self.k = k
 
-        self.add_node(1, Node())
-        hosts = range(2, k + 2)
-        for h in hosts:
-            self.add_node(h, Node(is_switch = False))
-            self.add_edge(h, 1, Edge())
-
-        if enable_all:
-            self.enable_all()
+        switch = self.add_switch('s1')
+        for h in irange(1, k):
+            host = self.add_host('h%s' % h)
+            self.add_link(host, switch)
 
 
 class SingleSwitchReversedTopo(SingleSwitchTopo):
@@ -422,27 +223,23 @@ class SingleSwitchReversedTopo(SingleSwitchTopo):
 
 
 class LinearTopo(Topo):
-    '''Linear topology of k switches, with one host per switch.'''
+    "Linear topology of k switches, with one host per switch."
 
-    def __init__(self, k = 2, enable_all = True):
-        '''Init.
+    def __init__(self, k=2, **opts):
+        """Init.
+           k: number of switches (and hosts)
+           hconf: host configuration options
+           lconf: link configuration options"""
 
-        @param k number of switches (and hosts too)
-        @param enable_all enables all nodes and switches?
-        '''
-        super(LinearTopo, self).__init__()
+        super(LinearTopo, self).__init__(**opts)
 
         self.k = k
 
-        switches = range(1, k + 1)
-        for s in switches:
-            h = s + k
-            self.add_node(s, Node())
-            self.add_node(h, Node(is_switch = False))
-            self.add_edge(s, h, Edge())
-        for s in switches:
-            if s != k:
-                self.add_edge(s, s + 1, Edge())
-
-        if enable_all:
-            self.enable_all()
+        lastSwitch = None
+        for i in irange(1, k):
+            host = self.add_host('h%s' % i)
+            switch = self.add_switch('s%s' % i)
+            self.add_link( host, switch)
+            if lastSwitch:
+                self.add_link( switch, lastSwitch)
+            lastSwitch = switch

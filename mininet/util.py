@@ -224,6 +224,18 @@ def ipNum( w, x, y, z ):
        returns: w << 24 | x << 16 | y << 8 | z"""
     return  ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
 
+def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
+    """Return IP address string from ints
+       i: int to be added to ipbase
+       prefixLen: optional IP prefix length
+       ipBaseNum: option base IP address as int
+       returns IP address as string"""
+    # Ugly but functional
+    assert i < ( 1 << ( 32 - prefixLen ) )
+    mask = 0xffffffff ^ ( ( 1 << prefixLen ) - 1 )
+    ipnum = i + ( ipBaseNum & mask )
+    return ipStr( ipnum )
+
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
@@ -275,8 +287,12 @@ def natural( text ):
     "To sort sanely/alphabetically: sorted( l, key=natural )"
     def num( s ):
         "Convert text segment to int if necessary"
-        return int( s ) if s.isdigit() else text
+        return int( s ) if s.isdigit() else s
     return [  num( s ) for s in re.split( r'(\d+)', text ) ]
+
+def naturalSeq( t ):
+    "Natural sort key function for sequences"
+    return [ natural( x ) for x in t ]
 
 def numCores():
     "Returns number of CPU cores based on /proc/cpuinfo"
@@ -287,6 +303,11 @@ def numCores():
     except ValueError:
         return 0
     return numCores.ncores
+
+def irange(start, end):
+    """Inclusive range from start to end (vs. Python insanity.)
+       irange(1,5) -> 1, 2, 3, 4, 5"""
+    return range( start, end + 1 )
 
 def custom( cls, **params ):
     "Returns customized constructor for class cls."
