@@ -310,16 +310,19 @@ class Node( object ):
         ports = self.intfs.keys()
         if ports:
             return self.intfs[ min( ports ) ]
+        else:
+            warn( '*** defaultIntf: warning:', self.name,
+                 'has no interfaces\n' )
 
     def intf( self, intf='' ):
-        """Return our interface object with given name,x
+        """Return our interface object with given name,
            or default intf if name is empty"""
         if not intf:
             return self.defaultIntf()
         elif type( intf) is str:
             return self.nameToIntf[ intf ]
         else:
-            return intf
+            return None
 
     def connectionsTo( self, node):
         "Return [ intf1, intf2... ] for all intfs that connect self to node."
