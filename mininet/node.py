@@ -374,13 +374,13 @@ class Node( object ):
 
     # Convenience and configuration methods
 
-    def setMAC( self, mac, intf=''):
+    def setMAC( self, mac, intf=None ):
         """Set the MAC address for an interface.
            intf: intf or intf name
            mac: MAC address as string"""
         return self.intf( intf ).setMAC( mac )
 
-    def setIP( self, ip, prefixLen=8, intf='' ):
+    def setIP( self, ip, prefixLen=8, intf=None ):
         """Set the IP address for an interface.
            intf: interface name
            ip: IP address as a string
@@ -392,13 +392,11 @@ class Node( object ):
 
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
-        i = self.intf( intf )
-        return self.intf( i ).IP() if i else None
+        return self.intf( intf ).IP()
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        i = self.intf( intf )
-        return self.intf( i ).MAC() if i else None
+        return self.intf( intf ).IP()
 
     def intfIsUp( self, intf=None ):
         "Check if an interface is up."
