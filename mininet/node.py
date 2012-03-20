@@ -194,8 +194,13 @@ class Node( object ):
            printPid: print command's PID?"""
         assert not self.waiting
         printPid = kwargs.get( 'printPid', True )
-        if len( args ) > 0:
+        # Allow sendCmd( [ list ] )
+        if len( args ) == 1 and type( args[ 0 ] ) is list:
+            cmd = args[ 0 ]
+        # Allow sendCmd( cmd, arg1, arg2... )
+        elif len( args ) > 0:
             cmd = args
+        # Convert to string
         if not isinstance( cmd, str ):
             cmd = ' '.join( [ str( c ) for c in cmd ] )
         if not re.search( r'\w', cmd ):
