@@ -54,7 +54,7 @@ from mininet.log import info, error, warn, debug
 from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
 from mininet.util import numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
-from mininet.link import Link, Intf
+from mininet.link import Link, Intf, TCIntf
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -810,10 +810,19 @@ class OVSSwitch( Switch ):
         "Run ovs-dpctl command"
         return self.cmd( 'ovs-dpctl', args[ 0 ], self, *args[ 1: ] )
 
+    @staticmethod
+    def TCReapply( intf ):
+        """Unfortunately OVS and Mininet are fighting
+           over tc queuing disciplines. As a quick hack/
+           workaround, we clear OVS's and reapply our own."""
+        if type( intf ) is TCIntf:
+            intf.config( **intf.params )
+
     def attach( self, intf ):
         "Connect a data port"
         self.cmd( 'ovs-vsctl add-port', self, intf )
         self.cmd( 'ifconfig', intf, 'up' )
+        self.TCReapply( intf )
 
     def detach( self, intf ):
         "Disconnect a data port"
