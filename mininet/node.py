@@ -206,15 +206,17 @@ class Node( object ):
         if not re.search( r'\w', cmd ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            separator = '&'
-            cmd = cmd[ :-1 ]
-        else:
-            separator = ';'
-            if printPid and not isShellBuiltin( cmd ):
-                cmd = 'mnexec -p ' + cmd
-        self.write( cmd + separator + ' printf "\\177" \n' )
         self.lastCmd = cmd
+        printPid = printPid and not isShellBuiltin( cmd )
+        if len( cmd ) > 0 and cmd[ -1 ] == '&':
+            # print ^A{pid}\n{sentinel}
+            cmd += ' printf "\\001%d\n\\177" $! \n'
+        else:
+            # print sentinel
+            cmd += '; printf "\\177"'
+            if printPid and not isShellBuiltin( cmd ):
+                cmd = 'mnexec -p ' + cmd 
+        self.write( cmd  + '\n' )
         self.lastPid = None
         self.waiting = True
 
