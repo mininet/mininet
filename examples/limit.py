@@ -42,7 +42,7 @@ def limit( bw=10, cpu=.4 ):
     myTopo = TreeTopo( depth=1, fanout=2 )
     for sched in 'rt', 'cfs':
         print '*** Testing with', sched, 'bandwidth limiting'
-        host = custom( git CPULimitedHost, sched=sched, cpu=cpu )
+        host = custom( CPULimitedHost, sched=sched, cpu=cpu )
         net = Mininet( topo=myTopo, intf=intf, host=host )
         net.start()
         testLinkLimit( net, bw=bw )
