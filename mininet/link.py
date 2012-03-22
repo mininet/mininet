@@ -33,7 +33,7 @@ class Intf( object ):
 
     "Basic interface object that can configure itself."
 
-    def __init__( self, name, node=None, port=None, link=None, **kwargs ):
+    def __init__( self, name, node=None, port=None, link=None, **params ):
         """name: interface name (e.g. h1-eth0)
            node: owning node (where this intf most likely lives)
            link: parent link if we're part of a link
@@ -44,7 +44,9 @@ class Intf( object ):
         self.mac, self.ip, self.prefixLen = None, None, None
         # Add to node (and move ourselves if necessary )
         node.addIntf( self, port=port )
-        self.config( **kwargs )
+        # Save params for future reference
+        self.params = params
+        self.config( **params )
 
     def cmd( self, *args, **kwargs ):
         "Run a command in our owning node"

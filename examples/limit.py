@@ -34,7 +34,7 @@ def testCpuLimit( net, cpu ):
     h1.cmd( 'kill %1')
     h2.cmd( 'kill %1')
 
-def limit( bw=1, cpu=.3 ):
+def limit( bw=1, cpu=.4 ):
     """Example/test of link and CPU bandwidth limits
        bw: interface bandwidth limit in Mbps
        cpu: cpu limit as fraction of overall CPU time"""
