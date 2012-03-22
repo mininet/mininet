@@ -506,14 +506,14 @@ class CPULimitedHost( Host ):
 
     "CPU limited host"
 
-    def __init__( self, *args, **kwargs ):
-        Host.__init__( self, *args, **kwargs )
+    def __init__( self, name, sched='cfs', **kwargs ):
+        Host.__init__( self, name, **kwargs )
         # Create a cgroup and move shell into it
         self.cgroup = 'cpu,cpuacct:/' + self.name
         errFail( 'cgcreate -g ' + self.cgroup )
         errFail( 'cgclassify -g %s %s' % ( self.cgroup, self.pid ) )
         self.period_us = kwargs.get( 'period_us', 10000 )
-        self.sched = kwargs.get( 'sched', 'rt' )
+        self.sched = sched
 
     def cleanup( self ):
         "Clean up our cgroup"
