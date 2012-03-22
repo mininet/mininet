@@ -34,21 +34,35 @@ def testCpuLimit( net, cpu ):
     h1.cmd( 'kill %1')
     h2.cmd( 'kill %1')
 
-def limit( bw=1, cpu=.4 ):
+def limit( bw=10, cpu=.4 ):
     """Example/test of link and CPU bandwidth limits
        bw: interface bandwidth limit in Mbps
        cpu: cpu limit as fraction of overall CPU time"""
-    intf = custom( TCIntf, bw=1 )
+    intf = custom( TCIntf, bw=bw )
     myTopo = TreeTopo( depth=1, fanout=2 )
     for sched in 'rt', 'cfs':
         print '*** Testing with', sched, 'bandwidth limiting'
-        host = custom( CPULimitedHost, sched=sched, cpu=cpu )
+        host = custom( git CPULimitedHost, sched=sched, cpu=cpu )
         net = Mininet( topo=myTopo, intf=intf, host=host )
         net.start()
         testLinkLimit( net, bw=bw )
         testCpuLimit( net, cpu=cpu )
         net.stop()
 
+def verySimpleLimit( bw=150 ):
+    intf = custom( TCIntf, bw=bw )
+    net = Mininet( intf=intf )
+    h1, h2 = net.addHost( 'h1' ), net.addHost( 'h2' )
+    net.addLink( h1, h2 )
+    net.start()
+    net.pingAll()
+    net.iperf()
+    h1.cmdPrint( 'tc -s qdisc ls dev', h1.defaultIntf() )
+    h2.cmdPrint( 'tc -d class show dev', h2.defaultIntf() )
+    h1.cmdPrint( 'tc -s qdisc ls dev', h1.defaultIntf() )
+    h2.cmdPrint( 'tc -d class show dev', h2.defaultIntf() )
+    net.stop()
+    
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    limit()
+    verySimpleLimit()
