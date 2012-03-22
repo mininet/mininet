@@ -203,6 +203,12 @@ class Mininet( object ):
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
+    
+    # BL: is this better than just using nameToNode[] ?
+    # Should it have a better name?
+    def getNodeByName( self, nodeName ):
+        "Return node with given name"
+        return self.nameToNode[ nodeName ]
 
     def addLink( self, src, dst, srcPort=None, dstPort=None,
                  cls=None, **params ):
