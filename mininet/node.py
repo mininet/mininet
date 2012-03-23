@@ -662,7 +662,7 @@ class Switch( Node ):
         "Derive dpid from switch name, s1 -> 1"
         dpid = int( re.findall( '\d+', self.name )[ 0 ] )
         dpid = hex( dpid )[ 2: ]
-        dpid = '0' * ( 12 - len( dpid ) ) + dpid
+        dpid = '0' * ( 16 - len( dpid ) ) + dpid
         return dpid
 
     def defaultIntf( self ):
@@ -749,7 +749,7 @@ class OVSLegacyKernelSwitch( Switch ):
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        self.dp = 'dp%i' % dp
+        self.dp = self.name
         self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
@@ -762,6 +762,7 @@ class OVSLegacyKernelSwitch( Switch ):
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
             moduleName='Open vSwitch (openvswitch.org)')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+
 
     def start( self, controllers ):
         "Start up kernel datapath."
