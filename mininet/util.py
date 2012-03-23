@@ -102,8 +102,8 @@ def errFail( *cmd, **kwargs ):
     "Run a command using errRun and raise exception on nonzero exit"
     out, err, ret = errRun( *cmd, **kwargs )
     if ret:
-        raise Exception( "errFail: failed with return code %s"
-                         % ret )
+        raise Exception( "errFail: %s failed with return code %s: %s"
+                         % ( cmd, ret, err ) )
     return out, err, ret
 
 def quietRun( cmd, **kwargs ):
