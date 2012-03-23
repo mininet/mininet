@@ -52,7 +52,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from mininet.log import info, error, warn, debug
 from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
-from mininet.util import numCores
+from mininet.util import numCores, retry
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
 
@@ -139,6 +139,10 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
+        if not self.inNamespace:
+            for intfName in self.intfNames():
+                if self.name in intfName:
+                    quietRun( 'ip link del ' + intfName )
         self.shell = None
 
     def read( self, maxbytes=1024 ):
@@ -517,12 +521,6 @@ class CPULimitedHost( Host ):
         self.period_us = kwargs.get( 'period_us', 10000 )
         self.sched = sched
 
-    def cleanup( self ):
-        "Clean up our cgroup"
-        Host.cleanup( self )
-        debug( '*** deleting cgroup', self.cgroup, '\n' )
-        errFail( 'cgdelete -r ' + self.cgroup )
-
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
         cmd = 'cgset -r %s.%s=%s /%s' % (
@@ -539,6 +537,16 @@ class CPULimitedHost( Host ):
         cmd = 'cgget -r %s.%s /%s' % (
             resource, param, self.name )
         return quietRun( cmd ).split()[ -1 ]
+
+    def cgroupDel( self ):
+        "Clean up our cgroup"
+        # info( '*** deleting cgroup', self.cgroup, '\n' )
+        out, err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
+        return exitcode != 0
+
+    def cleanup( self ):
+        "Clean up our cgroup"
+        retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     def chrt( self, prio=20 ):
         "Set RT scheduling priority"
