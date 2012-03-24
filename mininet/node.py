@@ -518,7 +518,11 @@ class CPULimitedHost( Host ):
         self.cgroup = 'cpu,cpuacct:/' + self.name
         errFail( 'cgcreate -g ' + self.cgroup )
         errFail( 'cgclassify -g %s %s' % ( self.cgroup, self.pid ) )
-        self.period_us = kwargs.get( 'period_us', 10000 )
+        # BL: Setting the correct period/quota is tricky, particularly
+        # for RT. RT allows very small quotas, but the overhead
+        # seems to be high. CFS has a mininimum quota of 1 ms, but
+        # still does better with larger period values.
+        self.period_us = kwargs.get( 'period_us', 100000 )
         self.sched = sched
 
     def cgroupSet( self, param, value, resource='cpu' ):
