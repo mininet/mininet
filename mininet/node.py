@@ -219,8 +219,8 @@ class Node( object ):
             # print sentinel
             cmd += '; printf "\\177"'
             if printPid and not isShellBuiltin( cmd ):
-                cmd = 'mnexec -p ' + cmd 
-        self.write( cmd  + '\n' )
+                cmd = 'mnexec -p ' + cmd
+        self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
 
@@ -545,7 +545,7 @@ class CPULimitedHost( Host ):
     def cgroupDel( self ):
         "Clean up our cgroup"
         # info( '*** deleting cgroup', self.cgroup, '\n' )
-        out, err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
+        _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         return exitcode != 0
 
     def cleanup( self ):
@@ -753,7 +753,7 @@ class OVSLegacyKernelSwitch( Switch ):
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
         Switch.__init__( self, name, **kwargs )
-        self.dp = self.name
+        self.dp = dp if dp else self.name
         self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
@@ -766,7 +766,6 @@ class OVSLegacyKernelSwitch( Switch ):
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
             moduleName='Open vSwitch (openvswitch.org)')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
-
 
     def start( self, controllers ):
         "Start up kernel datapath."

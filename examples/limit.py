@@ -50,6 +50,7 @@ def limit( bw=10, cpu=.4 ):
         net.stop()
 
 def verySimpleLimit( bw=150 ):
+    "Absurdly simple limiting test"
     intf = custom( TCIntf, bw=bw )
     net = Mininet( intf=intf )
     h1, h2 = net.addHost( 'h1' ), net.addHost( 'h2' )
@@ -62,7 +63,7 @@ def verySimpleLimit( bw=150 ):
     h1.cmdPrint( 'tc -s qdisc ls dev', h1.defaultIntf() )
     h2.cmdPrint( 'tc -d class show dev', h2.defaultIntf() )
     net.stop()
-    
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     verySimpleLimit()

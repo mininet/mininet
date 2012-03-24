@@ -60,10 +60,10 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
 def dump( results ):
     "Dump results"
 
-    format = '%s\t%s\t%s'
+    fmt = '%s\t%s\t%s'
 
     print
-    print format % ( 'sched', 'cpu', 'client MB/s' )
+    print fmt % ( 'sched', 'cpu', 'client MB/s' )
     print
 
     for sched in sorted( results.keys() ):
@@ -71,11 +71,11 @@ def dump( results ):
         for cpu, bps in entries:
             pct = '%.2f%%' % ( cpu * 100 )
             mbps = bps / 1e6
-            print format % ( sched, pct, mbps )
+            print fmt % ( sched, pct, mbps )
 
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
     limits = [ .45, .4, .3, .2, .1 ]
-    results = bwtest( limits )
-    dump( results )
+    out = bwtest( limits )
+    dump( out )

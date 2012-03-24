@@ -109,7 +109,6 @@ class CLI( Cmd ):
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
-
     def do_net( self, _line ):
         "List network connections."
         dumpNodeConnections( self.nodelist )
