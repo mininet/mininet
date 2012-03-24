@@ -189,21 +189,30 @@ class TCIntf( Intf ):
         elif bw is not None:
             # BL: this seems a bit brittle...
             if ( speedup > 0 and
-                 self.node.name[0:2] == 'sw' ):
+                 self.node.name[0:1] == 's' ):
                 bw = speedup
+            # BL: As far as I can discern,
+            # burst is the max number of bytes we can send in 1 ms, but
+            # this may not actually be correct!  Why 1 ms?
+            burst = bw * 1e6 / 8 * .001
             if use_hfsc:
                 cmds = [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
-                          'class add dev %s parent 1:0 classid 1:1 hfsc sc '
+                          '%s class add dev %s parent 1:0 classid 1:1 hfsc sc '
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
-                latency_us = 10 * 1500 * 8 / bw
+                # was: latency_us = 10 * 1500 * 8 / bw
+                latency_us = 1000
                 cmds = ['%s qdisc add dev %s root handle 1: tbf ' +
-                        'rate %fMbit burst 15000 latency %fus' %
-                         (bw, latency_us) ]
+                        'rate %fMbit burst %f latency %fus' %
+                         ( bw, burst, latency_us ) ]
             else:
+                # This may not be correct - we should look more closely
+                # at the semantics of burst and cburst to make sure we
+                # are specifying the correct sizes.
                 cmds = [ '%s qdisc add dev %s root handle 1:0 htb default 1',
                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                         'rate %fMbit burst 15k' % bw ]
+                         'rate %fMbit burst %f cburst %f' %
+                         ( bw, burst, burst ) ]
             parent = ' parent 1:1 '
 
             # ECN or RED
