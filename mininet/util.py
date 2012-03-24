@@ -187,6 +187,31 @@ def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
 
+# Support for dumping network
+
+def dumpNodeConnections( nodes ):
+    "Dump connections to/from nodes."
+
+    def dumpConnections( node ):
+        "Helper function: dump connections to node"
+        for intf in node.intfList():
+            output( ' %s:' % intf )
+            if intf.link:
+                intfs = [ intf.link.intf1, intf.link.intf2 ]
+                intfs.remove( intf )
+                output( intfs[ 0 ] )
+            else:
+                output( ' ' )
+
+    for node in nodes:
+        output( node.name )
+        dumpConnections( node )
+        output( '\n' )
+
+def dumpNetConnections( net ):
+    "Dump connections in network"
+    nodes = net.controllers + net.switches + net.hosts
+    dumpNodeConnections( nodes )
 
 # IP and Mac address formatting and parsing
 

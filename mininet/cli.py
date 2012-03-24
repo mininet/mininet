@@ -33,7 +33,7 @@ import sys
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms
-from mininet.util import quietRun, isShellBuiltin
+from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -109,21 +109,10 @@ class CLI( Cmd ):
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    @staticmethod
-    def dump_connections( node ):
-        "Helper method: dump connections to node"
-        for intf in node.intfList():
-            if intf.link:
-                intfs = [ intf.link.intf1, intf.link.intf2 ]
-                intfs.remove( intf )
-                output( ' %s' % intfs[ 0 ].node )
 
     def do_net( self, _line ):
         "List network connections."
-        for node in self.nodelist:
-            output( node.name, '<->' )
-            self.dump_connections( node )
-            output( '\n' )
+        dumpNodeConnections( self.nodelist )
 
     def do_sh( self, line ):
         "Run an external shell command"
