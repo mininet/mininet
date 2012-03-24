@@ -95,7 +95,7 @@ from time import sleep
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
-from mininet.link import Link
+from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
@@ -104,7 +104,7 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                 controller=Controller, link=Link, intf=None,
+                 controller=Controller, link=Link, intf=Intf,
                  build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None ):
@@ -203,21 +203,28 @@ class Mininet( object ):
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
-    
+
     # BL: is this better than just using nameToNode[] ?
     # Should it have a better name?
     def getNodeByName( self, nodeName ):
         "Return node with given name"
         return self.nameToNode[ nodeName ]
 
-    def addLink( self, src, dst, srcPort=None, dstPort=None,
+    def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
-        "Add a link from topo"
-        if self.intf and not 'intf' in params:
-            params[ 'intf' ] = self.intf
+        """"Add a link from node1 to node2
+            node1: source node
+            node2: dest node
+            port1: source port
+            port2: dest port
+            returns: link object"""
+        defaults = { 'port1': port1,
+                     'port2': port2,
+                     'intf': self.intf }
+        defaults.update( params )
         if not cls:
             cls = self.link
-        return cls( src, dst, srcPort, dstPort, **params )
+        return cls( node1, node2, **defaults )
 
     def configHosts( self ):
         "Configure a set of hosts."
@@ -260,9 +267,13 @@ class Mininet( object ):
         info( '\n*** Adding links:\n' )
         for srcName, dstName in topo.links(sort=True):
             src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
+            params = topo.linkInfo( srcName, dstName )
             srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort,
-                          **topo.linkInfo( srcName, dstName ) )
+            if not params:
+                params = {}
+            params.setdefault( 'port1', srcPort)
+            params.setdefault( 'port2', dstPort)
+            self.addLink( src, dst, **params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
 
         info( '\n' )
