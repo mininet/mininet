@@ -24,7 +24,7 @@ def waitListening(client, server, port):
         sleep(.5)
 
 
-def bwtest( cpuLimits, period_us=10000, seconds=5 ):
+def bwtest( cpuLimits, period_us=100000, seconds=5 ):
     """Example/test of link and CPU bandwidth limits
        cpu: cpu limit as fraction of overall CPU time"""
 
@@ -76,6 +76,6 @@ def dump( results ):
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    limits = [ .4, .3, .2, .1 ]
+    limits = [ .45, .4, .3, .2, .1 ]
     results = bwtest( limits )
     dump( results )
