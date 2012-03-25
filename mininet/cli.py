@@ -46,6 +46,9 @@ class CLI( Cmd ):
         self.nodemap = {}  # map names to Node objects
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
+        # Local variable bindings for py command
+        self.locals = { 'net': mininet }
+        self.locals.update( self.nodemap )
         # Attempt to handle input
         self.stdin = stdin
         self.inPoller = poll()
@@ -124,7 +127,7 @@ class CLI( Cmd ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: h1.cmd('ls')"""
         try:
-            result = eval( line, globals(), self.nodemap )
+            result = eval( line, globals(), self.locals )
             if not result:
                 return
             elif isinstance( result, str ):
