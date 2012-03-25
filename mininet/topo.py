@@ -30,83 +30,73 @@ class Topo(object):
         self.node_info = {}
         self.link_info = {}  # (src, dst) tuples hash to EdgeInfo objects
         self.hopts = {} if hopts is None else hopts
-        self.sopts = {} if sopts is None else lopts
+        self.sopts = {} if sopts is None else sopts
         self.lopts = {} if lopts is None else lopts
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
 
-    def add_node(self, name, *args, **opts):
+    def add_node(self, name, **opts):
         """Add Node to graph.
-           add_node('name', dict) <or> add_node('name', **opts)
            name: name
-           args: dict of node options
-           opts: node options"""
+           opts: node options
+           returns: node name"""
         self.g.add_node(name)
-        if args and type(args[0]) is dict:
-            opts = args[0]
         self.node_info[name] = opts
         return name
 
-    def add_host(self, name, *args, **opts):
+    def add_host(self, name, **opts):
         """Convenience method: Add host to graph.
-           add_host('name', dict) <or> add_host('name', **opts)
-           name: name
-           args: dict of node options
-           opts: node options"""
+           name: host name
+           opts: host options
+           returns: host name"""
         if not opts and self.hopts:
             opts = self.hopts
-        return self.add_node(name, *args, **opts)
+        return self.add_node(name, **opts)
 
     def add_switch(self, name, **opts):
         """Convenience method: Add switch to graph.
-           add_switch('name', dict) <or> add_switch('name', **opts)
-           name: name
-           args: dict of node options
-           opts: node options"""
+           name: switch name
+           opts: switch options
+           returns: switch name"""
         if not opts and self.sopts:
             opts = self.sopts
         result = self.add_node(name, is_switch=True, **opts)
         return result
 
-    def add_link(self, src, dst, *args, **opts):
-        """Add link (Node, Node) to topo.
-           add_link(src, dst, dict) <or> add_link(src, dst, **opts)
-           src: src name
-           dst: dst name
-           args: dict of node options
-           params: link parameters"""
-        src, dst = sorted([src, dst], key=naturalSeq)
-        self.g.add_edge(src, dst)
-        if args and type(args[0]) is dict:
-            opts = args[0]
-        if not opts and self.sopts:
-            opts = self.sopts
-        self.link_info[(src, dst)] = opts
-        self.add_port(src, dst)
-        return src, dst
+    def add_link(self, node1, node2, port1=None, port2=None, 
+                 *default, **opts):
+        """node1, node2: nodes to link together
+           port1, port2: ports (optional)
+           opts: link options (optional)
+           returns: link info key"""
+        if not opts and self.lopts:
+            opts = self.lopts
+        self.add_port(node1, node2, port1, port2)
+        key = tuple(self.sorted([node1, node2]))
+        self.link_info[key] = opts
+        self.g.add_edge(*key)
+        return key
 
-    def add_port(self, src, dst):
+    def add_port(self, src, dst, sport=None, dport=None):
         '''Generate port mapping for new edge.
-
-        @param src source switch DPID
-        @param dst destination switch DPID
+        @param src source switch name
+        @param dst destination switch name
         '''
+        self.ports.setdefault(src, {})
+        self.ports.setdefault(dst, {})
+        # New port: number of outlinks + base
         src_base = 1 if self.is_switch(src) else 0
         dst_base = 1 if self.is_switch(dst) else 0
-        if src not in self.ports:
-            self.ports[src] = {}
-        if dst not in self.ports[src]:
-            # num outlinks
-            self.ports[src][dst] = len(self.ports[src]) + src_base
-        if dst not in self.ports:
-            self.ports[dst] = {}
-        if src not in self.ports[dst]:
-            # num outlinks
-            self.ports[dst][src] = len(self.ports[dst]) + dst_base
+        if sport is None:
+            sport = len(self.ports[src]) + src_base
+        if dport is None:
+            dport = len(self.ports[dst]) + dst_base
+        self.ports[src][dst] = sport
+        self.ports[dst][src] = dport
 
     def nodes(self, sort=True):
         "Return nodes in graph"
         if sort:
-            return sorted( self.g.nodes(), key=natural )
+            return self.sorted( self.g.nodes() )
         else:
             return self.g.nodes()
 
@@ -137,7 +127,8 @@ class Topo(object):
         if not sort:
             return self.g.edges()
         else:
-            return sorted( self.g.edges(), key=naturalSeq )
+            links = [tuple(self.sorted(e)) for e in self.g.edges()]
+            return sorted( links, key=naturalSeq )
 
     def port(self, src, dst):
         '''Get port number.
@@ -154,9 +145,9 @@ class Topo(object):
 
     def linkInfo( self, src, dst ):
         "Return link metadata"
-        src, dst = sorted((src, dst), key=naturalSeq)
+        src, dst = self.sorted([src, dst])
         return self.link_info[(src, dst)]
-
+    
     def nodeInfo( self, name ):
         "Return metadata (dict) for node"
         info = self.node_info[ name ]
@@ -197,31 +188,19 @@ class SingleSwitchReversedTopo(SingleSwitchTopo):
 
     Useful to verify that Mininet properly handles custom port numberings.
     '''
+    def __init__(self, k=2, **opts):
+        '''Init.
 
-    def port(self, src, dst):
-        '''Get port number.
-
-        @param src source switch DPID
-        @param dst destination switch DPID
-        @return tuple (src_port, dst_port):
-            src_port: port on source switch leading to the destination switch
-            dst_port: port on destination switch leading to the source switch
+        @param k number of hosts
+        @param enable_all enables all nodes and switches?
         '''
-        if src == 1:
-            if dst in range(2, self.k + 2):
-                dst_index = dst - 2
-                highest = self.k - 1
-                return (highest - dst_index, 0)
-            else:
-                raise Exception('unexpected dst: %i' % dst)
-        elif src in range(2, self.k + 2):
-            if dst == 1:
-                raise Exception('unexpected dst: %i' % dst)
-            else:
-                src_index = src - 2
-                highest = self.k - 1
-                return (0, highest - src_index)
-
+        super(SingleSwitchTopo, self).__init__(**opts)
+        self.k = k
+        switch = self.add_switch('s1')
+        for h in irange(1, k):
+            host = self.add_host('h%s' % h)
+            self.add_link(host, switch, 
+                          port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
     "Linear topology of k switches, with one host per switch."

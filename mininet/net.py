@@ -269,11 +269,7 @@ class Mininet( object ):
             src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
             params = topo.linkInfo( srcName, dstName )
             srcPort, dstPort = topo.port( srcName, dstName )
-            if not params:
-                params = {}
-            params.setdefault( 'port1', srcPort)
-            params.setdefault( 'port2', dstPort)
-            self.addLink( src, dst, **params )
+            self.addLink( src, dst, srcPort, dstPort, **params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
 
         info( '\n' )
