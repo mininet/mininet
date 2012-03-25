@@ -123,7 +123,7 @@ function kernel_clean {
 function mn_deps {
     echo "Installing Mininet dependencies"
     $install gcc make screen psmisc xterm ssh iperf iproute \
-        python-setuptools python-networkx
+        python-setuptools python-networkx cgroup-bin ethtool
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
         echo "Upgrading networkx to avoid deprecation warning"
