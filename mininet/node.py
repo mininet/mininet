@@ -865,6 +865,7 @@ class OVSSwitch( Switch ):
     def stop( self ):
         "Terminate OVS switch."
         self.cmd( 'ovs-vsctl del-br', self )
+        self.deleteIntfs()
 
 OVSKernelSwitch = OVSSwitch
 
