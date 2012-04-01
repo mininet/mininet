@@ -191,7 +191,6 @@ class TCIntf( Intf ):
             if ( speedup > 0 and
                  self.node.name[0:1] == 's' ):
                 bw = speedup
-            burst = bw * 1e6 / 8 * .001
             # This may not be correct - we should look more closely
             # at the semantics of burst (and cburst) to make sure we
             # are specifying the correct sizes. For now I have used
