@@ -20,8 +20,8 @@ sudo apt-get update
 sudo apt-get -y install git-core openssh-server
 git clone git://github.com/mininet/mininet
 cd mininet
-# Currently ovs-1.4-compat; will change to testing or master
-git checkout -b 1.4 origin/devel/ovs-1.4-compat
+# Check out branch for cs244
+git checkout -b cs244 origin/class/cs244
 cd
 time mininet/util/install.sh
 if ! grep NOX_CORE_DIR .bashrc; then
