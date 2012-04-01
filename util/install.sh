@@ -237,6 +237,12 @@ function ovs {
 
     # Otherwise try distribution's OVS packages
     if [ "$DIST" = "Ubuntu" ] && [ `echo "$RELEASE >= 11.10" | bc` = 1 ]; then
+        if ! dpkg --get-selections | grep openvswitch-datapath; then
+            # If you've already installed a datapath, assume you
+            # know what you're doing and don't need dkms datapath.
+            # Otherwise, install it.
+            $install openvswitch-datapath-dkms
+        fi
 	if $install openvswitch-switch openvswitch-controller; then
             return
         fi
