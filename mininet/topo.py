@@ -62,8 +62,8 @@ class Topo(object):
         result = self.add_node(name, is_switch=True, **opts)
         return result
 
-    def add_link(self, node1, node2, port1=None, port2=None, 
-                 *default, **opts):
+    def add_link(self, node1, node2, port1=None, port2=None,
+                 **opts):
         """node1, node2: nodes to link together
            port1, port2: ports (optional)
            opts: link options (optional)
@@ -147,7 +147,7 @@ class Topo(object):
         "Return link metadata"
         src, dst = self.sorted([src, dst])
         return self.link_info[(src, dst)]
-    
+
     def nodeInfo( self, name ):
         "Return metadata (dict) for node"
         info = self.node_info[ name ]
@@ -181,7 +181,7 @@ class SingleSwitchTopo(Topo):
             self.add_link(host, switch)
 
 
-class SingleSwitchReversedTopo(SingleSwitchTopo):
+class SingleSwitchReversedTopo(Topo):
     '''Single switch connected to k hosts, with reversed ports.
 
     The lowest-numbered host is connected to the highest-numbered port.
@@ -194,12 +194,12 @@ class SingleSwitchReversedTopo(SingleSwitchTopo):
         @param k number of hosts
         @param enable_all enables all nodes and switches?
         '''
-        super(SingleSwitchTopo, self).__init__(**opts)
+        super(SingleSwitchReversedTopo, self).__init__(**opts)
         self.k = k
         switch = self.add_switch('s1')
         for h in irange(1, k):
             host = self.add_host('h%s' % h)
-            self.add_link(host, switch, 
+            self.add_link(host, switch,
                           port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
