@@ -245,7 +245,8 @@ class TCIntf( Intf ):
                 'limit %d' % max_queue_size if max_queue_size is not None
                  else '' )
             if netemargs:
-                cmds = [ '%s qdisc add dev %s ' + parent + ' netem ' +
+                cmds = [ '%s qdisc add dev %s ' + parent +
+                         ' handle 10: netem ' +
                           netemargs ]
         return cmds
 
