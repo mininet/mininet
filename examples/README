@@ -35,6 +35,15 @@ miniedit.py:
 
 This example demonstrates creating a network via a graphical editor.
 
+multiping.py:
+
+This example demonstrates one method for 
+monitoring output from multiple hosts, using node.monitor().
+
+multipoll.py:
+
+This example demonstrates monitoring output files from multiple hosts.
+
 multitest.py:
 
 This example creates a network and runs multiple tests on it.
