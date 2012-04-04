@@ -54,6 +54,10 @@ These two examples demonstrate how to create a network by using the lowest-
 level Mininet functions. Generally the higher-level API is easier to use,
 but scratchnet shows what is going on behind the scenes.
 
+simpleperf.py:
+
+A simple example of configuring network and CPU bandwidth limits.
+
 sshd.py:
 
 This example shows how to run an sshd process in each host, allowing
