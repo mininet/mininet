@@ -16,7 +16,7 @@ class SingleSwitchTopo(Topo):
    def __init__(self, n=2, **opts):
        Topo.__init__(self, **opts)
        switch = self.add_switch('s1')
-       for h in range(n+1):
+       for h in range(n):
         # Each host gets 50%/n of system CPU
            host = self.add_host('h%s' % (h + 1),
             cpu=.5/n)
