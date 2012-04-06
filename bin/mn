@@ -44,8 +44,8 @@ def customNode( constructors, argStr ):
         if not newargs:
             return constructor( name, *args, **params )
         if args:
-            warn( 'warning: %s replacing %s with %s\n',
-                  constructor, args, newargs )
+            warn( 'warning: %s replacing %s with %s\n' % (
+                  constructor, args, newargs ) )
         return constructor( name, *newargs, **params )
 
     return customized
