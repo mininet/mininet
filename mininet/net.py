@@ -214,9 +214,11 @@ class Mininet( object ):
 
     # BL: is this better than just using nameToNode[] ?
     # Should it have a better name?
-    def getNodeByName( self, nodeName ):
-        "Return node with given name"
-        return self.nameToNode[ nodeName ]
+    def getNodeByName( self, *args ):
+        "Return node(s) with given name(s)"
+        if len( args ) == 1:
+            return self.nameToNode[ args[ 0 ] ]
+        return [ self.nameToNode[ n ] for n in args ]
 
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
