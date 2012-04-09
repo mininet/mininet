@@ -316,8 +316,8 @@ def mountCgroups():
     if 'cgroups on %s' % cgdir not in mounts:
         raise Exception( "cgroups not mounted on " + cgdir )
     if 'cpuset on %s' % csdir not in mounts:
-        errRun( 'mkdir -p', csdir )
-        errRun( 'mount -t cgroup -ocpuset cpuset', csdir )
+        errRun( 'mkdir -p ' + csdir )
+        errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
 
 def natural( text ):
     "To sort sanely/alphabetically: sorted( l, key=natural )"
