@@ -305,8 +305,19 @@ def makeNumeric( s ):
 
 def fixLimits():
     "Fix ridiculously small resource limits."
-    setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
-    setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
+    setrlimit( RLIMIT_NPROC, ( 8192, 8192 ) )
+    setrlimit( RLIMIT_NOFILE, ( 16384, 16384 ) )
+
+def mountCgroups():
+    "Make sure cgroups file system is mounted"
+    mounts = quietRun( 'mount' )
+    cgdir = '/sys/fs/cgroup'
+    csdir = cgdir + '/cpuset'
+    if 'cgroups on %s' % cgdir not in mounts:
+        raise Exception( "cgroups not mounted on " + cgdir )
+    if 'cpuset on %s' % csdir not in mounts:
+        errRun( 'mkdir -p', csdir )
+        errRun( 'mount -t cgroup -ocpuset cpuset', csdir )
 
 def natural( text ):
     "To sort sanely/alphabetically: sorted( l, key=natural )"
