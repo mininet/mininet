@@ -51,8 +51,8 @@ import select
 from subprocess import Popen, PIPE, STDOUT
 
 from mininet.log import info, error, warn, debug
-from mininet.util import quietRun, errRun, errFail, moveIntf, isShellBuiltin
-from mininet.util import numCores, retry
+from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
+                          numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
 
@@ -514,10 +514,15 @@ class CPULimitedHost( Host ):
 
     def __init__( self, name, sched='cfs', **kwargs ):
         Host.__init__( self, name, **kwargs )
+        # Initialize class if necessary
+        if not CPULimitedHost.inited:
+            CPULimitedHost.init()
         # Create a cgroup and move shell into it
-        self.cgroup = 'cpu,cpuacct:/' + self.name
+        self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
         errFail( 'cgcreate -g ' + self.cgroup )
-        errFail( 'cgclassify -g %s %s' % ( self.cgroup, self.pid ) )
+        # We don't add ourselves to a cpuset because you must
+        # specify the cpu and memory placement first
+        errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid ) )
         # BL: Setting the correct period/quota is tricky, particularly
         # for RT. RT allows very small quotas, but the overhead
         # seems to be high. CFS has a mininimum quota of 1 ms, but
@@ -540,7 +545,7 @@ class CPULimitedHost( Host ):
         "Return value of cgroup parameter"
         cmd = 'cgget -r %s.%s /%s' % (
             resource, param, self.name )
-        return quietRun( cmd ).split()[ -1 ]
+        return int( quietRun( cmd ).split()[ -1 ] )
 
     def cgroupDel( self ):
         "Clean up our cgroup"
@@ -616,14 +621,40 @@ class CPULimitedHost( Host ):
             self.chrt( prio=20 )
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
-    def config( self, cpu=None, **params ):
+    def setCPUs( self, cores ):
+        "Specify (real) cores that our cgroup can run on"
+        if type( cores ) is list:
+            cores = ','.join( [ str( c ) for c in cores ] )
+        self.cgroupSet( resource='cpuset', param='cpus',
+                        value= cores )
+        # Memory placement is probably not relevant, but we
+        # must specify it anyway
+        self.cgroupSet( resource='cpuset', param='mems',
+                        value= cores )
+        # We have to do this here after we've specified
+        # cpus and mems
+        errFail( 'cgclassify -g cpuset:/%s %s' % (
+                self.name, self.pid ) )
+
+    def config( self, cpu=None, cores=None, **params ):
         """cpu: desired overall system CPU fraction
+           cores: (real) core(s) this host can run on
            params: parameters for Node.config()"""
         r = Node.config( self, **params )
         # Was considering cpu={'cpu': cpu , 'sched': sched}, but
         # that seems redundant
         self.setParam( r, 'setCPUFrac', cpu=cpu )
+        self.setParam( r, 'setCPUs', cores=cores )
         return r
+
+    inited = False
+
+    @classmethod
+    def init( cls ):
+        "Initialization for CPULimitedHost class"
+        mountCgroups()
+        cls.inited = True
+
 
 # Some important things to note:
 #

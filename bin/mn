@@ -221,6 +221,9 @@ class MininetRunner( object ):
         opts.add_option( '--prefixlen', type='int', default=8,
                         help='prefix length (e.g. /8) for automatic '
                         'network configuration' )
+        opts.add_option( '--pin', action='store_true',
+                         default=False, help="pin hosts to CPU cores "
+                         "(requires --host cfs or --host rt)" )
 
         self.options, self.args = opts.parse_args()
 
@@ -259,6 +262,7 @@ class MininetRunner( object ):
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
+        pin = self.options.pin
         listenPort = None
         if not self.options.nolistenport:
             listenPort = self.options.listenport
@@ -268,7 +272,8 @@ class MininetRunner( object ):
                   ipBase=ipBase,
                   inNamespace=inNamespace,
                   xterms=xterms, autoSetMacs=mac,
-                  autoStaticArp=arp, listenPort=listenPort )
+                  autoStaticArp=arp, autoPinCpus=pin,
+                  listenPort=listenPort )
 
         if self.options.pre:
             CLI( mn, script=self.options.pre )

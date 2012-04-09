@@ -96,7 +96,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link, Intf
-from mininet.util import quietRun, fixLimits
+from mininet.util import quietRun, fixLimits, numCores
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -107,7 +107,8 @@ class Mininet( object ):
                  controller=Controller, link=Link, intf=Intf,
                  build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                  inNamespace=False,
-                 autoSetMacs=False, autoStaticArp=False, listenPort=None ):
+                 autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
+                 listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -120,8 +121,9 @@ class Mininet( object ):
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
-           autoSetMacs: set MAC addrs from topo dpid?
+           autoSetMacs: set MAC addrs automatically like IP addresses?
            autoStaticArp: set all-pairs static MAC addrs?
+           autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
                each additional switch in the net if inNamespace=False"""
         self.topo = topo
@@ -138,6 +140,9 @@ class Mininet( object ):
         self.cleanup = cleanup
         self.autoSetMacs = autoSetMacs
         self.autoStaticArp = autoStaticArp
+        self.autoPinCpus = autoPinCpus
+        self.numCores = numCores()
+        self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
 
         self.hosts = []
@@ -166,6 +171,9 @@ class Mininet( object ):
                                   prefixLen=self.prefixLen ) }
         if self.autoSetMacs:
             defaults[ 'mac'] = macColonHex( self.nextIP )
+        if self.autoPinCpus:
+            defaults[ 'cores' ] = self.nextCore
+            self.nextCore = ( self.nextCore + 1 ) % self.numCores
         self.nextIP += 1
         defaults.update( params )
         if not cls:
@@ -230,7 +238,7 @@ class Mininet( object ):
         "Configure a set of hosts."
         for host in self.hosts:
             info( host.name + ' ' )
-            host.configDefault( defaultRoute=host.defaultIntf )
+            host.configDefault( defaultRoute=host.defaultIntf() )
             # You're low priority, dude!
             # BL: do we want to do this here or not?
             # May not make sense if we have CPU lmiting...
