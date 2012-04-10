@@ -26,20 +26,19 @@ def startpings( host, targetips ):
     targetips.append( '10.0.0.200' )
 
     targetips = ' '.join( targetips )
-    
+
     # BL: Not sure why loopback intf isn't up!
     host.cmd( 'ifconfig lo up' )
 
-    
     # Simple ping loop
     cmd = ( 'while true; do '
-            ' for ip in %s; do ' % targetips  +
+            ' for ip in %s; do ' % targetips +
             '  echo -n %s "->" $ip ' % host.IP() +
             '   `ping -c1 -w 1 $ip | grep packets` ;'
             '  sleep 1;'
             ' done; '
             'done &' )
-    
+
     print ( '*** Host %s (%s) will be pinging ips: %s' %
            ( host.name, host.IP(), targetips ) )
 
@@ -47,7 +46,7 @@ def startpings( host, targetips ):
 
 def multiping( netsize, chunksize, seconds):
     "Ping subsets of size chunksize in net of size netsize"
-    
+
     # Create network and identify subnets
     topo = SingleSwitchTopo( netsize )
     net = Mininet( topo=topo )
@@ -60,13 +59,13 @@ def multiping( netsize, chunksize, seconds):
     poller = poll()
     for fd in fds:
         poller.register( fd, POLLIN )
-    
+
     # Start pings
     for subnet in subnets:
         ips = [ host.IP() for host in subnet ]
         for host in subnet:
             startpings( host, ips )
-    
+
     # Monitor output
     endTime = time() + seconds
     while time() < endTime:
@@ -78,17 +77,10 @@ def multiping( netsize, chunksize, seconds):
     # Stop pings
     for host in hosts:
         host.cmd( 'kill %while' )
-    
+
     net.stop()
 
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
     multiping( netsize=20, chunksize=4, seconds=10 )
-
-    
-    
-
-    
-    
-    

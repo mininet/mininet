@@ -8,13 +8,13 @@ monitoring them
 from mininet.topo import SingleSwitchTopo
 from mininet.net import Mininet
 from mininet.log import setLogLevel
-from mininet.util import quietRun
 
-from time import time, sleep
+from time import time
 from select import poll, POLLIN
 from subprocess import Popen, PIPE
 
 def monitorFiles( outfiles, seconds, timeoutms ):
+    "Monitor set of files and return [(host, line)...]"
     devnull = open( '/dev/null', 'w' )
     tails, fdToFile, fdToHost = {}, {}, {}
     for h, outfile in outfiles.iteritems():
@@ -63,7 +63,7 @@ def monitorTest( N=3, seconds=3 ):
         h.cmd( 'echo >', outfiles[ h ] )
         h.cmd( 'echo >', errfiles[ h ] )
         # Start pings
-        h.cmdPrint('ping', server.IP(), 
+        h.cmdPrint('ping', server.IP(),
                    '>', outfiles[ h ],
                    '2>', errfiles[ h ],
                    '&' )
@@ -79,5 +79,3 @@ def monitorTest( N=3, seconds=3 ):
 if __name__ == '__main__':
     setLogLevel('info')
     monitorTest()
-
-    
