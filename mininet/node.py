@@ -827,11 +827,12 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, **params ):
+    def __init__( self, name, failMode='secure', **params ):
         """Init.
            name: name for switch
-           defaultMAC: default MAC as unsigned int; random value if None"""
+           failMode: controller loss behavior (secure|open)"""
         Switch.__init__( self, name, **params )
+        self.failMode = failMode
 
     @classmethod
     def setup( cls ):
@@ -884,7 +885,7 @@ class OVSSwitch( Switch ):
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
         self.cmd( 'ovs-vsctl add-br', self )
-        self.cmd( 'ovs-vsctl set-fail-mode', self, 'secure' )
+        self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
         for intf in self.intfList():
             if not intf.IP():
                 self.attach( intf )
