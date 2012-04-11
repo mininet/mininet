@@ -146,16 +146,6 @@ function of {
     make
     sudo make install
 
-    # Install dissector:
-    sudo apt-get install -y wireshark libgtk2.0-dev
-    cd ~/openflow/utilities/wireshark_dissectors/openflow
-    make
-    sudo make install
-
-    # Copy coloring rules: OF is white-on-blue:
-    mkdir -p ~/.wireshark
-    cp ~/mininet/util/colorfilters ~/.wireshark
-
     # Remove avahi-daemon, which may cause unwanted discovery packets to be 
 	# sent during tests, near link status changes:
     sudo apt-get remove -y avahi-daemon
@@ -168,6 +158,39 @@ function of {
     fi
     sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
 }
+
+
+function wireshark {    
+    echo "Installing Wireshark dissector..."
+
+    sudo apt-get install -y wireshark libgtk2.0-dev
+
+    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
+        # Install newer version
+        sudo apt-get install -y scons mercurial libglib2.0-dev
+        sudo apt-get install -y libwiretap-dev libwireshark-dev
+        cd ~
+        hg clone https://bitbucket.org/onlab/of-dissector
+        cd of-dissector/src
+        export WIRESHARK=/usr/include/wireshark
+        scons
+        # libwireshark0/ on 11.04; libwireshark1/ on later
+        WSDIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
+        WSPLUGDIR=$WSDIR/plugins/
+        sudo cp openflow.so $WSPLUGDIR
+        echo "Copied openflow plugin to $WSPLUGDIR"
+    else
+        # Install older version from reference source
+        cd ~/openflow/utilities/wireshark_dissectors/openflow
+        make
+        sudo make install
+    fi
+
+    # Copy coloring rules: OF is white-on-blue:
+    mkdir -p ~/.wireshark
+    cp ~/mininet/util/colorfilters ~/.wireshark
+}
+
 
 # Install Open vSwitch
 # Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
@@ -331,6 +354,7 @@ function all {
     kernel
     mn_deps
     of
+    wireshark
     ovs
     modprobe
     nox
@@ -390,6 +414,7 @@ function usage {
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
+    printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
     printf -- ' -y: install (A)ll packages\n' >&2    
     
@@ -400,7 +425,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmntvx' OPTION
+    while getopts 'abcdfhkmntvwx' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -414,6 +439,7 @@ else
       n)    mn_deps;;
       t)    other;;
       v)    ovs;;
+      w)    wireshark;;
       x)    nox;;
       ?)    usage;;
       esac
