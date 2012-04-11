@@ -174,7 +174,9 @@ function wireshark {
         cd of-dissector/src
         export WIRESHARK=/usr/include/wireshark
         scons
-        WSPLUGDIR=/usr/lib/wireshark/libwireshark1/plugins/
+        # libwireshark0/ on 11.04; libwireshark1/ on later
+        WSDIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
+        WSPLUGDIR=$WSDIR/plugins/
         sudo cp openflow.so $WSPLUGDIR
         echo "Copied openflow plugin to $WSPLUGDIR"
     else
