@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include <linux/sched.h>
 #include <unistd.h>
+#include <limits.h>
+#include <syscall.h>
+#include <fcntl.h>
 
 void usage(char *name) 
 {
@@ -22,15 +25,26 @@ void usage(char *name)
            "-c: close all file descriptors except stdin/out/error\n"
            "-d: detach from tty by calling setsid()\n"
            "-n: run in new network namespace\n"
-           "-p: print ^A + pid\n", name);
+           "-p: print ^A + pid\n"
+           "-a pid: attach to pid's network namespace\n", 
+           name);
+}
+
+
+int setns(int fd, int nstype)
+{
+	return syscall(308, fd, nstype);
 }
 
 int main(int argc, char *argv[])
 {
     char c;
     int fd;
-    
-    while ((c = getopt(argc, argv, "+cdnp")) != -1)
+    char path[PATH_MAX];
+    int nsid;
+    int pid;
+
+    while ((c = getopt(argc, argv, "+cdnpa:")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -63,6 +77,20 @@ int main(int argc, char *argv[])
             /* print pid */
             printf("\001%d\n", getpid());
             fflush(stdout);
+            break;
+        case 'a':
+            /* Attach to pid's network namespace */
+            pid = atoi(optarg);
+            sprintf(path, "/proc/%d/ns/net", pid );
+            nsid = open(path, O_RDONLY);
+            if (nsid < 0) {
+                perror(path);
+                return 1;
+            }
+            if (setns(nsid, 0) != 0) {
+                perror("setns");
+                return 1;
+            }
             break;
         default:
             usage(argv[0]);
