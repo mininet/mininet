@@ -220,6 +220,10 @@ class Mininet( object ):
             return self.nameToNode[ args[ 0 ] ]
         return [ self.nameToNode[ n ] for n in args ]
 
+    def get( self, *args ):
+        "Convenience alias for getNodeByName"
+        return self.getNodeByName( *args )
+
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
         """"Add a link from node1 to node2

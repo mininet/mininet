@@ -282,6 +282,37 @@ class Node( object ):
            cmd: string"""
         return self.cmd( *args, **{ 'verbose': True } )
 
+    def popen( self, *args, **kwargs ):
+        """Return a Popen() object in our namespace
+           args: Popen() args, single list, or string
+           kwargs: Popen() keyword args"""
+        defaults = { 'stdout': PIPE, 'stderr': PIPE,
+                     'mncmd': [ 'mnexec', '-a' ] }
+        defaults.update( kwargs )
+        if len( args ) == 1:
+            if type( args[ 0 ] ) is list:
+                # popen([cmd, arg1, arg2...])
+                cmd = args[ 0 ]
+            elif type( args[ 0 ] ) is str:
+                # popen("cmd arg1 arg2...")
+                cmd = args[ 0 ].split()
+        elif len( args ) > 0:
+            # popen( cmd, arg1, arg2... )
+            cmd = args
+        # Attach to our namespace  using mnexec -a
+        mncmd = defaults[ 'mncmd' ]
+        del defaults[ 'mncmd' ]
+        cmd = mncmd + [ str( self.pid ) ] + cmd
+        return Popen( cmd, **defaults )
+
+    def pexec( self, *args, **kwargs ):
+        """Execute a command using popen
+           returns: out, err, exitcode"""
+        popen = self.popen( *args, **kwargs)
+        out, err = popen.communicate()
+        exitcode = popen.wait()
+        return out, err, exitcode
+
     # Interface management, configuration, and routing
 
     # BL notes: This might be a bit redundant or over-complicated.
@@ -529,6 +560,7 @@ class CPULimitedHost( Host ):
         # still does better with larger period values.
         self.period_us = kwargs.get( 'period_us', 100000 )
         self.sched = sched
+        self.rtprio = 20
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
@@ -553,13 +585,24 @@ class CPULimitedHost( Host ):
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         return exitcode != 0
 
+    def popen( self, *args, **kwargs ):
+        """Return a Popen() object in node's namespace
+           args: Popen() args, single list, or string
+           kwargs: Popen() keyword args"""
+        # Tell mnexec to execute command in our cgroup
+        mncmd = [ 'mnexec', '-a', str( self.pid ), 
+                  '-c', self.cgroup ]
+        if self.sched == 'rt':
+            mncmd = [ 'chrt', self.rtprio ] + mncmd
+        return Host.popen( self, *args, mncmd=mncmd, **kwargs )
+
     def cleanup( self ):
         "Clean up our cgroup"
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
-    def chrt( self, prio=20 ):
+    def chrt( self ):
         "Set RT scheduling priority"
-        quietRun( 'chrt -p %s %s' % ( prio, self.pid ) )
+        quietRun( 'chrt -p %s %s' % ( self.rtprio, self.pid ) )
         result = quietRun( 'chrt -p %s' % self.pid )
         firstline = result.split( '\n' )[ 0 ]
         lastword = firstline.split( ' ' )[ -1 ]
