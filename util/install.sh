@@ -170,7 +170,7 @@ function wireshark {
         sudo apt-get install -y scons mercurial libglib2.0-dev
         sudo apt-get install -y libwiretap-dev libwireshark-dev
         cd ~
-        hg clone ssh://hg@bitbucket.org/onlab/of-dissector
+        hg clone https://bitbucket.org/onlab/of-dissector
         cd of-dissector/src
         export WIRESHARK=/usr/include/wireshark
         scons
