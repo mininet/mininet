@@ -160,8 +160,8 @@ function of {
 }
 
 
-function wireshark {
-    # Install wireshark dissector
+function wireshark {    
+    echo "Installing Wireshark dissector..."
 
     sudo apt-get install -y wireshark libgtk2.0-dev
 
