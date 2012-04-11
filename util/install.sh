@@ -414,7 +414,7 @@ function usage {
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
-    printf -- ' -w: install OpenFlow (w)ireshark dissedtor\n' >&2
+    printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
     printf -- ' -y: install (A)ll packages\n' >&2    
     
