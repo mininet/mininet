@@ -287,7 +287,7 @@ class Node( object ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         defaults = { 'stdout': PIPE, 'stderr': PIPE,
-                     'mncmd': 
+                     'mncmd':
                      [ 'mnexec', '-a', str( self.pid ) ] }
         defaults.update( kwargs )
         if len( args ) == 1:
@@ -591,7 +591,7 @@ class CPULimitedHost( Host ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         # Tell mnexec to execute command in our cgroup
-        mncmd = [ 'mnexec', '-a', str( self.pid ), 
+        mncmd = [ 'mnexec', '-a', str( self.pid ),
                   '-g', self.name ]
         if self.sched == 'rt':
             mncmd += [ '-r', str( self.rtprio ) ]
