@@ -287,7 +287,8 @@ class Node( object ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         defaults = { 'stdout': PIPE, 'stderr': PIPE,
-                     'mncmd': [ 'mnexec', '-a' ] }
+                     'mncmd': 
+                     [ 'mnexec', '-a', str( self.pid ) ] }
         defaults.update( kwargs )
         if len( args ) == 1:
             if type( args[ 0 ] ) is list:
@@ -302,7 +303,7 @@ class Node( object ):
         # Attach to our namespace  using mnexec -a
         mncmd = defaults[ 'mncmd' ]
         del defaults[ 'mncmd' ]
-        cmd = mncmd + [ str( self.pid ) ] + cmd
+        cmd = mncmd + cmd
         return Popen( cmd, **defaults )
 
     def pexec( self, *args, **kwargs ):
@@ -591,9 +592,9 @@ class CPULimitedHost( Host ):
            kwargs: Popen() keyword args"""
         # Tell mnexec to execute command in our cgroup
         mncmd = [ 'mnexec', '-a', str( self.pid ), 
-                  '-c', self.cgroup ]
+                  '-g', self.name ]
         if self.sched == 'rt':
-            mncmd = [ 'chrt', self.rtprio ] + mncmd
+            mncmd += [ '-r', str( self.rtprio ) ]
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
@@ -661,7 +662,7 @@ class CPULimitedHost( Host ):
         self.cgroupSet( qstr, quota )
         if sched == 'rt':
             # Set RT priority if necessary
-            self.chrt( prio=20 )
+            self.chrt()
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
     def setCPUs( self, cores, mems=0 ):
