@@ -621,16 +621,16 @@ class CPULimitedHost( Host ):
             self.chrt( prio=20 )
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
-    def setCPUs( self, cores ):
+    def setCPUs( self, cores, mems=0 ):
         "Specify (real) cores that our cgroup can run on"
         if type( cores ) is list:
             cores = ','.join( [ str( c ) for c in cores ] )
         self.cgroupSet( resource='cpuset', param='cpus',
-                        value= cores )
+                        value=cores )
         # Memory placement is probably not relevant, but we
         # must specify it anyway
         self.cgroupSet( resource='cpuset', param='mems',
-                        value= cores )
+                        value=mems)
         # We have to do this here after we've specified
         # cpus and mems
         errFail( 'cgclassify -g cpuset:/%s %s' % (
