@@ -1,11 +1,14 @@
 "Utility functions for Mininet."
 
+from mininet.log import output, info, error
+
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN
 from subprocess import call, check_call, Popen, PIPE, STDOUT
-from mininet.log import output, info, error
 import re
+from fcntl import fcntl, F_GETFL, F_SETFL
+from os import O_NONBLOCK
 
 # Command execution support
 
@@ -300,6 +303,49 @@ def makeNumeric( s ):
     else:
         return s
 
+# Popen support
+
+def pmonitor(popens, timeoutms=500, readline=True,
+             readmax=1024 ):
+    """Monitor dict of hosts to popen objects
+       a line at a time
+       timeoutms: timeout for poll()
+       readline: return single line of output
+       yields: host, line/output (if any)
+       terminates: when all EOFs received"""
+    poller = poll()
+    fdToHost = {}
+    for host, popen in popens.iteritems():
+        fd = popen.stdout.fileno()
+        fdToHost[ fd ] = host
+        poller.register( fd, POLLIN )
+        if not readline:
+            # Use non-blocking reads
+            flags = fcntl( fd, F_GETFL )
+            fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+    while True:
+        fds = poller.poll( timeoutms )
+        if fds:
+            for fd, _event in fds:
+                host = fdToHost[ fd ]
+                popen = popens[ host ]
+                if readline:
+                    # Attempt to read a line of output
+                    # This blocks until we receive a newline!
+                    line = popen.stdout.readline()
+                else:
+                    line = popen.stdout.read( readmax )
+                yield host, line
+                # Check for EOF
+                if not line:
+                    popen.poll()
+                    if popen.returncode is not None:
+                        poller.unregister( fd )
+                        del popens[ host ]
+                        if not popens:
+                            return
+        else:
+            yield None, ''
 
 # Other stuff we use
 
