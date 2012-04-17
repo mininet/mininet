@@ -88,7 +88,17 @@ class Monitor(object):
 
     def monitor_cpu(self, fname="%s/cpu.txt" % self.output_dir, container=None):
         cmd = "(top -b -p 1 -d 1 | grep --line-buffered \"^Cpu\") > %s" % fname
-        if container is not None:
-            cmd = "(top -b -p 1 -d 1 | grep --line-buffered \\\"^Cpu\\\") > %s" % fname
-            cmd = "lxc-execute -n %s -- bash -c \"%s\"" % (container, cmd)
         Popen(cmd, shell=True).wait()
+
+    def monitor_cpuacct(self, hosts, fname="%s/cpuacct.txt" % self.output_dir, interval_sec=1.0):
+        outfile = open(fname, 'a')
+        hnames = ' '.join([h.name for h in hosts])
+        cpuacct_cmd = 'cgget -g cpuacct %s' % hnames
+        prev_time = time()
+        while 1:
+            sleep(interval_sec - (time() - prev_time))
+            prev_time = time()
+            cpu_usage = Popen(cpuacct_cmd, shell=True).communicate()[0]
+            outfile.write(cpu_usage)
+        return
+
