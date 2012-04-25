@@ -727,7 +727,7 @@ class Switch( Node ):
     portBase = 1  # Switches start with port 1 in OpenFlow
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
-        """dpid: dpid for switch (or None for default)
+        """dpid: dpid for switch (or None to derive from name, e.g. s1 -> 1)
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
         Node.__init__( self, name, **params )
@@ -739,10 +739,15 @@ class Switch( Node ):
 
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
-        dpid = int( re.findall( '\d+', self.name )[ 0 ] )
-        dpid = hex( dpid )[ 2: ]
-        dpid = '0' * ( 16 - len( dpid ) ) + dpid
-        return dpid
+        try:
+            dpid = int( re.findall( '\d+', self.name )[ 0 ] )
+            dpid = hex( dpid )[ 2: ]
+            dpid = '0' * ( 16 - len( dpid ) ) + dpid
+            return dpid
+        except IndexError:
+            raise Exception( 'Unable to derive default datapath ID - '
+                             'please either specify a dpid or use a '
+                             'canonical switch name such as s23.' )
 
     def defaultIntf( self ):
         "Return control interface"
