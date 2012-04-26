@@ -294,7 +294,7 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
     
-    sudo apt-get install -y libsnmp-dev libpcap-dev
+    sudo apt-get install -y libsnmp-dev libpcap-dev libconfig-dev
     cd ~/
     git clone git://openflow.org/oflops.git
     cd oflops
