@@ -212,6 +212,22 @@ class CLI( Cmd ):
         else:
             self.mn.configLinkStatus( *args )
 
+    def do_attach( self, line ):
+        "Create new link between a host and a switch"
+        args = line.split()
+        if len(args) != 2:
+            error( 'invalid number of args: attach host switch\n' )
+        else:
+            self.mn.attachHost(*args)
+            
+    def do_detach( self, line ):
+        "Detach a host from a switch"
+        args = line.split()
+        if len(args) < 1 or len(args) > 2:
+            error( 'invalid number of args: detach host [switch]\n' )
+        else:
+            self.mn.detachHost(*args)
+            
     def do_xterm( self, line, term='xterm' ):
         "Spawn xterm(s) for the given node(s)."
         args = line.split()
@@ -300,9 +316,17 @@ class CLI( Cmd ):
         if first in self.nodemap:
             node = self.nodemap[ first ]
             # Substitute IP addresses for node names in command
-            rest = [ self.nodemap[ arg ].IP()
-                    if arg in self.nodemap else arg
-                    for arg in rest ]
+            for index in range(len(rest)):
+                arg = rest[index]
+                if arg in self.nodemap:
+                    ip = self.nodemap[arg].IP()
+                    if not ip:
+                        error('%s is an unreachable, detached host\n' % arg)
+                        return
+                    rest[index] = ip
+            #rest = [ self.nodemap[ arg ].IP()
+            #        if arg in self.nodemap else arg
+            #        for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
             builtin = isShellBuiltin( first )
@@ -321,10 +345,6 @@ class CLI( Cmd ):
         bothPoller = poll()
         bothPoller.register( self.stdin )
         bothPoller.register( node.stdout )
-        if self.isatty():
-            # Buffer by character, so that interactive
-            # commands sort of work
-            quietRun( 'stty -icanon min 1' )
         while True:
             try:
                 bothPoller.poll()
