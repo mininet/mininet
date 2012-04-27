@@ -149,7 +149,7 @@ class Mininet( object ):
         self.listenPort = listenPort
 
         dt = datetime.now()
-        self.monitoring = Monitor(output_dir='/tmp/%s-%s' % (str(dt.date()), str(dt.time())))
+        self.monitoring = Monitor(output_dir='/tmp/mininet-%s-%s' % (str(dt.date()), str(dt.time())))
 
         self.hosts = []
         self.switches = []
