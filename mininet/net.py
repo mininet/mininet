@@ -92,6 +92,7 @@ import select
 import signal
 from time import sleep
 from datetime import datetime
+from multiprocessing import Process
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -345,11 +346,16 @@ class Mininet( object ):
             switch.start( self.controllers )
         info( '\n' )
         info( '*** Starting system monitor\n' )
-        self.monitoring.start()
-        info( 'Logging monitoring info in: %s\n' % self.monitoring.output_dir )
+        m = self.monitoring
+        m.monitors.append(Process(target=m.monitor_cpuacct,
+            args=(self.hosts, '%s/cpuacct.txt' % m.output_dir)))
+        m.start()
+        info( 'Logging monitoring info in: %s\n' % m.output_dir )
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
+        info( '*** Stopping system monitor\n' )
+        self.monitoring.stop()
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
@@ -368,8 +374,6 @@ class Mininet( object ):
             info( controller.name + ' ' )
             controller.stop()
         info( '\n' )
-        info( '*** Stopping system monitor\n' )
-        self.monitoring.stop()
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):

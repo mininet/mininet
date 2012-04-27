@@ -3,7 +3,9 @@ from subprocess import Popen, PIPE
 from multiprocessing import Process
 import re
 import os
+
 from mininet.log import info, error, debug, output
+from mininet.util import quietRun
 
 class Monitor(object):
 
@@ -110,14 +112,17 @@ class Monitor(object):
         Popen(cmd, shell=True).wait()
 
     def monitor_cpuacct(self, hosts, fname="%s/cpuacct.txt" % '.', interval_sec=1.0):
-        outfile = open(fname, 'a')
+        prereqs = ['cgget']
+        for p in prereqs:
+            if not quietRun('which ' + p):
+                error('Could not find %s... not monitoring cpuacct' % p)
+                return
         hnames = ' '.join([h.name for h in hosts])
-        cpuacct_cmd = 'cgget -g cpuacct %s' % hnames
+        cpuacct_cmd = 'cgget -g cpuacct %s >> %s' % (hnames, fname)
         prev_time = time()
         while 1:
             sleep(interval_sec - (time() - prev_time))
             prev_time = time()
-            cpu_usage = Popen(cpuacct_cmd, shell=True).communicate()[0]
-            outfile.write(cpu_usage)
+            cpu_usage = Popen(cpuacct_cmd, shell=True).wait()
         return
 
