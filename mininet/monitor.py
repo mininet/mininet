@@ -58,50 +58,6 @@ class Monitor(object):
             sleep(interval_sec)
         return
 
-    def monitor_count(self, ipt_args="--src 10.0.0.0/8", interval_sec=0.01, fname='%s/bytes_sent.txt' % '.', chain="OUTPUT"):
-        cmd = "iptables -I %(chain)s 1 %(filter)s -j RETURN" % {
-            "filter": ipt_args,
-            "chain": chain,
-            }
-        # We always erase the first rule; will fix this later
-        Popen("iptables -D %s 1" % chain, shell=True).wait()
-        # Add our rule
-        Popen(cmd, shell=True).wait()
-        open(fname, 'w').write('')
-        cmd = "iptables -vnL %s 1 -Z" % (chain)
-        while 1:
-            p = Popen(cmd, shell=True, stdout=PIPE)
-            output = p.stdout.read().strip()
-            values = output.split(' ')
-            if len(values) > 2:
-                t = "%f" % time()
-                pkts, bytes = values[0], values[1]
-                open(fname, 'a').write(','.join([t, pkts, bytes]) + '\n')
-            sleep(interval_sec)
-        return
-
-    def monitor_devs(self, dev_pattern='^sw', fname="%s/bytes_sent.txt" % '.', interval_sec=0.01):
-        """Aggregates (sums) all txed bytes and rate (in Mbps) from devices whose name
-        matches @dev_pattern and writes to @fname"""
-        pat = re.compile(dev_pattern)
-        spaces = re.compile('\s+')
-        open(fname, 'w').write('')
-        prev_tx = {}
-        while 1:
-            lines = open('/proc/net/dev').read().split('\n')
-            t = str(time())
-            total = 0
-            for line in lines:
-                line = spaces.split(line.strip())
-                iface = line[0]
-                if pat.match(iface) and len(line) > 9:
-                    tx_bytes = int(line[9])
-                    total += tx_bytes - prev_tx.get(iface, tx_bytes)
-                    prev_tx[iface] = tx_bytes
-            open(fname, 'a').write(','.join([t, str(total * 8 / interval_sec / 1e6), str(total)]) + "\n")
-            sleep(interval_sec)
-        return
-
     def monitor_devs_ng(self, fname="%s/txrate.txt" % '.', interval_sec=0.01):
         """Uses bwm-ng tool to collect iface tx rate stats.  Very reliable."""
         cmd = "sleep 1; bwm-ng -t %s -o csv -u bits -T rate -C ',' > %s" % (interval_sec * 1000, fname)
@@ -124,5 +80,51 @@ class Monitor(object):
             sleep(interval_sec - (time() - prev_time))
             prev_time = time()
             cpu_usage = Popen(cpuacct_cmd, shell=True).wait()
+        return
+
+    # Obsolete: Use bwm-ng instead (monitor_devs_ng), for reliable stats
+    def monitor_count(self, ipt_args="--src 10.0.0.0/8", interval_sec=0.01, fname='%s/bytes_sent.txt' % '.', chain="OUTPUT"):
+        cmd = "iptables -I %(chain)s 1 %(filter)s -j RETURN" % {
+            "filter": ipt_args,
+            "chain": chain,
+            }
+        # We always erase the first rule; will fix this later
+        Popen("iptables -D %s 1" % chain, shell=True).wait()
+        # Add our rule
+        Popen(cmd, shell=True).wait()
+        open(fname, 'w').write('')
+        cmd = "iptables -vnL %s 1 -Z" % (chain)
+        while 1:
+            p = Popen(cmd, shell=True, stdout=PIPE)
+            output = p.stdout.read().strip()
+            values = output.split(' ')
+            if len(values) > 2:
+                t = "%f" % time()
+                pkts, bytes = values[0], values[1]
+                open(fname, 'a').write(','.join([t, pkts, bytes]) + '\n')
+            sleep(interval_sec)
+        return
+
+    # Obsolete: Use bwm-ng instead (monitor_devs_ng), for reliable stats
+    def monitor_devs(self, dev_pattern='^sw', fname="%s/bytes_sent.txt" % '.', interval_sec=0.01):
+        """Aggregates (sums) all txed bytes and rate (in Mbps) from devices whose name
+        matches @dev_pattern and writes to @fname"""
+        pat = re.compile(dev_pattern)
+        spaces = re.compile('\s+')
+        open(fname, 'w').write('')
+        prev_tx = {}
+        while 1:
+            lines = open('/proc/net/dev').read().split('\n')
+            t = str(time())
+            total = 0
+            for line in lines:
+                line = spaces.split(line.strip())
+                iface = line[0]
+                if pat.match(iface) and len(line) > 9:
+                    tx_bytes = int(line[9])
+                    total += tx_bytes - prev_tx.get(iface, tx_bytes)
+                    prev_tx[iface] = tx_bytes
+            open(fname, 'a').write(','.join([t, str(total * 8 / interval_sec / 1e6), str(total)]) + "\n")
+            sleep(interval_sec)
         return
 
