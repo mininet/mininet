@@ -27,6 +27,10 @@ class Monitor(object):
         self.monitors.append(Process(target=self.monitor_cpu,
             args=('%s/cpu.txt' % self.output_dir, )))
 
+        # cwnd monitor: tcp_probe
+        self.monitors.append(Process(target=self.monitor_cwnd,
+            args=('%s/tcp_probe.txt' % self.output_dir, )))
+
     def start(self):
         '''Start all the system monitors'''
         # Start the monitors
@@ -39,7 +43,8 @@ class Monitor(object):
         for m in self.monitors:
             m.terminate()
         self.monitors = []
-        os.system("killall -9 bwm-ng top")
+        Popen("killall -9 bwm-ng top", shell=True).wait()
+        Popen("killall -9 cat; rmmod tcp_probe > /dev/null 2>&1;", shell=True).wait()
 
     def monitor_qlen(self, iface, interval_sec = 0.01, fname='%s/qlen.txt' % '.'):
         pat_queued = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
@@ -57,6 +62,10 @@ class Monitor(object):
                 open(fname, 'a').write(t + ',' + matches[1] + '\n')
             sleep(interval_sec)
         return
+
+    def monitor_cwnd(self, fname='%s/tcp_probe.txt' % '.'):
+        Popen("rmmod tcp_probe > /dev/null 2>&1; modprobe tcp_probe;", shell=True).wait()
+        Popen("cat /proc/net/tcpprobe > %s" % fname, shell=True).wait()
 
     def monitor_devs_ng(self, fname="%s/txrate.txt" % '.', interval_sec=0.01):
         """Uses bwm-ng tool to collect iface tx rate stats.  Very reliable."""
