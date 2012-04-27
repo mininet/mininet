@@ -37,6 +37,7 @@ class Monitor(object):
         for m in self.monitors:
             m.terminate()
         self.monitors = []
+        os.system("killall -9 bwm-ng top")
 
     def monitor_qlen(self, iface, interval_sec = 0.01, fname='%s/qlen.txt' % '.'):
         pat_queued = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
