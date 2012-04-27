@@ -91,6 +91,7 @@ import re
 import select
 import signal
 from time import sleep
+from datetime import datetime
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -99,6 +100,7 @@ from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
+from mininet.monitor import Monitor
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -144,6 +146,9 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+
+        dt = datetime.now()
+        self.monitoring = Monitor(output_dir='/tmp/%s-%s' % (str(dt.date()), str(dt.time())))
 
         self.hosts = []
         self.switches = []
@@ -339,6 +344,9 @@ class Mininet( object ):
             info( switch.name + ' ')
             switch.start( self.controllers )
         info( '\n' )
+        info( '*** Starting system monitor\n' )
+        self.monitoring.start()
+        info( 'Logging monitoring info in: %s\n' % self.monitoring.output_dir )
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
@@ -359,6 +367,9 @@ class Mininet( object ):
         for controller in self.controllers:
             info( controller.name + ' ' )
             controller.stop()
+        info( '\n' )
+        info( '*** Stopping system monitor\n' )
+        self.monitoring.stop()
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
