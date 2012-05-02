@@ -13,11 +13,6 @@ class Monitor(object):
         self.monitors = []
         self.output_dir = output_dir
 
-        # Create output directory if it doesn't exist already
-        debug('Monitoring output dir: %s' % self.output_dir)
-        if not os.path.isdir(self.output_dir):
-            os.makedirs(self.output_dir)
-
         # Add general process monitors
         # Bandwidth monitor
         self.monitors.append(Process(target=self.monitor_devs_ng,
@@ -33,6 +28,10 @@ class Monitor(object):
 
     def start(self):
         '''Start all the system monitors'''
+
+        # Set output directory
+        self.set_output_dir(self.output_dir)
+
         # Start the monitors
         for m in self.monitors:
             m.start()
@@ -45,6 +44,13 @@ class Monitor(object):
         self.monitors = []
         Popen("killall -9 bwm-ng top", shell=True).wait()
         Popen("killall -9 cat; rmmod tcp_probe > /dev/null 2>&1;", shell=True).wait()
+
+    def set_output_dir(self, output_dir):
+        # Create output directory if it doesn't exist already
+        self.output_dir = output_dir
+        debug('Monitoring output dir: %s' % self.output_dir)
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
 
     def monitor_qlen(self, iface, interval_sec = 0.01, fname='%s/qlen.txt' % '.'):
         pat_queued = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
