@@ -147,9 +147,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
-
-        dt = datetime.now()
-        self.monitoring = Monitor(output_dir='/tmp/mininet-%s-%s' % (str(dt.date()), str(dt.time())))
+        self.monitoring = None
 
         self.hosts = []
         self.switches = []
@@ -164,6 +162,13 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
+
+    def set_debug(self, output_dir=None):
+        '''Enable debugging, with output to the specified directory'''
+        dt = datetime.now()
+        if not output_dir:
+            output_dir = '/tmp/mininet-%s-%s' % (str(dt.date()), str(dt.time()))
+        self.monitoring = Monitor(output_dir=output_dir)
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
@@ -346,16 +351,18 @@ class Mininet( object ):
             switch.start( self.controllers )
         info( '\n' )
         info( '*** Starting system monitor\n' )
-        m = self.monitoring
-        m.monitors.append(Process(target=m.monitor_cpuacct,
-            args=(self.hosts, '%s/cpuacct.txt' % m.output_dir)))
-        m.start()
-        info( 'Logging monitoring info in: %s\n' % m.output_dir )
+        if self.monitoring:
+            m = self.monitoring
+            m.monitors.append(Process(target=m.monitor_cpuacct,
+                args=(self.hosts, '%s/cpuacct.txt' % m.output_dir)))
+            m.start()
+            info( 'Logging monitoring info in: %s\n' % m.output_dir )
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
         info( '*** Stopping system monitor\n' )
-        self.monitoring.stop()
+        if self.monitoring:
+            self.monitoring.stop()
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
