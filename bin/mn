@@ -205,9 +205,6 @@ class MininetRunner( object ):
         opts.add_option( '--verbosity', '-v', type='choice',
                         choices=LEVELS.keys(), default = 'info',
                         help = '|'.join( LEVELS.keys() )  )
-        opts.add_option( '--ip', type='string', default='127.0.0.1',
-                        help='ip address as a dotted decimal string for a'
-                        'remote controller' )
         opts.add_option( '--innamespace', action='store_true',
                         default=False, help='sw and ctrl in namespace?' )
         opts.add_option( '--listenport', type='int', default=6635,
