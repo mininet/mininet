@@ -313,14 +313,15 @@ class CLI( Cmd ):
         nodePoller = poll()
         nodePoller.register( node.stdout )
         bothPoller = poll()
-        bothPoller.register( self.stdin )
-        bothPoller.register( node.stdout )
+        bothPoller.register( self.stdin, POLLIN )
+        bothPoller.register( node.stdout, POLLIN )
         if self.isatty():
             # Buffer by character, so that interactive
             # commands sort of work
             quietRun( 'stty -icanon min 1' )
         while True:
             try:
+                print 'waiting for input'
                 bothPoller.poll()
                 # XXX BL: this doesn't quite do what we want.
                 if False and self.inputFile:
