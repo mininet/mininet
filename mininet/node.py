@@ -1031,14 +1031,14 @@ class NOX( Controller ):
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
-    def __init__( self, name, defaultIP='127.0.0.1',
+    def __init__( self, name, ip='127.0.0.1',
                  port=6633, **kwargs):
         """Init.
            name: name to give controller
            defaultIP: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
-        Controller.__init__( self, name, defaultIP=defaultIP, port=port,
+        Controller.__init__( self, name, ip=ip, port=port,
             **kwargs )
 
     def start( self ):
