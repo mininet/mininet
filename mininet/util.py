@@ -74,31 +74,33 @@ def errRun( *cmd, **kwargs ):
         # cmd goes to stderr, output goes to stdout
         info( cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
-    # We use poll() because select() doesn't work with large fd numbers
+    # We use poll() because select() doesn't work with large fd numbers,
+    # and thus communicate() doesn't work either
     out, err = '', ''
     poller = poll()
     poller.register( popen.stdout, POLLIN )
     fdtofile = { popen.stdout.fileno(): popen.stdout }
+    outDone, errDone = False, True
     if popen.stderr:
         fdtofile[ popen.stderr.fileno() ] = popen.stderr
         poller.register( popen.stderr, POLLIN )
-    while True:
+        errDone = False
+    while not outDone or not errDone:
         readable = poller.poll()
-        # Tell pylint to ignore unused variable event
-        # pylint: disable-msg=W0612
         for fd, event in readable:
-            # pylint: enable-msg=W0612
             f = fdtofile[ fd ]
             data = f.read( 1024 )
             if echo:
                 output( data )
             if f == popen.stdout:
                 out += data
+                if data == '':
+                    outDone = True
             elif f == popen.stderr:
                 err += data
-        returncode = popen.poll()
-        if returncode is not None:
-            break
+                if data == '':
+                    errDone = True
+    returncode = popen.wait()
     return out, err, returncode
 
 def errFail( *cmd, **kwargs ):
