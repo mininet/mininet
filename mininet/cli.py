@@ -319,8 +319,8 @@ class CLI( Cmd ):
         nodePoller = poll()
         nodePoller.register( node.stdout )
         bothPoller = poll()
-        bothPoller.register( self.stdin )
-        bothPoller.register( node.stdout )
+        bothPoller.register( self.stdin, POLLIN )
+        bothPoller.register( node.stdout, POLLIN )
         if self.isatty():
             # Buffer by character, so that interactive
             # commands sort of work
