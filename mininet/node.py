@@ -725,6 +725,7 @@ class Switch( Node ):
        an OpenFlow switch."""
 
     portBase = 1  # Switches start with port 1 in OpenFlow
+    dpidLen = 16  # digits in dpid passed to switch
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
         """dpid: dpid for switch (or None to derive from name, e.g. s1 -> 1)
@@ -742,7 +743,7 @@ class Switch( Node ):
         try:
             dpid = int( re.findall( '\d+', self.name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
-            dpid = '0' * ( 16 - len( dpid ) ) + dpid
+            dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
             return dpid
         except IndexError:
             raise Exception( 'Unable to derive default datapath ID - '
@@ -775,6 +776,8 @@ class Switch( Node ):
 
 class UserSwitch( Switch ):
     "User-space switch."
+
+    dpidLen = 12
 
     def __init__( self, name, **kwargs ):
         """Init.
