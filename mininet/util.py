@@ -87,7 +87,7 @@ def errRun( *cmd, **kwargs ):
         errDone = False
     while not outDone or not errDone:
         readable = poller.poll()
-        for fd, event in readable:
+        for fd, _event in readable:
             f = fdtofile[ fd ]
             data = f.read( 1024 )
             if echo:
@@ -116,7 +116,7 @@ def quietRun( cmd, **kwargs ):
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
 # pylint: enable-msg=E1103
-# pylint: disable-msg=E1101,W0612
+# pylint: disable-msg=E1101
 
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
@@ -129,7 +129,7 @@ def isShellBuiltin( cmd ):
 
 isShellBuiltin.builtIns = None
 
-# pylint: enable-msg=E1101,W0612
+# pylint: enable-msg=E1101
 
 # Interface management
 #
