@@ -321,7 +321,6 @@ class CLI( Cmd ):
             quietRun( 'stty -icanon min 1' )
         while True:
             try:
-                print 'waiting for input'
                 bothPoller.poll()
                 # XXX BL: this doesn't quite do what we want.
                 if False and self.inputFile:
