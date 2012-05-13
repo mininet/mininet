@@ -52,7 +52,7 @@ def oldQuietRun( *cmd ):
 
 
 # This is a bit complicated, but it enables us to
-# monitor commount output as it is happening
+# monitor command output as it is happening
 
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
