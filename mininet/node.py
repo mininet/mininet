@@ -937,6 +937,8 @@ class OVSSwitch( Switch ):
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
         self.cmd( 'ovs-vsctl add-br', self )
+        self.cmd( 'ovs-vsctl -- set Bridge', self,
+                  'other_config:datapath-id=' + self.dpid )
         self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
         for intf in self.intfList():
             if not intf.IP():
