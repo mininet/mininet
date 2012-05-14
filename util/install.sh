@@ -343,7 +343,10 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am ~/mininet/util/nox-patches/*.patch
+    git am ~/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` -eq 1 ]; then
+        git am ~/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+    fi
 
     # Build
     ./boot.sh

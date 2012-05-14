@@ -1,0 +1,175 @@
+From 166693d7cb640d4a41251b87e92c52d9c688196b Mon Sep 17 00:00:00 2001
+From: Bob Lantz <rlantz@cs.stanford.edu>
+Date: Mon, 14 May 2012 15:30:44 -0700
+Subject: [PATCH] Hacks to get NOX classic/destiny to compile under Ubuntu
+ 12.04
+
+Thanks to Srinivasu R. Kanduru for the initial patch.
+
+Apologies for the hacks - it is my hope that this will be fixed
+upstream eventually.
+
+---
+ config/ac_pkg_swig.m4                              |    7 ++++---
+ src/Make.vars                                      |    2 +-
+ src/nox/coreapps/pyrt/deferredcallback.cc          |    2 +-
+ src/nox/coreapps/pyrt/pyglue.cc                    |    2 +-
+ src/nox/coreapps/pyrt/pyrt.cc                      |    2 +-
+ src/nox/netapps/authenticator/auth.i               |    2 ++
+ src/nox/netapps/authenticator/flow_util.i          |    1 +
+ src/nox/netapps/routing/routing.i                  |    2 ++
+ .../switch_management/pyswitch_management.i        |    2 ++
+ src/nox/netapps/tests/tests.cc                     |    2 +-
+ src/nox/netapps/topology/pytopology.i              |    2 ++
+ 11 files changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/config/ac_pkg_swig.m4 b/config/ac_pkg_swig.m4
+index d12556e..9b608f2 100644
+--- a/config/ac_pkg_swig.m4
++++ b/config/ac_pkg_swig.m4
+@@ -78,9 +78,10 @@ AC_DEFUN([AC_PROG_SWIG],[
+                         if test -z "$available_patch" ; then
+                                 [available_patch=0]
+                         fi
+-                        if test $available_major -ne $required_major \
+-                                -o $available_minor -ne $required_minor \
+-                                -o $available_patch -lt $required_patch ; then
++			major_done=`test $available_major -gt $required_major`
++			minor_done=`test $available_minor -gt $required_minor`
++                        if test !$major_done -a !$minor_done \
++                                -a $available_patch -lt $required_patch ; then
+                                 AC_MSG_WARN([SWIG version >= $1 is required.  You have $swig_version.  You should look at http://www.swig.org])
+                                 SWIG=''
+                         else
+diff --git a/src/Make.vars b/src/Make.vars
+index d70d6aa..93b2879 100644
+--- a/src/Make.vars
++++ b/src/Make.vars
+@@ -53,7 +53,7 @@ AM_LDFLAGS += -export-dynamic
+ endif
+ 
+ # set python runtimefiles to be installed in the same directory as pkg
+-pkglib_SCRIPTS = $(NOX_RUNTIMEFILES) $(NOX_PYBUILDFILES)
++pkgdata_SCRIPTS = $(NOX_RUNTIMEFILES) $(NOX_PYBUILDFILES)
+ BUILT_SOURCES  = $(NOX_PYBUILDFILES)
+ 
+ # Runtime-files build and clean rules
+diff --git a/src/nox/coreapps/pyrt/deferredcallback.cc b/src/nox/coreapps/pyrt/deferredcallback.cc
+index 3a40fa7..111a586 100644
+--- a/src/nox/coreapps/pyrt/deferredcallback.cc
++++ b/src/nox/coreapps/pyrt/deferredcallback.cc
+@@ -69,7 +69,7 @@ DeferredCallback::get_instance(const Callback& c)
+     DeferredCallback* cb = new DeferredCallback(c);
+ 
+     // flag as used in *_wrap.cc....correct?
+-    return SWIG_Python_NewPointerObj(cb, s, SWIG_POINTER_OWN | 0);
++    return SWIG_Python_NewPointerObj(m, cb, s, SWIG_POINTER_OWN | 0);
+ }
+ 
+ bool
+diff --git a/src/nox/coreapps/pyrt/pyglue.cc b/src/nox/coreapps/pyrt/pyglue.cc
+index 48b9716..317fd04 100644
+--- a/src/nox/coreapps/pyrt/pyglue.cc
++++ b/src/nox/coreapps/pyrt/pyglue.cc
+@@ -874,7 +874,7 @@ to_python(const Flow& flow)
+     if (!s) {
+         throw std::runtime_error("Could not find Flow SWIG type_info");
+     }
+-    return SWIG_Python_NewPointerObj(f, s, SWIG_POINTER_OWN | 0);
++    return SWIG_Python_NewPointerObj(m, f, s, SWIG_POINTER_OWN | 0);
+ 
+ //     PyObject* dict = PyDict_New();
+ //     if (!dict) {
+diff --git a/src/nox/coreapps/pyrt/pyrt.cc b/src/nox/coreapps/pyrt/pyrt.cc
+index fbda461..8ec05d6 100644
+--- a/src/nox/coreapps/pyrt/pyrt.cc
++++ b/src/nox/coreapps/pyrt/pyrt.cc
+@@ -776,7 +776,7 @@ Python_event_manager::create_python_context(const Context* ctxt,
+                             pretty_print_python_exception());
+     }
+ 
+-    PyObject* pyctxt = SWIG_Python_NewPointerObj(p, s, 0);
++    PyObject* pyctxt = SWIG_Python_NewPointerObj(m, p, s, 0);
+     Py_INCREF(pyctxt); // XXX needed?
+ 
+     //Py_DECREF(m);
+diff --git a/src/nox/netapps/authenticator/auth.i b/src/nox/netapps/authenticator/auth.i
+index 1de1a17..bfa04e2 100644
+--- a/src/nox/netapps/authenticator/auth.i
++++ b/src/nox/netapps/authenticator/auth.i
+@@ -18,6 +18,8 @@
+ 
+ %module "nox.netapps.authenticator.pyauth"
+ 
++// Hack to get it to compile -BL
++%include "std_list.i"
+ %{
+ #include "core_events.hh"
+ #include "pyrt/pycontext.hh"
+diff --git a/src/nox/netapps/authenticator/flow_util.i b/src/nox/netapps/authenticator/flow_util.i
+index f67c3ef..2a314e2 100644
+--- a/src/nox/netapps/authenticator/flow_util.i
++++ b/src/nox/netapps/authenticator/flow_util.i
+@@ -32,6 +32,7 @@ using namespace vigil::applications;
+ %}
+ 
+ %include "common-defs.i"
++%include "std_list.i"
+ 
+ %import "netinet/netinet.i"
+ %import "pyrt/event.i"
+diff --git a/src/nox/netapps/routing/routing.i b/src/nox/netapps/routing/routing.i
+index 44ccb3d..f9221a2 100644
+--- a/src/nox/netapps/routing/routing.i
++++ b/src/nox/netapps/routing/routing.i
+@@ -17,6 +17,8 @@
+  */
+ %module "nox.netapps.routing.pyrouting"
+ 
++// Hack to get it to compile -BL
++%include "std_list.i"
+ %{
+ #include "pyrouting.hh"
+ #include "routing.hh"
+diff --git a/src/nox/netapps/switch_management/pyswitch_management.i b/src/nox/netapps/switch_management/pyswitch_management.i
+index 72bfed4..ad2c90d 100644
+--- a/src/nox/netapps/switch_management/pyswitch_management.i
++++ b/src/nox/netapps/switch_management/pyswitch_management.i
+@@ -18,6 +18,8 @@
+ 
+ %module "nox.netapps.pyswitch_management"
+ 
++// Hack to get it to compile -BL
++%include "std_list.i"
+ %{
+ #include "switch_management_proxy.hh"
+ #include "pyrt/pycontext.hh"
+diff --git a/src/nox/netapps/tests/tests.cc b/src/nox/netapps/tests/tests.cc
+index 20e900d..f027028 100644
+--- a/src/nox/netapps/tests/tests.cc
++++ b/src/nox/netapps/tests/tests.cc
+@@ -306,7 +306,7 @@ private:
+             throw runtime_error("Could not find PyContext SWIG type_info.");
+         }
+         
+-        PyObject* pyctxt = SWIG_Python_NewPointerObj(p, s, 0);
++        PyObject* pyctxt = SWIG_Python_NewPointerObj(m, p, s, 0);
+         assert(pyctxt);
+ 
+         Py_DECREF(m);
+diff --git a/src/nox/netapps/topology/pytopology.i b/src/nox/netapps/topology/pytopology.i
+index 94a9f4b..7a8cd94 100644
+--- a/src/nox/netapps/topology/pytopology.i
++++ b/src/nox/netapps/topology/pytopology.i
+@@ -18,6 +18,8 @@
+ 
+ %module "nox.netapps.topology"
+ 
++// Hack to get it to compile -BL
++%include "std_list.i"
+ %{
+ #include "pytopology.hh"
+ #include "pyrt/pycontext.hh"
+-- 
+1.7.5.4
+
