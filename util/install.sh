@@ -383,7 +383,7 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
     
-    $install libsnmp-dev libpcap-dev
+    $install libsnmp-dev libpcap-dev libconfig-dev
     cd ~/
     git clone git://openflow.org/oflops.git
     cd oflops
