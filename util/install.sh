@@ -213,16 +213,19 @@ function wireshark {
 
 # Install Open vSwitch
 # Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
+
 function ovs {
     echo "Installing Open vSwitch..."
 
     # Required for module build/dkms install
     $install $KERNEL_HEADERS
 
+    ovspresent=0
+
     # First see if we have packages
     # XXX wget -c seems to fail from github/amazon s3
     cd /tmp
-    if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME; then
+    if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME 2> /dev/null; then
 	$install patch dkms fakeroot python-argparse
         tar xf $OVS_PACKAGE_NAME
         orig=`tar tf $OVS_PACKAGE_NAME`
@@ -234,21 +237,11 @@ function ovs {
 	    # Annoyingly, things seem to be missing without this flag
             $pkginst --force-confmiss $pkg
         done
-        # Switch can run on its own, but 
-        # Mininet should control the controller
-	if [ -e /etc/init.d/openvswitch-controller ]; then
-            if sudo service openvswitch-controller stop; then
-                echo "Stopped running controller"
-            fi
-            sudo update-rc.d openvswitch-controller disable
-        fi
-        echo "Done (hopefully) installing packages"
-        cd ~
-        return
+        ovspresent=1
     fi
 
     # Otherwise try distribution's OVS packages
-    if [ "$DIST" = "Ubuntu" ] && [ `echo "$RELEASE >= 11.10" | bc` = 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 11.10` = 1 ]; then
         if ! dpkg --get-selections | grep openvswitch-datapath; then
             # If you've already installed a datapath, assume you
             # know what you're doing and don't need dkms datapath.
@@ -256,9 +249,27 @@ function ovs {
             $install openvswitch-datapath-dkms
         fi
 	if $install openvswitch-switch openvswitch-controller; then
-            return
+            echo "Ignoring error installing openvswitch-controller"
         fi
+        ovspresent=1
     fi
+
+    # Switch can run on its own, but 
+    # Mininet should control the controller
+    if [ -e /etc/init.d/openvswitch-controller ]; then
+        if sudo service openvswitch-controller stop; then
+            echo "Stopped running controller"
+        fi
+        sudo update-rc.d openvswitch-controller disable
+    fi
+
+    if [ $ovspresent = 1 ]; then
+        echo "Done (hopefully) installing packages"
+        cd ~
+        return
+    fi
+
+    # Otherwise attempt to install from source
 
     $install pkg-config gcc make python-dev libssl-dev libtool
 
@@ -344,7 +355,7 @@ function nox {
     # Apply patches
     git checkout -b tutorial-destiny
     git am ~/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` -eq 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
         git am ~/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
