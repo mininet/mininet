@@ -196,36 +196,35 @@ class TCIntf( Intf ):
             # are specifying the correct sizes. For now I have used
             # the same settings we had in the mininet-hifi code.
             if use_hfsc:
-                cmds = [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
+                cmds += [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
                           '%s class add dev %s parent 1:0 classid 1:1 hfsc sc '
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
                 latency_us = 10 * 1500 * 8 / bw
-                cmds = ['%s qdisc add dev %s root handle 1: tbf ' +
+                cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
                         'rate %fMbit burst 15000 latency %fus' %
                          ( bw, latency_us ) ]
             else:
-                cmds = [ '%s qdisc add dev %s root handle 1:0 htb default 1',
+                cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
                          'rate %fMbit burst 15k' % bw ]
             parent = ' parent 1:1 '
 
             # ECN or RED
             if enable_ecn:
-                cmds = [ '%s qdisc add dev %s' + parent +
+                cmds += [ '%s qdisc add dev %s' + parent +
                           'handle 10: red limit 1000000 ' +
                           'min 20000 max 25000 avpkt 1000 ' +
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1 ecn' % bw ]
                 parent = ' parent 10: '
             elif enable_red:
-                cmds = [ '%s qdisc add dev %s' + parent +
+                cmds += [ '%s qdisc add dev %s' + parent +
                           'handle 10: red limit 1000000 ' +
                           'min 20000 max 25000 avpkt 1000 ' +
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1' % bw ]
                 parent = ' parent 10: '
-
         return cmds, parent
 
     @staticmethod
