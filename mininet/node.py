@@ -297,6 +297,8 @@ class Node( object ):
             elif type( args[ 0 ] ) is str:
                 # popen("cmd arg1 arg2...")
                 cmd = args[ 0 ].split()
+            else:
+                raise Exception( 'popen() requires a string or list' )
         elif len( args ) > 0:
             # popen( cmd, arg1, arg2... )
             cmd = args
@@ -304,6 +306,9 @@ class Node( object ):
         mncmd = defaults[ 'mncmd' ]
         del defaults[ 'mncmd' ]
         cmd = mncmd + cmd
+        # Shell requires a string, not a list!
+        if defaults.get( 'shell', False ):
+            cmd = ' '.join( cmd )
         return Popen( cmd, **defaults )
 
     def pexec( self, *args, **kwargs ):
