@@ -148,6 +148,11 @@ class Topo(object):
         src, dst = self.sorted([src, dst])
         return self.link_info[(src, dst)]
 
+    def setlinkInfo( self, src, dst, info ):
+        "Set link metadata"
+        src, dst = self.sorted([src, dst])
+        self.link_info[(src, dst)] = info
+
     def nodeInfo( self, name ):
         "Return metadata (dict) for node"
         info = self.node_info[ name ]
