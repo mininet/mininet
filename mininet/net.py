@@ -244,7 +244,12 @@ class Mininet( object ):
         "Configure a set of hosts."
         for host in self.hosts:
             info( host.name + ' ' )
-            host.configDefault( defaultRoute=host.defaultIntf() )
+            intf = host.defaultIntf()
+            if intf:
+                host.configDefault( defaultRoute=intf )
+            else:
+                # Don't configure nonexistent intf
+                host.configDefault( ip=None, mac=None )
             # You're low priority, dude!
             # BL: do we want to do this here or not?
             # May not make sense if we have CPU lmiting...
