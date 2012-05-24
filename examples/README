@@ -48,6 +48,11 @@ multitest.py:
 
 This example creates a network and runs multiple tests on it.
 
+popenpoll.py:
+
+This example demonstrates monitoring output from multiple hosts using
+the node.popen() interface (which returns Popen objects) and pmonitor().
+
 scratchnet.py, scratchnetuser.py:
 
 These two examples demonstrate how to create a network by using the lowest-
