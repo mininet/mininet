@@ -22,11 +22,11 @@ def pmonitorTest( N=3, seconds=10 ):
     print "Monitoring output for", seconds, "seconds"
     endTime = time() + seconds
     for h, line in pmonitor( popens, timeoutms=500 ):
-       if h:
-          print '%s: %s' % ( h.name, line ),
-       if time() >= endTime:
-          for p in popens.values():
-             p.send_signal( SIGINT )
+        if h:
+            print '%s: %s' % ( h.name, line ),
+        if time() >= endTime:
+            for p in popens.values():
+                p.send_signal( SIGINT )
     net.stop()
 
 if __name__ == '__main__':
