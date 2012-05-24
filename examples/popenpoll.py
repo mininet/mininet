@@ -19,15 +19,15 @@ def pmonitorTest( N=3, seconds=10 ):
     popens = {}
     for h in hosts:
         popens[ h ] = h.popen('ping', server.IP() )
-        print "Monitoring output for", seconds, "seconds"
-        endTime = time() + seconds
-        for h, line in pmonitor( popens, timeoutms=500 ):
-            if h:
-                print '%s: %s' % ( h.name, line ),
-            if time() >= endTime:
-                for p in popens.values():
-                    p.send_signal( SIGINT )
-                net.stop()
+    print "Monitoring output for", seconds, "seconds"
+    endTime = time() + seconds
+    for h, line in pmonitor( popens, timeoutms=500 ):
+       if h:
+          print '%s: %s' % ( h.name, line ),
+          if time() >= endTime:
+             for p in popens.values():
+                p.send_signal( SIGINT )
+    net.stop()
 
 if __name__ == '__main__':
     pmonitorTest()
