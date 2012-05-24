@@ -301,7 +301,7 @@ class Node( object ):
                 raise Exception( 'popen() requires a string or list' )
         elif len( args ) > 0:
             # popen( cmd, arg1, arg2... )
-            cmd = args
+            cmd = list( args )
         # Attach to our namespace  using mnexec -a
         mncmd = defaults[ 'mncmd' ]
         del defaults[ 'mncmd' ]
