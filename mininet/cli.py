@@ -30,6 +30,7 @@ from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
 import sys
+import time
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms
@@ -277,6 +278,13 @@ class CLI( Cmd ):
         for sw in self.mn.switches:
             output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
             output( sw.dpctl( *args ) )
+
+    def do_time( self, line ):
+        "Measure time taken for any command in Mininet."
+        start = time.time()
+        self.onecmd(line)
+        elapsed = time.time() - start
+        self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
