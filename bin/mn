@@ -29,8 +29,12 @@ from mininet.topolib import TreeTopo
 from mininet.util import makeNumeric, custom
 
 
-def customNode( constructors, argStr ):
-    "Return custom Node constructor based on argStr"
+def customConstructor( constructors, argStr ):
+    """Return custom constructor based on argStr
+    
+    The args and key/val pairs in argsStr will be automatically applied
+    when the generated constructor is later used.
+    """
     cname, newargs, kwargs = splitArgs( argStr )
     constructor = constructors.get( cname, None )
 
@@ -39,7 +43,7 @@ def customNode( constructors, argStr ):
                ( cname, constructors.keys() ) )
 
     def customized( name, *args, **params ):
-        "Customized Node constructor"
+        "Customized constructor, useful for Node, Link, and other classes"
         params.update( kwargs )
         if not newargs:
             return constructor( name, *args, **params )
@@ -245,10 +249,10 @@ class MininetRunner( object ):
         start = time.time()
 
         topo = buildTopo( self.options.topo )
-        switch = customNode( SWITCHES, self.options.switch )
-        host = customNode( HOSTS, self.options.host )
-        controller = customNode( CONTROLLERS, self.options.controller )
-        link = customNode( LINKS, self.options.link )
+        switch = customConstructor( SWITCHES, self.options.switch )
+        host = customConstructor( HOSTS, self.options.host )
+        controller = customConstructor( CONTROLLERS, self.options.controller )
+        link = customConstructor( LINKS, self.options.link )
 
         if self.validate:
             self.validate( self.options )
