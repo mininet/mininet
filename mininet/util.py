@@ -400,3 +400,54 @@ def custom( cls, **params ):
         kwargs.update( params )
         return cls( *args, **kwargs )
     return customized
+
+def splitArgs( argstr ):
+    """Split argument string into usable python arguments
+       argstr: argument string with format fn,arg2,kw1=arg3...
+       returns: fn, args, kwargs"""
+    split = argstr.split( ',' )
+    fn = split[ 0 ]
+    params = split[ 1: ]
+    # Convert int and float args; removes the need for function
+    # to be flexible with input arg formats.
+    args = [ makeNumeric( s ) for s in params if '=' not in s ]
+    kwargs = {}
+    for s in [ p for p in params if '=' in p ]:
+        key, val = s.split( '=' )
+        kwargs[ key ] = makeNumeric( val )
+    return fn, args, kwargs
+
+def customConstructor( constructors, argStr ):
+    """Return custom constructor based on argStr
+    
+    The args and key/val pairs in argsStr will be automatically applied
+    when the generated constructor is later used.
+    """
+    cname, newargs, kwargs = splitArgs( argStr )
+    constructor = constructors.get( cname, None )
+
+    if not constructor:
+        raise Exception( "error: %s is unknown - please specify one of %s" %
+               ( cname, constructors.keys() ) )
+
+    def customized( name, *args, **params ):
+        "Customized constructor, useful for Node, Link, and other classes"
+        params.update( kwargs )
+        if not newargs:
+            return constructor( name, *args, **params )
+        if args:
+            warn( 'warning: %s replacing %s with %s\n' % (
+                  constructor, args, newargs ) )
+        return constructor( name, *newargs, **params )
+
+    return customized
+
+def buildTopo( topos, topoStr ):
+    """Create topology from string with format (object, arg1, arg2,...).
+    
+    input topos is a dict of topo names to constructors, possibly w/args.
+    """
+    topo, args, kwargs = splitArgs( topoStr )
+    if topo not in topos:
+        raise Exception( 'Invalid topo name %s' % topo )
+    return topos[ topo ]( *args, **kwargs )

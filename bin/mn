@@ -26,33 +26,8 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
-from mininet.util import makeNumeric, custom
-
-
-def customConstructor( constructors, argStr ):
-    """Return custom constructor based on argStr
-    
-    The args and key/val pairs in argsStr will be automatically applied
-    when the generated constructor is later used.
-    """
-    cname, newargs, kwargs = splitArgs( argStr )
-    constructor = constructors.get( cname, None )
-
-    if not constructor:
-        raise Exception( "error: %s is unknown - please specify one of %s" %
-               ( cname, constructors.keys() ) )
-
-    def customized( name, *args, **params ):
-        "Customized constructor, useful for Node, Link, and other classes"
-        params.update( kwargs )
-        if not newargs:
-            return constructor( name, *args, **params )
-        if args:
-            warn( 'warning: %s replacing %s with %s\n' % (
-                  constructor, args, newargs ) )
-        return constructor( name, *newargs, **params )
-
-    return customized
+from mininet.util import makeNumeric, custom, customConstructor, splitArgs
+from mininet.util import buildTopo
 
 
 # built in topologies, created only when run
@@ -91,31 +66,6 @@ TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
 
 ALTSPELLING = { 'pingall': 'pingAll', 'pingpair': 'pingPair',
     'iperfudp': 'iperfUdp', 'iperfUDP': 'iperfUdp', 'prefixlen': 'prefixLen' }
-
-
-def splitArgs( argstr ):
-    """Split argument string into usable python arguments
-       argstr: argument string with format fn,arg2,kw1=arg3...
-       returns: fn, args, kwargs"""
-    split = argstr.split( ',' )
-    fn = split[ 0 ]
-    params = split[ 1: ]
-    # Convert int and float args; removes the need for function
-    # to be flexible with input arg formats.
-    args = [ makeNumeric( s ) for s in params if '=' not in s ]
-    kwargs = {}
-    for s in [ p for p in params if '=' in p ]:
-        key, val = s.split( '=' )
-        kwargs[ key ] = makeNumeric( val )
-    return fn, args, kwargs
-
-
-def buildTopo( topoStr ):
-    "Create topology from string with format (object, arg1, arg2,...)."
-    topo, args, kwargs = splitArgs( topoStr )
-    if topo not in TOPOS:
-        raise Exception( 'Invalid topo name %s' % topo )
-    return TOPOS[ topo ]( *args, **kwargs )
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
@@ -248,7 +198,7 @@ class MininetRunner( object ):
 
         start = time.time()
 
-        topo = buildTopo( self.options.topo )
+        topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
         controller = customConstructor( CONTROLLERS, self.options.controller )
