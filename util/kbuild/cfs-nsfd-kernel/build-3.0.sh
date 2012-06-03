@@ -38,7 +38,8 @@ ubuntu_default_release=ubuntu-oneiric
 ubuntu_base=3.0.0-14  # base tag and version for build
 ubuntu_tag=Ubuntu-$ubuntu_base.23
 ubuntu_flavor=generic
-ubuntu_config=/boot/config-$ubuntu_base-$ubuntu_flavor
+#ubuntu_config=/boot/config-$ubuntu_base-$ubuntu_flavor
+ubuntu_config=${orig_dir}/config-3.0.9-with-cfs
 ubuntu_image=linux-image-$ubuntu_base-$ubuntu_flavor
 ubuntu_kver=3.0.9 # must match version that is actually built
 
@@ -131,7 +132,7 @@ function fetch_kernel {
 	tag=3.0.0
     else
 	warn "Pre-installing $ubuntu_image"
-	sudo apt-get install $ubuntu_image 
+	#sudo apt-get install $ubuntu_image 
 	srcdir=$kdir/$ubuntu_release
 	archive=git://kernel.ubuntu.com/ubuntu/$ubuntu_release
 	tag=$ubuntu_tag
