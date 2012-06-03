@@ -1,0 +1,125 @@
+From 11db1560b4dec193a20e2c78fb8238d9f14a1782 Mon Sep 17 00:00:00 2001
+From: Nikhil Rao <ncrao@google.com>
+Date: Thu, 21 Jul 2011 09:43:40 -0700
+Subject: [PATCH 15/19] sched: Add exports tracking cfs bandwidth control statistics
+
+This change introduces statistics exports for the cpu sub-system, these are
+added through the use of a stat file similar to that exported by other
+subsystems.
+
+The following exports are included:
+
+nr_periods:	number of periods in which execution occurred
+nr_throttled:	the number of periods above in which execution was throttle
+throttled_time:	cumulative wall-time that any cpus have been throttled for
+this group
+
+Signed-off-by: Paul Turner <pjt@google.com>
+Signed-off-by: Nikhil Rao <ncrao@google.com>
+Signed-off-by: Bharata B Rao <bharata@linux.vnet.ibm.com>
+Reviewed-by: Hidetoshi Seto <seto.hidetoshi@jp.fujitsu.com>
+Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
+Link: http://lkml.kernel.org/r/20110721184758.198901931@google.com
+Signed-off-by: Ingo Molnar <mingo@elte.hu>
+---
+ kernel/sched.c      |   21 +++++++++++++++++++++
+ kernel/sched_fair.c |    7 +++++++
+ 2 files changed, 28 insertions(+), 0 deletions(-)
+
+diff --git a/kernel/sched.c b/kernel/sched.c
+index 7b99d63..08d3aa0 100644
+--- a/kernel/sched.c
++++ b/kernel/sched.c
+@@ -259,6 +259,9 @@ struct cfs_bandwidth {
+ 	struct hrtimer period_timer;
+ 	struct list_head throttled_cfs_rq;
+ 
++	/* statistics */
++	int nr_periods, nr_throttled;
++	u64 throttled_time;
+ #endif
+ };
+ 
+@@ -399,6 +402,7 @@ struct cfs_rq {
+ 	u64 runtime_expires;
+ 	s64 runtime_remaining;
+ 
++	u64 throttled_timestamp;
+ 	int throttled, throttle_count;
+ 	struct list_head throttled_list;
+ #endif
+@@ -9383,6 +9387,19 @@ static int __cfs_schedulable(struct task_group *tg, u64 period, u64 quota)
+ 
+ 	return ret;
+ }
++
++static int cpu_stats_show(struct cgroup *cgrp, struct cftype *cft,
++		struct cgroup_map_cb *cb)
++{
++	struct task_group *tg = cgroup_tg(cgrp);
++	struct cfs_bandwidth *cfs_b = tg_cfs_bandwidth(tg);
++
++	cb->fill(cb, "nr_periods", cfs_b->nr_periods);
++	cb->fill(cb, "nr_throttled", cfs_b->nr_throttled);
++	cb->fill(cb, "throttled_time", cfs_b->throttled_time);
++
++	return 0;
++}
+ #endif /* CONFIG_CFS_BANDWIDTH */
+ #endif /* CONFIG_FAIR_GROUP_SCHED */
+ 
+@@ -9429,6 +9446,10 @@ static struct cftype cpu_files[] = {
+ 		.read_u64 = cpu_cfs_period_read_u64,
+ 		.write_u64 = cpu_cfs_period_write_u64,
+ 	},
++	{
++		.name = "stat",
++		.read_map = cpu_stats_show,
++	},
+ #endif
+ #ifdef CONFIG_RT_GROUP_SCHED
+ 	{
+diff --git a/kernel/sched_fair.c b/kernel/sched_fair.c
+index 831a300..2060fc9 100644
+--- a/kernel/sched_fair.c
++++ b/kernel/sched_fair.c
+@@ -1528,6 +1528,7 @@ static void throttle_cfs_rq(struct cfs_rq *cfs_rq)
+ 		rq->nr_running -= task_delta;
+ 
+ 	cfs_rq->throttled = 1;
++	cfs_rq->throttled_timestamp = rq->clock;
+ 	raw_spin_lock(&cfs_b->lock);
+ 	list_add_tail_rcu(&cfs_rq->throttled_list, &cfs_b->throttled_cfs_rq);
+ 	raw_spin_unlock(&cfs_b->lock);
+@@ -1545,8 +1546,10 @@ static void unthrottle_cfs_rq(struct cfs_rq *cfs_rq)
+ 
+ 	cfs_rq->throttled = 0;
+ 	raw_spin_lock(&cfs_b->lock);
++	cfs_b->throttled_time += rq->clock - cfs_rq->throttled_timestamp;
+ 	list_del_rcu(&cfs_rq->throttled_list);
+ 	raw_spin_unlock(&cfs_b->lock);
++	cfs_rq->throttled_timestamp = 0;
+ 
+ 	update_rq_clock(rq);
+ 	/* update hierarchical throttle state */
+@@ -1634,6 +1637,7 @@ static int do_sched_cfs_period_timer(struct cfs_bandwidth *cfs_b, int overrun)
+ 	throttled = !list_empty(&cfs_b->throttled_cfs_rq);
+ 	/* idle depends on !throttled (for the case of a large deficit) */
+ 	idle = cfs_b->idle && !throttled;
++	cfs_b->nr_periods += overrun;
+ 
+ 	/* if we're going inactive then everything else can be deferred */
+ 	if (idle)
+@@ -1647,6 +1651,9 @@ static int do_sched_cfs_period_timer(struct cfs_bandwidth *cfs_b, int overrun)
+ 		goto out_unlock;
+ 	}
+ 
++	/* account preceding periods in which throttling occurred */
++	cfs_b->nr_throttled += overrun;
++
+ 	/*
+ 	 * There are throttled entities so we must first use the new bandwidth
+ 	 * to unthrottle them before making it generally available.  This
+-- 
+1.7.0.4
+

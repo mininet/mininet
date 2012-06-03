@@ -1,0 +1,69 @@
+From 7af3c5930e241d0bddc028e3d05ad396c32689be Mon Sep 17 00:00:00 2001
+From: Paul Turner <pjt@google.com>
+Date: Thu, 21 Jul 2011 09:43:38 -0700
+Subject: [PATCH 13/19] sched: Migrate throttled tasks on HOTPLUG
+
+Throttled tasks are invisisble to cpu-offline since they are not eligible for
+selection by pick_next_task().  The regular 'escape' path for a thread that is
+blocked at offline is via ttwu->select_task_rq, however this will not handle a
+throttled group since there are no individual thread wakeups on an unthrottle.
+
+Resolve this by unthrottling offline cpus so that threads can be migrated.
+
+Signed-off-by: Paul Turner <pjt@google.com>
+Reviewed-by: Hidetoshi Seto <seto.hidetoshi@jp.fujitsu.com>
+Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
+Link: http://lkml.kernel.org/r/20110721184757.989000590@google.com
+Signed-off-by: Ingo Molnar <mingo@elte.hu>
+---
+ kernel/sched.c |   27 +++++++++++++++++++++++++++
+ 1 files changed, 27 insertions(+), 0 deletions(-)
+
+diff --git a/kernel/sched.c b/kernel/sched.c
+index 523464e..7b99d63 100644
+--- a/kernel/sched.c
++++ b/kernel/sched.c
+@@ -6310,6 +6310,30 @@ static void calc_global_load_remove(struct rq *rq)
+ 	rq->calc_load_active = 0;
+ }
+ 
++#ifdef CONFIG_CFS_BANDWIDTH
++static void unthrottle_offline_cfs_rqs(struct rq *rq)
++{
++	struct cfs_rq *cfs_rq;
++
++	for_each_leaf_cfs_rq(rq, cfs_rq) {
++		struct cfs_bandwidth *cfs_b = tg_cfs_bandwidth(cfs_rq->tg);
++
++		if (!cfs_rq->runtime_enabled)
++			continue;
++
++		/*
++		 * clock_task is not advancing so we just need to make sure
++		 * there's some valid quota amount
++		 */
++		cfs_rq->runtime_remaining = cfs_b->quota;
++		if (cfs_rq_throttled(cfs_rq))
++			unthrottle_cfs_rq(cfs_rq);
++	}
++}
++#else
++static void unthrottle_offline_cfs_rqs(struct rq *rq) {}
++#endif
++
+ /*
+  * Migrate all tasks from the rq, sleeping tasks will be migrated by
+  * try_to_wake_up()->select_task_rq().
+@@ -6335,6 +6359,9 @@ static void migrate_tasks(unsigned int dead_cpu)
+ 	 */
+ 	rq->stop = NULL;
+ 
++	/* Ensure any throttled groups are reachable by pick_next_task */
++	unthrottle_offline_cfs_rqs(rq);
++
+ 	for ( ; ; ) {
+ 		/*
+ 		 * There's this thread running, bail when that's the only
+-- 
+1.7.0.4
+

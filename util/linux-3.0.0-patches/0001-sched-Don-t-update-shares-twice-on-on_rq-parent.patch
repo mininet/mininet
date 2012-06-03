@@ -1,0 +1,36 @@
+From 57cc69f4a6d27c0b3ef495589a1d4629a9f1fa3e Mon Sep 17 00:00:00 2001
+From: Paul Turner <pjt@google.com>
+Date: Wed, 6 Jul 2011 22:30:37 -0700
+Subject: [PATCH 01/19] sched: Don't update shares twice on on_rq parent
+
+In dequeue_task_fair() we bail on dequeue when we encounter a parenting entity
+with additional weight.  However, we perform a double shares update on this
+entity as we continue the shares update traversal from this point, despite
+dequeue_entity() having already updated its queuing cfs_rq.
+Avoid this by starting from the parent when we resume.
+
+Signed-off-by: Paul Turner <pjt@google.com>
+Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
+Link: http://lkml.kernel.org/r/20110707053059.797714697@google.com
+Signed-off-by: Ingo Molnar <mingo@elte.hu>
+---
+ kernel/sched_fair.c |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/kernel/sched_fair.c b/kernel/sched_fair.c
+index c768588..c80f030 100644
+--- a/kernel/sched_fair.c
++++ b/kernel/sched_fair.c
+@@ -1370,6 +1370,9 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
+ 			 */
+ 			if (task_sleep && parent_entity(se))
+ 				set_next_buddy(parent_entity(se));
++
++			/* avoid re-evaluating load for this entity */
++			se = parent_entity(se);
+ 			break;
+ 		}
+ 		flags |= DEQUEUE_SLEEP;
+-- 
+1.7.0.4
+

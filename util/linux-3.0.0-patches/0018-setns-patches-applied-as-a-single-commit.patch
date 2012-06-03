@@ -1,0 +1,1826 @@
+From b468b7c2ed35186f3844de880a122ec4e7ecabb6 Mon Sep 17 00:00:00 2001
+From: Bob Lantz <rlantz@cs.stanford.edu>
+Date: Mon, 19 Sep 2011 15:42:34 -0700
+Subject: [PATCH] setns patches as one commit, with self.c
+
+url: http://lxc.sourceforge.net/patches/linux/3.0.0/3.0.0-lxc1/patches.tar.gz
+
+---
+ arch/powerpc/platforms/cell/spufs/sched.c |    2 +-
+ arch/um/drivers/mconsole_kern.c           |    2 +-
+ fs/hppfs/hppfs.c                          |    2 +-
+ fs/namespace.c                            |  103 ++++++++++++++++
+ fs/proc/Makefile                          |    1 +
+ fs/proc/base.c                            |  164 +-------------------------
+ fs/proc/generic.c                         |   26 ++--
+ fs/proc/inode.c                           |    6 +-
+ fs/proc/internal.h                        |    1 +
+ fs/proc/namespaces.c                      |  186 +++++++++++++++++++++++++----
+ fs/proc/root.c                            |   11 +--
+ fs/proc/self.c                            |   58 +++++++++
+ include/linux/ipc_namespace.h             |    2 +
+ include/linux/mnt_namespace.h             |    2 +
+ include/linux/pid_namespace.h             |   30 ++++-
+ include/linux/proc_fs.h                   |   27 ++++-
+ include/linux/user_namespace.h            |    1 +
+ include/linux/utsname.h                   |    1 +
+ include/net/net_namespace.h               |    2 +
+ init/main.c                               |    3 -
+ init/version.c                            |    2 +
+ ipc/msgutil.c                             |    2 +
+ ipc/namespace.c                           |   16 +++
+ kernel/cgroup.c                           |    2 +-
+ kernel/events/core.c                      |    2 +-
+ kernel/fork.c                             |   24 +++-
+ kernel/nsproxy.c                          |    5 +-
+ kernel/pid.c                              |   12 ++-
+ kernel/pid_namespace.c                    |  107 ++++++++++++++---
+ kernel/signal.c                           |    9 +-
+ kernel/sysctl_binary.c                    |    2 +-
+ kernel/user.c                             |    2 +
+ kernel/user_namespace.c                   |   40 ++++++
+ kernel/utsname.c                          |   17 +++-
+ net/core/net_namespace.c                  |   24 ++++
+ 35 files changed, 642 insertions(+), 254 deletions(-)
+ create mode 100644 fs/proc/self.c
+
+diff --git a/arch/powerpc/platforms/cell/spufs/sched.c b/arch/powerpc/platforms/cell/spufs/sched.c
+index 32cb4e6..ccdd506 100644
+--- a/arch/powerpc/platforms/cell/spufs/sched.c
++++ b/arch/powerpc/platforms/cell/spufs/sched.c
+@@ -1095,7 +1095,7 @@ static int show_spu_loadavg(struct seq_file *s, void *private)
+ 		LOAD_INT(c), LOAD_FRAC(c),
+ 		count_active_contexts(),
+ 		atomic_read(&nr_spu_contexts),
+-		current->nsproxy->pid_ns->last_pid);
++		task_active_pid_ns(current)->last_pid);
+ 	return 0;
+ }
+ 
+diff --git a/arch/um/drivers/mconsole_kern.c b/arch/um/drivers/mconsole_kern.c
+index c70e047..9c83ba5 100644
+--- a/arch/um/drivers/mconsole_kern.c
++++ b/arch/um/drivers/mconsole_kern.c
+@@ -124,7 +124,7 @@ void mconsole_log(struct mc_request *req)
+ #if 0
+ void mconsole_proc(struct mc_request *req)
+ {
+-	struct vfsmount *mnt = current->nsproxy->pid_ns->proc_mnt;
++	struct vfsmount *mnt = task_active_pid_ns(current)->proc_mnt;
+ 	struct file *file;
+ 	int n;
+ 	char *ptr = req->request.data, *buf;
+diff --git a/fs/hppfs/hppfs.c b/fs/hppfs/hppfs.c
+index 85c098a..1ed652d 100644
+--- a/fs/hppfs/hppfs.c
++++ b/fs/hppfs/hppfs.c
+@@ -713,7 +713,7 @@ static int hppfs_fill_super(struct super_block *sb, void *d, int silent)
+ 	struct vfsmount *proc_mnt;
+ 	int err = -ENOENT;
+ 
+-	proc_mnt = mntget(current->nsproxy->pid_ns->proc_mnt);
++	proc_mnt = mntget(task_active_pid_ns(current)->proc_mnt);
+ 	if (IS_ERR(proc_mnt))
+ 		goto out;
+ 
+diff --git a/fs/namespace.c b/fs/namespace.c
+index fe59bd1..5b15b99 100644
+--- a/fs/namespace.c
++++ b/fs/namespace.c
+@@ -31,6 +31,7 @@
+ #include <linux/idr.h>
+ #include <linux/fs_struct.h>
+ #include <linux/fsnotify.h>
++#include <linux/proc_fs.h>
+ #include <asm/uaccess.h>
+ #include <asm/unistd.h>
+ #include "pnode.h"
+@@ -1422,6 +1423,26 @@ static int mount_is_safe(struct path *path)
+ #endif
+ }
+ 
++static bool mnt_ns_loop(struct path *path)
++{
++	/* Could bind mounting the mount namespace inode cause a
++	 * mount namespace loop?
++	 */
++	struct inode *inode = path->dentry->d_inode;
++	struct proc_inode *ei;
++	struct mnt_namespace *mnt_ns;
++
++	if (!proc_ns_inode(inode))
++		return false;
++
++	ei = PROC_I(inode);
++	if (ei->ns_ops != &mntns_operations)
++		return false;
++
++	mnt_ns = ei->ns;
++	return current->nsproxy->mnt_ns->seq >= mnt_ns->seq;
++}
++
+ struct vfsmount *copy_tree(struct vfsmount *mnt, struct dentry *dentry,
+ 					int flag)
+ {
+@@ -1761,6 +1782,10 @@ static int do_loopback(struct path *path, char *old_name,
+ 	if (err)
+ 		return err;
+ 
++	err = -EINVAL;
++	if (mnt_ns_loop(&old_path))
++		goto out;
++
+ 	err = lock_mount(path);
+ 	if (err)
+ 		goto out;
+@@ -2355,13 +2380,22 @@ dput_out:
+ 	return retval;
+ }
+ 
++static atomic64_t mnt_ns_seq = ATOMIC64_INIT(1);
++
+ static struct mnt_namespace *alloc_mnt_ns(void)
+ {
+ 	struct mnt_namespace *new_ns;
++	int ret;
+ 
+ 	new_ns = kmalloc(sizeof(struct mnt_namespace), GFP_KERNEL);
+ 	if (!new_ns)
+ 		return ERR_PTR(-ENOMEM);
++	ret = proc_alloc_inum(&new_ns->proc_inum);
++	if (ret) {
++		kfree(new_ns);
++		return ERR_PTR(ret);
++	}
++	new_ns->seq = atomic64_add_return(1, &mnt_ns_seq);
+ 	atomic_set(&new_ns->count, 1);
+ 	new_ns->root = NULL;
+ 	INIT_LIST_HEAD(&new_ns->list);
+@@ -2715,6 +2749,7 @@ void put_mnt_ns(struct mnt_namespace *ns)
+ 	br_write_unlock(vfsmount_lock);
+ 	up_write(&namespace_sem);
+ 	release_mounts(&umount_list);
++	proc_free_inum(ns->proc_inum);
+ 	kfree(ns);
+ }
+ EXPORT_SYMBOL(put_mnt_ns);
+@@ -2724,3 +2759,71 @@ struct vfsmount *kern_mount_data(struct file_system_type *type, void *data)
+ 	return vfs_kern_mount(type, MS_KERNMOUNT, type->name, data);
+ }
+ EXPORT_SYMBOL_GPL(kern_mount_data);
++
++static void *mntns_get(struct task_struct *task)
++{
++	struct mnt_namespace *ns = NULL;
++	struct nsproxy *nsproxy;
++
++	rcu_read_lock();
++	nsproxy = task_nsproxy(task);
++	if (nsproxy) {
++		ns = nsproxy->mnt_ns;
++		get_mnt_ns(ns);
++	}
++	rcu_read_unlock();
++
++	return ns;
++}
++
++static void mntns_put(void *ns)
++{
++	put_mnt_ns(ns);
++}
++
++static int mntns_install(struct nsproxy *nsproxy, void *ns)
++{
++	struct fs_struct *fs = current->fs;
++	struct mnt_namespace *mnt_ns = ns;
++	struct path root;
++
++	if (fs->users != 1)
++		return -EINVAL;
++
++	get_mnt_ns(mnt_ns);
++	put_mnt_ns(nsproxy->mnt_ns);
++	nsproxy->mnt_ns = mnt_ns;
++
++	/* Find the root */
++	root.mnt    = mnt_ns->root;
++	root.dentry = mnt_ns->root->mnt_root;
++	path_get(&root);
++	while(d_mountpoint(root.dentry) && follow_down(&root))
++		;
++
++	/* Update the pwd and root */
++	path_get(&root);
++	path_get(&root);
++	path_put(&fs->root);
++	path_put(&fs->pwd);
++	fs->root = root;
++	fs->pwd  = root;
++	path_put(&root);
++
++	return 0;
++}
++
++static unsigned int mntns_inum(void *ns)
++{
++	struct mnt_namespace *mnt_ns = ns;
++	return mnt_ns->proc_inum;
++}
++
++const struct proc_ns_operations mntns_operations = {
++	.name		= "mnt",
++	.type		= CLONE_NEWNS,
++	.get		= mntns_get,
++	.put		= mntns_put,
++	.install	= mntns_install,
++	.inum		= mntns_inum,
++};
+diff --git a/fs/proc/Makefile b/fs/proc/Makefile
+index c1c7293..def7a4a 100644
+--- a/fs/proc/Makefile
++++ b/fs/proc/Makefile
+@@ -21,6 +21,7 @@ proc-y	+= uptime.o
+ proc-y	+= version.o
+ proc-y	+= softirqs.o
+ proc-y	+= namespaces.o
++proc-y	+= self.o
+ proc-$(CONFIG_PROC_SYSCTL)	+= proc_sysctl.o
+ proc-$(CONFIG_NET)		+= proc_net.o
+ proc-$(CONFIG_PROC_KCORE)	+= kcore.o
+diff --git a/fs/proc/base.c b/fs/proc/base.c
+index fc5bc27..8754b76 100644
+--- a/fs/proc/base.c
++++ b/fs/proc/base.c
+@@ -2563,145 +2563,6 @@ static const struct file_operations proc_coredump_filter_operations = {
+ };
+ #endif
+ 
+-/*
+- * /proc/self:
+- */
+-static int proc_self_readlink(struct dentry *dentry, char __user *buffer,
+-			      int buflen)
+-{
+-	struct pid_namespace *ns = dentry->d_sb->s_fs_info;
+-	pid_t tgid = task_tgid_nr_ns(current, ns);
+-	char tmp[PROC_NUMBUF];
+-	if (!tgid)
+-		return -ENOENT;
+-	sprintf(tmp, "%d", tgid);
+-	return vfs_readlink(dentry,buffer,buflen,tmp);
+-}
+-
+-static void *proc_self_follow_link(struct dentry *dentry, struct nameidata *nd)
+-{
+-	struct pid_namespace *ns = dentry->d_sb->s_fs_info;
+-	pid_t tgid = task_tgid_nr_ns(current, ns);
+-	char *name = ERR_PTR(-ENOENT);
+-	if (tgid) {
+-		name = __getname();
+-		if (!name)
+-			name = ERR_PTR(-ENOMEM);
+-		else
+-			sprintf(name, "%d", tgid);
+-	}
+-	nd_set_link(nd, name);
+-	return NULL;
+-}
+-
+-static void proc_self_put_link(struct dentry *dentry, struct nameidata *nd,
+-				void *cookie)
+-{
+-	char *s = nd_get_link(nd);
+-	if (!IS_ERR(s))
+-		__putname(s);
+-}
+-
+-static const struct inode_operations proc_self_inode_operations = {
+-	.readlink	= proc_self_readlink,
+-	.follow_link	= proc_self_follow_link,
+-	.put_link	= proc_self_put_link,
+-};
+-
+-/*
+- * proc base
+- *
+- * These are the directory entries in the root directory of /proc
+- * that properly belong to the /proc filesystem, as they describe
+- * describe something that is process related.
+- */
+-static const struct pid_entry proc_base_stuff[] = {
+-	NOD("self", S_IFLNK|S_IRWXUGO,
+-		&proc_self_inode_operations, NULL, {}),
+-};
+-
+-static struct dentry *proc_base_instantiate(struct inode *dir,
+-	struct dentry *dentry, struct task_struct *task, const void *ptr)
+-{
+-	const struct pid_entry *p = ptr;
+-	struct inode *inode;
+-	struct proc_inode *ei;
+-	struct dentry *error;
+-
+-	/* Allocate the inode */
+-	error = ERR_PTR(-ENOMEM);
+-	inode = new_inode(dir->i_sb);
+-	if (!inode)
+-		goto out;
+-
+-	/* Initialize the inode */
+-	ei = PROC_I(inode);
+-	inode->i_ino = get_next_ino();
+-	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
+-
+-	/*
+-	 * grab the reference to the task.
+-	 */
+-	ei->pid = get_task_pid(task, PIDTYPE_PID);
+-	if (!ei->pid)
+-		goto out_iput;
+-
+-	inode->i_mode = p->mode;
+-	if (S_ISDIR(inode->i_mode))
+-		inode->i_nlink = 2;
+-	if (S_ISLNK(inode->i_mode))
+-		inode->i_size = 64;
+-	if (p->iop)
+-		inode->i_op = p->iop;
+-	if (p->fop)
+-		inode->i_fop = p->fop;
+-	ei->op = p->op;
+-	d_add(dentry, inode);
+-	error = NULL;
+-out:
+-	return error;
+-out_iput:
+-	iput(inode);
+-	goto out;
+-}
+-
+-static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
+-{
+-	struct dentry *error;
+-	struct task_struct *task = get_proc_task(dir);
+-	const struct pid_entry *p, *last;
+-
+-	error = ERR_PTR(-ENOENT);
+-
+-	if (!task)
+-		goto out_no_task;
+-
+-	/* Lookup the directory entry */
+-	last = &proc_base_stuff[ARRAY_SIZE(proc_base_stuff) - 1];
+-	for (p = proc_base_stuff; p <= last; p++) {
+-		if (p->len != dentry->d_name.len)
+-			continue;
+-		if (!memcmp(dentry->d_name.name, p->name, p->len))
+-			break;
+-	}
+-	if (p > last)
+-		goto out;
+-
+-	error = proc_base_instantiate(dir, dentry, task, p);
+-
+-out:
+-	put_task_struct(task);
+-out_no_task:
+-	return error;
+-}
+-
+-static int proc_base_fill_cache(struct file *filp, void *dirent,
+-	filldir_t filldir, struct task_struct *task, const struct pid_entry *p)
+-{
+-	return proc_fill_cache(filp, dirent, filldir, p->name, p->len,
+-				proc_base_instantiate, task, p);
+-}
+-
+ #ifdef CONFIG_TASK_IO_ACCOUNTING
+ static int do_io_accounting(struct task_struct *task, char *buffer, int whole)
+ {
+@@ -2992,15 +2853,11 @@ out:
+ 
+ struct dentry *proc_pid_lookup(struct inode *dir, struct dentry * dentry, struct nameidata *nd)
+ {
+-	struct dentry *result;
++	struct dentry *result = NULL;
+ 	struct task_struct *task;
+ 	unsigned tgid;
+ 	struct pid_namespace *ns;
+ 
+-	result = proc_base_lookup(dir, dentry);
+-	if (!IS_ERR(result) || PTR_ERR(result) != -ENOENT)
+-		goto out;
+-
+ 	tgid = name_to_int(dentry);
+ 	if (tgid == ~0U)
+ 		goto out;
+@@ -3063,7 +2920,7 @@ retry:
+ 	return iter;
+ }
+ 
+-#define TGID_OFFSET (FIRST_PROCESS_ENTRY + ARRAY_SIZE(proc_base_stuff))
++#define TGID_OFFSET (FIRST_PROCESS_ENTRY)
+ 
+ static int proc_pid_fill_cache(struct file *filp, void *dirent, filldir_t filldir,
+ 	struct tgid_iter iter)
+@@ -3077,24 +2934,11 @@ static int proc_pid_fill_cache(struct file *filp, void *dirent, filldir_t filldi
+ /* for the /proc/ directory itself, after non-process stuff has been done */
+ int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir)
+ {
+-	unsigned int nr;
+-	struct task_struct *reaper;
+ 	struct tgid_iter iter;
+ 	struct pid_namespace *ns;
+ 
+ 	if (filp->f_pos >= PID_MAX_LIMIT + TGID_OFFSET)
+-		goto out_no_task;
+-	nr = filp->f_pos - FIRST_PROCESS_ENTRY;
+-
+-	reaper = get_proc_task(filp->f_path.dentry->d_inode);
+-	if (!reaper)
+-		goto out_no_task;
+-
+-	for (; nr < ARRAY_SIZE(proc_base_stuff); filp->f_pos++, nr++) {
+-		const struct pid_entry *p = &proc_base_stuff[nr];
+-		if (proc_base_fill_cache(filp, dirent, filldir, reaper, p) < 0)
+-			goto out;
+-	}
++		goto out;
+ 
+ 	ns = filp->f_dentry->d_sb->s_fs_info;
+ 	iter.task = NULL;
+@@ -3110,8 +2954,6 @@ int proc_pid_readdir(struct file * filp, void * dirent, filldir_t filldir)
+ 	}
+ 	filp->f_pos = PID_MAX_LIMIT + TGID_OFFSET;
+ out:
+-	put_task_struct(reaper);
+-out_no_task:
+ 	return 0;
+ }
+ 
+diff --git a/fs/proc/generic.c b/fs/proc/generic.c
+index f1637f1..65416a1 100644
+--- a/fs/proc/generic.c
++++ b/fs/proc/generic.c
+@@ -350,14 +350,14 @@ static DEFINE_SPINLOCK(proc_inum_lock); /* protects the above */
+  * Return an inode number between PROC_DYNAMIC_FIRST and
+  * 0xffffffff, or zero on failure.
+  */
+-static unsigned int get_inode_number(void)
++int proc_alloc_inum(unsigned int *inum)
+ {
+ 	unsigned int i;
+ 	int error;
+ 
+ retry:
+-	if (ida_pre_get(&proc_inum_ida, GFP_KERNEL) == 0)
+-		return 0;
++	if (!ida_pre_get(&proc_inum_ida, GFP_KERNEL))
++		return -ENOMEM;
+ 
+ 	spin_lock(&proc_inum_lock);
+ 	error = ida_get_new(&proc_inum_ida, &i);
+@@ -365,18 +365,19 @@ retry:
+ 	if (error == -EAGAIN)
+ 		goto retry;
+ 	else if (error)
+-		return 0;
++		return error;
+ 
+ 	if (i > UINT_MAX - PROC_DYNAMIC_FIRST) {
+ 		spin_lock(&proc_inum_lock);
+ 		ida_remove(&proc_inum_ida, i);
+ 		spin_unlock(&proc_inum_lock);
+-		return 0;
++		return -ENOSPC;
+ 	}
+-	return PROC_DYNAMIC_FIRST + i;
++	*inum = PROC_DYNAMIC_FIRST + i;
++	return 0;
+ }
+ 
+-static void release_inode_number(unsigned int inum)
++void proc_free_inum(unsigned int inum)
+ {
+ 	spin_lock(&proc_inum_lock);
+ 	ida_remove(&proc_inum_ida, inum - PROC_DYNAMIC_FIRST);
+@@ -554,13 +555,12 @@ static const struct inode_operations proc_dir_inode_operations = {
+ 
+ static int proc_register(struct proc_dir_entry * dir, struct proc_dir_entry * dp)
+ {
+-	unsigned int i;
+ 	struct proc_dir_entry *tmp;
++	int ret;
+ 	
+-	i = get_inode_number();
+-	if (i == 0)
+-		return -EAGAIN;
+-	dp->low_ino = i;
++	ret = proc_alloc_inum(&dp->low_ino);
++	if (ret)
++		return ret;
+ 
+ 	if (S_ISDIR(dp->mode)) {
+ 		if (dp->proc_iops == NULL) {
+@@ -766,7 +766,7 @@ EXPORT_SYMBOL(proc_create_data);
+ 
+ static void free_proc_entry(struct proc_dir_entry *de)
+ {
+-	release_inode_number(de->low_ino);
++	proc_free_inum(de->low_ino);
+ 
+ 	if (S_ISLNK(de->mode))
+ 		kfree(de->data);
+diff --git a/fs/proc/inode.c b/fs/proc/inode.c
+index 74b48cf..123267d 100644
+--- a/fs/proc/inode.c
++++ b/fs/proc/inode.c
+@@ -29,6 +29,7 @@ static void proc_evict_inode(struct inode *inode)
+ 	struct proc_dir_entry *de;
+ 	struct ctl_table_header *head;
+ 	const struct proc_ns_operations *ns_ops;
++	void *ns;
+ 
+ 	truncate_inode_pages(&inode->i_data, 0);
+ 	end_writeback(inode);
+@@ -47,8 +48,9 @@ static void proc_evict_inode(struct inode *inode)
+ 	}
+ 	/* Release any associated namespace */
+ 	ns_ops = PROC_I(inode)->ns_ops;
+-	if (ns_ops && ns_ops->put)
+-		ns_ops->put(PROC_I(inode)->ns);
++	ns = PROC_I(inode)->ns;
++	if (ns_ops && ns)
++		ns_ops->put(ns);
+ }
+ 
+ static struct kmem_cache * proc_inode_cachep;
+diff --git a/fs/proc/internal.h b/fs/proc/internal.h
+index 7838e5c..0399337 100644
+--- a/fs/proc/internal.h
++++ b/fs/proc/internal.h
+@@ -12,6 +12,7 @@
+ #include <linux/proc_fs.h>
+ 
+ extern struct proc_dir_entry proc_root;
++extern void proc_self_init(void);
+ #ifdef CONFIG_PROC_SYSCTL
+ extern int proc_sys_init(void);
+ #else
+diff --git a/fs/proc/namespaces.c b/fs/proc/namespaces.c
+index be177f7..cc46464 100644
+--- a/fs/proc/namespaces.c
++++ b/fs/proc/namespaces.c
+@@ -25,12 +25,168 @@ static const struct proc_ns_operations *ns_entries[] = {
+ #ifdef CONFIG_IPC_NS
+ 	&ipcns_operations,
+ #endif
++	&mntns_operations,
++#ifdef CONFIG_USER_NS
++	&userns_operations,
++#endif
++#ifdef CONFIG_PID_NS
++	&pidns_operations,
++#endif
+ };
+ 
+ static const struct file_operations ns_file_operations = {
+ 	.llseek		= no_llseek,
+ };
+ 
++static const struct inode_operations ns_inode_operations = {
++	.setattr	= proc_setattr,
++};
++
++static int ns_delete_dentry(const struct dentry *dentry)
++{
++	/* Don't cache namespace dentries when not in use */
++	return 1;
++}
++
++static char *ns_dname(struct dentry *dentry, char *buffer, int buflen)
++{
++	struct inode *inode = dentry->d_inode;
++	const struct proc_ns_operations *ns_ops = PROC_I(inode)->ns_ops;
++
++	return dynamic_dname(dentry, buffer, buflen, "%s:[%lu]",
++		ns_ops->name, inode->i_ino);
++}
++
++static const struct dentry_operations ns_dentry_operations =
++{
++	.d_delete	= ns_delete_dentry,
++	.d_dname	= ns_dname,
++};
++
++static struct dentry *proc_ns_get_dentry(struct super_block *sb,
++	struct task_struct *task, const struct proc_ns_operations *ns_ops)
++{
++	struct dentry *dentry, *result;
++	struct inode *inode;
++	struct proc_inode *ei;
++	struct qstr qname = { .name = "", };
++	void *ns;
++
++	ns = ns_ops->get(task);
++	if (!ns)
++		return ERR_PTR(-ENOENT);
++
++	dentry = d_alloc_pseudo(sb, &qname);
++	if (!dentry) {
++		ns_ops->put(ns);
++		return ERR_PTR(-ENOMEM);
++	}
++
++	inode = iget_locked(sb, ns_ops->inum(ns));
++	if (!inode) {
++		dput(dentry);
++		ns_ops->put(ns);
++		return ERR_PTR(-ENOMEM);
++	}
++
++	ei = PROC_I(inode);
++	if (inode->i_state & I_NEW) {
++		inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
++		inode->i_op = &ns_inode_operations;
++		inode->i_mode = S_IFREG|S_IRUSR;
++		inode->i_fop = &ns_file_operations;
++		ei->ns_ops = ns_ops;
++		ei->ns = ns;
++		unlock_new_inode(inode);
++	} else {
++		ns_ops->put(ns);
++	}
++
++	d_set_d_op(dentry, &ns_dentry_operations);
++	result = d_instantiate_unique(dentry, inode);
++	if (result) {
++		dput(dentry);
++		dentry = result;
++	}
++
++	return dentry;
++}
++
++static void *proc_ns_follow_link(struct dentry *dentry, struct nameidata *nd)
++{
++	struct inode *inode = dentry->d_inode;
++	struct super_block *sb = inode->i_sb;
++	struct proc_inode *ei = PROC_I(inode);
++	struct task_struct *task;
++	struct dentry *ns_dentry;
++	void *error = ERR_PTR(-EACCES);
++
++	task = get_proc_task(inode);
++	if (!task)
++		goto out;
++
++	if (!ptrace_may_access(task, PTRACE_MODE_READ))
++		goto out_put_task;
++
++	ns_dentry = proc_ns_get_dentry(sb, task, ei->ns_ops);
++	if (IS_ERR(ns_dentry)) {
++		error = ERR_CAST(ns_dentry);
++		goto out_put_task;
++	}
++
++	dput(nd->path.dentry);
++	nd->path.dentry = ns_dentry;
++	error = NULL;
++
++out_put_task:
++	put_task_struct(task);
++out:
++	return error;
++}
++
++static int proc_ns_readlink(struct dentry *dentry, char __user *buffer, int buflen)
++{
++	struct inode *inode = dentry->d_inode;
++	struct proc_inode *ei = PROC_I(inode);
++	const struct proc_ns_operations *ns_ops = ei->ns_ops;
++	struct task_struct *task;
++	void *ns;
++	char name[50];
++	int len = -EACCES;
++
++	task = get_proc_task(inode);
++	if (!task)
++		goto out;
++
++	if (!ptrace_may_access(task, PTRACE_MODE_READ))
++		goto out_put_task;
++
++	len = -ENOENT;
++	ns = ns_ops->get(task);
++	if (!ns)
++		goto out_put_task;
++
++	snprintf(name, sizeof(name), "%s:[%u]", ns_ops->name, ns_ops->inum(ns));
++	len = strlen(name);
++
++	if (len > buflen)
++		len = buflen;
++	if (copy_to_user(buffer, name, len))
++		len = -EFAULT;
++
++	ns_ops->put(ns);
++out_put_task:
++	put_task_struct(task);
++out:
++	return len;
++}
++
++static const struct inode_operations proc_ns_link_inode_operations = {
++	.readlink	= proc_ns_readlink,
++	.follow_link	= proc_ns_follow_link,
++	.setattr	= proc_setattr,
++};
++
+ static struct dentry *proc_ns_instantiate(struct inode *dir,
+ 	struct dentry *dentry, struct task_struct *task, const void *ptr)
+ {
+@@ -38,32 +194,23 @@ static struct dentry *proc_ns_instantiate(struct inode *dir,
+ 	struct inode *inode;
+ 	struct proc_inode *ei;
+ 	struct dentry *error = ERR_PTR(-ENOENT);
+-	void *ns;
+ 
+ 	inode = proc_pid_make_inode(dir->i_sb, task);
+ 	if (!inode)
+ 		goto out;
+ 
+-	ns = ns_ops->get(task);
+-	if (!ns)
+-		goto out_iput;
+-
+ 	ei = PROC_I(inode);
+-	inode->i_mode = S_IFREG|S_IRUSR;
+-	inode->i_fop  = &ns_file_operations;
+-	ei->ns_ops    = ns_ops;
+-	ei->ns	      = ns;
++	inode->i_mode = S_IFLNK|S_IRWXUGO;
++	inode->i_op = &proc_ns_link_inode_operations;
++	ei->ns_ops = ns_ops;
+ 
+-	dentry->d_op = &pid_dentry_operations;
++	d_set_d_op(dentry, &pid_dentry_operations);
+ 	d_add(dentry, inode);
+ 	/* Close the race of the process dying before we return the dentry */
+ 	if (pid_revalidate(dentry, NULL))
+ 		error = NULL;
+ out:
+ 	return error;
+-out_iput:
+-	iput(inode);
+-	goto out;
+ }
+ 
+ static int proc_ns_fill_cache(struct file *filp, void *dirent,
+@@ -90,10 +237,6 @@ static int proc_ns_dir_readdir(struct file *filp, void *dirent,
+ 	if (!task)
+ 		goto out_no_task;
+ 
+-	ret = -EPERM;
+-	if (!ptrace_may_access(task, PTRACE_MODE_READ))
+-		goto out;
+-
+ 	ret = 0;
+ 	i = filp->f_pos;
+ 	switch (i) {
+@@ -153,10 +296,6 @@ static struct dentry *proc_ns_dir_lookup(struct inode *dir,
+ 	if (!task)
+ 		goto out_no_task;
+ 
+-	error = ERR_PTR(-EPERM);
+-	if (!ptrace_may_access(task, PTRACE_MODE_READ))
+-		goto out;
+-
+ 	last = &ns_entries[ARRAY_SIZE(ns_entries) - 1];
+ 	for (entry = ns_entries; entry <= last; entry++) {
+ 		if (strlen((*entry)->name) != len)
+@@ -164,7 +303,6 @@ static struct dentry *proc_ns_dir_lookup(struct inode *dir,
+ 		if (!memcmp(dentry->d_name.name, (*entry)->name, len))
+ 			break;
+ 	}
+-	error = ERR_PTR(-ENOENT);
+ 	if (entry > last)
+ 		goto out;
+ 
+@@ -199,3 +337,7 @@ out_invalid:
+ 	return ERR_PTR(-EINVAL);
+ }
+ 
++bool proc_ns_inode(struct inode *inode)
++{
++	return inode->i_fop == &ns_file_operations;
++}
+diff --git a/fs/proc/root.c b/fs/proc/root.c
+index d6c3b41..163d6fc 100644
+--- a/fs/proc/root.c
++++ b/fs/proc/root.c
+@@ -42,12 +42,11 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
+ 	int err;
+ 	struct super_block *sb;
+ 	struct pid_namespace *ns;
+-	struct proc_inode *ei;
+ 
+ 	if (flags & MS_KERNMOUNT)
+ 		ns = (struct pid_namespace *)data;
+ 	else
+-		ns = current->nsproxy->pid_ns;
++		ns = task_active_pid_ns(current);
+ 
+ 	sb = sget(fs_type, proc_test_super, proc_set_super, ns);
+ 	if (IS_ERR(sb))
+@@ -64,13 +63,6 @@ static struct dentry *proc_mount(struct file_system_type *fs_type,
+ 		sb->s_flags |= MS_ACTIVE;
+ 	}
+ 
+-	ei = PROC_I(sb->s_root->d_inode);
+-	if (!ei->pid) {
+-		rcu_read_lock();
+-		ei->pid = get_pid(find_pid_ns(1, ns));
+-		rcu_read_unlock();
+-	}
+-
+ 	return dget(sb->s_root);
+ }
+ 
+@@ -105,6 +97,7 @@ void __init proc_root_init(void)
+ 	}
+ 
+ 	init_pid_ns.proc_mnt = mnt;
++	proc_self_init();
+ 	proc_symlink("mounts", NULL, "self/mounts");
+ 
+ 	proc_net_init();
+diff --git a/fs/proc/self.c b/fs/proc/self.c
+new file mode 100644
+index 0000000..0d01aaa
+--- /dev/null
++++ b/fs/proc/self.c
+@@ -0,0 +1,58 @@
++#include <linux/proc_fs.h>
++#include <linux/sched.h>
++#include <linux/namei.h>
++
++/*
++ * /proc/self:
++ */
++static int proc_self_readlink(struct dentry *dentry, char __user *buffer,
++			      int buflen)
++{
++	struct pid_namespace *ns = dentry->d_sb->s_fs_info;
++	pid_t tgid = task_tgid_nr_ns(current, ns);
++	char tmp[PROC_NUMBUF];
++	if (!tgid)
++		return -ENOENT;
++	sprintf(tmp, "%d", tgid);
++	return vfs_readlink(dentry,buffer,buflen,tmp);
++}
++
++static void *proc_self_follow_link(struct dentry *dentry, struct nameidata *nd)
++{
++	struct pid_namespace *ns = dentry->d_sb->s_fs_info;
++	pid_t tgid = task_tgid_nr_ns(current, ns);
++	char *name = ERR_PTR(-ENOENT);
++	if (tgid) {
++		name = __getname();
++		if (!name)
++			name = ERR_PTR(-ENOMEM);
++		else
++			sprintf(name, "%d", tgid);
++	}
++	nd_set_link(nd, name);
++	return NULL;
++}
++
++static void proc_self_put_link(struct dentry *dentry, struct nameidata *nd,
++				void *cookie)
++{
++	char *s = nd_get_link(nd);
++	if (!IS_ERR(s))
++		__putname(s);
++}
++
++static const struct inode_operations proc_self_inode_operations = {
++	.readlink	= proc_self_readlink,
++	.follow_link	= proc_self_follow_link,
++	.put_link	= proc_self_put_link,
++};
++
++void __init proc_self_init(void)
++{
++	struct proc_dir_entry *proc_self_symlink;
++	mode_t mode;
++
++	mode = S_IFLNK | S_IRWXUGO;
++	proc_self_symlink = proc_create("self", mode, NULL, NULL );
++	proc_self_symlink->proc_iops = &proc_self_inode_operations;
++}
+diff --git a/include/linux/ipc_namespace.h b/include/linux/ipc_namespace.h
+index a6d1655..22a4dc4 100644
+--- a/include/linux/ipc_namespace.h
++++ b/include/linux/ipc_namespace.h
+@@ -60,6 +60,8 @@ struct ipc_namespace {
+ 
+ 	/* user_ns which owns the ipc ns */
+ 	struct user_namespace *user_ns;
++
++	unsigned int	proc_inum;
+ };
+ 
+ extern struct ipc_namespace init_ipc_ns;
+diff --git a/include/linux/mnt_namespace.h b/include/linux/mnt_namespace.h
+index 0b89efc..32136e7 100644
+--- a/include/linux/mnt_namespace.h
++++ b/include/linux/mnt_namespace.h
+@@ -8,6 +8,8 @@
+ 
+ struct mnt_namespace {
+ 	atomic_t		count;
++	unsigned int		proc_inum;
++	u64			seq;
+ 	struct vfsmount *	root;
+ 	struct list_head	list;
+ 	wait_queue_head_t poll;
+diff --git a/include/linux/pid_namespace.h b/include/linux/pid_namespace.h
+index 38d1032..483cecf 100644
+--- a/include/linux/pid_namespace.h
++++ b/include/linux/pid_namespace.h
+@@ -20,9 +20,11 @@ struct pid_namespace {
+ 	struct kref kref;
+ 	struct pidmap pidmap[PIDMAP_ENTRIES];
+ 	int last_pid;
++	int dead;
+ 	struct task_struct *child_reaper;
+ 	struct kmem_cache *pid_cachep;
+ 	unsigned int level;
++	unsigned int proc_inum;
+ 	struct pid_namespace *parent;
+ #ifdef CONFIG_PROC_FS
+ 	struct vfsmount *proc_mnt;
+@@ -42,7 +44,8 @@ static inline struct pid_namespace *get_pid_ns(struct pid_namespace *ns)
+ 	return ns;
+ }
+ 
+-extern struct pid_namespace *copy_pid_ns(unsigned long flags, struct pid_namespace *ns);
++extern struct pid_namespace *copy_pid_ns(unsigned long flags,
++	struct pid_namespace *default_ns, struct pid_namespace *active_ns);
+ extern void free_pid_ns(struct kref *kref);
+ extern void zap_pid_ns_processes(struct pid_namespace *pid_ns);
+ 
+@@ -52,6 +55,17 @@ static inline void put_pid_ns(struct pid_namespace *ns)
+ 		kref_put(&ns->kref, free_pid_ns);
+ }
+ 
++static inline bool pid_ns_dead(struct pid *pid)
++{
++	int i;
++
++	for (i = 0; i <= pid->level; i++) {
++		if (pid->numbers[i].ns->dead)
++			return true;
++	}
++	return false;
++}
++
+ #else /* !CONFIG_PID_NS */
+ #include <linux/err.h>
+ 
+@@ -60,12 +74,12 @@ static inline struct pid_namespace *get_pid_ns(struct pid_namespace *ns)
+ 	return ns;
+ }
+ 
+-static inline struct pid_namespace *
+-copy_pid_ns(unsigned long flags, struct pid_namespace *ns)
++static inline struct pid_namespace *copy_pid_ns(unsigned long flags,
++	struct pid_namespace *default_ns, struct pid_namespace *active_ns)
+ {
+ 	if (flags & CLONE_NEWPID)
+-		ns = ERR_PTR(-EINVAL);
+-	return ns;
++		return ERR_PTR(-EINVAL);
++	return default_ns;
+ }
+ 
+ static inline void put_pid_ns(struct pid_namespace *ns)
+@@ -77,6 +91,12 @@ static inline void zap_pid_ns_processes(struct pid_namespace *ns)
+ {
+ 	BUG();
+ }
++
++static inline bool pid_ns_dead(struct pid *pid)
++{
++	return false;
++}
++
+ #endif /* CONFIG_PID_NS */
+ 
+ extern struct pid_namespace *task_active_pid_ns(struct task_struct *tsk);
+diff --git a/include/linux/proc_fs.h b/include/linux/proc_fs.h
+index e7576cf..5f2f381 100644
+--- a/include/linux/proc_fs.h
++++ b/include/linux/proc_fs.h
+@@ -28,9 +28,14 @@ struct mm_struct;
+  */
+ 
+ enum {
+-	PROC_ROOT_INO = 1,
++	PROC_ROOT_INO		= 1,
++	PROC_IPC_INIT_INO	= 0xEFFFFFFFU,
++	PROC_UTS_INIT_INO	= 0xEFFFFFFEU,
++	PROC_USER_INIT_INO	= 0xEFFFFFFDU,
++	PROC_PID_INIT_INO	= 0xEFFFFFFCU,
+ };
+ 
++
+ /*
+  * This is not completely implemented yet. The idea is to
+  * create an in-memory tree (like the actual /proc filesystem
+@@ -174,7 +179,10 @@ extern struct proc_dir_entry *proc_net_mkdir(struct net *net, const char *name,
+ 	struct proc_dir_entry *parent);
+ 
+ extern struct file *proc_ns_fget(int fd);
++extern bool proc_ns_inode(struct inode *inode);
+ 
++extern int proc_alloc_inum(unsigned int *pino);
++extern void proc_free_inum(unsigned int inum);
+ #else
+ 
+ #define proc_net_fops_create(net, name, mode, fops)  ({ (void)(mode), NULL; })
+@@ -229,6 +237,19 @@ static inline struct file *proc_ns_fget(int fd)
+ 	return ERR_PTR(-EINVAL);
+ }
+ 
++static bool proc_ns_inode(struct inode *inode)
++{
++	return false;
++}
++
++static inline int proc_alloc_inum(unsigned int *inum)
++{
++	*inum = 1;
++	return 0;
++}
++static inline void proc_free_inum(unsigned int inum)
++{
++}
+ #endif /* CONFIG_PROC_FS */
+ 
+ #if !defined(CONFIG_PROC_KCORE)
+@@ -247,10 +268,14 @@ struct proc_ns_operations {
+ 	void *(*get)(struct task_struct *task);
+ 	void (*put)(void *ns);
+ 	int (*install)(struct nsproxy *nsproxy, void *ns);
++	unsigned int (*inum)(void *ns);
+ };
+ extern const struct proc_ns_operations netns_operations;
+ extern const struct proc_ns_operations utsns_operations;
+ extern const struct proc_ns_operations ipcns_operations;
++extern const struct proc_ns_operations mntns_operations;
++extern const struct proc_ns_operations userns_operations;
++extern const struct proc_ns_operations pidns_operations;
+ 
+ union proc_op {
+ 	int (*proc_get_link)(struct inode *, struct path *);
+diff --git a/include/linux/user_namespace.h b/include/linux/user_namespace.h
+index faf4679..5ecc988 100644
+--- a/include/linux/user_namespace.h
++++ b/include/linux/user_namespace.h
+@@ -14,6 +14,7 @@ struct user_namespace {
+ 	struct hlist_head	uidhash_table[UIDHASH_SZ];
+ 	struct user_struct	*creator;
+ 	struct work_struct	destroyer;
++	unsigned int		proc_inum;
+ };
+ 
+ extern struct user_namespace init_user_ns;
+diff --git a/include/linux/utsname.h b/include/linux/utsname.h
+index 4e5b021..03db764 100644
+--- a/include/linux/utsname.h
++++ b/include/linux/utsname.h
+@@ -44,6 +44,7 @@ struct uts_namespace {
+ 	struct kref kref;
+ 	struct new_utsname name;
+ 	struct user_namespace *user_ns;
++	unsigned int proc_inum;
+ };
+ extern struct uts_namespace init_uts_ns;
+ 
+diff --git a/include/net/net_namespace.h b/include/net/net_namespace.h
+index aef430d..850799f 100644
+--- a/include/net/net_namespace.h
++++ b/include/net/net_namespace.h
+@@ -52,6 +52,8 @@ struct net {
+ 	struct list_head	cleanup_list;	/* namespaces on death row */
+ 	struct list_head	exit_list;	/* Use only net_mutex */
+ 
++	unsigned int		proc_inum;
++
+ 	struct proc_dir_entry 	*proc_net;
+ 	struct proc_dir_entry 	*proc_net_stat;
+ 
+diff --git a/init/main.c b/init/main.c
+index d7211fa..da57698 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -748,9 +748,6 @@ static noinline int init_post(void)
+ 	system_state = SYSTEM_RUNNING;
+ 	numa_default_policy();
+ 
+-
+-	current->signal->flags |= SIGNAL_UNKILLABLE;
+-
+ 	if (ramdisk_execute_command) {
+ 		run_init_process(ramdisk_execute_command);
+ 		printk(KERN_WARNING "Failed to execute %s\n",
+diff --git a/init/version.c b/init/version.c
+index 86fe0cc..58170f1 100644
+--- a/init/version.c
++++ b/init/version.c
+@@ -12,6 +12,7 @@
+ #include <linux/utsname.h>
+ #include <generated/utsrelease.h>
+ #include <linux/version.h>
++#include <linux/proc_fs.h>
+ 
+ #ifndef CONFIG_KALLSYMS
+ #define version(a) Version_ ## a
+@@ -34,6 +35,7 @@ struct uts_namespace init_uts_ns = {
+ 		.domainname	= UTS_DOMAINNAME,
+ 	},
+ 	.user_ns = &init_user_ns,
++	.proc_inum = PROC_UTS_INIT_INO,
+ };
+ EXPORT_SYMBOL_GPL(init_uts_ns);
+ 
+diff --git a/ipc/msgutil.c b/ipc/msgutil.c
+index 8b5ce5d..f7da485 100644
+--- a/ipc/msgutil.c
++++ b/ipc/msgutil.c
+@@ -14,6 +14,7 @@
+ #include <linux/slab.h>
+ #include <linux/ipc.h>
+ #include <linux/ipc_namespace.h>
++#include <linux/proc_fs.h>
+ #include <asm/uaccess.h>
+ 
+ #include "util.h"
+@@ -33,6 +34,7 @@ struct ipc_namespace init_ipc_ns = {
+ 	.mq_msgsize_max  = DFLT_MSGSIZEMAX,
+ #endif
+ 	.user_ns = &init_user_ns,
++	.proc_inum = PROC_IPC_INIT_INO,
+ };
+ 
+ atomic_t nr_ipc_ns = ATOMIC_INIT(1);
+diff --git a/ipc/namespace.c b/ipc/namespace.c
+index ce0a647..cd7f733 100644
+--- a/ipc/namespace.c
++++ b/ipc/namespace.c
+@@ -26,9 +26,16 @@ static struct ipc_namespace *create_ipc_ns(struct task_struct *tsk,
+ 	if (ns == NULL)
+ 		return ERR_PTR(-ENOMEM);
+ 
++	err = proc_alloc_inum(&ns->proc_inum);
++	if (err) {
++		kfree(ns);
++		return ERR_PTR(err);
++	}
++
+ 	atomic_set(&ns->count, 1);
+ 	err = mq_init_ns(ns);
+ 	if (err) {
++		proc_free_inum(ns->proc_inum);
+ 		kfree(ns);
+ 		return ERR_PTR(err);
+ 	}
+@@ -113,6 +120,7 @@ static void free_ipc_ns(struct ipc_namespace *ns)
+ 	 */
+ 	ipcns_notify(IPCNS_REMOVED);
+ 	put_user_ns(ns->user_ns);
++	proc_free_inum(ns->proc_inum);
+ 	kfree(ns);
+ }
+ 
+@@ -170,10 +178,18 @@ static int ipcns_install(struct nsproxy *nsproxy, void *ns)
+ 	return 0;
+ }
+ 
++static unsigned int ipcns_inum(void *vp)
++{
++	struct ipc_namespace *ns = vp;
++
++	return ns->proc_inum;
++}
++
+ const struct proc_ns_operations ipcns_operations = {
+ 	.name		= "ipc",
+ 	.type		= CLONE_NEWIPC,
+ 	.get		= ipcns_get,
+ 	.put		= ipcns_put,
+ 	.install	= ipcns_install,
++	.inum		= ipcns_inum,
+ };
+diff --git a/kernel/cgroup.c b/kernel/cgroup.c
+index 2731d11..7138ad9 100644
+--- a/kernel/cgroup.c
++++ b/kernel/cgroup.c
+@@ -3099,7 +3099,7 @@ static struct cgroup_pidlist *cgroup_pidlist_find(struct cgroup *cgrp,
+ {
+ 	struct cgroup_pidlist *l;
+ 	/* don't need task_nsproxy() if we're looking at ourself */
+-	struct pid_namespace *ns = current->nsproxy->pid_ns;
++	struct pid_namespace *ns = task_active_pid_ns(current);
+ 
+ 	/*
+ 	 * We can't drop the pidlist_mutex before taking the l->mutex in case
+diff --git a/kernel/events/core.c b/kernel/events/core.c
+index 9efe710..ef69024 100644
+--- a/kernel/events/core.c
++++ b/kernel/events/core.c
+@@ -6192,7 +6192,7 @@ perf_event_alloc(struct perf_event_attr *attr, int cpu,
+ 
+ 	event->parent		= parent_event;
+ 
+-	event->ns		= get_pid_ns(current->nsproxy->pid_ns);
++	event->ns		= get_pid_ns(task_active_pid_ns(current));
+ 	event->id		= atomic64_inc_return(&perf_event_id);
+ 
+ 	event->state		= PERF_EVENT_STATE_INACTIVE;
+diff --git a/kernel/fork.c b/kernel/fork.c
+index 0276c30..7b315af 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -960,8 +960,6 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
+ 	atomic_set(&sig->live, 1);
+ 	atomic_set(&sig->sigcnt, 1);
+ 	init_waitqueue_head(&sig->wait_chldexit);
+-	if (clone_flags & CLONE_NEWPID)
+-		sig->flags |= SIGNAL_UNKILLABLE;
+ 	sig->curr_target = tsk;
+ 	init_sigpending(&sig->shared_pending);
+ 	INIT_LIST_HEAD(&sig->posix_timers);
+@@ -1331,6 +1329,13 @@ static struct task_struct *copy_process(unsigned long clone_flags,
+ 		goto bad_fork_free_pid;
+ 	}
+ 
++	if (pid_ns_dead(pid)) {
++		spin_unlock(&current->sighand->siglock);
++		write_unlock_irq(&tasklist_lock);
++		retval = -EPERM;
++		goto bad_fork_free_pid;
++	}
++
+ 	if (clone_flags & CLONE_THREAD) {
+ 		current->signal->nr_threads++;
+ 		atomic_inc(&current->signal->live);
+@@ -1343,8 +1348,18 @@ static struct task_struct *copy_process(unsigned long clone_flags,
+ 		tracehook_finish_clone(p, clone_flags, trace);
+ 
+ 		if (thread_group_leader(p)) {
+-			if (is_child_reaper(pid))
++			if (is_child_reaper(pid)) {
++				/*
++				 * Tell the world that we're going to be the grim
++				 * reaper of innocent orphaned children.
++				 *
++				 * We don't want people to have to make incorrect
++				 * assumptions about where in the task array this
++				 * can be found.
++				 */
+ 				p->nsproxy->pid_ns->child_reaper = p;
++				p->signal->flags |= SIGNAL_UNKILLABLE;
++			}
+ 
+ 			p->signal->leader_pid = pid;
+ 			p->signal->tty = tty_kref_get(current->signal->tty);
+@@ -1583,7 +1598,8 @@ static int check_unshare_flags(unsigned long unshare_flags)
+ {
+ 	if (unshare_flags & ~(CLONE_THREAD|CLONE_FS|CLONE_NEWNS|CLONE_SIGHAND|
+ 				CLONE_VM|CLONE_FILES|CLONE_SYSVSEM|
+-				CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWNET))
++				CLONE_NEWUTS|CLONE_NEWIPC|CLONE_NEWNET|
++				CLONE_NEWPID))
+ 		return -EINVAL;
+ 	/*
+ 	 * Not implemented, but pretend it works if there is nothing to
+diff --git a/kernel/nsproxy.c b/kernel/nsproxy.c
+index d6a00f3..b956079 100644
+--- a/kernel/nsproxy.c
++++ b/kernel/nsproxy.c
+@@ -84,7 +84,8 @@ static struct nsproxy *create_new_namespaces(unsigned long flags,
+ 		goto out_ipc;
+ 	}
+ 
+-	new_nsp->pid_ns = copy_pid_ns(flags, task_active_pid_ns(tsk));
++	new_nsp->pid_ns = copy_pid_ns(flags, tsk->nsproxy->pid_ns,
++						task_active_pid_ns(tsk));
+ 	if (IS_ERR(new_nsp->pid_ns)) {
+ 		err = PTR_ERR(new_nsp->pid_ns);
+ 		goto out_pid;
+@@ -188,7 +189,7 @@ int unshare_nsproxy_namespaces(unsigned long unshare_flags,
+ 	int err = 0;
+ 
+ 	if (!(unshare_flags & (CLONE_NEWNS | CLONE_NEWUTS | CLONE_NEWIPC |
+-			       CLONE_NEWNET)))
++			       CLONE_NEWNET | CLONE_NEWPID)))
+ 		return 0;
+ 
+ 	if (!capable(CAP_SYS_ADMIN))
+diff --git a/kernel/pid.c b/kernel/pid.c
+index 57a8346..8c51c26 100644
+--- a/kernel/pid.c
++++ b/kernel/pid.c
+@@ -76,8 +76,10 @@ struct pid_namespace init_pid_ns = {
+ 		[ 0 ... PIDMAP_ENTRIES-1] = { ATOMIC_INIT(BITS_PER_PAGE), NULL }
+ 	},
+ 	.last_pid = 0,
++	.dead = 0,
+ 	.level = 0,
+ 	.child_reaper = &init_task,
++	.proc_inum = PROC_PID_INIT_INO,
+ };
+ EXPORT_SYMBOL_GPL(init_pid_ns);
+ 
+@@ -291,6 +293,8 @@ struct pid *alloc_pid(struct pid_namespace *ns)
+ 
+ 	tmp = ns;
+ 	for (i = ns->level; i >= 0; i--) {
++		if (ns->dead)
++			goto out_free;
+ 		nr = alloc_pidmap(tmp);
+ 		if (nr < 0)
+ 			goto out_free;
+@@ -342,7 +346,7 @@ EXPORT_SYMBOL_GPL(find_pid_ns);
+ 
+ struct pid *find_vpid(int nr)
+ {
+-	return find_pid_ns(nr, current->nsproxy->pid_ns);
++	return find_pid_ns(nr, task_active_pid_ns(current));
+ }
+ EXPORT_SYMBOL_GPL(find_vpid);
+ 
+@@ -425,7 +429,7 @@ struct task_struct *find_task_by_pid_ns(pid_t nr, struct pid_namespace *ns)
+ 
+ struct task_struct *find_task_by_vpid(pid_t vnr)
+ {
+-	return find_task_by_pid_ns(vnr, current->nsproxy->pid_ns);
++	return find_task_by_pid_ns(vnr, task_active_pid_ns(current));
+ }
+ 
+ struct pid *get_task_pid(struct task_struct *task, enum pid_type type)
+@@ -479,7 +483,7 @@ pid_t pid_nr_ns(struct pid *pid, struct pid_namespace *ns)
+ 
+ pid_t pid_vnr(struct pid *pid)
+ {
+-	return pid_nr_ns(pid, current->nsproxy->pid_ns);
++	return pid_nr_ns(pid, task_active_pid_ns(current));
+ }
+ EXPORT_SYMBOL_GPL(pid_vnr);
+ 
+@@ -490,7 +494,7 @@ pid_t __task_pid_nr_ns(struct task_struct *task, enum pid_type type,
+ 
+ 	rcu_read_lock();
+ 	if (!ns)
+-		ns = current->nsproxy->pid_ns;
++		ns = task_active_pid_ns(current);
+ 	if (likely(pid_alive(task))) {
+ 		if (type != PIDTYPE_PID)
+ 			task = task->group_leader;
+diff --git a/kernel/pid_namespace.c b/kernel/pid_namespace.c
+index e9c9adc..b599762 100644
+--- a/kernel/pid_namespace.c
++++ b/kernel/pid_namespace.c
+@@ -97,12 +97,18 @@ static struct pid_namespace *create_pid_namespace(struct pid_namespace *parent_p
+ 	for (i = 1; i < PIDMAP_ENTRIES; i++)
+ 		atomic_set(&ns->pidmap[i].nr_free, BITS_PER_PAGE);
+ 
+-	err = pid_ns_prepare_proc(ns);
++	err = proc_alloc_inum(&ns->proc_inum);
+ 	if (err)
+ 		goto out_put_parent_pid_ns;
+ 
++	err = pid_ns_prepare_proc(ns);
++	if (err)
++		goto out_free_proc_inum;
++
+ 	return ns;
+ 
++out_free_proc_inum:
++	proc_free_inum(ns->proc_inum);
+ out_put_parent_pid_ns:
+ 	put_pid_ns(parent_pid_ns);
+ out_free_map:
+@@ -117,18 +123,20 @@ static void destroy_pid_namespace(struct pid_namespace *ns)
+ {
+ 	int i;
+ 
++	proc_free_inum(ns->proc_inum);
+ 	for (i = 0; i < PIDMAP_ENTRIES; i++)
+ 		kfree(ns->pidmap[i].page);
+ 	kmem_cache_free(pid_ns_cachep, ns);
+ }
+ 
+-struct pid_namespace *copy_pid_ns(unsigned long flags, struct pid_namespace *old_ns)
++struct pid_namespace *copy_pid_ns(unsigned long flags,
++	struct pid_namespace *default_ns, struct pid_namespace *active_ns)
+ {
+ 	if (!(flags & CLONE_NEWPID))
+-		return get_pid_ns(old_ns);
++		return get_pid_ns(default_ns);
+ 	if (flags & (CLONE_THREAD|CLONE_PARENT))
+ 		return ERR_PTR(-EINVAL);
+-	return create_pid_namespace(old_ns);
++	return create_pid_namespace(active_ns);
+ }
+ 
+ void free_pid_ns(struct kref *kref)
+@@ -146,16 +154,20 @@ void free_pid_ns(struct kref *kref)
+ 
+ void zap_pid_ns_processes(struct pid_namespace *pid_ns)
+ {
++	struct task_struct *me = current;
+ 	int nr;
+ 	int rc;
+ 	struct task_struct *task;
+ 
+ 	/*
+-	 * The last thread in the cgroup-init thread group is terminating.
+-	 * Find remaining pid_ts in the namespace, signal and wait for them
+-	 * to exit.
++	 * The last task in the pid namespace-init thread group is terminating.
++	 * Find remaining pids in the namespace, signal and wait for them
++	 * to to be reaped.
++	 *
++	 * By waiting for all of the tasks to be reaped before init is reaped
++	 * we provide the invariant that no task can escape the pid namespace.
+ 	 *
+-	 * Note:  This signals each threads in the namespace - even those that
++	 * Note:  This signals each task in the namespace - even those that
+ 	 * 	  belong to the same thread group, To avoid this, we would have
+ 	 * 	  to walk the entire tasklist looking a processes in this
+ 	 * 	  namespace, but that could be unnecessarily expensive if the
+@@ -164,33 +176,96 @@ void zap_pid_ns_processes(struct pid_namespace *pid_ns)
+ 	 *
+ 	 */
+ 	read_lock(&tasklist_lock);
+-	nr = next_pidmap(pid_ns, 1);
+-	while (nr > 0) {
+-		rcu_read_lock();
++	pid_ns->dead = 1;
++	for (nr = next_pidmap(pid_ns, 0); nr > 0; nr = next_pidmap(pid_ns, nr)) {
+ 
+ 		/*
+ 		 * Any nested-container's init processes won't ignore the
+ 		 * SEND_SIG_NOINFO signal, see send_signal()->si_fromuser().
+ 		 */
+-		task = pid_task(find_vpid(nr), PIDTYPE_PID);
+-		if (task)
++		rcu_read_lock();
++		task = pid_task(find_pid_ns(nr, pid_ns), PIDTYPE_PID);
++		if (task && !same_thread_group(task, me))
+ 			send_sig_info(SIGKILL, SEND_SIG_NOINFO, task);
+-
+ 		rcu_read_unlock();
+-
+-		nr = next_pidmap(pid_ns, nr);
+ 	}
+ 	read_unlock(&tasklist_lock);
+ 
++	/* Nicely reap all of the remaining children in the namespace */
+ 	do {
+ 		clear_thread_flag(TIF_SIGPENDING);
+ 		rc = sys_wait4(-1, NULL, __WALL, NULL);
+ 	} while (rc != -ECHILD);
+ 
++
++repeat:
++	/* Brute force wait for any remaining tasks to pass unhash_process
++	 * in release_task.  Once a task has passed unhash_process there
++	 * is no pid_namespace state left and they can be safely ignored.
++	 */
++	for (nr = next_pidmap(pid_ns, 1); nr > 0; nr = next_pidmap(pid_ns, nr)) {
++		int found;
++
++		/* Are there any tasks alive in this pid namespace */
++		rcu_read_lock();
++		task = pid_task(find_pid_ns(nr, pid_ns), PIDTYPE_PID);
++		found = task && !same_thread_group(task, me);
++		rcu_read_unlock();
++		if (found) {
++			clear_thread_flag(TIF_SIGPENDING);
++			schedule_timeout_interruptible(HZ/10);
++			goto repeat;
++		}
++	}
++	/* At this point there are at most two tasks in the pid namespace.
++	 * These tasks are our current task, and if we aren't pid 1 the zombie
++	 * of pid 1. In either case pid 1 will be the final task reaped in this
++	 * pid namespace, as non-leader threads are self reaping and leaders
++	 * cannot be reaped until all of their siblings have been reaped.
++	 */
++
+ 	acct_exit_ns(pid_ns);
+ 	return;
+ }
+ 
++static void *pidns_get(struct task_struct *task)
++{
++	struct pid_namespace *ns;
++
++	rcu_read_lock();
++	ns = get_pid_ns(task_active_pid_ns(task));
++	rcu_read_unlock();
++
++	return ns;
++}
++
++static void pidns_put(void *ns)
++{
++	put_pid_ns(ns);
++}
++
++static int pidns_install(struct nsproxy *nsproxy, void *ns)
++{
++	put_pid_ns(nsproxy->pid_ns);
++	nsproxy->pid_ns = get_pid_ns(ns);
++	return 0;
++}
++
++static unsigned int pidns_inum(void *vns)
++{
++	struct pid_namespace *ns = vns;
++	return ns->proc_inum;
++}
++
++const struct proc_ns_operations pidns_operations = {
++	.name		= "pid",
++	.type		= CLONE_NEWPID,
++	.get		= pidns_get,
++	.put		= pidns_put,
++	.install	= pidns_install,
++	.inum		= pidns_inum,
++};
++
+ static __init int pid_namespaces_init(void)
+ {
+ 	pid_ns_cachep = KMEM_CACHE(pid_namespace, SLAB_PANIC);
+diff --git a/kernel/signal.c b/kernel/signal.c
+index 415d85d..fd8fcdc 100644
+--- a/kernel/signal.c
++++ b/kernel/signal.c
+@@ -1535,16 +1535,15 @@ int do_notify_parent(struct task_struct *tsk, int sig)
+ 	 * we are under tasklist_lock here so our parent is tied to
+ 	 * us and cannot exit and release its namespace.
+ 	 *
+-	 * the only it can is to switch its nsproxy with sys_unshare,
+-	 * bu uncharing pid namespaces is not allowed, so we'll always
+-	 * see relevant namespace
++	 * The only it can is to switch its nsproxy with sys_unshare,
++	 * but we use the pid_namespace for task_pid which never changes.
+ 	 *
+ 	 * write_lock() currently calls preempt_disable() which is the
+ 	 * same as rcu_read_lock(), but according to Oleg, this is not
+ 	 * correct to rely on this
+ 	 */
+ 	rcu_read_lock();
+-	info.si_pid = task_pid_nr_ns(tsk, tsk->parent->nsproxy->pid_ns);
++	info.si_pid = task_pid_nr_ns(tsk, task_active_pid_ns(tsk->parent));
+ 	info.si_uid = __task_cred(tsk)->uid;
+ 	rcu_read_unlock();
+ 
+@@ -1629,7 +1628,7 @@ static void do_notify_parent_cldstop(struct task_struct *tsk,
+ 	 * see comment in do_notify_parent() about the following 4 lines
+ 	 */
+ 	rcu_read_lock();
+-	info.si_pid = task_pid_nr_ns(tsk, parent->nsproxy->pid_ns);
++	info.si_pid = task_pid_nr_ns(tsk, task_active_pid_ns(parent));
+ 	info.si_uid = __task_cred(tsk)->uid;
+ 	rcu_read_unlock();
+ 
+diff --git a/kernel/sysctl_binary.c b/kernel/sysctl_binary.c
+index 3b8e028..20dfc21 100644
+--- a/kernel/sysctl_binary.c
++++ b/kernel/sysctl_binary.c
+@@ -1344,7 +1344,7 @@ static ssize_t binary_sysctl(const int *name, int nlen,
+ 		goto out_putname;
+ 	}
+ 
+-	mnt = current->nsproxy->pid_ns->proc_mnt;
++	mnt = task_active_pid_ns(current)->proc_mnt;
+ 	file = file_open_root(mnt->mnt_root, mnt, pathname, flags);
+ 	result = PTR_ERR(file);
+ 	if (IS_ERR(file))
+diff --git a/kernel/user.c b/kernel/user.c
+index 9e03e9c..867fc65 100644
+--- a/kernel/user.c
++++ b/kernel/user.c
+@@ -16,6 +16,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/module.h>
+ #include <linux/user_namespace.h>
++#include <linux/proc_fs.h>
+ 
+ /*
+  * userns count is 1 for root user, 1 for init_uts_ns,
+@@ -26,6 +27,7 @@ struct user_namespace init_user_ns = {
+ 		.refcount	= ATOMIC_INIT(3),
+ 	},
+ 	.creator = &root_user,
++	.proc_inum = PROC_USER_INIT_INO,
+ };
+ EXPORT_SYMBOL_GPL(init_user_ns);
+ 
+diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
+index 9da289c..3c2e8f8 100644
+--- a/kernel/user_namespace.c
++++ b/kernel/user_namespace.c
+@@ -11,6 +11,7 @@
+ #include <linux/user_namespace.h>
+ #include <linux/highuid.h>
+ #include <linux/cred.h>
++#include <linux/proc_fs.h>
+ 
+ static struct kmem_cache *user_ns_cachep __read_mostly;
+ 
+@@ -27,11 +28,18 @@ int create_user_ns(struct cred *new)
+ 	struct user_namespace *ns;
+ 	struct user_struct *root_user;
+ 	int n;
++	int ret;
+ 
+ 	ns = kmem_cache_alloc(user_ns_cachep, GFP_KERNEL);
+ 	if (!ns)
+ 		return -ENOMEM;
+ 
++	ret = proc_alloc_inum(&ns->proc_inum);
++	if (ret) {
++		kmem_cache_free(user_ns_cachep, ns);
++		return ret;
++	}
++
+ 	kref_init(&ns->kref);
+ 
+ 	for (n = 0; n < UIDHASH_SZ; ++n)
+@@ -40,6 +48,7 @@ int create_user_ns(struct cred *new)
+ 	/* Alloc new root user.  */
+ 	root_user = alloc_uid(ns, 0);
+ 	if (!root_user) {
++		proc_free_inum(ns->proc_inum);
+ 		kmem_cache_free(user_ns_cachep, ns);
+ 		return -ENOMEM;
+ 	}
+@@ -73,6 +82,7 @@ static void free_user_ns_work(struct work_struct *work)
+ 	struct user_namespace *ns =
+ 		container_of(work, struct user_namespace, destroyer);
+ 	free_uid(ns->creator);
++	proc_free_inum(ns->proc_inum);
+ 	kmem_cache_free(user_ns_cachep, ns);
+ }
+ 
+@@ -135,3 +145,33 @@ static __init int user_namespaces_init(void)
+ 	return 0;
+ }
+ module_init(user_namespaces_init);
++
++static void *userns_get(struct task_struct *task)
++{
++	return get_user_ns(task_cred_xxx(task, user)->user_ns);
++}
++
++static void userns_put(void *ns)
++{
++	put_user_ns(ns);
++}
++
++static int userns_install(struct nsproxy *nsproxy, void *ns)
++{
++	return -EINVAL;
++}
++
++static unsigned int userns_inum(void *ns)
++{
++	struct user_namespace *user_ns = ns;
++	return user_ns->proc_inum;
++}
++
++const struct proc_ns_operations userns_operations = {
++	.name		= "user",
++	.type		= CLONE_NEWNS,
++	.get		= userns_get,
++	.put		= userns_put,
++	.install	= userns_install,
++	.inum		= userns_inum,
++};
+diff --git a/kernel/utsname.c b/kernel/utsname.c
+index bff131b..3ab6a08 100644
+--- a/kernel/utsname.c
++++ b/kernel/utsname.c
+@@ -36,11 +36,18 @@ static struct uts_namespace *clone_uts_ns(struct task_struct *tsk,
+ 					  struct uts_namespace *old_ns)
+ {
+ 	struct uts_namespace *ns;
++	int err;
+ 
+ 	ns = create_uts_ns();
+ 	if (!ns)
+ 		return ERR_PTR(-ENOMEM);
+ 
++	err = proc_alloc_inum(&ns->proc_inum);
++	if (err) {
++		kfree(ns);
++		return ERR_PTR(err);
++	}
++
+ 	down_read(&uts_sem);
+ 	memcpy(&ns->name, &old_ns->name, sizeof(ns->name));
+ 	ns->user_ns = get_user_ns(task_cred_xxx(tsk, user)->user_ns);
+@@ -78,6 +85,7 @@ void free_uts_ns(struct kref *kref)
+ 
+ 	ns = container_of(kref, struct uts_namespace, kref);
+ 	put_user_ns(ns->user_ns);
++	proc_free_inum(ns->proc_inum);
+ 	kfree(ns);
+ }
+ 
+@@ -110,11 +118,18 @@ static int utsns_install(struct nsproxy *nsproxy, void *ns)
+ 	return 0;
+ }
+ 
++static unsigned int utsns_inum(void *vp)
++{
++	struct uts_namespace *ns = vp;
++
++	return ns->proc_inum;
++}
++
+ const struct proc_ns_operations utsns_operations = {
+ 	.name		= "uts",
+ 	.type		= CLONE_NEWUTS,
+ 	.get		= utsns_get,
+ 	.put		= utsns_put,
+ 	.install	= utsns_install,
++	.inum		= utsns_inum,
+ };
+-
+diff --git a/net/core/net_namespace.c b/net/core/net_namespace.c
+index ea489db..a02b405 100644
+--- a/net/core/net_namespace.c
++++ b/net/core/net_namespace.c
+@@ -366,6 +366,21 @@ struct net *get_net_ns_by_pid(pid_t pid)
+ }
+ EXPORT_SYMBOL_GPL(get_net_ns_by_pid);
+ 
++static __net_init int net_ns_net_init(struct net *net)
++{
++	return proc_alloc_inum(&net->proc_inum);
++}
++
++static __net_exit void net_ns_net_exit(struct net *net)
++{
++	proc_free_inum(net->proc_inum);
++}
++
++static struct pernet_operations __net_initdata net_ns_ops = {
++	.init = net_ns_net_init,
++	.exit = net_ns_net_exit,
++};
++
+ static int __init net_ns_init(void)
+ {
+ 	struct net_generic *ng;
+@@ -397,6 +412,8 @@ static int __init net_ns_init(void)
+ 
+ 	mutex_unlock(&net_mutex);
+ 
++	register_pernet_subsys(&net_ns_ops);
++
+ 	return 0;
+ }
+ 
+@@ -624,11 +641,18 @@ static int netns_install(struct nsproxy *nsproxy, void *ns)
+ 	return 0;
+ }
+ 
++static unsigned int netns_inum(void *ns)
++{
++	struct net *net = ns;
++	return net->proc_inum;
++}
++
+ const struct proc_ns_operations netns_operations = {
+ 	.name		= "net",
+ 	.type		= CLONE_NEWNET,
+ 	.get		= netns_get,
+ 	.put		= netns_put,
+ 	.install	= netns_install,
++	.inum		= netns_inum,
+ };
+ #endif
+-- 
+1.7.1
+
