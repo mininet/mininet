@@ -214,7 +214,7 @@ class TCIntf( Intf ):
             if enable_ecn:
                 cmds += [ '%s qdisc add dev %s' + parent +
                           'handle 10: red limit 1000000 ' +
-                          'min 20000 max 25000 avpkt 1000 ' +
+                          'min 30000 max 35000 avpkt 1500 ' +
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1 ecn' % bw ]
                 parent = ' parent 10: '
