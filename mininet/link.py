@@ -201,7 +201,7 @@ class TCIntf( Intf ):
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
                 if latency_ms is None:
-                    latency_ms = 10 * 1500 * 8 / bw
+                    latency_ms = 15 * 8 / bw
                 cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
                         'rate %fMbit burst 15000 latency %fms' %
                          ( bw, latency_ms ) ]
