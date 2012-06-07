@@ -177,8 +177,8 @@ class TCIntf( Intf ):
        Allows specification of bandwidth limits (various methods)
        as well as delay, loss and max queue length"""
 
-    def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False, latency_ms=None,
-                enable_ecn=False, enable_red=False ):
+    def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False, 
+                latency_ms=None, enable_ecn=False, enable_red=False ):
         "Return tc commands to set bandwidth"
 
         cmds, parent = [], ' root '
@@ -260,9 +260,9 @@ class TCIntf( Intf ):
         return self.cmd( c )
 
     def config( self, bw=None, delay=None, jitter=None, loss=None, 
-                disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False, latency_ms=None, 
-                enable_ecn=False, enable_red=False, max_queue_size=None, 
-                **params ):
+                disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False, 
+                latency_ms=None, enable_ecn=False, enable_red=False, 
+                max_queue_size=None, **params ):
         "Configure the port and set its properties."
 
         result = Intf.config( self, **params)
@@ -282,8 +282,8 @@ class TCIntf( Intf ):
 
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
-                                 use_hfsc=use_hfsc, use_tbf=use_tbf,
-                                 enable_ecn=enable_ecn,
+                                 use_hfsc=use_hfsc, use_tbf=use_tbf, 
+                                 latency_ms=latency_ms, enable_ecn=enable_ecn,
                                  enable_red=enable_red )
         cmds += bwcmds
 
