@@ -284,7 +284,7 @@ function oftest {
 
     # Install oftest:
     cd ~/
-    git clone git://openflow.org/oftest
+    git clone git://github.com/floodlight/oftest
     cd oftest
     cd tools/munger
     sudo make install
