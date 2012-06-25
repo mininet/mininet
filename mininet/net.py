@@ -168,7 +168,8 @@ class Mininet( object ):
         # Default IP and MAC addresses
         defaults = { 'ip': ipAdd( self.nextIP,
                                   ipBaseNum=self.ipBaseNum,
-                                  prefixLen=self.prefixLen ) }
+                                  prefixLen=self.prefixLen ) +
+                                  '/%s' % self.prefixLen }
         if self.autoSetMacs:
             defaults[ 'mac'] = macColonHex( self.nextIP )
         if self.autoPinCpus:
