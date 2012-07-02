@@ -134,7 +134,11 @@ class MininetRunner( object ):
             else:
                 raise Exception( 'Custom file name not found' )
 
-        opts = OptionParser()
+        desc = ( "The %prog utility creates Mininet network from the\n"
+                 "command line. It can create parametrized topologies,\n"
+                 "invoke the Mininet CLI, and run tests." )
+
+        opts = OptionParser( description=desc )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
         addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
@@ -175,6 +179,10 @@ class MininetRunner( object ):
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
+        def fakeversion( *args ):
+            "Fake version for help2man"
+            print "mn (development version)"
+        opts.add_option( '--version', action='callback', callback=fakeversion )
 
         self.options, self.args = opts.parse_args()
 

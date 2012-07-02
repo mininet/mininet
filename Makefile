@@ -1,7 +1,8 @@
 MININET = mininet/*.py
 TEST = mininet/test/*.py
 EXAMPLES = examples/*.py
-BIN = bin/mn
+MN = bin/mn
+BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
 P8IGN = E251,E201,E302,E202
@@ -34,6 +35,12 @@ develop: $(MNEXEC)
 	install $(MNEXEC) /usr/local/bin/
 	python setup.py develop
 
-doc:
+man: mn.1
+
+mn.1: $(MN)
+	help2man -N -n "create a Mininet network." --no-discard-stderr $(MN) \
+    > mn.1
+
+doc: man
 	doxygen doxygen.cfg
 
