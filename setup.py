@@ -11,23 +11,26 @@ modname = distname = 'mininet'
 
 setup(
     name=distname,
-    version='0.0.0',
+    version='2.0.0d1',
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
     packages=find_packages(exclude='test'),
     long_description="""
-Insert longer description here.
-      """,
+        Mininet is a network emulator which uses lightweight
+        virtualization to create virtual networks for rapid
+        prototyping of Software-Defined Network (SDN) designs
+        using OpenFlow. http://openflow.org/mininet
+        """,
     classifiers=[
-          "License :: OSI Approved :: GNU General Public License (GPL)",
+          "License :: OSI Approved :: BSD License",
           "Programming Language :: Python",
-          "Development Status :: 4 - Beta",
+          "Development Status :: 2 - Pre-Alpha",
           "Intended Audience :: Developers",
           "Topic :: Internet",
     ],
-    keywords='networking protocol Internet OpenFlow',
-    license='unspecified',
+    keywords='networking emulator protocol Internet OpenFlow SDN',
+    license='BSD',
     install_requires=[
         'setuptools',
         'networkx'

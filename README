@@ -1,9 +1,9 @@
 
     Mininet: A Simple Virtual Testbed for OpenFlow/SDN
                         or
-How to Squeeze a 1024-node OpenFlow Network onto your Laptop
+How to Squeeze an OpenFlow Network onto your Laptop
 
-Mininet 1.0.0
+Mininet 2.0.0d1
 
 ---
 Welcome to Mininet!
@@ -19,16 +19,9 @@ Linux kernel.
 Mininet may be invoked directly from the command line, and also provides a
 handy Python API for creating networks of varying sizes and topologies.
 
-Mininet is currently in *limited alpha release*. We encourage you to
-experiment with it and hope that you will provide us with feedback on
-features, documentation, and how you're using it. We plan to make it
-available publicly via a GPL or BSD license (probably in April), but please
-don't distribute the code or URLs yet! The feedback you provide will help
-us improve Mininet for general release.
-
 In order to run Mininet, you must have:
 
-* A Linux 2.6.26 or greater kernel compiled with network namespace support
+* A Linux kernel compiled with network namespace support
   enabled (see INSTALL for additional information.)
 
 * An OpenFlow implementation (either the reference user or kernel
