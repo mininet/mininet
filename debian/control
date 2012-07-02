@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 Standards-Version: 3.9.3
 Build-Depends:
-  debhelper (>= 7),
+  debhelper (>= 7.0.50~),
   python-dev,
   python-pkg-resources,
   python-setuptools
@@ -15,11 +15,12 @@ Depends:
   openvswitch-switch,
   openvswitch-controller,
   telnet,
+  python-networkx,
   ${misc:Depends},
   ${python:Depends},
   ${shlibs:Depends}
 Description: Process-based network emulator
-  Mininet is a network emulator which uses lightweight
-  virtualization to create virtual networks for rapid
-  prototyping of Software-Defined Network (SDN) designs
-  using OpenFlow. http://openflow.org/mininet
+ Mininet is a network emulator which uses lightweight
+ virtualization to create virtual networks for rapid
+ prototyping of Software-Defined Network (SDN) designs
+ using OpenFlow. http://openflow.org/mininet
