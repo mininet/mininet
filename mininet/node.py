@@ -975,6 +975,20 @@ class Controller( Node ):
         self.port = port
         Node.__init__( self, name, inNamespace=inNamespace,
             ip=ip, **params  )
+        self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
+        self.checkListening()
+
+    def checkListening( self ):
+        "Make sure no controllers are running on our port"
+        listening = self.cmd( "echo A | telnet -e A %s %d" %
+                              ( self.ip, self.port ) )
+        if 'Unable' not in listening:
+            servers = self.cmd( 'netstat -atp' ).split( '\n' )
+            pstr = ':%d ' % self.port
+            info = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
+            raise Exception( "Please shut down the controller which is"
+                             " running on port %d:\n" % self.port +
+                             '\n'.join( info ) )
 
     def start( self ):
         """Start <controller> <args> on controller.

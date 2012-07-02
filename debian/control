@@ -13,6 +13,8 @@ Package: mininet
 Architecture: any
 Depends:
   openvswitch-switch,
+  openvswitch-controller,
+  telnet,
   ${misc:Depends},
   ${python:Depends},
   ${shlibs:Depends}
