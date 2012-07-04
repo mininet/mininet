@@ -100,6 +100,9 @@ from mininet.util import quietRun, fixLimits, numCores
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
+# Mininet version: should be consistent with README and LICENSE
+VERSION = "2.0.0d1"
+
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 

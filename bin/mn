@@ -19,7 +19,7 @@ import time
 from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, warn
-from mininet.net import Mininet, MininetWithControlNet
+from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, UserSwitch, OVSKernelSwitch,
                            OVSLegacyKernelSwitch )
@@ -86,6 +86,11 @@ def addDictOption( opts, choicesDict, default, name, helpStr=None ):
                     default = default,
                     help = helpStr )
 
+
+def version( *_args ):
+    "Print Mininet version and exit"
+    print "mn (Mininet %s)" % VERSION
+    exit()
 
 class MininetRunner( object ):
     "Build, setup, and run Mininet."
@@ -179,10 +184,7 @@ class MininetRunner( object ):
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
-        def fakeversion( *args ):
-            "Fake version for help2man"
-            print "mn (development version)"
-        opts.add_option( '--version', action='callback', callback=fakeversion )
+        opts.add_option( '--version', action='callback', callback=version )
 
         self.options, self.args = opts.parse_args()
 
