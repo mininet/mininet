@@ -39,7 +39,7 @@ man: mn.1
 
 mn.1: $(MN)
 	help2man -N -n "create a Mininet network." --no-discard-stderr $(MN) \
-    > mn.1
+    -o $@
 
 doc: man
 	doxygen doxygen.cfg
