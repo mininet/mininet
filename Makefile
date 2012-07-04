@@ -5,12 +5,15 @@ MN = bin/mn
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
+MANPAGE = mn.1
 P8IGN = E251,E201,E302,E202
+BINDIR = /usr/bin
+MANDIR = /usr/share/man/man1
 
 all: codecheck test
 
 clean:
-	rm -rf build dist *.egg-info *.pyc $(MNEXEC)
+	rm -rf build dist *.egg-info *.pyc $(MNEXEC) $(MANPAGE)
 
 codecheck: $(PYSRC)
 	-echo "Running code check"
@@ -27,17 +30,20 @@ test: $(MININET) $(TEST)
 	-echo "Running tests"
 	mininet/test/test_nets.py
 
-install: $(MNEXEC)
-	install $(MNEXEC) /usr/local/bin/
+install: $(MNEXEC) $(MANPAGE)
+	install $(MNEXEC) $(BINDIR)
+	install $(MANPAGE) $(MANDIR)
 	python setup.py install
 
-develop: $(MNEXEC)
-	install $(MNEXEC) /usr/local/bin/
+develop: $(MNEXEC) $(MANPAGE)
+	# Perhaps we should link these as well
+	install $(MNEXEC) $(BINDIR)
+	install $(MANPAGE) $(MANDIR)
 	python setup.py develop
 
-man: mn.1
+man: $(MANPAGE)
 
-mn.1: $(MN)
+$(MANPAGE): $(MN)
 	help2man -N -n "create a Mininet network." --no-discard-stderr $(MN) \
     -o $@
 
