@@ -7,7 +7,8 @@ Build-Depends:
   debhelper (>= 7.0.50~),
   python-dev,
   python-pkg-resources,
-  python-setuptools
+  python-setuptools,
+  help2man
 
 Package: mininet
 Architecture: any
