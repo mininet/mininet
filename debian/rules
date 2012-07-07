@@ -5,5 +5,5 @@
 
 override_dh_auto_build:
 	make man
-	make mnexec && cp mnexec bin/
+	make mnexec
 	dh_auto_build
