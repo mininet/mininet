@@ -44,7 +44,8 @@ develop: $(MNEXEC) $(MANPAGE)
 man: $(MANPAGE)
 
 $(MANPAGE): $(MN)
-	help2man -N -n "create a Mininet network." --no-discard-stderr $(MN) \
+	PYTHONPATH=. help2man -N -n "create a Mininet network." \
+    --no-discard-stderr $(MN) \
     -o $@
 
 doc: man
