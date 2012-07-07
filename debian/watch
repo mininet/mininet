@@ -1,0 +1,3 @@
+version=3
+opts=dversionmangle=s/\+dfsg// \
+http://githubredir.debian.net/github/mininet/mininet/ mininet-(.*).tar.gz
