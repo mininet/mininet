@@ -11,7 +11,7 @@ modname = distname = 'mininet'
 
 setup(
     name=distname,
-    version='2.0.0d1',
+    version='2.0.0d2',
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
