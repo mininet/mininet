@@ -19,7 +19,7 @@ def modprobe( mod ):
     return quietRun( [ 'modprobe', mod ] )
 
 OF_KMOD = 'ofdatapath'
-OVS_KMOD = 'openvswitch_mod'
+OVS_KMOD = 'openvswitch_mod'  # Renamed 'openvswitch' in OVS 1.7+/Linux 3.5+
 TUN = 'tun'
 
 def moduleDeps( subtract=None, add=None ):

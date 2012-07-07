@@ -1,6 +1,6 @@
 "Utility functions for Mininet."
 
-from mininet.log import output, info, error
+from mininet.log import output, info, error, warn
 
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
@@ -419,7 +419,6 @@ def splitArgs( argstr ):
 
 def customConstructor( constructors, argStr ):
     """Return custom constructor based on argStr
-    
     The args and key/val pairs in argsStr will be automatically applied
     when the generated constructor is later used.
     """
@@ -444,7 +443,6 @@ def customConstructor( constructors, argStr ):
 
 def buildTopo( topos, topoStr ):
     """Create topology from string with format (object, arg1, arg2,...).
-    
     input topos is a dict of topo names to constructors, possibly w/args.
     """
     topo, args, kwargs = splitArgs( topoStr )

@@ -896,7 +896,9 @@ class OVSSwitch( Switch ):
         "Make sure Open vSwitch is installed and working"
         pathCheck( 'ovs-vsctl',
             moduleName='Open vSwitch (openvswitch.org)')
-        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+        # This should no longer be needed, and it breaks
+        # with OVS 1.7 which has renamed the kernel module:
+        #  moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
         out, err, exitcode = errRun( 'ovs-vsctl -t 1 show' )
         if exitcode:
             error( out + err +
@@ -985,10 +987,10 @@ class Controller( Node ):
         if 'Unable' not in listening:
             servers = self.cmd( 'netstat -atp' ).split( '\n' )
             pstr = ':%d ' % self.port
-            info = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
+            clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
             raise Exception( "Please shut down the controller which is"
                              " running on port %d:\n" % self.port +
-                             '\n'.join( info ) )
+                             '\n'.join( clist ) )
 
     def start( self ):
         """Start <controller> <args> on controller.

@@ -18,7 +18,7 @@ import time
 
 from mininet.clean import cleanup
 from mininet.cli import CLI
-from mininet.log import lg, LEVELS, info, warn
+from mininet.log import lg, LEVELS, info
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, UserSwitch, OVSKernelSwitch,
@@ -26,7 +26,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
-from mininet.util import makeNumeric, custom, customConstructor, splitArgs
+from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
 
 
