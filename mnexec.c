@@ -23,17 +23,23 @@
 #include <limits.h>
 #include <sched.h>
 
+#if !defined(VERSION)
+#define VERSION "(devel)"
+#endif
+
 void usage(char *name) 
 {
-    printf("Execution utility for Mininet.\n"
-           "usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] cmd args...\n"
-           "-c: close all file descriptors except stdin/out/error\n"
-           "-d: detach from tty by calling setsid()\n"
-           "-n: run in new network namespace\n"
-           "-p: print ^A + pid\n"
-           "-a pid: attach to pid's network namespace\n"
-           "-g group: add to cgroup\n"
-           "-r rtprio: run with SCHED_RR (usually requires -g)\n",
+    printf("Execution utility for Mininet\n\n"
+           "Usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] cmd args...\n\n"
+           "Options:\n"
+           "  -c: close all file descriptors except stdin/out/error\n"
+           "  -d: detach from tty by calling setsid()\n"
+           "  -n: run in new network namespace\n"
+           "  -p: print ^A + pid\n"
+           "  -a pid: attach to pid's network namespace\n"
+           "  -g group: add to cgroup\n"
+           "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
+           "  -v: print version\n",
            name);
 }
 
@@ -92,7 +98,7 @@ int main(int argc, char *argv[])
     int nsid;
     int pid;
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:")) != -1)
+    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -152,9 +158,15 @@ int main(int argc, char *argv[])
                 return 1;
             }
             break;
+        case 'v':
+            printf("%s\n", VERSION);
+            exit(0);
+        case 'h':
+            usage(argv[0]);
+            exit(0);
         default:
             usage(argv[0]);
-            break;
+            exit(1); 
         }
 
     if (optind < argc) {

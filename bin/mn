@@ -89,7 +89,7 @@ def addDictOption( opts, choicesDict, default, name, helpStr=None ):
 
 def version( *_args ):
     "Print Mininet version and exit"
-    print "mn (Mininet %s)" % VERSION
+    print "%s" % VERSION
     exit()
 
 class MininetRunner( object ):
