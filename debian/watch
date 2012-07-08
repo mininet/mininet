@@ -1,3 +1,3 @@
 version=3
-opts=dversionmangle=s/\+dfsg// \
+opts=filenamemangle=s/.*tarball\/(.*)/$1\.tar\.gz/ \
 https://github.com/mininet/mininet/tags .*/tarball/(\d[\d\.abd]+)
