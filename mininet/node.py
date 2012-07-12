@@ -1074,3 +1074,12 @@ class RemoteController( Controller ):
     def stop( self ):
         "Overridden to do nothing."
         return
+
+    def checkListening( self ):
+        "Ensure that the remote controller is accessible"
+        listening = self.cmd( "echo A | telnet -e A %s %d" %
+                              ( self.ip, self.port ) )
+        if 'Unable' in listening:
+            raise Exception( "Unable to contact the remote controller"
+                             " at %s:%d\n" % (self.ip, self.port))
+
