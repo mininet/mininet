@@ -48,7 +48,7 @@ mn.1: $(MN)
 	--no-discard-stderr $< -o $@
 
 mnexec: mnexec.c $(MN) mininet/net.py
-	cc -DVERSION=\"`$(MN) --version`\" $< -o $@
+	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< -o $@
 
 mnexec.1: mnexec
 	help2man -N -n "execution utility for Mininet." \
