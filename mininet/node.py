@@ -817,7 +817,6 @@ class UserSwitch( Switch ):
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
             ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
-            ' --no-slicing ' +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
             ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
