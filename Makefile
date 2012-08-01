@@ -30,7 +30,7 @@ test: $(MININET) $(TEST)
 	-echo "Running tests"
 	mininet/test/test_nets.py
 
-install: $(MNEXEC) $(MANPAGE)
+install: $(MNEXEC) $(MANPAGES)
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGE) $(MANDIR)
 	python setup.py install
@@ -38,7 +38,7 @@ install: $(MNEXEC) $(MANPAGE)
 develop: $(MNEXEC) $(MANPAGE)
 	# Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
-	install $(MANPAGE) $(MANDIR)
+	install $(MANPAGES) $(MANDIR)
 	python setup.py develop
 
 man: $(MANPAGES)
