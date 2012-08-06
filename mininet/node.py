@@ -1075,10 +1075,9 @@ class RemoteController( Controller ):
         return
 
     def checkListening( self ):
-        "Ensure that the remote controller is accessible"
+        "Warn if remote controller is not accessible"
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
         if 'Unable' in listening:
-            raise Exception( "Unable to contact the remote controller"
-                             " at %s:%d\n" % (self.ip, self.port))
-
+            warn( "Unable to contact the remote controller"
+                             " at %s:%d\n" % ( self.ip, self.port ) )
