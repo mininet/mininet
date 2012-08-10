@@ -5,13 +5,18 @@
 from setuptools import setup, find_packages
 from os.path import join
 
+# Get version number from source tree
+import sys
+sys.path.append( '.' )
+from mininet.net import VERSION
+
 scripts = [ join( 'bin', filename ) for filename in [ 'mn' ] ]
 
 modname = distname = 'mininet'
 
 setup(
     name=distname,
-    version='2.0.0d2',
+    version=VERSION,
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
