@@ -143,7 +143,10 @@ class MininetRunner( object ):
                  "command line. It can create parametrized topologies,\n"
                  "invoke the Mininet CLI, and run tests." )
 
-        opts = OptionParser( description=desc )
+        usage = ( '%prog [options]\n'
+                  '(type %prog -h for details)' )
+
+        opts = OptionParser( description=desc, usage=usage )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
         addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
