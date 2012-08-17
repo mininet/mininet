@@ -28,10 +28,10 @@ class MyTopo( Topo ):
         rightHost = 4
 
         # Add nodes
-        self.add_node( leftSwitch, Node( is_switch=True ) )
-        self.add_node( rightSwitch, Node( is_switch=True ) )
-        self.add_node( leftHost, Node( is_switch=False ) )
-        self.add_node( rightHost, Node( is_switch=False ) )
+        self.addNode( leftSwitch, Node( isSwitch=True ) )
+        self.addNode( rightSwitch, Node( isSwitch=True ) )
+        self.addNode( leftHost, Node( isSwitch=False ) )
+        self.addNode( rightHost, Node( isSwitch=False ) )
 
         # Add edges
         self.add_edge( leftHost, leftSwitch )

@@ -34,7 +34,7 @@ class Topo(object):
         self.lopts = {} if lopts is None else lopts
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
 
-    def add_node(self, name, **opts):
+    def addNode(self, name, **opts):
         """Add Node to graph.
            name: name
            opts: node options
@@ -43,26 +43,26 @@ class Topo(object):
         self.node_info[name] = opts
         return name
 
-    def add_host(self, name, **opts):
+    def addHost(self, name, **opts):
         """Convenience method: Add host to graph.
            name: host name
            opts: host options
            returns: host name"""
         if not opts and self.hopts:
             opts = self.hopts
-        return self.add_node(name, **opts)
+        return self.addNode(name, **opts)
 
-    def add_switch(self, name, **opts):
+    def addSwitch(self, name, **opts):
         """Convenience method: Add switch to graph.
            name: switch name
            opts: switch options
            returns: switch name"""
         if not opts and self.sopts:
             opts = self.sopts
-        result = self.add_node(name, is_switch=True, **opts)
+        result = self.addNode(name, isSwitch=True, **opts)
         return result
 
-    def add_link(self, node1, node2, port1=None, port2=None,
+    def addLink(self, node1, node2, port1=None, port2=None,
                  **opts):
         """node1, node2: nodes to link together
            port1, port2: ports (optional)
@@ -70,13 +70,13 @@ class Topo(object):
            returns: link info key"""
         if not opts and self.lopts:
             opts = self.lopts
-        self.add_port(node1, node2, port1, port2)
+        self.addPort(node1, node2, port1, port2)
         key = tuple(self.sorted([node1, node2]))
         self.link_info[key] = opts
         self.g.add_edge(*key)
         return key
 
-    def add_port(self, src, dst, sport=None, dport=None):
+    def addPort(self, src, dst, sport=None, dport=None):
         '''Generate port mapping for new edge.
         @param src source switch name
         @param dst destination switch name
@@ -84,8 +84,8 @@ class Topo(object):
         self.ports.setdefault(src, {})
         self.ports.setdefault(dst, {})
         # New port: number of outlinks + base
-        src_base = 1 if self.is_switch(src) else 0
-        dst_base = 1 if self.is_switch(dst) else 0
+        src_base = 1 if self.isSwitch(src) else 0
+        dst_base = 1 if self.isSwitch(dst) else 0
         if sport is None:
             sport = len(self.ports[src]) + src_base
         if dport is None:
@@ -100,24 +100,24 @@ class Topo(object):
         else:
             return self.g.nodes()
 
-    def is_switch(self, n):
+    def isSwitch(self, n):
         '''Returns true if node is a switch.'''
         info = self.node_info[n]
-        return info and info.get('is_switch', False)
+        return info and info.get('isSwitch', False)
 
     def switches(self, sort=True):
         '''Return switches.
         sort: sort switches alphabetically
         @return dpids list of dpids
         '''
-        return [n for n in self.nodes(sort) if self.is_switch(n)]
+        return [n for n in self.nodes(sort) if self.isSwitch(n)]
 
     def hosts(self, sort=True):
         '''Return hosts.
         sort: sort hosts alphabetically
         @return dpids list of dpids
         '''
-        return [n for n in self.nodes(sort) if not self.is_switch(n)]
+        return [n for n in self.nodes(sort) if not self.isSwitch(n)]
 
     def links(self, sort=True):
         '''Return links.
@@ -180,10 +180,10 @@ class SingleSwitchTopo(Topo):
 
         self.k = k
 
-        switch = self.add_switch('s1')
+        switch = self.addSwitch('s1')
         for h in irange(1, k):
-            host = self.add_host('h%s' % h)
-            self.add_link(host, switch)
+            host = self.addHost('h%s' % h)
+            self.addLink(host, switch)
 
 
 class SingleSwitchReversedTopo(Topo):
@@ -201,10 +201,10 @@ class SingleSwitchReversedTopo(Topo):
         '''
         super(SingleSwitchReversedTopo, self).__init__(**opts)
         self.k = k
-        switch = self.add_switch('s1')
+        switch = self.addSwitch('s1')
         for h in irange(1, k):
-            host = self.add_host('h%s' % h)
-            self.add_link(host, switch,
+            host = self.addHost('h%s' % h)
+            self.addLink(host, switch,
                           port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
@@ -222,9 +222,9 @@ class LinearTopo(Topo):
 
         lastSwitch = None
         for i in irange(1, k):
-            host = self.add_host('h%s' % i)
-            switch = self.add_switch('s%s' % i)
-            self.add_link( host, switch)
+            host = self.addHost('h%s' % i)
+            switch = self.addSwitch('s%s' % i)
+            self.addLink( host, switch)
             if lastSwitch:
-                self.add_link( switch, lastSwitch)
+                self.addLink( switch, lastSwitch)
             lastSwitch = switch

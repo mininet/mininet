@@ -19,13 +19,13 @@ class TreeTopo( Topo ):
            returns: last node added"""
         isSwitch = depth > 0
         if isSwitch:
-            node = self.add_switch( 's%s' % self.switchNum )
+            node = self.addSwitch( 's%s' % self.switchNum )
             self.switchNum += 1
             for _ in range( fanout ):
                 child = self.addTree( depth - 1, fanout )
-                self.add_link( node, child )
+                self.addLink( node, child )
         else:
-            node = self.add_host( 'h%s' % self.hostNum )
+            node = self.addHost( 'h%s' % self.hostNum )
             self.hostNum += 1
         return node
 

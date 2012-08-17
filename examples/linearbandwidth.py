@@ -41,22 +41,22 @@ class LinearTestTopo( Topo ):
         Topo.__init__( self, **params )
 
         # Create switches and hosts
-        hosts = [ self.add_host( 'h%s' % h )
+        hosts = [ self.addHost( 'h%s' % h )
                   for h in irange( 1, N ) ]
-        switches = [ self.add_switch( 's%s' % s )
+        switches = [ self.addSwitch( 's%s' % s )
                      for s in irange( 1, N - 1 ) ]
 
         # Wire up switches
         last = None
         for switch in switches:
             if last:
-                self.add_link( last, switch )
+                self.addLink( last, switch )
             last = switch
 
         # Wire up hosts
-        self.add_link( hosts[ 0 ], switches[ 0 ] )
+        self.addLink( hosts[ 0 ], switches[ 0 ] )
         for host, switch in zip( hosts[ 1: ], switches ):
-            self.add_link( host, switch )
+            self.addLink( host, switch )
 
 
 def linearBandwidthTest( lengths ):
