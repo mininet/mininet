@@ -32,10 +32,10 @@ test: $(MININET) $(TEST)
 
 install: $(MNEXEC) $(MANPAGES)
 	install $(MNEXEC) $(BINDIR)
-	install $(MANPAGE) $(MANDIR)
+	install $(MANPAGES) $(MANDIR)
 	python setup.py install
 
-develop: $(MNEXEC) $(MANPAGE)
+develop: $(MNEXEC) $(MANPAGES)
 	# Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
