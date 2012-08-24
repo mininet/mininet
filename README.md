@@ -35,16 +35,16 @@ In order to run Mininet, you must have:
 
 Currently Mininet includes:
 
-- A simple node infrastructure (Host, Switch, Controller classes) for
+- A simple node infrastructure (`Host`, `Switch`, `Controller` classes) for
   creating virtual OpenFlow networks
 	
-- A simple network infrastructure (Mininet class) supporting parametrized
-  topologies (Topo subclasses.) For example, a tree network may be created
+- A simple network infrastructure (`Mininet` class) supporting parametrized
+  topologies (`Topo` subclasses.) For example, a tree network may be created
   with the command
   
   `# mn --topo tree,depth=2,fanout=3`
   
-- Basic tests, including connectivity (ping) and bandwidth (iperf)
+- Basic tests, including connectivity (`ping`) and bandwidth (`iperf`)
 
 - A command-line interface (CLI class) which provides useful 
   diagnostic commands, as well as the ability to send a command to a
