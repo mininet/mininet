@@ -251,9 +251,11 @@ function nox {
 
     # Fetch NOX destiny
     cd ~/
-    git clone git://noxrepo.org/nox noxcore
+    git clone https://github.com/noxrepo/nox-classic.git noxcore
     cd noxcore
-    git checkout -b destiny remotes/origin/destiny
+    if ! git checkout -b destiny remotes/origin/destiny ; then
+        echo "Did not check out a new destiny branch - assuming current branch is destiny"
+    fi
 
     # Apply patches
     git checkout -b tutorial-destiny
