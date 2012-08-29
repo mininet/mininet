@@ -284,7 +284,7 @@ class TCIntf( Intf ):
         cmds += bwcmds
 
         # Delay/loss/max_queue_size using netem
-        delaycmds, parnet = self.delayCmds( delay=delay, loss=loss,
+        delaycmds, parent = self.delayCmds( delay=delay, loss=loss,
                                  max_queue_size=max_queue_size,
                                  parent=parent )
         cmds += delaycmds
