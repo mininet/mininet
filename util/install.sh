@@ -377,6 +377,13 @@ function nox {
     #./nox_core -v -i ptcp:
 }
 
+# "Install" POX
+function pox {
+    echo "Installing POX into $HOME/pox..."
+    cd ~
+    git clone https://github.com/noxrepo/pox.git
+}
+
 # Install OFtest
 function oftest {
     echo "Installing oftest..."
@@ -458,7 +465,9 @@ function all {
     of
     wireshark
     ovs
-    nox
+    # NOX-classic is deprecated, but you can install it manually if desired.
+    # nox
+    pox
     oftest
     cbench
     other
@@ -527,7 +536,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnrtvwx' OPTION
+    while getopts 'abcdfhkmnprtvwx' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -539,6 +548,7 @@ else
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
+      p)    pox;;
       r)    remove_ovs;;
       t)    other;;
       v)    ovs;;
