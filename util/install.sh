@@ -52,10 +52,10 @@ KERNEL_IMAGE_OLD=linux-image-2.6.26-2-686
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-OVS_RELEASE=v1.2.2
+OVS_RELEASE=v1.7.1
 OVS_SRC=~/openvswitch
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
-OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
+OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch.ko,brcompat.ko})
 
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
@@ -228,8 +228,8 @@ function ovs {
     ../configure $opts
     make
     sudo make install
-	# openflowd is deprecated, but for now copy it in
-	sudo cp tests/test-openflowd /usr/local/bin/ovs-openflowd
+    mkdir -p /usr/local/etc/openvswitch
+    ovsdb-tool create /usr/local/etc/openvswitch/conf.db.bak vswitchd/vswitch.ovsschema
 }
 
 # Install NOX with tutorial files

@@ -53,7 +53,6 @@ from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 
 SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
-
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
@@ -578,42 +577,50 @@ class OVSKernelSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
-            moduleName='Open vSwitch (openvswitch.org)')
+        pathCheck( 'ovs-dpctl', 'ovs-vsctl',
+            moduleName='Open vSwitch switching datapath')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+
+        quietRun('cp /usr/local/etc/openvswitch/conf.db.bak /usr/local/etc/openvswitch/conf.db')
+        quietRun('ovsdb-server --remote=punix:/usr/local/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,manager_options --private-key=db:SSL,private_key --certificate=db:SSL,certificate --bootstrap-ca-cert=db:SSL,ca_cert --pidfile --detach')
+        quietRun('ovs-vsctl --no-wait init')
+        quietRun('ovs-vswitchd --pidfile --detach')
 
     def start( self, controllers ):
         "Start up kernel datapath."
+
         ofplog = '/tmp/' + self.name + '-ofp.log'
         quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
-        quietRun( 'ovs-dpctl del-dp ' + self.dp )
-        self.cmd( 'ovs-dpctl add-dp ' + self.dp )
+        quietRun( 'ovs-vsctl del-br ' + self.dp )
+        self.cmd( 'ovs-vsctl add-br ' + self.dp )
         mac_str = ''
         if self.defaultMAC:
             # ovs-openflowd expects a string of exactly 16 hex digits with no
             # colons.
-            mac_str = ' --datapath-id=0000' + \
-                      ''.join( self.defaultMAC.split( ':' ) ) + ' '
+            quietRun('ovs-vsctl set bridge ' + self.dp + \
+                ' other-config:datapath-id=0000' + ''.join( self.defaultMAC.split( ':' ) ))
+
         ports = sorted( self.ports.values() )
         if len( ports ) != ports[ -1 ] + 1 - self.portBase:
             raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
-        intfs = [ self.intfs[ port ] for port in ports ]
-        self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
+
+        for intf in  self.intfs.values():
+            self.cmd( 'ovs-vsctl add-port ' +  self.dp +' ' + intf + 
+                ' 1>' + ofplog + ' 2>' + ofplog + '&' )
+            quietRun( 'ifconfig ' + intf + ' up' ) 
         # Run protocol daemon
         controller = controllers[ 0 ]
-        self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
-            ' --fail=secure ' + self.opts + mac_str +
+        self.cmd( 'ovs-vsctl set-controller ' + self.dp +
+            ' tcp:%s:%d' % ( controller.IP(), controller.port ) + 
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
     def stop( self ):
         "Terminate kernel datapath."
-        quietRun( 'ovs-dpctl del-dp ' + self.dp )
-        self.cmd( 'kill %ovs-openflowd' )
+        quietRun( 'ovs-vsctl del-br ' + self.dp )
         self.deleteIntfs()
 
 
