@@ -68,6 +68,27 @@ ALTSPELLING = { 'pingall': 'pingAll', 'pingpair': 'pingPair',
     'iperfudp': 'iperfUdp', 'iperfUDP': 'iperfUdp', 'prefixlen': 'prefixLen' }
 
 
+def _checkOption( choicesDict, default, name, helpStr ):
+    if default not in choicesDict:
+        raise Exception( 'Invalid  default %s for choices dict: %s' %
+                        ( default, name ) )
+    if not helpStr:
+        helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
+                   '[,param=value...]' )
+
+
+def addListOption( opts, choicesDict, default, name, helpStr=None ):
+    """Convenience function to add choices lists to OptionParser.
+       opts: OptionParser instance
+       choicesDict: dictionary of valid choices, must include default
+       default: default choice key
+       name: long option name
+       help: string"""
+    _checkOption( choicesDict, default, name, helpStr )
+    opts.add_option( '--' + name, type='string', action='append',
+                     default=[], help=helpStr )
+
+
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
     """Convenience function to add choices dicts to OptionParser.
        opts: OptionParser instance
@@ -75,12 +96,7 @@ def addDictOption( opts, choicesDict, default, name, helpStr=None ):
        default: default choice key
        name: long option name
        help: string"""
-    if default not in choicesDict:
-        raise Exception( 'Invalid  default %s for choices dict: %s' %
-                        ( default, name ) )
-    if not helpStr:
-        helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
-                   '[,param=value...]' )
+    _checkOption( choicesDict, default, name, helpStr )
     opts.add_option( '--' + name,
                     type='string',
                     default = default,
@@ -149,7 +165,7 @@ class MininetRunner( object ):
         opts = OptionParser( description=desc, usage=usage )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
-        addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
+        addListOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
         addDictOption( opts, LINKS, LINKDEF, 'link' )
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
 
@@ -214,7 +230,8 @@ class MininetRunner( object ):
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
-        controller = customConstructor( CONTROLLERS, self.options.controller )
+        controller = [customConstructor( CONTROLLERS, c )
+                      for c in self.options.controller or [CONTROLLERDEF]]
         link = customConstructor( LINKS, self.options.link )
 
         if self.validate:
@@ -230,14 +247,28 @@ class MininetRunner( object ):
         listenPort = None
         if not self.options.nolistenport:
             listenPort = self.options.listenport
-        mn = Net( topo=topo,
-                  switch=switch, host=host, controller=controller,
-                  link=link,
-                  ipBase=ipBase,
-                  inNamespace=inNamespace,
-                  xterms=xterms, autoSetMacs=mac,
-                  autoStaticArp=arp, autoPinCpus=pin,
-                  listenPort=listenPort )
+        if isinstance(controller, list):
+            mn = Net( topo=topo,
+                      switch=switch, host=host,
+                      link=link,
+                      ipBase=ipBase,
+                      inNamespace=inNamespace,
+                      xterms=xterms, autoSetMacs=mac,
+                      autoStaticArp=arp, autoPinCpus=pin,
+                      listenPort=listenPort,
+                      build=False)
+            for i, c in enumerate(controller):
+                mn.addController( 'c%d' % i, c )
+            mn.build()
+        else:
+            mn = Net( topo=topo,
+                      switch=switch, host=host, controller=controller,
+                      link=link,
+                      ipBase=ipBase,
+                      inNamespace=inNamespace,
+                      xterms=xterms, autoSetMacs=mac,
+                      autoStaticArp=arp, autoPinCpus=pin,
+                      listenPort=listenPort )
 
         if self.options.pre:
             CLI( mn, script=self.options.pre )

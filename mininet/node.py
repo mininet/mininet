@@ -779,6 +779,17 @@ class Switch( Node ):
         return '<%s %s: %s pid=%s> ' % (
                 self.__class__.__name__, self.name, intfs, self.pid )
 
+    def _clist_args(self, controllers):
+        "create controller lists for argument"
+        if 'controllers' in self.params:
+            clist = self.params['controllers']
+        elif 'controller' in self.params:
+            clist = [controllers[self.params['controller']]]
+        else:
+            clist = controllers
+
+        return ','.join('tcp:%s:%d' % (c.IP(), c.port) for c in clist)
+
 class UserSwitch( Switch ):
     "User-space switch."
 
@@ -810,7 +821,6 @@ class UserSwitch( Switch ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
            controllers: list of controller objects"""
-        controller = controllers[ 0 ]
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
@@ -819,7 +829,7 @@ class UserSwitch( Switch ):
             ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' ' + self._clist_args( controllers ) +
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
@@ -865,9 +875,8 @@ class OVSLegacyKernelSwitch( Switch ):
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
-        controller = controllers[ 0 ]
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' ' + self._clist_args(controllers) +
             ' --fail=secure ' + self.opts +
             ' --datapath-id=' + self.dpid +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
@@ -950,8 +959,7 @@ class OVSSwitch( Switch ):
             if not intf.IP():
                 self.attach( intf )
         # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
+        clist = self._clist_args(controllers)
         self.cmd( 'ovs-vsctl set-controller', self, clist )
 
     def stop( self ):
