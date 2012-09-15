@@ -810,7 +810,9 @@ class UserSwitch( Switch ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
            controllers: list of controller objects"""
-        controller = controllers[ 0 ]
+        # Add controllers
+        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
+                           for c in controllers ] )
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
@@ -819,7 +821,7 @@ class UserSwitch( Switch ):
             ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
             ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' ' + clist +
             ' --fail=closed ' + self.opts +
             ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
@@ -865,9 +867,10 @@ class OVSLegacyKernelSwitch( Switch ):
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
-        controller = controllers[ 0 ]
+        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
+                           for c in controllers ] )
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' tcp:%s:%d' % ( controller.IP(), controller.port ) +
+            ' ' + clist +
             ' --fail=secure ' + self.opts +
             ' --datapath-id=' + self.dpid +
             ' 1>' + ofplog + ' 2>' + ofplog + '&' )
