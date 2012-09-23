@@ -1,11 +1,12 @@
 "Utility functions for Mininet."
 
 from time import sleep
-from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
+from resource import setrlimit, getrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
 from subprocess import call, check_call, Popen, PIPE, STDOUT
+import os
 
-from mininet.log import error
+from mininet.log import error, warn
 
 # Command execution support
 
@@ -29,6 +30,7 @@ def quietRun( *cmd ):
         cmd = cmd[ 0 ]
         if isinstance( cmd, str ):
             cmd = cmd.split( ' ' )
+    cmd = ["sudo", "-E", "env", "PATH=%s" % os.environ["PATH"]] + cmd
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
     # select(), which can't handle
@@ -205,5 +207,22 @@ def makeNumeric( s ):
 
 def fixLimits():
     "Fix ridiculously small resource limits."
-    setrlimit( RLIMIT_NPROC, ( 4096, 8192 ) )
-    setrlimit( RLIMIT_NOFILE, ( 16384, 32768 ) )
+    manyprocs = 8192
+    manyfiles = 32768
+    minprocs, maxprocs = getrlimit( RLIMIT_NPROC )
+    minfiles, maxfiles = getrlimit( RLIMIT_NOFILE )
+    # Root can raise limits
+    if os.getuid() == 0:
+        maxprocs = max( maxprocs, manyprocs )
+        maxfiles = max( maxfiles, manyfiles )
+    minprocs = min( manyprocs, maxprocs )
+    minfiles = min( manyfiles, maxfiles )
+    setrlimit( RLIMIT_NPROC, ( minprocs, maxprocs ) )
+    setrlimit( RLIMIT_NOFILE, ( minfiles, maxfiles ) )
+    nprocs = max( getrlimit( RLIMIT_NPROC ) )
+    nfiles = max( getrlimit( RLIMIT_NOFILE ) )
+    # Complain if limits are too low
+    if nprocs < manyprocs:
+        warn( '*** Warning: process limit is low:', nprocs, 'procs\n' )
+    if nfiles < manyfiles:
+        warn( '*** Warning: open file limit is low:', nfiles, 'files \n' )
