@@ -283,7 +283,7 @@ class CLI( Cmd ):
             return
         for sw in self.mn.switches:
             output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
-            output( sw.cmd( 'dpctl ' + ' '.join(args) +
+            output( sw.cmd( sw.dpctl + ' ' + ' '.join(args) +
                             ' tcp:127.0.0.1:%i' % sw.listenPort ) )
 
     def default( self, line ):
