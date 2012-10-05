@@ -22,7 +22,13 @@ Boot up the VM image, log in, and follow the instructions on the wiki page.
 An additional advantage of using the VM image is that it doesn't mess with
 your native OS installation or damage it in any way.
 
-2. Native installation on Ubuntu
+2. Next-easiest install: use our Ubuntu package!
+
+To install Mininet itself (i.e. mn and the Python API) on Ubuntu 12.10+
+
+  sudo apt-get install mininet
+
+3. Native installation from source on Ubuntu 11.10+
 
 If you're reading this, you've probably already done it, but the command to
 download the Mininet source code is;
@@ -60,7 +66,7 @@ $ mininet/util/install.sh -a
 
 This takes about 20 minutes on our test system.
 
-3. Creating your own Mininet/OpenFlow tutorial VM
+4. Creating your own Mininet/OpenFlow tutorial VM
 
 Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
 is easy! First, create a new Ubuntu VM. Then, run
