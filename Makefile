@@ -17,6 +17,7 @@ clean:
 
 codecheck: $(PYSRC)
 	-echo "Running code check"
+	util/versioncheck.py
 	pyflakes $(PYSRC)
 	pylint --rcfile=.pylint $(PYSRC)
 	pep8 --repeat --ignore=$(P8IGN) $(PYSRC)
