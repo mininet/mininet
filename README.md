@@ -3,7 +3,7 @@
                         or
     How to Squeeze an OpenFlow Network onto your Laptop
 
-Mininet 2.0.0d2
+Mininet 2.0.0d3
 
 ---
 **Welcome to Mininet!**
