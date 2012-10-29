@@ -178,7 +178,7 @@ class TCIntf( Intf ):
        as well as delay, loss and max queue length"""
 
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
-                enable_ecn=False, enable_red=False ):
+                latency_ms=None, enable_ecn=False, enable_red=False ):
         "Return tc commands to set bandwidth"
 
         cmds, parent = [], ' root '
@@ -200,10 +200,11 @@ class TCIntf( Intf ):
                           '%s class add dev %s parent 1:0 classid 1:1 hfsc sc '
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
-                latency_us = 10 * 1500 * 8 / bw
+                if latency_ms is None:
+                    latency_ms = 15 * 8 / bw
                 cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
-                        'rate %fMbit burst 15000 latency %fus' %
-                         ( bw, latency_us ) ]
+                        'rate %fMbit burst 15000 latency %fms' %
+                         ( bw, latency_ms ) ]
             else:
                 cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
@@ -228,18 +229,21 @@ class TCIntf( Intf ):
         return cmds, parent
 
     @staticmethod
-    def delayCmds( parent, delay=None, loss=None,
-                   max_queue_size=None ):
+    def delayCmds( parent, delay=None, jitter=None,
+                   loss=None, max_queue_size=None ):
         "Internal method: return tc commands for delay and loss"
         cmds = []
         if delay and delay < 0:
             error( 'Negative delay', delay, '\n' )
+        elif jitter and jitter < 0:
+            error( 'Negative jitter', jitter, '\n' )
         elif loss and ( loss < 0 or loss > 100 ):
             error( 'Bad loss percentage', loss, '%%\n' )
         else:
-            # Delay/loss/max queue size
-            netemargs = '%s%s%s' % (
+            # Delay/jitter/loss/max queue size
+            netemargs = '%s%s%s%s' % (
                 'delay %s ' % delay if delay is not None else '',
+                '%s ' % jitter if jitter is not None else '',
                 'loss %d ' % loss if loss is not None else '',
                 'limit %d' % max_queue_size if max_queue_size is not None
                  else '' )
@@ -255,9 +259,10 @@ class TCIntf( Intf ):
         debug(" *** executing command: %s\n" % c)
         return self.cmd( c )
 
-    def config( self, bw=None, delay=None, loss=None, disable_gro=True,
-                speedup=0, use_hfsc=False, use_tbf=False, enable_ecn=False,
-                enable_red=False, max_queue_size=None, **params ):
+    def config( self, bw=None, delay=None, jitter=None, loss=None,
+                disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False,
+                latency_ms=None, enable_ecn=False, enable_red=False,
+                max_queue_size=None, **params ):
         "Configure the port and set its properties."
 
         result = Intf.config( self, **params)
@@ -278,18 +283,19 @@ class TCIntf( Intf ):
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
                                  use_hfsc=use_hfsc, use_tbf=use_tbf,
-                                 enable_ecn=enable_ecn,
+                                 latency_ms=latency_ms, enable_ecn=enable_ecn,
                                  enable_red=enable_red )
         cmds += bwcmds
 
-        # Delay/loss/max_queue_size using netem
-        cmds += self.delayCmds( delay=delay, loss=loss,
+        # Delay/jitter/loss/max_queue_size using netem
+        cmds += self.delayCmds( delay=delay, jitter=jitter, loss=loss,
                                  max_queue_size=max_queue_size,
                                  parent=parent )
 
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
+                  ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
                   ( ['%d%% loss' % loss ] if loss is not None else [] ) +
                   ( [ 'ECN' ] if enable_ecn  else [ 'RED' ]
                     if enable_red else [] ) )
