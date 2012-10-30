@@ -278,7 +278,11 @@ class Mininet( object ):
         if not self.controllers:
             # Add a default controller
             info( '*** Adding controller\n' )
-            self.addController( 'c0' )
+            classes = self.controller
+            if type( classes ) is not list:
+                classes = [ classes ]
+            for i, cls in enumerate( classes ):
+                self.addController( 'c%d' % i, cls )
 
         info( '*** Adding hosts:\n' )
         for hostName in topo.hosts():
