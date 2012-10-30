@@ -395,8 +395,11 @@ def irange(start, end):
 
 def custom( cls, **params ):
     "Returns customized constructor for class cls."
+    # Note: we may wish to see if we can use functools.partial() here
+    # and in customConstructor
     def customized( *args, **kwargs):
         "Customized constructor"
+        kwargs = kwargs.copy()
         kwargs.update( params )
         return cls( *args, **kwargs )
     customized.__name__ = 'custom(%s,%s)' % ( cls, params )
@@ -432,6 +435,7 @@ def customConstructor( constructors, argStr ):
 
     def customized( name, *args, **params ):
         "Customized constructor, useful for Node, Link, and other classes"
+        params = params.copy()
         params.update( kwargs )
         if not newargs:
             return constructor( name, *args, **params )
