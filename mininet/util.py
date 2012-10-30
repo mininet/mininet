@@ -399,6 +399,7 @@ def custom( cls, **params ):
         "Customized constructor"
         kwargs.update( params )
         return cls( *args, **kwargs )
+    customized.__name__ = 'custom(%s,%s)' % ( cls, params )
     return customized
 
 def splitArgs( argstr ):
@@ -439,6 +440,7 @@ def customConstructor( constructors, argStr ):
                   constructor, args, newargs ) )
         return constructor( name, *newargs, **params )
 
+    customized.__name__ = 'customConstructor(%s)' % argStr
     return customized
 
 def buildTopo( topos, topoStr ):
