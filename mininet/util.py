@@ -362,9 +362,12 @@ def fixLimits():
     setrlimit( RLIMIT_NOFILE, ( 16384, 16384 ) )
 
 def mountCgroups():
+    return
     "Make sure cgroups file system is mounted"
     mounts = quietRun( 'mount' )
-    cgdir = '/sys/fs/cgroup'
+    #cgdir = '/sys/fs/cgroup'
+    # BDH temp for 10.04
+    cgdir = '/mnt/cgroups'
     csdir = cgdir + '/cpuset'
     if 'cgroups on %s' % cgdir not in mounts:
         raise Exception( "cgroups not mounted on " + cgdir )
