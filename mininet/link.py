@@ -183,8 +183,8 @@ class TCIntf( Intf ):
 
         cmds, parent = [], ' root '
 
-        if bw and ( bw < 0 or bw > 1000 ):
-            error( 'Bandwidth', bw, 'is outside range 0..1000 Mbps\n' )
+        if bw and ( bw < 0 or bw > 10000 ):
+            warn( 'Bandwidth', bw, 'is outside range 0..10000 Mbps\n' )
 
         elif bw is not None:
             # BL: this seems a bit brittle...
