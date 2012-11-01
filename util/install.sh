@@ -284,7 +284,7 @@ function ovs {
             sudo apt-get -y --force-yes -t lenny-backports install autoconf
         fi
     else
-        $install git
+        $install git-core
     fi    
 
     # Install OVS from release
