@@ -9,6 +9,7 @@ from subprocess import call, check_call, Popen, PIPE, STDOUT
 import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
+import os
 
 # Command execution support
 
@@ -110,6 +111,10 @@ def errFail( *cmd, **kwargs ):
         raise Exception( "errFail: %s failed with return code %s: %s"
                          % ( cmd, ret, err ) )
     return out, err, ret
+
+def errFailTemp( *cmd, **kwargs ):
+    import os
+    os.system(" ".join(cmd))
 
 def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"

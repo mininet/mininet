@@ -49,12 +49,15 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
+import time
+import subprocess
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
-                          numCores, retry, mountCgroups )
+                          numCores, retry, mountCgroups, errFailTemp )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
+from mininet.clean import kill_cgroups
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -556,10 +559,18 @@ class CPULimitedHost( Host ):
             CPULimitedHost.init()
         # Create a cgroup and move shell into it
         self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
-        errFail( 'cgcreate -g ' + self.cgroup )
+        cmd_to_run = 'cgcreate -g ' + self.cgroup
+        error("creating group using command: %s\n" % cmd_to_run)
+        errFail( cmd_to_run )
         # We don't add ourselves to a cpuset because you must
         # specify the cpu and memory placement first
-        errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid ) )
+        #self.pid = 12345
+        #error("nap time!")
+        time.sleep(0.1)
+        cmd_to_run = 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid )
+        errFailTemp( cmd_to_run )
+        #error("nap time over.")
+        #exit
         # BL: Setting the correct period/quota is tricky, particularly
         # for RT. RT allows very small quotas, but the overhead
         # seems to be high. CFS has a mininimum quota of 1 ms, but
@@ -573,7 +584,7 @@ class CPULimitedHost( Host ):
         cmd = 'cgset -r %s.%s=%s /%s' % (
             resource, param, value, self.name )
         quietRun( cmd )
-        nvalue = int( self.cgroupGet( param, resource ) )
+        nvalue = int( self.cgroupGet2( param, resource ) )
         if nvalue != value:
             error( '*** error: cgroupSet: %s set to %s instead of %s\n'
                    % ( param, nvalue, value ) )
@@ -583,13 +594,35 @@ class CPULimitedHost( Host ):
         "Return value of cgroup parameter"
         cmd = 'cgget -r %s.%s /%s' % (
             resource, param, self.name )
-        return int( quietRun( cmd ).split()[ -1 ] )
+        cmd_output = quietRun( cmd )
+        return int( cmd_output.split()[ -1 ] )
+
+    def cgroupGet2( self, param, resource='cpu' ):
+        "Return value of cgroup parameter"
+        # TEMP: cgget not in 10.04 cgroup-bin.  Oops!
+        # Can get same stuff by reading files.
+        filename = resource + '.' + param
+        filepath = os.path.join("/mnt/cgroups/", resource, self.name, filename)
+        #cmd = 'cgget -r %s.%s /%s' % (
+        #    resource, param, self.name )
+        if not os.path.exists(filepath):
+            raise Exception("%s not found." % filename)
+        # TEMP below
+        f = open(filepath)
+        cmd_output = f.readlines()[0]
+        f.close()
+        #cmd_output = subprocess.check_output(cmd, shell=True) 
+        #quietRun( cmd )
+        return int( cmd_output.split()[ -1 ] )
 
     def cgroupDel( self ):
         "Clean up our cgroup"
         # info( '*** deleting cgroup', self.cgroup, '\n' )
-        _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
-        return exitcode != 0
+        # TEMP out
+        kill_cgroups([self.name])
+        #_out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
+        #return exitcode != 0
+        return True
 
     def popen( self, *args, **kwargs ):
         """Return a Popen() object in node's namespace
