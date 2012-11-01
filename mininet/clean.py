@@ -14,11 +14,31 @@ from subprocess import Popen, PIPE
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
+import os
 
 def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
     return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+
+CGROUPS_LOC='/mnt/cgroups'
+
+def kill_cgroups(cgroups = None):
+    """cgroups is a list of cgroup names."""
+    if not cgroups:
+        cpudir = os.path.join(CGROUPS_LOC, 'cpu')
+        if not os.path.exists(cpudir):
+            return
+        else:
+            cgroups = os.listdir(cpudir)
+    info( "killing cgroups: %s" % " ".join(cgroups) )
+    for g in cgroups:
+        if 'sysdefault' in g:
+            continue
+        for resource in os.listdir(CGROUPS_LOC):
+            cgdir = "%s/%s/%s" % (CGROUPS_LOC, resource, g)
+            if os.path.exists(cgdir):
+                sh( "sudo rmdir %s" % cgdir )
 
 def cleanup():
     """Clean up junk which might be left over from old runs;
@@ -56,5 +76,7 @@ def cleanup():
     for link in links:
         if link != '':
             sh( "ip link del " + link )
+
+    kill_cgroups()
 
     info( "*** Cleanup complete.\n" )
