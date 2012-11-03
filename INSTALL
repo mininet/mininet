@@ -28,6 +28,12 @@ To install Mininet itself (i.e. mn and the Python API) on Ubuntu 12.10+
 
   sudo apt-get install mininet
 
+Note: if you are upgrading from an older version of Mininet, make sure you
+remove the old OVS from /usr/local:
+
+  sudo rm /usr/local/bin/ovs*
+  sudo rm /usr/local/sbin/ovs*
+
 3. Native installation from source on Ubuntu 11.10+
 
 If you're reading this, you've probably already done it, but the command to
