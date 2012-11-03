@@ -1,14 +1,14 @@
 
-    Mininet: A Simple Virtual Testbed for OpenFlow/SDN
-                        or
-    How to Squeeze an OpenFlow Network onto your Laptop
+    Mininet: Rapid Prototyping for Software Defined Networks
+                            or
+    The best way to emulate almost any network on your laptop!
 
-Mininet 2.0.0d3
+Mininet 2.0.0rc1
 
 ---
-**Welcome to Mininet!**
+** Welcome to Mininet! **
 
-Mininet creates OpenFlow test networks by using process-based
+Mininet creates virtual SDN/OpenFlow test networks by using process-based
 virtualization and network namespaces.
 
 Simulated hosts (as well as switches and controllers with the user
@@ -16,24 +16,38 @@ datapath) are created as processes in separate network namespaces. This
 allows a complete OpenFlow network to be simulated on top of a single
 Linux kernel.
 
+Mininet's support for OpenFlow and Linux allows you to create a custom
+network with customized routing, and to run almost any existing Linux
+networking application on top of it without modification. OpenFlow-based
+designs that work in Mininet can usually be transferred to hardware with
+minimal change for full line-rate execution.
+
 Mininet may be invoked directly from the command line, and also provides a
 handy Python API for creating networks of varying sizes and topologies.
 
-In order to run Mininet, you must have:
+** Mininet 2.0.0 **
 
-* A Linux kernel compiled with network namespace support
-  enabled (see `INSTALL` for additional information.)
+Mininet 2.0.0 is a major upgrade to the Mininet system and provides
+a number of enhancements and new features, including:
 
-* An OpenFlow implementation (either the reference user or kernel
-  space implementations, or Open vSwitch.) Appropriate kernel modules
-  (e.g. tun and ofdatapath for the reference kernel implementation) must
-  be loaded.
+* First-class Interface (`Intf`) and Link (`Link`) classes
 
-* Python, `bash`, `ping`, `iperf`, etc.
+* An upgraded Topology (`Topo`) class which supports node and link
+  customization
 
-* Root privileges (required for network device access)
+* Link bandwidth limits using `tc` (`TCIntf` and `TCLink` classes)
 
-Currently Mininet includes:
+* CPU isolation and bandwidth limits (`CPULimitedHost` class)
+
+* Support for the Open vSwitch 1.4+ (including Ubuntu OVS packages)
+
+* Man pages for the `mn` and `mnexec` utilities.
+
+[Since the API (most notably the topology) has changed, existing code that
+runs in Mininet 1.0 will need to be changed to run with Mininet 2.0. This
+is the primary reason for the major version number change.]
+
+Mininet also includes:
 
 - A simple node infrastructure (`Host`, `Switch`, `Controller` classes) for
   creating virtual OpenFlow networks
@@ -62,17 +76,56 @@ Currently Mininet includes:
   
 - Examples (in the examples/ directory) to help you get started.
 
-Batteries are not included (yet!)
+- Full API documentation via Python `help()` docstrings, as well as
+  the ability to generate PDF/HTML documentation with "make doc."
 
-However, some preliminary installation notes are included in the INSTALL
-file.
+In order to run Mininet, you must have:
 
-Additionally, much useful information, including a Mininet tutorial,
-is available on the [Mininet Wiki](http://openflow.org/mininet).
+* A Linux kernel compiled with network namespace support
+  enabled (see `INSTALL` for additional information.)
 
-Enjoy, and good luck!
+* An OpenFlow implementation (either the reference user or kernel
+  space implementations, or Open vSwitch.) Appropriate kernel modules
+  (e.g. tun and ofdatapath for the reference kernel implementation) must
+  be loaded.
+
+* Python, `bash`, `ping`, `iperf`, etc.
+
+* Root privileges (required for network device access)
+
+Installation instructions are available in INSTALL
+
+*** Mininet Documentation ***
+
+In addition to the API documentation (`make doc`) much useful information,
+including a Mininet walkthrough and an introduction to the Python API is
+available on the [Mininet Web Site](http://openflow.org/mininet). There is
+also a wiki which you are encouraged to read and to contribute to,
+particularly the Frequently Asked Questions (FAQ.)
+
+*** Mininet Support ***
+
+Mininet is supported by the friendly Mininet community. We encourage you to
+join the Mininet mailing list, `mininet-discuss` at:
+
+<https://mailman.stanford.edu/mailman/listinfo/mininet-discuss>
+
+*** Contributing to Mininet ***
+
+Mininet is an open-source project and is currently hosted at
+<https://github.com/mininet>. You are encouraged to download the code,
+examine it, modify it, and submit bug reports, bug fixes, feature
+requests, and enhancements!
+
+Best wishes, and we look forward to seeing what you can do with Mininet
+to change the networking world!
 
 ---
+
 Bob Lantz
-rlantz@cs.stanford.edu
+Brandon Heller
+Nikhil Handigol
+Vimal Jeyakumar
+
+Mininet Project
 
