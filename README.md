@@ -17,7 +17,7 @@ allows a complete OpenFlow network to be simulated on top of a single
 Linux kernel.
 
 Mininet's support for OpenFlow and Linux allows you to create a custom
-network with customized routing, and to run almost any existing Linux
+network with customized routing, and to run almost any Linux-compatible
 networking application on top of it without modification. OpenFlow-based
 designs that work in Mininet can usually be transferred to hardware with
 minimal change for full line-rate execution.
@@ -42,6 +42,8 @@ a number of enhancements and new features, including:
 * Support for the Open vSwitch 1.4+ (including Ubuntu OVS packages)
 
 * Man pages for the `mn` and `mnexec` utilities.
+
+* Debian packaging (and apt-get install in Ubuntu 12.10)
 
 [Since the API (most notably the topology) has changed, existing code that
 runs in Mininet 1.0 will need to be changed to run with Mininet 2.0. This
