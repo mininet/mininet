@@ -25,9 +25,9 @@ minimal change for full line-rate execution.
 Mininet may be invoked directly from the command line, and also provides a
 handy Python API for creating networks of varying sizes and topologies.
 
-** Mininet 2.0.0 **
+** Mininet 2.0.0rc1 **
 
-Mininet 2.0.0 is a major upgrade to the Mininet system and provides
+Mininet 2.0.0rc1 is a major upgrade to the Mininet system and provides
 a number of enhancements and new features, including:
 
 * First-class Interface (`Intf`) and Link (`Link`) classes
