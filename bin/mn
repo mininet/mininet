@@ -12,9 +12,13 @@ Example to pull custom params (topo, switch, etc.) from a file:
 """
 
 from optparse import OptionParser
-import os.path
+import os
 import sys
 import time
+
+# Fix setuptools' evil madness, and open up (more?) security holes
+if 'PYTHONPATH' in os.environ:
+    sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
 
 from mininet.clean import cleanup
 from mininet.cli import CLI
