@@ -1,39 +1,70 @@
+Mininet: Rapid Prototyping for Software Defined Networks
+===
 
-    Mininet: Rapid Prototyping for Software Defined Networks
-                            or
-    The best way to emulate almost any network on your laptop!
+The best way to emulate almost any network on your laptop!
 
-Mininet 2.0.0rc1
+Version 2.0.0rc1
 
----
-** Welcome to Mininet! **
+### What is Mininet?
 
-Mininet creates virtual SDN/OpenFlow test networks by using process-based
-virtualization and network namespaces.
+Mininet emulates a complete network of hosts, links, and switches on a single
+machine.  To create a sample two-host, one-switch network, just run:
 
-Simulated hosts (as well as switches and controllers with the user
-datapath) are created as processes in separate network namespaces. This
-allows a complete OpenFlow network to be simulated on top of a single
-Linux kernel.
+    sudo mn
 
-Mininet's support for OpenFlow and Linux allows you to create a custom
-network with customized routing, and to run almost any Linux-compatible
-networking application on top of it without modification. OpenFlow-based
-designs that work in Mininet can usually be transferred to hardware with
-minimal change for full line-rate execution.
+Mininet is useful for interactive development, testing, and demos, especially
+those using OpenFlow and SDN.  OpenFlow-based network controllers prototyped in
+Mininet can usually be transferred to hardware with minimal changes for full
+line-rate execution.
 
-Mininet may be invoked directly from the command line, and also provides a
-handy Python API for creating networks of varying sizes and topologies.
+### How does it work?
 
-** Mininet 2.0.0rc1 **
+Mininet creates virtual networks using process-based virtualization and network
+namespaces - features that are available in recent Linux kernels.  In Mininet,
+hosts are emulated as bash processes running in a network namespace, so any
+code that would normally run on a Linux server (like a web server or client
+program) should run just fine within a Mininet "Host".  The Mininet "Host" will
+have its own private network interface and can only see its own processes.
+Switches in Mininet are software-based switches like Open vSwitch or the
+OpenFlow reference switch.  Links are virtual ethernet pairs, which live in the
+Linux kernel and connect our emulated switches to emulated hosts (processes).
 
-Mininet 2.0.0rc1 is a major upgrade to the Mininet system and provides
+### Features
+
+Mininet includes:
+
+* A command-line launcher ('mn') to instantiate networks.
+
+* A handy Python API for creating networks of varying sizes and topologies.
+
+* Examples (in the examples/ directory) to help you get started.
+
+* Full API documentation via Python `help()` docstrings, as well as the ability
+  to generate PDF/HTML documentation with "make doc."
+
+* Parametrized topologies (`Topo` subclasses) using the Mininet object.  For
+  example, a tree network may be created with the command:
+  
+    mn --topo tree,depth=2,fanout=3`
+
+* A command-line interface (CLI class) which provides useful diagnostic
+  commands (like iperf and ping), as well as the ability to run a command to a 
+  node. For example,
+  
+    mininet> h11 ifconfig -a`
+  
+  tells host h11 to run the command `ifconfig -a`
+
+* A 'cleanup' command to get rid of junk (interfaces, processes, files in
+  /tmp, etc.) which might be left around by Mininet or Linux. Try this if 
+  things stop working!
+  
+     mn -c
+
+### New features in 2.0.0:
+
+Mininet 2.0.0 is a major upgrade and provides
 a number of enhancements and new features, including:
-
-* First-class Interface (`Intf`) and Link (`Link`) classes
-
-* An upgraded Topology (`Topo`) class which supports node and link
-  customization
 
 * Link bandwidth limits using `tc` (`TCIntf` and `TCLink` classes)
 
@@ -41,47 +72,24 @@ a number of enhancements and new features, including:
 
 * Support for the Open vSwitch 1.4+ (including Ubuntu OVS packages)
 
-* Man pages for the `mn` and `mnexec` utilities.
-
 * Debian packaging (and apt-get install in Ubuntu 12.10)
+
+* First-class Interface (`Intf`) and Link (`Link`) classes for easier extensibility
+
+* An upgraded Topology (`Topo`) class which supports node and link
+  customization
+
+* Man pages for the `mn` and `mnexec` utilities.
 
 [Since the API (most notably the topology) has changed, existing code that
 runs in Mininet 1.0 will need to be changed to run with Mininet 2.0. This
 is the primary reason for the major version number change.]
 
-Mininet also includes:
+### Install
 
-- A simple node infrastructure (`Host`, `Switch`, `Controller` classes) for
-  creating virtual OpenFlow networks
-	
-- A simple network infrastructure (`Mininet` class) supporting parametrized
-  topologies (`Topo` subclasses.) For example, a tree network may be created
-  with the command
-  
-  `# mn --topo tree,depth=2,fanout=3`
-  
-- Basic tests, including connectivity (`ping`) and bandwidth (`iperf`)
+To install Mininet, the easiest approach is to start with an Ubuntu system like 12.04 and run util/vm/install.sh, which will install any needed dependencies.
 
-- A command-line interface (CLI class) which provides useful 
-  diagnostic commands, as well as the ability to send a command to a
-  node. For example,
-  
-  `mininet> h11 ifconfig -a`
-  
-  tells host h11 to run the command `ifconfig -a`
-
-- A 'cleanup' command to get rid of junk (interfaces, processes, files in
-  /tmp, etc.) which might be left around by Mininet or Linux. Try this if 
-  things stop working!
-  
-  `# mn -c`
-  
-- Examples (in the examples/ directory) to help you get started.
-
-- Full API documentation via Python `help()` docstrings, as well as
-  the ability to generate PDF/HTML documentation with "make doc."
-
-In order to run Mininet, you must have:
+In general, you must have:
 
 * A Linux kernel compiled with network namespace support
   enabled (see `INSTALL` for additional information.)
@@ -95,9 +103,9 @@ In order to run Mininet, you must have:
 
 * Root privileges (required for network device access)
 
-Installation instructions are available in INSTALL
+Further installation instructions are available in INSTALL.
 
-*** Mininet Documentation ***
+### Documentation
 
 In addition to the API documentation (`make doc`) much useful information,
 including a Mininet walkthrough and an introduction to the Python API is
@@ -105,14 +113,14 @@ available on the [Mininet Web Site](http://openflow.org/mininet). There is
 also a wiki which you are encouraged to read and to contribute to,
 particularly the Frequently Asked Questions (FAQ.)
 
-*** Mininet Support ***
+### Support
 
-Mininet is supported by the friendly Mininet community. We encourage you to
+Mininet community-supported. We encourage you to
 join the Mininet mailing list, `mininet-discuss` at:
 
 <https://mailman.stanford.edu/mailman/listinfo/mininet-discuss>
 
-*** Contributing to Mininet ***
+### Contributing
 
 Mininet is an open-source project and is currently hosted at
 <https://github.com/mininet>. You are encouraged to download the code,
@@ -122,12 +130,12 @@ requests, and enhancements!
 Best wishes, and we look forward to seeing what you can do with Mininet
 to change the networking world!
 
----
+### Credits
 
-Bob Lantz
-Brandon Heller
-Nikhil Handigol
-Vimal Jeyakumar
+The Mininet Team:
 
-Mininet Project
+* Bob Lantz
+* Brandon Heller
+* Nikhil Handigol
+* Vimal Jeyakumar
 
