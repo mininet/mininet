@@ -23,7 +23,7 @@ hardware with minimal changes for full line-rate execution.
 
 Mininet creates virtual networks using process-based virtualization
 and network namespaces - features that are available in recent Linux
-kernels.  In Mininet, hosts are emulated as bash processes running in
+kernels.  In Mininet, hosts are emulated as `bash` processes running in
 a network namespace, so any code that would normally run on a Linux
 server (like a web server or client program) should run just fine
 within a Mininet "Host".  The Mininet "Host" will have its own private
@@ -61,7 +61,7 @@ Mininet includes:
 
   tells host h11 to run the command `ifconfig -a`
 
-* A 'cleanup' command to get rid of junk (interfaces, processes, files
+* A "cleanup" command to get rid of junk (interfaces, processes, files
   in /tmp, etc.) which might be left around by Mininet or Linux. Try
   this if things stop working!
 
