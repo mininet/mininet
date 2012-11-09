@@ -98,9 +98,9 @@ See `INSTALL` for installation instructions and details.
 
 ### Documentation
 
-In addition to the API documentation (`make doc`) much useful
+In addition to the API documentation (`make doc`), much useful
 information, including a Mininet walkthrough and an introduction
-to the Python API is available on the
+to the Python API, is available on the
 [Mininet Web Site](http://openflow.org/mininet).
 There is also a wiki which you are encouraged to read and to
 contribute to, particularly the Frequently Asked Questions (FAQ.)
