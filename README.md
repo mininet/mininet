@@ -33,19 +33,19 @@ Linux kernel and connect our emulated switches to emulated hosts (processes).
 
 Mininet includes:
 
-* A command-line launcher ('mn') to instantiate networks.
+* A command-line launcher (`mn`) to instantiate networks.
 
 * A handy Python API for creating networks of varying sizes and topologies.
 
-* Examples (in the examples/ directory) to help you get started.
+* Examples (in the `examples/` directory) to help you get started.
 
 * Full API documentation via Python `help()` docstrings, as well as the ability
-  to generate PDF/HTML documentation with "make doc."
+  to generate PDF/HTML documentation with `make doc`.
 
 * Parametrized topologies (`Topo` subclasses) using the Mininet object.  For
   example, a tree network may be created with the command:
   
-    mn --topo tree,depth=2,fanout=3`
+    mn --topo tree,depth=2,fanout=3
 
 * A command-line interface (CLI class) which provides useful diagnostic
   commands (like iperf and ping), as well as the ability to run a command to a 
@@ -59,7 +59,7 @@ Mininet includes:
   /tmp, etc.) which might be left around by Mininet or Linux. Try this if 
   things stop working!
   
-     mn -c
+    mn -c
 
 ### New features in 2.0.0:
 
@@ -72,7 +72,7 @@ a number of enhancements and new features, including:
 
 * Support for the Open vSwitch 1.4+ (including Ubuntu OVS packages)
 
-* Debian packaging (and apt-get install in Ubuntu 12.10)
+* Debian packaging (and `apt-get install mininet` in Ubuntu 12.10)
 
 * First-class Interface (`Intf`) and Link (`Link`) classes for easier extensibility
 
@@ -103,7 +103,7 @@ In general, you must have:
 
 * Root privileges (required for network device access)
 
-Further installation instructions are available in INSTALL.
+Further installation instructions are available in `INSTALL`.
 
 ### Documentation
 
