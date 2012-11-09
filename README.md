@@ -45,13 +45,13 @@ Mininet includes:
 * Parametrized topologies (`Topo` subclasses) using the Mininet object.  For
   example, a tree network may be created with the command:
   
-    mn --topo tree,depth=2,fanout=3
+  `mn --topo tree,depth=2,fanout=3`
 
 * A command-line interface (CLI class) which provides useful diagnostic
   commands (like iperf and ping), as well as the ability to run a command to a 
   node. For example,
   
-    mininet> h11 ifconfig -a`
+  `mininet> h11 ifconfig -a`
   
   tells host h11 to run the command `ifconfig -a`
 
@@ -59,7 +59,7 @@ Mininet includes:
   /tmp, etc.) which might be left around by Mininet or Linux. Try this if 
   things stop working!
   
-    mn -c
+  `mn -c`
 
 ### New features in 2.0.0:
 
