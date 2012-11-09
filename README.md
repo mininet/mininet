@@ -1,5 +1,6 @@
+
 Mininet: Rapid Prototyping for Software Defined Networks
-===
+========================================================
 
 The best way to emulate almost any network on your laptop!
 
@@ -85,25 +86,9 @@ a number of enhancements and new features, including:
 runs in Mininet 1.0 will need to be changed to run with Mininet 2.0. This
 is the primary reason for the major version number change.]
 
-### Install
+### Installation
 
-To install Mininet, the easiest approach is to start with an Ubuntu system like 12.04 and run util/vm/install.sh, which will install any needed dependencies.
-
-In general, you must have:
-
-* A Linux kernel compiled with network namespace support
-  enabled (see `INSTALL` for additional information.)
-
-* An OpenFlow implementation (either the reference user or kernel
-  space implementations, or Open vSwitch.) Appropriate kernel modules
-  (e.g. tun and ofdatapath for the reference kernel implementation) must
-  be loaded.
-
-* Python, `bash`, `ping`, `iperf`, etc.
-
-* Root privileges (required for network device access)
-
-Further installation instructions are available in `INSTALL`.
+See `INSTALL` for installation instructions and details.
 
 ### Documentation
 

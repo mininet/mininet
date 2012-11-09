@@ -12,17 +12,23 @@ can also easily create your own Mininet VM image (3).
 (Other distributions may be supported in the future - if you would
 like to contribute an installation script, we would welcome it!)
 
-1. Easiest "install" - use our pre-built VM image!
+1. Easiest "installation" - use our pre-built VM image!
 
 The easiest way to get Mininet running is to start with one of our pre-built 
 virtual machine images from http://openflow.org/mininet
 
 Boot up the VM image, log in, and follow the instructions on the wiki page.
 
-An additional advantage of using the VM image is that it doesn't mess with
+One advantage of using the VM image is that it doesn't mess with
 your native OS installation or damage it in any way.
 
-2. Next-easiest install: use our Ubuntu package!
+Although a single Mininet instance can simulate multiple networks with
+multiple controllers, only one Mininet instance may currently be run at
+a time, and Mininet requires root access in the machine it's running on.
+Therefore, if you have a multiuser system, you may wish to consider
+running Mininet in a VM.
+
+2. Next-easiest option: use our Ubuntu package!
 
 To install Mininet itself (i.e. mn and the Python API) on Ubuntu 12.10+
 
@@ -36,7 +42,7 @@ remove the old OVS from /usr/local:
 
 3. Native installation from source on Ubuntu 11.10+
 
-If you're reading this, you've probably already done it, but the command to
+If you're reading this, you've probably already done so, but the command to
 download the Mininet source code is;
    
   git clone git://openflow.org/mininet.git
@@ -80,10 +86,30 @@ is easy! First, create a new Ubuntu VM. Then, run
 $ wget https://raw.github.com/mininet/mininet/util/vm/install-mininet-vm.sh
 $ time install-mininet-vm.sh
 
+5. Installation on other Linux distributions
+
+Although we don't support other Linux distributions directly, it should be
+possible to install and run Mininet with some degree of manual effort.
+
+In general, you must have:
+
+* A Linux kernel compiled with network namespace support enabled
+
+* An OpenFlow implementation (either the reference user or kernel
+  space implementations, or Open vSwitch.) Appropriate kernel modules
+  (e.g. tun and ofdatapath for the reference kernel implementation) must
+  be loaded.
+
+* Python, `bash`, `ping`, `iperf`, etc.
+
+* Root privileges (required for network device access)
+
+We encourage contribution of patches to the `install.sh` script to support
+other Linux distributions.
+
 Good luck!
 
-p.s. Note that only one instance of Mininet is currently supported on a single
-machine - that's one reason we recommend using a VM to run it.
+Mininet Team
 
 ---
 
