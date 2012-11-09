@@ -48,9 +48,9 @@ Mininet includes:
   
   `mn --topo tree,depth=2,fanout=3`
 
-* A command-line interface (CLI class) which provides useful diagnostic
-  commands (like iperf and ping), as well as the ability to run a command to a 
-  node. For example,
+* A command-line interface (`CLI` class) which provides useful diagnostic
+  commands (like `iperf` and `ping`), as well as the ability to run a command
+  to a node. For example,
   
   `mininet> h11 ifconfig -a`
   
@@ -62,7 +62,7 @@ Mininet includes:
   
   `mn -c`
 
-### New features in 2.0.0:
+### New features in 2.0.0
 
 Mininet 2.0.0 is a major upgrade and provides
 a number of enhancements and new features, including:
@@ -75,7 +75,8 @@ a number of enhancements and new features, including:
 
 * Debian packaging (and `apt-get install mininet` in Ubuntu 12.10)
 
-* First-class Interface (`Intf`) and Link (`Link`) classes for easier extensibility
+* First-class Interface (`Intf`) and Link (`Link`) classes for easier
+  extensibility
 
 * An upgraded Topology (`Topo`) class which supports node and link
   customization
