@@ -72,11 +72,13 @@ Mininet includes:
 Mininet 2.0.0 is a major upgrade and provides
 a number of enhancements and new features, including:
 
-* Link bandwidth limits using `tc` (`TCIntf` and `TCLink` classes)
+* "Mininet-HiFi" functionality:
 
-* CPU isolation and bandwidth limits (`CPULimitedHost` class)
+    * Link bandwidth limits using `tc` (`TCIntf` and `TCLink` classes)
 
-* Support for the Open vSwitch 1.4+ (including Ubuntu OVS packages)
+    * CPU isolation and bandwidth limits (`CPULimitedHost` class)
+
+* Support for Open vSwitch 1.4+ (including Ubuntu OVS packages)
 
 * Debian packaging (and `apt-get install mininet` in Ubuntu 12.10)
 
