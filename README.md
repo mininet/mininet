@@ -12,7 +12,7 @@ Mininet emulates a complete network of hosts, links, and switches
 on a single machine.  To create a sample two-host, one-switch network,
 just run:
 
-    sudo mn
+  `sudo mn`
 
 Mininet is useful for interactive development, testing, and demos,
 especially those using OpenFlow and SDN.  OpenFlow-based network
