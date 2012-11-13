@@ -297,7 +297,7 @@ class TCIntf( Intf ):
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
                   ( ['%d%% loss' % loss ] if loss is not None else [] ) +
-                  ( [ 'ECN' ] if enable_ecn  else [ 'RED' ]
+                  ( [ 'ECN' ] if enable_ecn else [ 'RED' ]
                     if enable_red else [] ) )
         info( '(' + ' '.join( stuff ) + ') ' )
 

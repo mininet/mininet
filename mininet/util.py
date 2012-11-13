@@ -252,7 +252,7 @@ def ipStr( ip ):
 def ipNum( w, x, y, z ):
     """Generate unsigned int from components of IP address
        returns: w << 24 | x << 16 | y << 8 | z"""
-    return  ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
+    return ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
 
 def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
     """Return IP address string from ints
