@@ -475,7 +475,7 @@ class MiniEdit( Frame ):
         target = self.findItem( x, y )
         dest = self.itemToWidget.get( target, None )
         if ( source is None or dest is None or source == dest
-            or dest in source.links or source in dest.links ):
+                or dest in source.links or source in dest.links ):
             self.releaseLink( event )
             return
         # For now, don't allow hosts to be directly linked

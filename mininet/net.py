@@ -515,7 +515,7 @@ class Mininet( object ):
             servout += server.monitor()
         if l4Type == 'TCP':
             while 'Connected' not in client.cmd(
-                'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
+                    'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
                 output('waiting for iperf to start up...')
                 sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
@@ -617,7 +617,7 @@ class MininetWithControlNet( Mininet ):
     # in the control network location.
 
     def configureRoutedControlNetwork( self, ip='192.168.123.1',
-        prefixLen=16 ):
+            prefixLen=16 ):
         """Configure a routed control network on controller and switches.
            For use with the user datapath only right now."""
         controller = self.controllers[ 0 ]

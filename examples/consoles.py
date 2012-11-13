@@ -170,10 +170,10 @@ class Graph( Frame ):
     "Graph that we can add bars to over time."
 
     def __init__( self, parent=None,
-        bg = 'white',
-        gheight=200, gwidth=500,
-        barwidth=10,
-        ymax=3.5,):
+            bg = 'white',
+            gheight=200, gwidth=500,
+            barwidth=10,
+            ymax=3.5,):
 
         Frame.__init__( self, parent )
 
