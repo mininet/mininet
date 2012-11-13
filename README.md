@@ -67,9 +67,9 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.0.0
+### New features in 2.0.0rc1
 
-Mininet 2.0.0 is a major upgrade and provides
+Mininet 2.0.0rc1 is a major upgrade and provides
 a number of enhancements and new features, including:
 
 * "Mininet-HiFi" functionality:
