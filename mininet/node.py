@@ -167,7 +167,7 @@ class Node( object ):
         if '\n' not in self.readbuf:
             return None
         pos = self.readbuf.find( '\n' )
-        line = self.readbuf[ 0 : pos ]
+        line = self.readbuf[ 0: pos ]
         self.readbuf = self.readbuf[ pos + 1: ]
         return line
 

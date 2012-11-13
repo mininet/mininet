@@ -18,7 +18,7 @@ from time import time
 
 def chunks( l, n ):
     "Divide list l into chunks of size n - thanks Stackoverflow"
-    return [ l[ i : i + n ] for i in range( 0, len( l ), n ) ]
+    return [ l[ i: i + n ] for i in range( 0, len( l ), n ) ]
 
 def startpings( host, targetips ):
     "Tell host to repeatedly ping targets"

@@ -289,7 +289,7 @@ class MiniEdit( Frame ):
     def deleteItem( self, item ):
         "Delete an item."
         # Don't delete while network is running
-        if self.buttons[ 'Select' ][ 'state' ] == 'disabled' :
+        if self.buttons[ 'Select' ][ 'state' ] == 'disabled':
             return
         # Delete from model
         if item in self.links:

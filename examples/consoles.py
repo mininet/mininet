@@ -252,7 +252,7 @@ class Graph( Frame ):
         x1 = x0 + self.barwidth
         y0 = self.gheight
         y1 = ( 1 - percent ) * self.gheight
-        c.create_rectangle( x0 , y0, x1, y1, fill='green' )
+        c.create_rectangle( x0, y0, x1, y1, fill='green' )
         self.xpos += 1
         self.updateScrollRegions()
         self.graph.xview( 'moveto', '1.0' )
