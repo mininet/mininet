@@ -46,7 +46,7 @@ def oldQuietRun( *cmd ):
                 break
             out += data
         popen.poll()
-        if popen.returncode != None:
+        if popen.returncode is not None:
             break
     return out
 

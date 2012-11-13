@@ -421,7 +421,7 @@ class Mininet( object ):
             return (1, 0)
         r = r'(\d+) packets transmitted, (\d+) received'
         m = re.search( r, pingOutput )
-        if m == None:
+        if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
                      pingOutput )
             return (1, 0)

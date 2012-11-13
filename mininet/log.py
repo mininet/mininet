@@ -117,7 +117,7 @@ class MininetLogger( Logger, object ):
            Convenience function to support lowercase names.
            levelName: level name from LEVELS"""
         level = LOGLEVELDEFAULT
-        if levelname != None:
+        if levelname is not None:
             if levelname not in LEVELS:
                 raise Exception( 'unknown levelname seen in setLogLevel' )
             else:
