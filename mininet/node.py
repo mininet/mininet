@@ -83,8 +83,8 @@ class Node( object ):
 
         # Make pylint happy
         ( self.shell, self.execed, self.pid, self.stdin, self.stdout,
-          self.lastPid, self.lastCmd, self.pollOut ) = (
-            None, None, None, None, None, None, None, None )
+            self.lastPid, self.lastCmd, self.pollOut ) = (
+                None, None, None, None, None, None, None, None )
         self.waiting = False
         self.readbuf = ''
 
