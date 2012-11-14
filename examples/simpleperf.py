@@ -2,6 +2,11 @@
 
 """
 Simple example of setting network and CPU parameters
+
+NOTE: link params limit BW, add latency, and loss.
+There is a high chance that pings WILL fail and that
+iperf will hang indefinitely if the TCP handshake fails
+to complete.
 """
 
 from mininet.topo import Topo
