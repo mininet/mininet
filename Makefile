@@ -32,6 +32,7 @@ errcheck: $(PYSRC)
 test: $(MININET) $(TEST)
 	-echo "Running tests"
 	mininet/test/test_nets.py
+	mininet/test/test_hifi.py
 
 mnexec: mnexec.c $(MN) mininet/net.py
 	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< -o $@
