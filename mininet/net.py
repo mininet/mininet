@@ -423,7 +423,7 @@ class Mininet( object ):
         m = re.search( r, pingOutput )
         if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
-                     pingOutput )
+                   pingOutput )
             return (1, 0)
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received

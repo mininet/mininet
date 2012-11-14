@@ -19,10 +19,10 @@ class SingleSwitchTopo(Topo):
         for h in range(n):
             # Each host gets 50%/n of system CPU
             host = self.addHost('h%s' % (h + 1),
-                                 cpu=.5 / n)
+                                cpu=.5 / n)
             # 10 Mbps, 5ms delay, 10% loss
             self.addLink(host, switch,
-                          bw=10, delay='5ms', loss=10, use_htb=True)
+                         bw=10, delay='5ms', loss=10, use_htb=True)
 
 def perfTest():
     "Create network and run simple performance test"

@@ -246,11 +246,11 @@ class TCIntf( Intf ):
                 '%s ' % jitter if jitter is not None else '',
                 'loss %d ' % loss if loss is not None else '',
                 'limit %d' % max_queue_size if max_queue_size is not None
-                 else '' )
+                else '' )
             if netemargs:
                 cmds = [ '%s qdisc add dev %s ' + parent +
                          ' handle 10: netem ' +
-                          netemargs ]
+                         netemargs ]
         return cmds
 
     def tc( self, cmd, tc='tc' ):
@@ -290,8 +290,8 @@ class TCIntf( Intf ):
 
         # Delay/jitter/loss/max_queue_size using netem
         cmds += self.delayCmds( delay=delay, jitter=jitter, loss=loss,
-                                 max_queue_size=max_queue_size,
-                                 parent=parent )
+                                max_queue_size=max_queue_size,
+                                parent=parent )
 
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +

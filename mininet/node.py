@@ -770,7 +770,7 @@ class Switch( Node ):
             return Node.sendCmd( self, *cmd, **kwargs )
         else:
             error( '*** Error: %s has execed and cannot accept commands' %
-                     self.name )
+                   self.name )
 
     def __repr__( self ):
         "More informative string representation"
@@ -1053,7 +1053,7 @@ class NOX( Controller ):
         Controller.__init__( self, name,
                              command=noxCoreDir + '/nox_core',
                              cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' +
-                                   ' '.join( noxArgs ),
+                             ' '.join( noxArgs ),
                              cdir=noxCoreDir,
                              **kwargs )
 
@@ -1084,4 +1084,4 @@ class RemoteController( Controller ):
                               ( self.ip, self.port ) )
         if 'Unable' in listening:
             warn( "Unable to contact the remote controller"
-                             " at %s:%d\n" % ( self.ip, self.port ) )
+                  " at %s:%d\n" % ( self.ip, self.port ) )
