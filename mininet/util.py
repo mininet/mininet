@@ -361,7 +361,8 @@ def mountCgroups():
     mounts = quietRun( 'mount' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
-    if 'cgroups on %s' % cgdir not in mounts:
+    if ('cgroup on %s' % cgdir not in mounts and
+            'cgroups on %s' % cgdir not in mounts):
         raise Exception( "cgroups not mounted on " + cgdir )
     if 'cpuset on %s' % csdir not in mounts:
         errRun( 'mkdir -p ' + csdir )
