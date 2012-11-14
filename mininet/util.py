@@ -181,7 +181,7 @@ def moveIntfNoRetry( intf, node, printError=False ):
     if not ( ' %s:' % intf ) in links:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
-                ' not successfully moved to ' + node.name + '\n' )
+                   ' not successfully moved to ' + node.name + '\n' )
         return False
     return True
 
@@ -431,7 +431,7 @@ def customConstructor( constructors, argStr ):
 
     if not constructor:
         raise Exception( "error: %s is unknown - please specify one of %s" %
-               ( cname, constructors.keys() ) )
+                         ( cname, constructors.keys() ) )
 
     def customized( name, *args, **params ):
         "Customized constructor, useful for Node, Link, and other classes"

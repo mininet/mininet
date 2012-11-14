@@ -112,7 +112,7 @@ class MiniEdit( Frame ):
         appMenu = Menu( mbar, tearoff=False )
         mbar.add_cascade( label=self.appName, font=font, menu=appMenu )
         appMenu.add_command( label='About MiniEdit', command=self.about,
-            font=font)
+                             font=font)
         appMenu.add_separator()
         appMenu.add_command( label='Quit', command=self.quit, font=font )
 
@@ -127,7 +127,7 @@ class MiniEdit( Frame ):
         editMenu = Menu( mbar, tearoff=False )
         mbar.add_cascade( label="Edit", font=font, menu=editMenu )
         editMenu.add_command( label="Cut", font=font,
-            command=lambda: self.deleteSelection( None ) )
+                              command=lambda: self.deleteSelection( None ) )
 
         runMenu = Menu( mbar, tearoff=False )
         mbar.add_cascade( label="Run", font=font, menu=runMenu )
@@ -143,7 +143,7 @@ class MiniEdit( Frame ):
         f = Frame( self )
 
         canvas = Canvas( f, width=self.cwidth, height=self.cheight,
-            bg=self.bg )
+                         bg=self.bg )
 
         # Scroll bars
         xbar = Scrollbar( f, orient='horizontal', command=canvas.xview )
@@ -177,7 +177,7 @@ class MiniEdit( Frame ):
         bbox = self.canvas.bbox( 'all' )
         if bbox is not None:
             self.canvas.configure( scrollregion=( 0, 0, bbox[ 2 ],
-                bbox[ 3 ] ) )
+                                   bbox[ 3 ] ) )
 
     def canvasx( self, x_root ):
         "Convert root x coordinate to canvas coordinate."
@@ -223,7 +223,7 @@ class MiniEdit( Frame ):
         for cmd, color in [ ( 'Stop', 'darkRed' ), ( 'Run', 'darkGreen' ) ]:
             doCmd = getattr( self, 'do' + cmd )
             b = Button( toolbar, text=cmd, font=self.smallFont,
-                fg=color, command=doCmd )
+                        fg=color, command=doCmd )
             b.pack( fill='x', side='bottom' )
 
         return toolbar
@@ -308,7 +308,7 @@ class MiniEdit( Frame ):
     def nodeIcon( self, node, name ):
         "Create a new node icon."
         icon = Button( self.canvas, image=self.images[ node ],
-            text=name, compound='top' )
+                       text=name, compound='top' )
         # Unfortunately bindtags wants a tuple
         bindtags = [ str( self.nodeBindings ) ]
         bindtags += list( icon.bindtags() )
@@ -322,8 +322,8 @@ class MiniEdit( Frame ):
         self.nodeCount += 1
         name = self.nodePrefixes[ node ] + str( self.nodeCount )
         icon = self.nodeIcon( node, name )
-        item = self.canvas.create_window( x, y, anchor='c',
-            window=icon, tags=node )
+        item = self.canvas.create_window( x, y, anchor='c', window=icon,
+                                          tags=node )
         self.widgetToItem[ icon ] = item
         self.itemToWidget[ item ] = icon
         self.selectItem( item )
@@ -437,7 +437,7 @@ class MiniEdit( Frame ):
         item = self.widgetToItem[ w ]
         x, y = self.canvas.coords( item )
         self.link = self.canvas.create_line( x, y, x, y, width=4,
-            fill='blue', tag='link' )
+                                             fill='blue', tag='link' )
         self.linkx, self.linky = x, y
         self.linkWidget = w
         self.linkItem = item

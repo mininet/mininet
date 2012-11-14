@@ -11,11 +11,11 @@ import types
 OUTPUT = 25
 
 LEVELS = { 'debug': logging.DEBUG,
-          'info': logging.INFO,
-          'output': OUTPUT,
-          'warning': logging.WARNING,
-          'error': logging.ERROR,
-          'critical': logging.CRITICAL }
+           'info': logging.INFO,
+           'output': OUTPUT,
+           'warning': logging.WARNING,
+           'error': logging.ERROR,
+           'critical': logging.CRITICAL }
 
 # change this to logging.INFO to get printouts when running unit tests
 LOGLEVELDEFAULT = OUTPUT

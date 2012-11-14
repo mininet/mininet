@@ -202,13 +202,13 @@ class TCIntf( Intf ):
             elif use_tbf:
                 if latency_ms is None:
                     latency_ms = 15 * 8 / bw
-                cmds += ['%s qdisc add dev %s root handle 1: tbf ' +
-                        'rate %fMbit burst 15000 latency %fms' %
-                         ( bw, latency_ms ) ]
+                cmds += [ '%s qdisc add dev %s root handle 1: tbf ' +
+                          'rate %fMbit burst 15000 latency %fms' %
+                          ( bw, latency_ms ) ]
             else:
                 cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
-                         '%s class add dev %s parent 1:0 classid 1:1 htb ' +
-                         'rate %fMbit burst 15k' % bw ]
+                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
+                          'rate %fMbit burst 15k' % bw ]
             parent = ' parent 1:1 '
 
             # ECN or RED
@@ -282,9 +282,10 @@ class TCIntf( Intf ):
 
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
-                                 use_hfsc=use_hfsc, use_tbf=use_tbf,
-                                 latency_ms=latency_ms, enable_ecn=enable_ecn,
-                                 enable_red=enable_red )
+                                      use_hfsc=use_hfsc, use_tbf=use_tbf,
+                                      latency_ms=latency_ms,
+                                      enable_ecn=enable_ecn,
+                                      enable_red=enable_red )
         cmds += bwcmds
 
         # Delay/jitter/loss/max_queue_size using netem

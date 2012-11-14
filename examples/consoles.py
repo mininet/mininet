@@ -74,11 +74,11 @@ class Console( Frame ):
             "Pop up a new terminal window for a node."
             net.terms += makeTerms( [ node ], title )
         label = Button( self, text=self.node.name, command=newTerm,
-            **self.buttonStyle )
+                        **self.buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **self.textStyle )
         ybar = Scrollbar( self, orient='vertical', width=7,
-            command=text.yview )
+                          command=text.yview )
         text.configure( yscrollcommand=ybar.set )
         text.pack( side='left', expand=True, fill='both' )
         ybar.pack( side='right', fill='y' )
@@ -95,7 +95,7 @@ class Console( Frame ):
         # way to trigger a file event handler from Tk's
         # event loop!
         self.tk.createfilehandler( self.node.stdout, READABLE,
-            self.handleReadable )
+                                   self.handleReadable )
 
     # We're not a terminal (yet?), so we ignore the following
     # control characters other than [\b\n\r]
@@ -169,11 +169,8 @@ class Graph( Frame ):
 
     "Graph that we can add bars to over time."
 
-    def __init__( self, parent=None,
-            bg = 'white',
-            gheight=200, gwidth=500,
-            barwidth=10,
-            ymax=3.5,):
+    def __init__( self, parent=None, bg = 'white', gheight=200, gwidth=500,
+                  barwidth=10, ymax=3.5,):
 
         Frame.__init__( self, parent )
 
@@ -195,7 +192,7 @@ class Graph( Frame ):
         width = 25
         ymax = self.ymax
         scale = Canvas( self, width=width, height=height,
-            background=self.bg )
+                        background=self.bg )
         opts = { 'fill': 'red' }
         # Draw scale line
         scale.create_line( width - 1, height, width - 1, 0, **opts )
@@ -211,7 +208,7 @@ class Graph( Frame ):
         ofs = 20
         height = self.gheight + ofs
         self.graph.configure( scrollregion=( 0, -ofs,
-            self.xpos * self.barwidth, height ) )
+                              self.xpos * self.barwidth, height ) )
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
 
     def yview( self, *args ):
@@ -231,7 +228,7 @@ class Graph( Frame ):
         xbar = Scrollbar( self, orient='horizontal', command=graph.xview )
         ybar = Scrollbar( self, orient='vertical', command=self.yview )
         graph.configure( xscrollcommand=xbar.set, yscrollcommand=ybar.set,
-            scrollregion=(0, 0, width, height ) )
+                         scrollregion=(0, 0, width, height ) )
         scale.configure( yscrollcommand=ybar.set )
 
         # Layout

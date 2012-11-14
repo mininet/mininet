@@ -68,7 +68,7 @@ def linearBandwidthTest( lengths ):
     hostCount = switchCount + 1
 
     switches = { 'reference user': UserSwitch,
-            'Open vSwitch kernel': OVSKernelSwitch }
+                 'Open vSwitch kernel': OVSKernelSwitch }
 
     topo = LinearTestTopo( hostCount )
 

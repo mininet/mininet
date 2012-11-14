@@ -19,7 +19,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
     tails, fdToFile, fdToHost = {}, {}, {}
     for h, outfile in outfiles.iteritems():
         tail = Popen( [ 'tail', '-f', outfile ],
-                     stdout=PIPE, stderr=devnull )
+                      stdout=PIPE, stderr=devnull )
         fd = tail.stdout.fileno()
         tails[ h ] = tail
         fdToFile[ fd ] = tail.stdout

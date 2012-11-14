@@ -40,7 +40,7 @@ def startpings( host, targetips ):
             'done &' )
 
     print ( '*** Host %s (%s) will be pinging ips: %s' %
-           ( host.name, host.IP(), targetips ) )
+            ( host.name, host.IP(), targetips ) )
 
     host.cmd( cmd )
 

@@ -52,7 +52,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
-                          numCores, retry, mountCgroups )
+                           numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
 
@@ -120,7 +120,7 @@ class Node( object ):
         # bash -m: enable job control
         cmd = [ 'mnexec', opts, 'bash', '-m' ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-            close_fds=True )
+                            close_fds=True )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
         self.pid = self.shell.pid
@@ -355,7 +355,7 @@ class Node( object ):
             return self.intfs[ min( ports ) ]
         else:
             warn( '*** defaultIntf: warning:', self.name,
-                 'has no interfaces\n' )
+                  'has no interfaces\n' )
 
     def intf( self, intf='' ):
         """Return our interface object with given name,
@@ -513,7 +513,7 @@ class Node( object ):
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
-                        for i in self.intfList() ] ) )
+                              for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
             self.__class__.__name__, self.name, intfs, self.pid )
 
@@ -775,7 +775,7 @@ class Switch( Node ):
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
-                        for i in self.intfList() ] ) )
+                              for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
             self.__class__.__name__, self.name, intfs, self.pid )
 
@@ -789,7 +789,8 @@ class UserSwitch( Switch ):
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
-            moduleName='the OpenFlow reference user switch (openflow.org)' )
+                   moduleName='the OpenFlow reference user switch' +
+                              '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
 
@@ -812,18 +813,18 @@ class UserSwitch( Switch ):
            controllers: list of controller objects"""
         # Add controllers
         clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                           for c in controllers ] )
+                            for c in controllers ] )
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         self.cmd( 'ifconfig lo up' )
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-            ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
-            ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
+                  ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
+                  ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-            ' ' + clist +
-            ' --fail=closed ' + self.opts +
-            ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+                  ' ' + clist +
+                  ' --fail=closed ' + self.opts +
+                  ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
     def stop( self ):
         "Stop OpenFlow reference user datapath."
@@ -846,14 +847,14 @@ class OVSLegacyKernelSwitch( Switch ):
         self.intf = self.dp
         if self.inNamespace:
             error( "OVSKernelSwitch currently only works"
-                " in the root namespace.\n" )
+                   " in the root namespace.\n" )
             exit( 1 )
 
     @classmethod
     def setup( cls ):
         "Ensure any dependencies are loaded; if not, try to load them."
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
-            moduleName='Open vSwitch (openvswitch.org)')
+                   moduleName='Open vSwitch (openvswitch.org)')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
 
     def start( self, controllers ):
@@ -868,12 +869,12 @@ class OVSLegacyKernelSwitch( Switch ):
         self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
         # Run protocol daemon
         clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                           for c in controllers ] )
+                            for c in controllers ] )
         self.cmd( 'ovs-openflowd ' + self.dp +
-            ' ' + clist +
-            ' --fail=secure ' + self.opts +
-            ' --datapath-id=' + self.dpid +
-            ' 1>' + ofplog + ' 2>' + ofplog + '&' )
+                  ' ' + clist +
+                  ' --fail=secure ' + self.opts +
+                  ' --datapath-id=' + self.dpid +
+                  ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
     def stop( self ):
@@ -897,7 +898,7 @@ class OVSSwitch( Switch ):
     def setup( cls ):
         "Make sure Open vSwitch is installed and working"
         pathCheck( 'ovs-vsctl',
-            moduleName='Open vSwitch (openvswitch.org)')
+                   moduleName='Open vSwitch (openvswitch.org)')
         # This should no longer be needed, and it breaks
         # with OVS 1.7 which has renamed the kernel module:
         #  moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
@@ -970,15 +971,15 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, command='controller',
-                 cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                 port=6633, **params ):
+                  cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
+                  port=6633, **params ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
         self.ip = ip
         self.port = port
         Node.__init__( self, name, inNamespace=inNamespace,
-            ip=ip, **params  )
+                       ip=ip, **params  )
         self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
         self.checkListening()
 
@@ -1002,7 +1003,7 @@ class Controller( Node ):
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.command + ' ' + self.cargs % self.port +
-            ' 1>' + cout + ' 2>' + cout + '&' )
+                  ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
@@ -1050,24 +1051,24 @@ class NOX( Controller ):
         noxCoreDir = os.environ[ 'NOX_CORE_DIR' ]
 
         Controller.__init__( self, name,
-            command=noxCoreDir + '/nox_core',
-            cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' +
-                    ' '.join( noxArgs ),
-            cdir=noxCoreDir, **kwargs )
+                             command=noxCoreDir + '/nox_core',
+                             cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' +
+                                   ' '.join( noxArgs ),
+                             cdir=noxCoreDir,
+                             **kwargs )
 
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
     def __init__( self, name, ip='127.0.0.1',
-                 port=6633, **kwargs):
+                  port=6633, **kwargs):
         """Init.
            name: name to give controller
            ip: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
-        Controller.__init__( self, name, ip=ip, port=port,
-            **kwargs )
+        Controller.__init__( self, name, ip=ip, port=port, **kwargs )
 
     def start( self ):
         "Overridden to do nothing."

@@ -107,11 +107,11 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                 controller=Controller, link=Link, intf=Intf,
-                 build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
-                 inNamespace=False,
-                 autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                 listenPort=None ):
+                  controller=Controller, link=Link, intf=Intf,
+                  build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
+                  inNamespace=False,
+                  autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
+                  listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -307,7 +307,7 @@ class Mininet( object ):
     def configureControlNetwork( self ):
         "Control net config hook: override in subclass"
         raise Exception( 'configureControlNetwork: '
-               'should be overriden in subclass', self )
+                         'should be overriden in subclass', self )
 
     def build( self ):
         "Build mininet."
@@ -519,7 +519,7 @@ class Mininet( object ):
                 output('waiting for iperf to start up...')
                 sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
-                           bwArgs )
+                             bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
         servout += server.waitOutput()
@@ -617,7 +617,7 @@ class MininetWithControlNet( Mininet ):
     # in the control network location.
 
     def configureRoutedControlNetwork( self, ip='192.168.123.1',
-            prefixLen=16 ):
+                                       prefixLen=16 ):
         """Configure a routed control network on controller and switches.
            For use with the user datapath only right now."""
         controller = self.controllers[ 0 ]

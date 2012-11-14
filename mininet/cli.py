@@ -192,7 +192,7 @@ class CLI( Cmd ):
         "List interfaces."
         for node in self.nodelist:
             output( '%s: %s\n' %
-                ( node.name, ','.join( node.intfNames() ) ) )
+                    ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
         "Dump node info."
@@ -303,8 +303,8 @@ class CLI( Cmd ):
             node = self.nodemap[ first ]
             # Substitute IP addresses for node names in command
             rest = [ self.nodemap[ arg ].IP()
-                    if arg in self.nodemap else arg
-                    for arg in rest ]
+                     if arg in self.nodemap else arg
+                     for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
             builtin = isShellBuiltin( first )
