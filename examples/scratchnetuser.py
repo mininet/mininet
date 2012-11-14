@@ -38,12 +38,12 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     h1intf, sintf2 = linkIntfs( h1, switch )
 
     info( '*** Configuring control network\n' )
-    controller.setIP( '10.0.123.1/24', cintf )
-    switch.setIP( '10.0.123.2/24', sintf)
+    controller.setIP( '10.0.123.1/24', intf=cintf )
+    switch.setIP( '10.0.123.2/24', intf=sintf)
 
     info( '*** Configuring hosts\n' )
-    h0.setIP( '192.168.123.1/24', h0intf )
-    h1.setIP( '192.168.123.2/24', h1intf )
+    h0.setIP( '192.168.123.1/24', intf=h0intf )
+    h1.setIP( '192.168.123.2/24', intf=h1intf )
 
     info( '*** Network state:\n' )
     for node in controller, switch, h0, h1:

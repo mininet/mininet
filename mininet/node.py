@@ -358,14 +358,20 @@ class Node( object ):
                   'has no interfaces\n' )
 
     def intf( self, intf='' ):
-        """Return our interface object with given name,
-           or default intf if name is empty"""
+        """Return our interface object with given string name,
+           default intf if name is falsy (None, empty string, etc).
+           or the input intf arg.
+
+        Having this fcn return its arg for Intf objects makes it
+        easier to construct functions with flexible input args for
+        interfaces (those that accept both string names and Intf objects).
+        """
         if not intf:
             return self.defaultIntf()
         elif type( intf) is str:
             return self.nameToIntf[ intf ]
         else:
-            return None
+            return intf
 
     def connectionsTo( self, node):
         "Return [ intf1, intf2... ] for all intfs that connect self to node."
@@ -425,7 +431,7 @@ class Node( object ):
 
     def setIP( self, ip, prefixLen=8, intf=None ):
         """Set the IP address for an interface.
-           intf: interface name
+           intf: intf or intf name
            ip: IP address as a string
            prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
         # This should probably be rethought
