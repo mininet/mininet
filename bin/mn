@@ -163,7 +163,8 @@ class MininetRunner( object ):
         opts.add_option( '--clean', '-c', action='store_true',
                          default=False, help='clean and exit' )
         opts.add_option( '--custom', type='string', default=None,
-                         help='read custom topo and node params from .py file' )
+                         help='read custom topo and node params from .py' +
+                         'file' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
                          help='|'.join( TESTS ) )
@@ -183,7 +184,8 @@ class MininetRunner( object ):
         opts.add_option( '--listenport', type='int', default=6635,
                          help='base port for passive switch listening' )
         opts.add_option( '--nolistenport', action='store_true',
-                         default=False, help="don't use passive listening port")
+                         default=False, help="don't use passive listening " +
+                         "port")
         opts.add_option( '--pre', type='string', default=None,
                          help='CLI script to run before tests' )
         opts.add_option( '--post', type='string', default=None,
