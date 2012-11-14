@@ -626,7 +626,7 @@ class Mininet( object ):
             # Split by line.  Ignore first line, which looks like this:
             # PID %CPU COMMAND\n
             for line in test_output.split('\n')[1:]:
-                r = r'\d+ (\d+\.\d+)'
+                r = r'\d+\s*(\d+\.\d+)'
                 m = re.search( r, line )
                 if m is None:
                     error( '*** Error: could not extract CPU fraction: %s\n' %
