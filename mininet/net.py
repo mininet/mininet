@@ -530,6 +530,42 @@ class Mininet( object ):
         output( '*** Results: %s\n' % result )
         return result
 
+    def runCpuLimitTest( self, cpu, duration=5 ):
+        """run CPU limit test with 'while true' processes.
+        cpu: desired CPU fraction of each host
+        duration: test duration in seconds
+        returns a single list of measured CPU fractions as floats.
+        """
+        pct = cpu * 100
+        info('*** Testing CPU %.0f%% bandwidth limit\n' % pct)
+        hosts = self.hosts
+        for h in hosts:
+            h.cmd( 'while true; do a=1; done &' )
+        pids = [h.cmd( 'echo $!' ).strip() for h in hosts]
+        pids_str = ",".join(["%s" % pid for pid in pids])
+        cmd = 'ps -p %s -o pid,%%cpu,args' % pids_str
+        # It's a shame that this is what pylint prefers
+        outputs = []
+        for _ in range( duration ):
+            sleep( 1 )
+            outputs.append( quietRun( cmd ).strip() )
+        for h in hosts:
+            h.cmd( 'kill %1' )
+        cpu_fractions = []
+        for test_output in outputs:
+            # Split by line.  Ignore first line, which looks like this:
+            # PID %CPU COMMAND\n
+            for line in test_output.split('\n')[1:]:
+                r = r'\d+ (\d+\.\d+)'
+                m = re.search( r, line )
+                if m is None:
+                    error( '*** Error: could not extract CPU fraction: %s\n' %
+                           line )
+                    return None
+                cpu_fractions.append( float( m.group( 1 ) ) )
+        output( '*** Results: %s\n' % cpu_fractions )
+        return cpu_fractions
+
     # BL: I think this can be rewritten now that we have
     # a real link class.
     def configLinkStatus( self, src, dst, status ):
