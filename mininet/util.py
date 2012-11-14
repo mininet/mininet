@@ -9,6 +9,7 @@ from subprocess import call, check_call, Popen, PIPE, STDOUT
 import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
+import os
 
 # Command execution support
 
@@ -456,3 +457,13 @@ def buildTopo( topos, topoStr ):
     if topo not in topos:
         raise Exception( 'Invalid topo name %s' % topo )
     return topos[ topo ]( *args, **kwargs )
+
+def ensureRoot():
+    """Ensure that we are running as root.
+
+    Probably we should only sudo when needed as per Big Switch's patch.
+    """
+    if os.getuid() != 0:
+        print "*** Mininet must run as root."
+        exit( 1 )
+    return

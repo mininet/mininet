@@ -96,7 +96,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link, Intf
-from mininet.util import quietRun, fixLimits, numCores
+from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -571,12 +571,7 @@ class Mininet( object ):
         "Initialize Mininet"
         if cls.inited:
             return
-        if os.getuid() != 0:
-            # Note: this script must be run as root
-            # Probably we should only sudo when we need
-            # to as per Big Switch's patch
-            print "*** Mininet must run as root."
-            exit( 1 )
+        ensureRoot()
         fixLimits()
         cls.inited = True
 
