@@ -21,10 +21,23 @@ controllers.py:
 
 This example creates a network and adds multiple controllers to it.
 
+cpu.py:
+
+This example tests iperf bandwidth for varying CPU limits.
+
 emptynet.py:
 
 This example demonstrates creating an empty network (i.e. with no
 topology object) and adding nodes to it.
+
+hwintf.py:
+
+This example shows how to add an interface (for example a real
+hardware interface) to a network after the network is created.
+
+limit.py:
+
+This example shows how to use link and CPU limits.
 
 linearbandwidth.py:
 
@@ -47,6 +60,11 @@ This example demonstrates monitoring output files from multiple hosts.
 multitest.py:
 
 This example creates a network and runs multiple tests on it.
+
+popen.py:
+
+This example monitors a number of hosts using host.popen() and
+pmonitor().
 
 popenpoll.py:
 
