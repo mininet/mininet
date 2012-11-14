@@ -3,6 +3,9 @@
 "This example doesn't use OpenFlow, but attempts to run sshd in a namespace."
 
 from mininet.node import Host
+from mininet.util import ensureRoot
+
+ensureRoot()
 
 print "*** Creating nodes"
 h1 = Host( 'h1' )
