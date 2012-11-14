@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-cpu.py: test iperf bandwidth for varying cpu limtis
+cpu.py: test iperf bandwidth for varying cpu limits
 """
 
 from mininet.net import Mininet
