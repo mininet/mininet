@@ -515,7 +515,7 @@ class Node( object ):
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
                         for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
-                self.__class__.__name__, self.name, intfs, self.pid )
+            self.__class__.__name__, self.name, intfs, self.pid )
 
     def __str__( self ):
         "Abbreviated string representation"
@@ -683,7 +683,7 @@ class CPULimitedHost( Host ):
         # We have to do this here after we've specified
         # cpus and mems
         errFail( 'cgclassify -g cpuset:/%s %s' % (
-                self.name, self.pid ) )
+                 self.name, self.pid ) )
 
     def config( self, cpu=None, cores=None, **params ):
         """cpu: desired overall system CPU fraction
@@ -777,7 +777,7 @@ class Switch( Node ):
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
                         for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
-                self.__class__.__name__, self.name, intfs, self.pid )
+            self.__class__.__name__, self.name, intfs, self.pid )
 
 class UserSwitch( Switch ):
     "User-space switch."
@@ -1021,8 +1021,8 @@ class Controller( Node ):
     def __repr__( self ):
         "More informative string representation"
         return '<%s %s: %s:%s pid=%s> ' % (
-                self.__class__.__name__, self.name,
-                self.IP(), self.port, self.pid )
+            self.__class__.__name__, self.name,
+            self.IP(), self.port, self.pid )
 
 
 class OVSController( Controller ):

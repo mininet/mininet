@@ -46,7 +46,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
             server.cmd( 'iperf -s -p 5001 &' )
             waitListening( client, server, 5001 )
             result = client.cmd( 'iperf -yc -t %s -c %s' % (
-                    seconds, server.IP() ) ).split( ',' )
+                seconds, server.IP() ) ).split( ',' )
             bps = float( result[ -1 ] )
             server.cmdPrint( 'kill %iperf' )
             net.stop()
