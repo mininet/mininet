@@ -148,6 +148,14 @@ class CLI( Cmd ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
 
+    def do_pingallfull( self, _line ):
+        "Ping between first two hosts, returns all ping results."
+        self.mn.pingAllFull()
+
+    def do_pingpairfull( self, _line ):
+        "Ping between first two hosts, returns all ping results."
+        self.mn.pingPairFull()
+
     def do_iperf( self, line ):
         "Simple iperf TCP test between two (optionally specified) hosts."
         args = line.split()

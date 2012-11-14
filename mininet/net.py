@@ -428,9 +428,10 @@ class Mininet( object ):
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received
 
-    def ping( self, hosts=None ):
+    def ping( self, hosts=None, timeout=None ):
         """Ping between all specified hosts.
            hosts: list of hosts
+           timeout: time to wait for a response, as string
            returns: ploss packet loss percentage"""
         # should we check if running?
         packets = 0
@@ -443,7 +444,10 @@ class Mininet( object ):
             output( '%s -> ' % node.name )
             for dest in hosts:
                 if node != dest:
-                    result = node.cmd( 'ping -c1 ' + dest.IP() )
+                    opts = ''
+                    if timeout:
+                        opts = '-W %s' % timeout
+                    result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
                     sent, received = self._parsePing( result )
                     packets += sent
                     if received > sent:
@@ -459,6 +463,61 @@ class Mininet( object ):
                 ( ploss, lost, packets ) )
         return ploss
 
+    @staticmethod
+    def _parsePingFull( pingOutput ):
+        "Parse ping output and return all data."
+        # Check for downed link
+        if 'connect: Network is unreachable' in pingOutput:
+            return (1, 0)
+        r = r'(\d+) packets transmitted, (\d+) received'
+        m = re.search( r, pingOutput )
+        if m is None:
+            error( '*** Error: could not parse ping output: %s\n' %
+                   pingOutput )
+            return (1, 0, 0, 0, 0, 0)
+        sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
+        r = r'rtt min/avg/max/mdev = '
+        r += r'(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+) ms'
+        m = re.search( r, pingOutput )
+        rttmin = float( m.group( 1 ) )
+        rttavg = float( m.group( 2 ) )
+        rttmax = float( m.group( 3 ) )
+        rttdev = float( m.group( 4 ) )
+        return sent, received, rttmin, rttavg, rttmax, rttdev
+
+    def pingFull( self, hosts=None, timeout=None ):
+        """Ping between all specified hosts and return all data.
+           hosts: list of hosts
+           timeout: time to wait for a response, as string
+           returns: all ping data; see function body."""
+        # should we check if running?
+        # Each value is a tuple: (src, dsd, [all ping outputs])
+        all_outputs = []
+        if not hosts:
+            hosts = self.hosts
+            output( '*** Ping: testing ping reachability\n' )
+        for node in hosts:
+            output( '%s -> ' % node.name )
+            for dest in hosts:
+                if node != dest:
+                    opts = ''
+                    if timeout:
+                        opts = '-W %s' % timeout
+                    result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
+                    outputs = self._parsePingFull( result )
+                    sent, received, rttmin, rttavg, rttmax, rttdev = outputs
+                    all_outputs.append( (node, dest, outputs) )
+                    output( ( '%s ' % dest.name ) if received else 'X ' )
+            output( '\n' )
+        output( "*** Results: \n" )
+        for outputs in all_outputs:
+            src, dest, ping_outputs = outputs
+            sent, received, rttmin, rttavg, rttmax, rttdev = ping_outputs
+            output( " %s->%s: %s/%s, " % (src, dest, sent, received ) )
+            output( "rtt min/avg/max/mdev %0.3f/%0.3f/%0.3f/%0.3f ms\n" %
+                    (rttmin, rttavg, rttmax, rttdev) )
+        return all_outputs
+
     def pingAll( self ):
         """Ping between all hosts.
            returns: ploss packet loss percentage"""
@@ -469,6 +528,17 @@ class Mininet( object ):
            returns: ploss packet loss percentage"""
         hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
         return self.ping( hosts=hosts )
+
+    def pingAllFull( self ):
+        """Ping between all hosts.
+           returns: ploss packet loss percentage"""
+        return self.pingFull()
+
+    def pingPairFull( self ):
+        """Ping between first two hosts, useful for testing.
+           returns: ploss packet loss percentage"""
+        hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
+        return self.pingFull( hosts=hosts )
 
     @staticmethod
     def _parseIperf( iperfOutput ):
