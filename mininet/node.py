@@ -962,7 +962,7 @@ class OVSSwitch( Switch ):
             if not intf.IP():
                 self.attach( intf )
         # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
+        clist = ' '.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
                             for c in controllers ] )
         self.cmd( 'ovs-vsctl set-controller', self, clist )
 
