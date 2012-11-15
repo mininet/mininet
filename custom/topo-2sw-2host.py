@@ -1,7 +1,5 @@
 """Custom topology example
 
-author: Brandon Heller (brandonh@stanford.edu)
-
 Two directly connected switches plus a host for each switch:
 
    host --- switch --- switch --- host
