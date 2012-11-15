@@ -964,6 +964,8 @@ class OVSSwitch( Switch ):
         # Add controllers
         clist = ' '.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
                             for c in controllers ] )
+        if self.listenPort:
+            clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
 
     def stop( self ):
