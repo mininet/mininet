@@ -11,8 +11,8 @@ def treePing64():
 
     results = {}
     switches = {  # 'reference kernel': KernelSwitch,
-        'reference user': UserSwitch,
-        'Open vSwitch kernel': OVSKernelSwitch }
+                  'reference user': UserSwitch,
+                  'Open vSwitch kernel': OVSKernelSwitch }
 
     for name in switches:
         print "*** Testing", name, "datapath"

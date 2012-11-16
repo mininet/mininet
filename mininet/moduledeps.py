@@ -19,7 +19,7 @@ def modprobe( mod ):
     return quietRun( [ 'modprobe', mod ] )
 
 OF_KMOD = 'ofdatapath'
-OVS_KMOD = 'openvswitch_mod'
+OVS_KMOD = 'openvswitch_mod'  # Renamed 'openvswitch' in OVS 1.7+/Linux 3.5+
 TUN = 'tun'
 
 def moduleDeps( subtract=None, add=None ):
@@ -48,8 +48,8 @@ def moduleDeps( subtract=None, add=None ):
             modprobeOutput = modprobe( mod )
             if modprobeOutput:
                 error( 'Error inserting ' + mod +
-                ' - is it installed and available via modprobe?\n' +
-                'Error was: "%s"\n' % modprobeOutput )
+                       ' - is it installed and available via modprobe?\n' +
+                       'Error was: "%s"\n' % modprobeOutput )
             if mod not in lsmod():
                 error( 'Failed to insert ' + mod + ' - quitting.\n' )
                 exit( 1 )
@@ -63,6 +63,6 @@ def pathCheck( *args, **kwargs ):
     for arg in args:
         if not quietRun( 'which ' + arg ):
             error( 'Cannot find required executable %s.\n' % arg +
-                'Please make sure that %s is installed ' % moduleName +
-                'and available in your $PATH:\n(%s)\n' % environ[ 'PATH' ] )
+                   'Please make sure that %s is installed ' % moduleName +
+                   'and available in your $PATH:\n(%s)\n' % environ[ 'PATH' ] )
             exit( 1 )

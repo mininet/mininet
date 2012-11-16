@@ -45,6 +45,12 @@ def cleanup():
         if dp != '':
             sh( 'dpctl deldp ' + dp )
 
+    info( "***  Removing OVS datapaths" )
+    dps = sh("ovs-vsctl list-br").split( '\n' )
+    for dp in dps:
+        if dp:
+            sh( 'ovs-vsctl del-br ' + dp )
+
     info( "*** Removing all links of the pattern foo-ethX\n" )
     links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
     for link in links:

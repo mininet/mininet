@@ -82,7 +82,7 @@ if __name__ == '__main__':
     fixLines( infile.readlines(), outfid )
     infile.close()
     os.close( outfid )
-    call( [ 'doxypy.py', outname ] )
+    call( [ 'doxypy', outname ] )
 
 
 

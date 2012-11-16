@@ -1,0 +1,9 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --buildsystem=python_distutils --with=python2 
+
+override_dh_auto_build:
+	make man
+	make mnexec
+	dh_auto_build

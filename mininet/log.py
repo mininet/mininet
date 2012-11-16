@@ -11,11 +11,11 @@ import types
 OUTPUT = 25
 
 LEVELS = { 'debug': logging.DEBUG,
-          'info': logging.INFO,
-          'output': OUTPUT,
-          'warning': logging.WARNING,
-          'error': logging.ERROR,
-          'critical': logging.CRITICAL }
+           'info': logging.INFO,
+           'output': OUTPUT,
+           'warning': logging.WARNING,
+           'error': logging.ERROR,
+           'critical': logging.CRITICAL }
 
 # change this to logging.INFO to get printouts when running unit tests
 LOGLEVELDEFAULT = OUTPUT
@@ -117,7 +117,7 @@ class MininetLogger( Logger, object ):
            Convenience function to support lowercase names.
            levelName: level name from LEVELS"""
         level = LOGLEVELDEFAULT
-        if levelname != None:
+        if levelname is not None:
             if levelname not in LEVELS:
                 raise Exception( 'unknown levelname seen in setLogLevel' )
             else:

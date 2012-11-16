@@ -25,9 +25,6 @@ ignore=CVS
 # Pickle collected data for later comparisons.
 persistent=yes
 
-# Set the cache size for astng objects.
-cache-size=500
-
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
 load-plugins=
@@ -35,24 +32,15 @@ load-plugins=
 
 [MESSAGES CONTROL]
 
-# Enable only checker(s) with the given id(s). This option conflicts with the
-# disable-checker option
-#enable-checker=
+# Enable the message, report, category or checker with the given id(s). You can
+# either give multiple identifier separated by comma (,) or put this option
+# multiple time.
+#enable=
 
-# Enable all checker(s) except those with the given id(s). This option
-# conflicts with the enable-checker option
-#disable-checker=
-
-# Enable all messages in the listed categories (IRCWEF).
-#enable-msg-cat=
-
-# Disable all messages in the listed categories (IRCWEF).
-disable-msg-cat=IR
-
-# Enable the message(s) with the given id(s).
-#enable-msg=
-
-# Disable the message(s) with the given id(s).
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifier separated by comma (,) or put this option
+# multiple time (only on the command line, not in the configuration file where
+# it should appear only once).
 disable=W0704,C0103,W0231,E1102,W0511,W0142,R0902,R0903,R0904,R0913,R0914,R0801,I0011
 
 
@@ -60,7 +48,7 @@ disable=W0704,C0103,W0231,E1102,W0511,W0142,R0902,R0903,R0904,R0913,R0914,R0801,
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
-output-format=text
+output-format=colorized
 
 # Include message's id in outpu
 include-ids=yes
@@ -276,7 +264,7 @@ int-import-graph=
 max-line-length=80
 
 # Maximum number of lines in a module
-max-module-lines=1000
+max-module-lines=1500
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).

@@ -21,7 +21,7 @@ def checkIntf( intf ):
     ips = re.findall( r'\d+\.\d+\.\d+\.\d+', quietRun( 'ifconfig ' + intf ) )
     if ips:
         error( 'Error:', intf, 'has an IP address,'
-            'and is probably in use!\n' )
+               'and is probably in use!\n' )
         exit( 1 )
 
 if __name__ == '__main__':

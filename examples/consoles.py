@@ -74,11 +74,11 @@ class Console( Frame ):
             "Pop up a new terminal window for a node."
             net.terms += makeTerms( [ node ], title )
         label = Button( self, text=self.node.name, command=newTerm,
-            **self.buttonStyle )
+                        **self.buttonStyle )
         label.pack( side='top', fill='x' )
         text = Text( self, wrap='word', **self.textStyle )
         ybar = Scrollbar( self, orient='vertical', width=7,
-            command=text.yview )
+                          command=text.yview )
         text.configure( yscrollcommand=ybar.set )
         text.pack( side='left', expand=True, fill='both' )
         ybar.pack( side='right', fill='y' )
@@ -95,7 +95,7 @@ class Console( Frame ):
         # way to trigger a file event handler from Tk's
         # event loop!
         self.tk.createfilehandler( self.node.stdout, READABLE,
-            self.handleReadable )
+                                   self.handleReadable )
 
     # We're not a terminal (yet?), so we ignore the following
     # control characters other than [\b\n\r]
@@ -107,8 +107,10 @@ class Console( Frame ):
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
+        outputHook = lambda x, y: True  # make pylint happier
         if self.outputHook:
-            self.outputHook( self, text )
+            outputHook = self.outputHook
+        outputHook( self, text )
 
     def handleKey( self, event ):
         "If it's an interactive command, send it to the node."
@@ -130,27 +132,22 @@ class Console( Frame ):
         self.sendCmd( cmd )
 
     # Callback ignores event
-    # pylint: disable-msg=W0613
-    def handleInt( self, event=None ):
+    def handleInt( self, _event=None ):
         "Handle control-c."
         self.node.sendInt()
-    # pylint: enable-msg=W0613
 
     def sendCmd( self, cmd ):
         "Send a command to our node."
         if not self.node.waiting:
             self.node.sendCmd( cmd )
 
-    # Callback ignores fds
-    # pylint: disable-msg=W0613
-    def handleReadable( self, fds, timeoutms=None ):
+    def handleReadable( self, _fds, timeoutms=None ):
         "Handle file readable event."
         data = self.node.monitor( timeoutms )
         self.append( data )
         if not self.node.waiting:
             # Print prompt
             self.append( self.prompt )
-    # pylint: enable-msg=W0613
 
     def waiting( self ):
         "Are we waiting for output?"
@@ -172,11 +169,8 @@ class Graph( Frame ):
 
     "Graph that we can add bars to over time."
 
-    def __init__( self, parent=None,
-        bg = 'white',
-        gheight=200, gwidth=500,
-        barwidth=10,
-        ymax=3.5,):
+    def __init__( self, parent=None, bg = 'white', gheight=200, gwidth=500,
+                  barwidth=10, ymax=3.5,):
 
         Frame.__init__( self, parent )
 
@@ -198,7 +192,7 @@ class Graph( Frame ):
         width = 25
         ymax = self.ymax
         scale = Canvas( self, width=width, height=height,
-            background=self.bg )
+                        background=self.bg )
         opts = { 'fill': 'red' }
         # Draw scale line
         scale.create_line( width - 1, height, width - 1, 0, **opts )
@@ -214,7 +208,7 @@ class Graph( Frame ):
         ofs = 20
         height = self.gheight + ofs
         self.graph.configure( scrollregion=( 0, -ofs,
-            self.xpos * self.barwidth, height ) )
+                              self.xpos * self.barwidth, height ) )
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
 
     def yview( self, *args ):
@@ -234,7 +228,7 @@ class Graph( Frame ):
         xbar = Scrollbar( self, orient='horizontal', command=graph.xview )
         ybar = Scrollbar( self, orient='vertical', command=self.yview )
         graph.configure( xscrollcommand=xbar.set, yscrollcommand=ybar.set,
-            scrollregion=(0, 0, width, height ) )
+                         scrollregion=(0, 0, width, height ) )
         scale.configure( yscrollcommand=ybar.set )
 
         # Layout
@@ -255,7 +249,7 @@ class Graph( Frame ):
         x1 = x0 + self.barwidth
         y0 = self.gheight
         y1 = ( 1 - percent ) * self.gheight
-        c.create_rectangle( x0 , y0, x1, y1, fill='green' )
+        c.create_rectangle( x0, y0, x1, y1, fill='green' )
         self.xpos += 1
         self.updateScrollRegions()
         self.graph.xview( 'moveto', '1.0' )
@@ -319,9 +313,7 @@ class ConsoleApp( Frame ):
 
         self.pack( expand=True, fill='both' )
 
-    # Update callback doesn't use console arg
-    # pylint: disable-msg=W0613
-    def updateGraph( self, console, output ):
+    def updateGraph( self, _console, output ):
         "Update our graph."
         m = re.search( r'(\d+) Mbits/sec', output )
         if not m:
@@ -332,7 +324,6 @@ class ConsoleApp( Frame ):
             self.graph.addBar( self.bw )
             self.bw = 0
             self.updates = 0
-    # pylint: enable-msg=W0613
 
     def setOutputHook( self, fn=None, consoles=None ):
         "Register fn as output hook [on specific consoles.]"

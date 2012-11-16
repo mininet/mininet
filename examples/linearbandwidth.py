@@ -6,9 +6,9 @@ using both kernel and user datapaths.
 
 We construct a network of N hosts and N-1 switches, connected as follows:
 
-h1 <-> sN+1 <-> sN+2 .. sN+N-1
-       |        |       |
-       h2       h3      hN
+h1 <-> s1 <-> s2 .. sN-1
+       |       |    |
+       h2      h3   hN
 
 WARNING: by default, the reference controller only supports 16
 switches, so this test WILL NOT WORK unless you have recompiled
@@ -23,42 +23,40 @@ of switches, this example demonstrates:
 
 """
 
+from mininet.net import Mininet
+from mininet.node import UserSwitch, OVSKernelSwitch
+from mininet.topo import Topo
+from mininet.log import lg
+from mininet.util import irange
+
 import sys
 flush = sys.stdout.flush
-
-from mininet.net import init, Mininet
-# from mininet.node import KernelSwitch
-from mininet.node import UserSwitch, OVSKernelSwitch
-from mininet.topo import Topo, Node
-from mininet.log import lg
 
 class LinearTestTopo( Topo ):
     "Topology for a string of N hosts and N-1 switches."
 
-    def __init__( self, N ):
+    def __init__( self, N, **params ):
 
-        # Add default members to class.
-        super( LinearTestTopo, self ).__init__()
+        # Initialize topology
+        Topo.__init__( self, **params )
 
-        # Create switch and host nodes
-        hosts = range( 1, N + 1 )
-        switches = range( N + 1 , N + N )
-        for h in hosts:
-            self.add_node( h, Node( is_switch=False ) )
-        for s in switches:
-            self.add_node( s, Node( is_switch=True ) )
+        # Create switches and hosts
+        hosts = [ self.addHost( 'h%s' % h )
+                  for h in irange( 1, N ) ]
+        switches = [ self.addSwitch( 's%s' % s )
+                     for s in irange( 1, N - 1 ) ]
 
         # Wire up switches
-        for s in switches[ :-1 ]:
-            self.add_edge( s, s + 1 )
+        last = None
+        for switch in switches:
+            if last:
+                self.addLink( last, switch )
+            last = switch
 
         # Wire up hosts
-        self.add_edge( hosts[ 0 ], switches[ 0 ] )
-        for h in hosts[ 1: ]:
-            self.add_edge( h, h + N - 1 )
-
-        # Consider all switches and hosts 'on'
-        self.enable_all()
+        self.addLink( hosts[ 0 ], switches[ 0 ] )
+        for host, switch in zip( hosts[ 1: ], switches ):
+            self.addLink( host, switch )
 
 
 def linearBandwidthTest( lengths ):
@@ -69,15 +67,16 @@ def linearBandwidthTest( lengths ):
     switchCount = max( lengths )
     hostCount = switchCount + 1
 
-    switches = {  # 'reference kernel': KernelSwitch,
-            'reference user': UserSwitch,
-            'Open vSwitch kernel': OVSKernelSwitch }
+    switches = { 'reference user': UserSwitch,
+                 'Open vSwitch kernel': OVSKernelSwitch }
+
+    topo = LinearTestTopo( hostCount )
 
     for datapath in switches.keys():
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        net = Mininet( topo=LinearTestTopo( hostCount ), switch=Switch )
+        net = Mininet( topo=topo, switch=Switch )
         net.start()
         print "*** testing basic connectivity"
         for n in lengths:
@@ -106,7 +105,6 @@ def linearBandwidthTest( lengths ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
-    init()
     sizes = [ 1, 10, 20, 40, 60, 80, 100 ]
     print "*** Running linearBandwidthTest", sizes
     linearBandwidthTest( sizes  )

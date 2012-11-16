@@ -30,10 +30,11 @@ from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
 import sys
+import time
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms
-from mininet.util import quietRun, isShellBuiltin
+from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -46,6 +47,9 @@ class CLI( Cmd ):
         self.nodemap = {}  # map names to Node objects
         for node in self.nodelist:
             self.nodemap[ node.name ] = node
+        # Local variable bindings for py command
+        self.locals = { 'net': mininet }
+        self.locals.update( self.nodemap )
         # Attempt to handle input
         self.stdin = stdin
         self.inPoller = poll()
@@ -77,7 +81,7 @@ class CLI( Cmd ):
     # Disable pylint "Unused argument: 'arg's'" messages, as well as
     # "method could be a function" warning, since each CLI function
     # must have the same interface
-    # pylint: disable-msg=W0613,R0201
+    # pylint: disable-msg=R0201
 
     helpStr = (
         'You may also send a command to a node using:\n'
@@ -104,21 +108,14 @@ class CLI( Cmd ):
         if line is '':
             output( self.helpStr )
 
-    def do_nodes( self, line ):
+    def do_nodes( self, _line ):
         "List all nodes."
         nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    def do_net( self, line ):
+    def do_net( self, _line ):
         "List network connections."
-        for switch in self.mn.switches:
-            output( switch.name, '<->' )
-            for intf in switch.intfs.values():
-                # Ugly, but pylint wants it
-                name = switch.connection.get( intf,
-                    ( None, 'Unknown ' ) )[ 1 ]
-                output( ' %s' % name )
-            output( '\n' )
+        dumpNodeConnections( self.nodelist )
 
     def do_sh( self, line ):
         "Run an external shell command"
@@ -131,7 +128,7 @@ class CLI( Cmd ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: h1.cmd('ls')"""
         try:
-            result = eval( line, globals(), self.nodemap )
+            result = eval( line, globals(), self.locals )
             if not result:
                 return
             elif isinstance( result, str ):
@@ -143,13 +140,21 @@ class CLI( Cmd ):
 
     # pylint: enable-msg=W0703
 
-    def do_pingall( self, line ):
+    def do_pingall( self, _line ):
         "Ping between all hosts."
         self.mn.pingAll()
 
-    def do_pingpair( self, line ):
+    def do_pingpair( self, _line ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
+
+    def do_pingallfull( self, _line ):
+        "Ping between first two hosts, returns all ping results."
+        self.mn.pingAllFull()
+
+    def do_pingpairfull( self, _line ):
+        "Ping between first two hosts, returns all ping results."
+        self.mn.pingPairFull()
 
     def do_iperf( self, line ):
         "Simple iperf TCP test between two (optionally specified) hosts."
@@ -191,16 +196,16 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperfudp bw src dst\n' +
                    'bw examples: 10M\n' )
 
-    def do_intfs( self, line ):
+    def do_intfs( self, _line ):
         "List interfaces."
         for node in self.nodelist:
             output( '%s: %s\n' %
-                ( node.name, ' '.join( sorted( node.intfs.values() ) ) ) )
+                    ( node.name, ','.join( node.intfNames() ) ) )
 
-    def do_dump( self, line ):
+    def do_dump( self, _line ):
         "Dump node info."
         for node in self.nodelist:
-            output( '%s\n' % node )
+            output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
         "Bring link(s) between two nodes up or down."
@@ -229,7 +234,7 @@ class CLI( Cmd ):
         "Spawn gnome-terminal(s) for the given node(s)."
         self.do_xterm( line, term='gterm' )
 
-    def do_exit( self, line ):
+    def do_exit( self, _line ):
         "Exit"
         return 'exited by user command'
 
@@ -275,16 +280,19 @@ class CLI( Cmd ):
     def do_dpctl( self, line ):
         "Run dpctl command on all switches."
         args = line.split()
-        if len(args) == 0:
+        if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
-            return
-        if not self.mn.listenPort:
-            error( "can't run dpctl w/no passive listening port\n")
             return
         for sw in self.mn.switches:
             output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
-            output( sw.cmd( 'dpctl ' + ' '.join(args) +
-                            ' tcp:127.0.0.1:%i' % sw.listenPort ) )
+            output( sw.dpctl( *args ) )
+
+    def do_time( self, line ):
+        "Measure time taken for any command in Mininet."
+        start = time.time()
+        self.onecmd(line)
+        elapsed = time.time() - start
+        self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
@@ -293,6 +301,8 @@ class CLI( Cmd ):
         corresponding IP addrs."""
 
         first, args, line = self.parseline( line )
+        if not args:
+            return
         if args and len(args) > 0 and args[ -1 ] == '\n':
             args = args[ :-1 ]
         rest = args.split( ' ' )
@@ -301,8 +311,8 @@ class CLI( Cmd ):
             node = self.nodemap[ first ]
             # Substitute IP addresses for node names in command
             rest = [ self.nodemap[ arg ].IP()
-                    if arg in self.nodemap else arg
-                    for arg in rest ]
+                     if arg in self.nodemap else arg
+                     for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
             builtin = isShellBuiltin( first )
@@ -311,7 +321,7 @@ class CLI( Cmd ):
         else:
             error( '*** Unknown command: %s\n' % first )
 
-    # pylint: enable-msg=W0613,R0201
+    # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
         "Wait for a node to finish, and  print its output."

@@ -1,0 +1,6 @@
+mininet (2.0.0d2-0ubuntu1) quantal; urgency=low
+
+  * Initial release.
+
+ -- Bob Lantz <rlantz@cs.stanford.edu>  Sun, 01 Jul 2012 23:19:54 +0000
+
