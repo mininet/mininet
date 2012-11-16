@@ -146,7 +146,7 @@ class Node( object ):
         self.shell = None
 
     # Subshell I/O, commands and control
-    
+
     def read( self, maxbytes=1024 ):
         """Buffered read from node, non-blocking.
            maxbytes: maximum number of bytes to return"""
