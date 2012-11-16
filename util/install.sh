@@ -5,7 +5,7 @@
 
 # Fail on error
 set -e
- 
+
 # Fail on unset var usage
 set -o nounset
 
@@ -33,7 +33,7 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     fi
     if ! which bc &> /dev/null; then
         $install bc
-    fi 
+    fi
 fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
@@ -97,11 +97,11 @@ function kernel {
         if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
             sudo update-initramfs -c -k ${KERNEL_NAME}
         fi
-        
+
         # Ensure /boot/grub/menu.lst boots with initrd image:
         sudo update-grub
 
-        # The default should be the new kernel. Otherwise, you may need to modify 
+        # The default should be the new kernel. Otherwise, you may need to modify
         # /boot/grub/menu.lst to set the default to the entry corresponding to the
         # kernel you just installed.
     fi
@@ -131,13 +131,13 @@ function mn_deps {
         sudo easy_install --upgrade networkx
     fi
 
-    # Add sysctl parameters as noted in the INSTALL file to increase kernel 
+    # Add sysctl parameters as noted in the INSTALL file to increase kernel
     # limits to support larger setups:
     sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
 
     # Load new sysctl settings:
     sudo sysctl -p
-    
+
     echo "Installing Mininet core"
     pushd ~/mininet
     sudo make install
@@ -153,7 +153,7 @@ function of {
     echo "Installing OpenFlow reference implementation..."
     cd ~/
     $install git-core autoconf automake autotools-dev pkg-config \
-		make gcc libtool libc6-dev 
+		make gcc libtool libc6-dev
     git clone git://openflowswitch.org/openflow.git
     cd ~/openflow
 
@@ -166,7 +166,7 @@ function of {
     make
     sudo make install
 
-    # Remove avahi-daemon, which may cause unwanted discovery packets to be 
+    # Remove avahi-daemon, which may cause unwanted discovery packets to be
     # sent during tests, near link status changes:
     $remove avahi-daemon
 
@@ -181,38 +181,6 @@ function of {
 }
 
 function wireshark {
-    echo "Installing Wireshark dissector..."
-
-    sudo apt-get install -y wireshark libgtk2.0-dev
-
-    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
-        # Install newer version
-        sudo apt-get install -y scons mercurial libglib2.0-dev
-        sudo apt-get install -y libwiretap-dev libwireshark-dev
-        cd ~
-        hg clone https://bitbucket.org/barnstorm/of-dissector
-        cd of-dissector/src
-        export WIRESHARK=/usr/include/wireshark
-        scons
-        # libwireshark0/ on 11.04; libwireshark1/ on later
-        WSDIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
-        WSPLUGDIR=$WSDIR/plugins/
-        sudo cp openflow.so $WSPLUGDIR
-        echo "Copied openflow plugin to $WSPLUGDIR"
-    else
-        # Install older version from reference source
-        cd ~/openflow/utilities/wireshark_dissectors/openflow
-        make
-        sudo make install
-    fi
-
-    # Copy coloring rules: OF is white-on-blue:
-    mkdir -p ~/.wireshark
-    cp ~/mininet/util/colorfilters ~/.wireshark
-}
-
-
-function wireshark {    
     echo "Installing Wireshark dissector..."
 
     sudo apt-get install -y wireshark libgtk2.0-dev
@@ -287,7 +255,7 @@ function ovs {
         ovspresent=1
     fi
 
-    # Switch can run on its own, but 
+    # Switch can run on its own, but
     # Mininet should control the controller
     if [ -e /etc/init.d/openvswitch-controller ]; then
         if sudo service openvswitch-controller stop; then
@@ -318,7 +286,7 @@ function ovs {
         fi
     else
         $install git
-    fi    
+    fi
 
     # Install OVS from release
     cd ~/
@@ -372,7 +340,7 @@ function nox {
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        $install python-dev libboost-dev 
+        $install python-dev libboost-dev
         $install libboost-filesystem-dev
         $install libboost-test-dev
     fi
@@ -435,7 +403,7 @@ function oftest {
 # Install cbench
 function cbench {
     echo "Installing cbench..."
-    
+
     $install libsnmp-dev libpcap-dev libconfig-dev
     cd ~/
     git clone git://openflow.org/oflops.git
@@ -538,7 +506,7 @@ function vm_clean {
 
 function usage {
     printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
-    
+
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04, 11.10\n' >&2
     printf 'and Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
@@ -549,7 +517,7 @@ function usage {
     printf -- ' -a: (default) install (A)ll packages - good luck!\n' >&2
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
     printf -- ' -c: (C)lean up after kernel install\n' >&2
-    printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2    
+    printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2
     printf -- ' -f: install open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
@@ -560,8 +528,8 @@ function usage {
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
-    printf -- ' -y: install (A)ll packages\n' >&2    
-    
+    printf -- ' -y: install (A)ll packages\n' >&2
+
     exit 2
 }
 
