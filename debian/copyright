@@ -3,9 +3,13 @@ Upstream-Name: mininet
 Source: https://github.com/mininet/mininet
 
 Files: *
-Copyright: 2009-2012 Bob Lantz,
-           2009-2012 Brandon Heller
-License: 
+Copyright: 2012 Open Networking Laboratory,
+           2009-2012 Bob Lantz,
+           2009-2012 The Board of Trustees of the Leland Stanford Junior
+           University
+License:
+  Original authors: Bob Lantz and Brandon Heller
+  .
   We are making Mininet available for public use and benefit with the
   expectation that others will use, modify and enhance the Software and
   contribute those enhancements back to the community. However, since we
