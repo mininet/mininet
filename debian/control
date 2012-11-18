@@ -5,23 +5,24 @@ Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 XSBC-Original-Maintainer: Bob Lantz <rlantz@cs.stanford.edu>
 Standards-Version: 3.9.3
 Build-Depends:
- debhelper (>= 7.0.50~),
+ debhelper (>= 9~),
  help2man,
  python-dev,
  python-pkg-resources,
- python-setuptools
+ python-setuptools,
+ python-networkx
 Homepage: http://openflow.org/mininet
 
 Package: mininet
 Architecture: any
 Depends:
- openvswitch-controller,
  openvswitch-switch,
  python-networkx,
  telnet,
  ${misc:Depends},
  ${python:Depends},
  ${shlibs:Depends}
+Recommends: iperf, openvswitch-controller
 Description: Process-based network emulator
  Mininet is a network emulator which uses lightweight
  virtualization to create virtual networks for rapid

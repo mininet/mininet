@@ -1,6 +1,12 @@
-mininet (2.0.0d2-0ubuntu1) quantal; urgency=low
+mininet (2.0.0~rc1-0ubuntu1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Update copyright to match upstream release
+
+ -- Bob Lantz <rlantz@cs.stanford.edu>  Sat, 17 Nov 2012 22:07:49 -0800
+
+mininet (2.0.0~d4-0ubuntu1) quantal; urgency=low
 
   * Initial release.
 
- -- Bob Lantz <rlantz@cs.stanford.edu>  Sun, 01 Jul 2012 23:19:54 +0000
-
+ -- Bob Lantz <rlantz@cs.stanford.edu>  Tue, 07 Aug 2012 14:11:27 -0700
