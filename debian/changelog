@@ -1,9 +1,10 @@
-mininet (2.0.0~rc1-0ubuntu1) UNRELEASED; urgency=low
+mininet (2.0.0~rc1-0ubuntu1) quantal; urgency=low
 
   * New upstream release.
   * Update copyright to match upstream release
+  * Fix this message
 
- -- Bob Lantz <rlantz@cs.stanford.edu>  Sat, 17 Nov 2012 22:07:49 -0800
+ -- Bob Lantz <rlantz@cs.stanford.edu>  Sun, 18 Nov 2012 00:15:09 -0800
 
 mininet (2.0.0~d4-0ubuntu1) quantal; urgency=low
 
