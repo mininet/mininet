@@ -11,36 +11,26 @@ topology enables one to pass in '--topo=mytopo' from the command line.
 """
 
 from mininet.topo import Topo
-from mininet.node import Node
 
 class MyTopo( Topo ):
     "Simple topology example."
 
-    def __init__( self, enable_all = True ):
+    def __init__( self ):
         "Create custom topo."
 
-        # Add default members to class.
-        super( MyTopo, self ).__init__()
+        # Initialize topology
+        Topo.__init__( self )
 
-        # Set Node IDs for hosts and switches
-        leftHost = 1
-        leftSwitch = 2
-        rightSwitch = 3
-        rightHost = 4
+        # Add hosts and switches
+        leftHost = self.addHost( 'h1' )
+        rightHost = self.addHost( 'h2' )
+        leftSwitch = self.addSwitch( 's3' )
+        rightSwitch = self.addSwitch( 's4' )
 
-        # Add nodes
-        self.addNode( leftSwitch, Node( isSwitch=True ) )
-        self.addNode( rightSwitch, Node( isSwitch=True ) )
-        self.addNode( leftHost, Node( isSwitch=False ) )
-        self.addNode( rightHost, Node( isSwitch=False ) )
-
-        # Add edges
-        self.add_edge( leftHost, leftSwitch )
-        self.add_edge( leftSwitch, rightSwitch )
-        self.add_edge( rightSwitch, rightHost )
-
-        # Consider all switches and hosts 'on'
-        self.enable_all()
+        # Add links
+        self.addLink( leftHost, leftSwitch )
+        self.addLink( leftSwitch, rightSwitch )
+        self.addLink( rightSwitch, rightHost )
 
 
 topos = { 'mytopo': ( lambda: MyTopo() ) }
