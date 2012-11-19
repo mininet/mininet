@@ -10,6 +10,7 @@ import re
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info, error
 from mininet.net import Mininet
+from mininet.link import Intf
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun
 
@@ -27,16 +28,20 @@ def checkIntf( intf ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
 
-    newIntf = 'eth1'
-    info( '*** Checking', newIntf, '\n' )
-    checkIntf( newIntf )
+    intfName = 'eth1'
+    info( '*** Checking', intfName, '\n' )
+    checkIntf( intfName )
 
     info( '*** Creating network\n' )
     net = Mininet( topo=TreeTopo( depth=1, fanout=2 ) )
 
     switch = net.switches[ 0 ]
-    info( '*** Adding', newIntf, 'to switch', switch.name, '\n' )
-    switch.addIntf( newIntf )
+    info( '*** Adding hardware interface', intfName, 'to switch',
+          switch.name, '\n' )
+    intf = Intf( intfName, node=switch )
+
+    info( '*** Note: you may need to reconfigure the interfaces for '
+          'the Mininet hosts:\n', net.hosts, '\n' )
 
     net.start()
     CLI( net )
