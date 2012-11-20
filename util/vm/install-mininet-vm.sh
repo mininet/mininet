@@ -4,9 +4,7 @@
 # a brand-new Ubuntu virtual machine,
 # to create a fully usable "tutorial" VM.
 set -e
-sudo sh -c 'cat >> /etc/sudoers' <<EOF
-openflow ALL=NOPASSWD: ALL
-EOF
+echo `whoami` ALL=NOPASSWD: ALL | sudo tee -a /etc/sudoers
 sudo sed -i -e 's/Default/#Default/' /etc/sudoers
 sudo sed -i -e 's/ubuntu/mininet-vm/' /etc/hostname
 sudo sed -i -e 's/ubuntu/mininet-vm/g' /etc/hosts
