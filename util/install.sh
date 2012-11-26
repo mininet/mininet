@@ -122,7 +122,7 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    $install gcc make screen psmisc xterm ssh iperf iproute \
+    $install gcc make screen psmisc xterm ssh iperf iproute telnet \
         python-setuptools python-networkx cgroup-bin ethtool help2man \
         pyflakes pylint pep8
 
