@@ -4,7 +4,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.0.0rc1
+Version 2.0.0
 
 ### What is Mininet?
 
@@ -67,9 +67,9 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.0.0rc1
+### New features in 2.0.0
 
-Mininet 2.0.0rc1 is a major upgrade and provides
+Mininet 2.0.0 is a major upgrade and provides
 a number of enhancements and new features, including:
 
 * "Mininet-HiFi" functionality:
