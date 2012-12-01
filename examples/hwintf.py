@@ -38,7 +38,7 @@ if __name__ == '__main__':
     switch = net.switches[ 0 ]
     info( '*** Adding hardware interface', intfName, 'to switch',
           switch.name, '\n' )
-    intf = Intf( intfName, node=switch )
+    _intf = Intf( intfName, node=switch )
 
     info( '*** Note: you may need to reconfigure the interfaces for '
           'the Mininet hosts:\n', net.hosts, '\n' )

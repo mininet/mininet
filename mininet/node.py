@@ -996,7 +996,7 @@ class Controller( Node ):
     def checkListening( self ):
         "Make sure no controllers are running on our port"
         # Verify that Telnet is installed first:
-        out, err, returnCode = errRun( "which telnet" )
+        out, _err, returnCode = errRun( "which telnet" )
         if 'telnet' not in out or returnCode != 0:
             raise Exception( "Error running telnet to check for listening "
                              "controllers; please check that it is "
