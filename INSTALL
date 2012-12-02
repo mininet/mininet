@@ -45,7 +45,7 @@ like to contribute an installation script, we would welcome it!)
 3. Native installation from source on Ubuntu 11.10+
 
    If you're reading this, you've probably already done so, but the
-   command to download the Mininet source code is;
+   command to download the Mininet source code is:
 
         git clone git://github.com/mininet/mininet.git
 
@@ -75,7 +75,7 @@ like to contribute an installation script, we would welcome it!)
    including POX, the OpenFlow WireShark dissector, the `oftest`
    framework, and other potentially useful software (and to add some
    stuff to `/etc/sysctl.conf` which may or may not be useful) you may
-   use
+   use:
 
         mininet/util/install.sh -a
 
@@ -84,10 +84,14 @@ like to contribute an installation script, we would welcome it!)
 4. Creating your own Mininet/OpenFlow tutorial VM
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
-   is easy! First, create a new Ubuntu VM. Then, run
+   is easy! First, create a new Ubuntu VM. Next, run two commands in it:
 
         wget https://raw.github.com/mininet/mininet/master/util/vm/install-mininet-vm.sh
         time install-mininet-vm.sh
+
+   Finally, verify that Mininet is installed and working in the VM:
+
+        sudo mn --test pingall
 
 5. Installation on other Linux distributions
 
