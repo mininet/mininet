@@ -1,116 +1,119 @@
+
 Mininet Installation/Configuration Notes
+----------------------------------------
 
 Mininet 2.0.0
-
 ---
 
-The supported installation methods for Mininet are 1) using
-a pre-built VM image, and 2) native installation on Ubuntu. You
-can also easily create your own Mininet VM image (3).
+The supported installation methods for Mininet are 1) using a
+pre-built VM image, and 2) native installation on Ubuntu. You can also
+easily create your own Mininet VM image (4).
 
 (Other distributions may be supported in the future - if you would
 like to contribute an installation script, we would welcome it!)
 
 1. Easiest "installation" - use our pre-built VM image!
 
-The easiest way to get Mininet running is to start with one of our pre-built 
-virtual machine images from http://openflow.org/mininet
+   The easiest way to get Mininet running is to start with one of our
+   pre-built virtual machine images from <http://openflow.org/mininet>
 
-Boot up the VM image, log in, and follow the instructions on the wiki page.
+   Boot up the VM image, log in, and follow the instructions on the
+   Mininet web site.
 
-One advantage of using the VM image is that it doesn't mess with
-your native OS installation or damage it in any way.
+   One advantage of using the VM image is that it doesn't mess with
+   your native OS installation or damage it in any way.
 
-Although a single Mininet instance can simulate multiple networks with
-multiple controllers, only one Mininet instance may currently be run at
-a time, and Mininet requires root access in the machine it's running on.
-Therefore, if you have a multiuser system, you may wish to consider
-running Mininet in a VM.
+   Although a single Mininet instance can simulate multiple networks
+   with multiple controllers, only one Mininet instance may currently
+   be run at a time, and Mininet requires root access in the machine
+   it's running on.  Therefore, if you have a multiuser system, you
+   may wish to consider running Mininet in a VM.
 
 2. Next-easiest option: use our Ubuntu package!
 
-To install Mininet itself (i.e. mn and the Python API) on Ubuntu 12.10+
+   To install Mininet itself (i.e. `mn` and the Python API) on Ubuntu
+   12.10+:
 
-  sudo apt-get install mininet
+        sudo apt-get install mininet
 
-Note: if you are upgrading from an older version of Mininet, make sure you
-remove the old OVS from /usr/local:
+   Note: if you are upgrading from an older version of Mininet, make
+   sure you remove the old OVS from `/usr/local`:
 
-  sudo rm /usr/local/bin/ovs*
-  sudo rm /usr/local/sbin/ovs*
+        sudo rm /usr/local/bin/ovs*
+        sudo rm /usr/local/sbin/ovs*
 
 3. Native installation from source on Ubuntu 11.10+
 
-If you're reading this, you've probably already done so, but the command to
-download the Mininet source code is;
-   
-  git clone git://github.com/mininet/mininet.git
+   If you're reading this, you've probably already done so, but the
+   command to download the Mininet source code is;
 
-If you are running Ubuntu, you may be able to use our handy install.sh script,
-which is in mininet/util.
+        git clone git://github.com/mininet/mininet.git
 
-WARNING: USE AT YOUR OWN RISK!
+   If you are running Ubuntu, you may be able to use our handy
+   `install.sh` script, which is in `mininet/util`.
 
-install.sh is a bit intrusive and may possibly damage your OS and/or
-home directory, by creating/modifying several directories such as
-mininet, openflow, openvswitch and noxcore. Although we hope it won't
-do anything completely terrible, you may want to look at the script
-before you run it, and you should make sure your system and home
-directory are backed up just in case!
+   *WARNING: USE AT YOUR OWN RISK!*
 
-To install Mininet itself, the OpenFlow reference implementation, and
-Open vSwitch, you may use:
+   `install.sh` is a bit intrusive and may possibly damage your OS
+   and/or home directory, by creating/modifying several directories
+   such as `mininet`, `openflow`, `oftest`, `pox`, or `noxcosre`.
+   Although we hope it won't do anything completely terrible, you may
+   want to look at the script before you run it, and you should make
+   sure your system and home directory are backed up just in case!
 
-$ mininet/util/install.sh -fnv
+   To install Mininet itself, the OpenFlow reference implementation, and
+   Open vSwitch, you may use:
 
-This should be reasonably quick and the following command should work
-after the installation:
+        mininet/util/install.sh -fnv
 
-$ sudo mn --test pingall
+   This should be reasonably quick, and the following command should
+   work after the installation:
 
-To install ALL of the software which we use for OpenFlow tutorials,
-including NOX classic, the OpenFlow WireShark dissector, the oftest
-framework, and other potentially useful software (and to add some stuff
-to /etc/sysctl.conf which may or may not be useful) you may use
+        sudo mn --test pingall
 
-$ mininet/util/install.sh -a
+   To install ALL of the software which we use for OpenFlow tutorials,
+   including POX, the OpenFlow WireShark dissector, the `oftest`
+   framework, and other potentially useful software (and to add some
+   stuff to `/etc/sysctl.conf` which may or may not be useful) you may
+   use
 
-This takes about 20 minutes on our test system.
+        mininet/util/install.sh -a
+
+   This takes about 4 minutes on our test system.
 
 4. Creating your own Mininet/OpenFlow tutorial VM
 
-Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
-is easy! First, create a new Ubuntu VM. Then, run
+   Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
+   is easy! First, create a new Ubuntu VM. Then, run
 
-$ wget https://raw.github.com/mininet/mininet/util/vm/install-mininet-vm.sh
-$ time install-mininet-vm.sh
+        wget https://raw.github.com/mininet/mininet/master/util/vm/install-mininet-vm.sh
+        time install-mininet-vm.sh
 
 5. Installation on other Linux distributions
 
-Although we don't support other Linux distributions directly, it should be
-possible to install and run Mininet with some degree of manual effort.
+   Although we don't support other Linux distributions directly, it
+   should be possible to install and run Mininet with some degree of
+   manual effort.
 
-In general, you must have:
+   In general, you must have:
 
-* A Linux kernel compiled with network namespace support enabled
+   * A Linux kernel compiled with network namespace support enabled
 
-* An OpenFlow implementation (either the reference user or kernel
-  space implementations, or Open vSwitch.) Appropriate kernel modules
-  (e.g. tun and ofdatapath for the reference kernel implementation) must
-  be loaded.
+   * An OpenFlow implementation (either the reference user or kernel
+     space implementations, or Open vSwitch.) Appropriate kernel
+     modules (e.g. tun and ofdatapath for the reference kernel
+     implementation) must be loaded.
 
-* Python, `bash`, `ping`, `iperf`, etc.
+   * Python, `bash`, `ping`, `iperf`, etc.`
 
-* Root privileges (required for network device access)
+   * Root privileges (required for network device access)
 
-We encourage contribution of patches to the `install.sh` script to support
-other Linux distributions.
+   We encourage contribution of patches to the `install.sh` script to
+   support other Linux distributions.
+
 
 Good luck!
 
 Mininet Team
 
 ---
-
-  
-  
