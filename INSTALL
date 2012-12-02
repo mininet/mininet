@@ -1,4 +1,3 @@
-
 Mininet Installation/Configuration Notes
 
 Mininet 2.0.0
@@ -45,7 +44,7 @@ remove the old OVS from /usr/local:
 If you're reading this, you've probably already done so, but the command to
 download the Mininet source code is;
    
-  git clone git://openflow.org/mininet.git
+  git clone git://github.com/mininet/mininet.git
 
 If you are running Ubuntu, you may be able to use our handy install.sh script,
 which is in mininet/util.
