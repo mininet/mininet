@@ -840,59 +840,6 @@ class UserSwitch( Switch ):
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
 
-class OF13Switch( Switch ):
-    "User-space switch."
-
-    dpidLen = 12
-
-    def __init__( self, name, **kwargs ):
-        """Init.
-           name: name for the switch"""
-        Switch.__init__( self, name, **kwargs )
-        pathCheck( 'ofdatapath', 'ofprotocol',
-                   moduleName='the OpenFlow reference user switch' +
-                              '(openflow.org)' )
-        if self.listenPort:
-            self.opts += ' --listen=ptcp:%i ' % self.listenPort
-
-    @classmethod
-    def setup( cls ):
-        "Ensure any dependencies are loaded; if not, try to load them."
-        if not os.path.exists( '/dev/net/tun' ):
-            moduleDeps( add=TUN )
-
-    def dpctl( self, *args ):
-        "Run dpctl command"
-        if not self.listenPort:
-            return "can't run dpctl without passive listening port"
-        return self.cmd( 'dpctl ' + ' '.join( args ) +
-                         ' tcp:127.0.0.1:%i' % self.listenPort )
-
-    def start( self, controllers ):
-        """Start OpenFlow reference user datapath.
-           Log to /tmp/sN-{ofd,ofp}.log.
-           controllers: list of controller objects"""
-        # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
-        ofdlog = '/tmp/' + self.name + '-ofd.log'
-        ofplog = '/tmp/' + self.name + '-ofp.log'
-        self.cmd( 'ifconfig lo up' )
-        intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
-        self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-                  ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
-                  ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
-        self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-                  ' ' + clist +
-                  self.opts +
-                  ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
-
-
-    def stop( self ):
-        "Stop OpenFlow reference user datapath."
-        self.cmd( 'kill %ofdatapath' )
-        self.cmd( 'kill %ofprotocol' )
-        self.deleteIntfs()
 
 class OVSLegacyKernelSwitch( Switch ):
     """Open VSwitch legacy kernel-space switch using ovs-openflowd.
