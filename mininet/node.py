@@ -447,7 +447,7 @@ class Node( object ):
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        return self.intf( intf ).IP()
+        return self.intf( intf ).MAC()
 
     def intfIsUp( self, intf=None ):
         "Check if an interface is up."
