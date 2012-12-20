@@ -180,6 +180,37 @@ function of {
     cd ~
 }
 
+function of13 {
+    echo "Installing OpenFlow 1.3 soft switch implementation..."
+    cd ~/
+    $install  git-core autoconf automake autotools-dev pkg-config \
+        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
+        unzip libpcre3-dev flex bison libboost-dev
+
+    if [ ! -d "ofsoftswitch13" ]; then
+         git clone https://github.com/CPqD/ofsoftswitch13.git
+    fi
+
+    # Install netbee
+    wget -nc http://www.nbee.org/download/nbeesrc-12-05-16.zip
+    unzip nbeesrc-12-05-16.zip
+    cd ~/nbeesrc/src
+    cmake .
+    make
+    cd ~/
+    cp nbeesrc/bin/libn*.so /usr/local/lib
+    ldconfig
+    cp -R nbeesrc/include/ /usr/
+
+    # Resume the install:
+    cd ~/ofsoftswitch13
+    ./boot.sh
+    ./configure
+    make
+    sudo make install
+    cd ~
+}
+
 function wireshark {
     echo "Installing Wireshark dissector..."
 
@@ -378,6 +409,40 @@ function nox {
     #./nox_core -v -i ptcp:
 }
 
+# Install NOX 1.3 with tutorial files
+function nox13 {
+    echo "Installing NOX w/tutorial files..."
+
+    # Install NOX deps:
+    $install autoconf automake g++ libtool python python-twisted \
+        swig libssl-dev make
+    if [ "$DIST" = "Debian" ]; then
+        $install libboost1.35-dev
+    elif [ "$DIST" = "Ubuntu" ]; then
+        $install python-dev libboost-dev
+        $install libboost-filesystem-dev
+        $install libboost-test-dev
+    fi
+
+    # Fetch NOX destiny
+    cd ~/
+    git clone https://github.com/CPqD/nox13oflib.git
+    cd nox13oflib
+
+    # Build
+    ./boot.sh
+    mkdir build
+    cd build
+    ../configure
+    make -j3
+    #make check
+
+    # To verify this install:
+    #cd ~/nox13oflib/build/src
+    #./nox_core -v -i ptcp:
+}
+
+
 # "Install" POX
 function pox {
     echo "Installing POX into $HOME/pox..."
@@ -537,18 +602,25 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnprtvwx' OPTION
+    while getopts 'abcdfghkmnoprtvwx' OPTION
     do
       case $OPTION in
       a)    all;;
       b)    cbench;;
       c)    kernel_clean;;
       d)    vm_clean;;
-      f)    of;;
+      f)    echo -n "OpenFlow version to install? [1.0 or 1.3]: "
+            read ver
+            case $ver in
+            1.0) of;;
+            1.3) of13;;
+            *)  echo "Invalid option";;
+            esac;;
       h)    usage;;
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
+      o)    nox13;;
       p)    pox;;
       r)    remove_ovs;;
       t)    other;;
