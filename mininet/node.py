@@ -561,7 +561,7 @@ class Host( Node ):
             intf = self.defaultIntf()
         return self.cmd( 'route add default gw', default_gw, intf )
 
-    def config( self, default_gw, **params ):
+    def config( self, default_gw = None, **params ):
         r = super( Host, self ).config( **params )
 
         self.setParam( r, 'setDefaultGateway', default_gw=default_gw )
