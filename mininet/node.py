@@ -550,8 +550,21 @@ class Node( object ):
 
 class Host( Node ):
     "A host is simply a Node"
-    pass
 
+    def setDefaultGateway( self, default_gw, intf = None ):
+        """Add default gateway to host.
+           ip: IP address as dotted decimal
+           intf: string, interface name"""
+        if not default_gw:
+            return
+        if not intf:
+            intf = self.defaultIntf()
+        return self.cmd( 'route add default gw', default_gw, intf )
+
+    def config( self, default_gw, **params ):
+        r = super( Host, self ).config( **params )
+
+        self.setParam( r, 'setDefaultGateway', default_gw=default_gw )
 
 class CPULimitedHost( Host ):
 
