@@ -123,13 +123,8 @@ function kernel_clean {
 function mn_deps {
     echo "Installing Mininet dependencies"
     $install gcc make socat psmisc xterm ssh iperf iproute telnet \
-        python-setuptools python-networkx cgroup-bin ethtool help2man \
+        python-setuptools cgroup-bin ethtool help2man \
         pyflakes pylint pep8
-
-    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
-        echo "Upgrading networkx to avoid deprecation warning"
-        sudo easy_install --upgrade networkx
-    fi
 
     # Add sysctl parameters as noted in the INSTALL file to increase kernel
     # limits to support larger setups:

@@ -9,15 +9,13 @@ Build-Depends:
  help2man,
  python-dev,
  python-pkg-resources,
- python-setuptools,
- python-networkx
+ python-setuptools
 Homepage: http://openflow.org/mininet
 
 Package: mininet
 Architecture: any
 Depends:
  openvswitch-switch,
- python-networkx,
  telnet,
  ${misc:Depends},
  ${python:Depends},
