@@ -19,7 +19,14 @@ graphical monitoring.
 
 controllers.py:
 
-This example creates a network and adds multiple controllers to it.
+This example creates a network with multiple controllers, by
+using a custom Switch() subclass.
+
+controllers2.py:
+
+This example creates a network with multiple controllers by
+creating an empty network, adding nodes to it, and manually
+starting the switches.
 
 cpu.py:
 
