@@ -1,30 +1,24 @@
 #!/usr/bin/python
 
 """
-This example creates a multi-controller network from
-semi-scratch; note a topo object could also be used and
-would be passed into the Mininet() constructor.
+This example creates a multi-controller network from semi-scratch by
+using the net.add*() API and manually starting the switches and controllers.
+
+Note that one could also create a custom switch class and pass it into
+the Mininet() constructor.
 """
 
 from mininet.net import Mininet
-from mininet.node import Controller, OVSKernelSwitch
+from mininet.node import Controller, OVSSwitch
 from mininet.cli import CLI
 from mininet.log import setLogLevel
 
-Switch = OVSKernelSwitch
-
-def addHost( net, N ):
-    "Create host hN and add to net."
-    name = 'h%d' % N
-    ip = '10.0.0.%d' % N
-    return net.addHost( name, ip=ip )
-
 def multiControllerNet():
-    "Create a network with multiple controllers."
+    "Create a network from semi-scratch with multiple controllers."
 
-    net = Mininet( controller=Controller, switch=Switch)
+    net = Mininet( controller=Controller, switch=OVSSwitch, build=False )
 
-    print "*** Creating controllers"
+    print "*** Creating (reference) controllers"
     c1 = net.addController( 'c1', port=6633 )
     c2 = net.addController( 'c2', port=6634 )
 
@@ -33,8 +27,8 @@ def multiControllerNet():
     s2 = net.addSwitch( 's2' )
 
     print "*** Creating hosts"
-    hosts1 = [ addHost( net, n ) for n in 3, 4 ]
-    hosts2 = [ addHost( net, n ) for n in 5, 6 ]
+    hosts1 = [ net.addHost( 'h%d' % n ) for n in 3, 4 ]
+    hosts2 = [ net.addHost( 'h%d' % n ) for n in 5, 6 ]
 
     print "*** Creating links"
     for h in hosts1:
