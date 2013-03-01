@@ -121,12 +121,12 @@ class CLI( Cmd ):
         "Run an external shell command"
         call( line, shell=True )
 
-    # do_py() needs to catch any exception during eval()
+    # do_py() and do_px() need to catch any exception during eval()/exec()
     # pylint: disable-msg=W0703
 
     def do_py( self, line ):
         """Evaluate a Python expression.
-           Node names may be used, e.g.: h1.cmd('ls')"""
+           Node names may be used, e.g.: py h1.cmd('ls')"""
         try:
             result = eval( line, globals(), self.locals )
             if not result:
@@ -138,7 +138,18 @@ class CLI( Cmd ):
         except Exception, e:
             output( str( e ) + '\n' )
 
-    # pylint: enable-msg=W0703
+    # We are in fact using the exec() pseudo-function
+    # pylint: disable-msg=W0122
+
+    def do_px( self, line ):
+        """Execute a Python statement.
+            Node names may be used, e.g.: px print h1.cmd('ls')"""
+        try:
+            exec( line, globals(), self.locals )
+        except Exception, e:
+            output( str( e ) + '\n' )
+
+    # pylint: enable-msg=W0703,W0122
 
     def do_pingall( self, _line ):
         "Ping between all hosts."
