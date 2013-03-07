@@ -4,6 +4,9 @@
 This example creates a multi-controller network from semi-scratch by
 using the net.add*() API and manually starting the switches and controllers.
 
+This is the "mid-level" API, which is an alternative to the "high-level"
+Topo() API which supports parametrized topology classes.
+
 Note that one could also create a custom switch class and pass it into
 the Mininet() constructor.
 """
@@ -32,10 +35,10 @@ def multiControllerNet():
 
     print "*** Creating links"
     for h in hosts1:
-        s1.linkTo( h )
+        net.addLink( s1, h )
     for h in hosts2:
-        s2.linkTo( h )
-    s1.linkTo( s2 )
+        net.addLink( s2, h )
+    net.addLink( s1, s2 )
 
     print "*** Starting network"
     net.build()
