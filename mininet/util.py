@@ -4,7 +4,7 @@ from mininet.log import output, info, error, warn
 
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
-from select import poll, POLLIN
+from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 import re
 from fcntl import fcntl, F_GETFL, F_SETFL
@@ -326,27 +326,24 @@ def pmonitor(popens, timeoutms=500, readline=True,
             # Use non-blocking reads
             flags = fcntl( fd, F_GETFL )
             fcntl( fd, F_SETFL, flags | O_NONBLOCK )
-    while True:
+    while popens:
         fds = poller.poll( timeoutms )
         if fds:
-            for fd, _event in fds:
+            for fd, event in fds:
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
-                if readline:
-                    # Attempt to read a line of output
-                    # This blocks until we receive a newline!
-                    line = popen.stdout.readline()
-                else:
-                    line = popen.stdout.read( readmax )
-                yield host, line
+                if event & POLLIN:
+                    if readline:
+                        # Attempt to read a line of output
+                        # This blocks until we receive a newline!
+                        line = popen.stdout.readline()
+                    else:
+                        line = popen.stdout.read( readmax )
+                    yield host, line
                 # Check for EOF
-                if not line:
-                    popen.poll()
-                    if popen.returncode is not None:
-                        poller.unregister( fd )
-                        del popens[ host ]
-                        if not popens:
-                            return
+                elif event & POLLHUP:
+                    poller.unregister( fd )
+                    del popens[ host ]
         else:
             yield None, ''
 
