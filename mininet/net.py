@@ -91,6 +91,7 @@ import re
 import select
 import signal
 from time import sleep
+from itertools import chain
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -216,8 +217,8 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    # BL: is this better than just using nameToNode[] ?
-    # Should it have a better name?
+    # BL: We now have four ways to look up nodes
+    # This may (should?) be cleaned up in the future.
     def getNodeByName( self, *args ):
         "Return node(s) with given name(s)"
         if len( args ) == 1:
@@ -227,6 +228,15 @@ class Mininet( object ):
     def get( self, *args ):
         "Convenience alias for getNodeByName"
         return self.getNodeByName( *args )
+
+    # Even more convenient syntax for node lookup and iteration
+    def __getitem__( self, *args ):
+        """net [ name ] operator: Return node(s) with given name(s)"""
+        return self.getNodeByName( *args )
+
+    def __iter__( self ):
+        "return iterator over nodes"
+        return chain( self.hosts, self.switches, self.controllers )
 
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
