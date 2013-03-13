@@ -242,9 +242,8 @@ def macColonHex( mac ):
 def ipStr( ip ):
     """Generate IP address string from an unsigned int.
        ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
-       returns: ip address string w.x.y.z, or 10.x.y.z if w==0"""
+       returns: ip address string w.x.y.z"""
     w = ( ip >> 24 ) & 0xff
-    w = 10 if w == 0 else w
     x = ( ip >> 16 ) & 0xff
     y = ( ip >> 8 ) & 0xff
     z = ip & 0xff
@@ -261,10 +260,10 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
        prefixLen: optional IP prefix length
        ipBaseNum: option base IP address as int
        returns IP address as string"""
-    # Ugly but functional
-    assert i < ( 1 << ( 32 - prefixLen ) )
-    mask = 0xffffffff ^ ( ( 1 << prefixLen ) - 1 )
-    ipnum = i + ( ipBaseNum & mask )
+    imax = 0xffffffff >> prefixLen
+    assert i <= imax
+    mask = 0xffffffff ^ imax
+    ipnum = ( ipBaseNum & mask ) + i
     return ipStr( ipnum )
 
 def ipParse( ip ):
