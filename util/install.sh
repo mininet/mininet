@@ -395,9 +395,6 @@ function oftest {
     # Install oftest:
     cd ~/
     git clone git://github.com/floodlight/oftest
-    cd oftest
-    cd tools/munger
-    sudo make install
 }
 
 # Install cbench
