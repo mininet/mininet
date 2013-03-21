@@ -502,11 +502,11 @@ function vm_clean {
 }
 
 function usage {
-    printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
+    printf 'Usage: %s [-abcdfhkmnprtvwx]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04, 11.10\n' >&2
-    printf 'and Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
+    printf 'If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
 
@@ -520,12 +520,12 @@ function usage {
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
+    printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
-    printf -- ' -y: install (A)ll packages\n' >&2
 
     exit 2
 }
