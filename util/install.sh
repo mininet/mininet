@@ -198,9 +198,9 @@ function of13 {
     cmake .
     make
     cd ~/
-    cp nbeesrc/bin/libn*.so /usr/local/lib
-    ldconfig
-    cp -R nbeesrc/include/ /usr/
+    sudo cp nbeesrc/bin/libn*.so /usr/local/lib
+    sudo ldconfig
+    sudo cp -R nbeesrc/include/ /usr/
 
     # Resume the install:
     cd ~/ofsoftswitch13
@@ -409,7 +409,7 @@ function nox {
     #./nox_core -v -i ptcp:
 }
 
-# Install NOX 1.3 with tutorial files
+# Install NOX Classic/Zaku for OpenFlow 1.3
 function nox13 {
     echo "Installing NOX w/tutorial files..."
 
@@ -567,7 +567,7 @@ function vm_clean {
 }
 
 function usage {
-    printf 'Usage: %s [-abcdfhkmnprtvwx]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhkmnprtvwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -590,40 +590,46 @@ function usage {
     printf -- ' -t: install o(T)her stuff\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
-    printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
-
+    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
+    printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
+    printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
     exit 2
 }
+
+OF_VERSION=1.0
 
 if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfghkmnoprtvwx' OPTION
+    while getopts 'abcdfhkmnprtvwx03' OPTION
     do
       case $OPTION in
       a)    all;;
       b)    cbench;;
       c)    kernel_clean;;
       d)    vm_clean;;
-      f)    echo -n "OpenFlow version to install? [1.0 or 1.3]: "
-            read ver
-            case $ver in
+      f)    case $OF_VERSION in
             1.0) of;;
             1.3) of13;;
-            *)  echo "Invalid option";;
+            *)  echo "Invalid OpenFlow version $OF_VERSION";;
             esac;;
       h)    usage;;
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
-      o)    nox13;;
       p)    pox;;
       r)    remove_ovs;;
       t)    other;;
       v)    ovs;;
       w)    wireshark;;
-      x)    nox;;
+      x)    case $OF_VERSION in
+            1.0) nox;;
+            1.3) nox13;;
+            *)  echo "Invalid OpenFlow version $OF_VERSION";;
+            esac;;
+      0)    OF_VERSION=1.0;;
+      3)    OF_VERSION=1.3;;
       ?)    usage;;
       esac
     done
