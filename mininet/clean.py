@@ -36,7 +36,7 @@ def cleanup():
     info( "*** Removing junk from /tmp\n" )
     sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
 
-    info( "*** Removing old screen sessions\n" )
+    info( "*** Removing old X11 tunnels\n" )
     cleanUpScreens()
 
     info( "*** Removing excess kernel datapaths\n" )
