@@ -118,7 +118,8 @@ class Node( object ):
         if self.inNamespace:
             opts += 'n'
         # bash -m: enable job control
-        cmd = [ 'mnexec', opts, 'bash', '-m' ]
+        # -s: pass $* to shell, and make process easy to find in ps
+        cmd = [ 'mnexec', opts, 'bash', '-ms', 'mininet:' + self.name ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                             close_fds=True )
         self.stdin = self.shell.stdin

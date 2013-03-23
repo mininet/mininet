@@ -27,11 +27,14 @@ def cleanup():
     info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd udpbwtest'
+    zombies += 'ovs-openflowd udpbwtest mnexec'
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
+
+    # And kill off sudo mnexec
+    sh( 'pkill -9 -f "sudo mnexec"')
 
     info( "*** Removing junk from /tmp\n" )
     sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
