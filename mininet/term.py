@@ -26,9 +26,9 @@ def tunnelX11( node, display=None):
         return display, None
     else:
         # Create a tunnel for the TCP connection
-        port = 6000 + int( float ( screen ) )
+        port = 6000 + int( float( screen ) )
         connection = r'TCP\:%s\:%s' % ( host, port )
-        cmd = [ "socat",  "TCP-LISTEN:%d,fork,reuseaddr" % port,
+        cmd = [ "socat", "TCP-LISTEN:%d,fork,reuseaddr" % port,
                "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
     return 'localhost:' + screen, node.popen( cmd )
 
