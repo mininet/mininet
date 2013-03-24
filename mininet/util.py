@@ -171,27 +171,35 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
-def moveIntfNoRetry( intf, node, printError=False ):
+def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
     """Move interface to node, without retrying.
        intf: string, interface
-       node: Node object
-       printError: if true, print error"""
-    cmd = 'ip link set ' + intf + ' netns ' + repr( node.pid )
-    quietRun( cmd )
-    links = node.cmd( 'ip link show' )
+        dstNode: destination Node
+        srcNode: source Node or None (default) for root ns
+        printError: if true, print error"""
+    intf = str( intf )
+    cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
+    if srcNode:
+        srcNode.cmd( cmd )
+    else:
+        quietRun( cmd )
+    links = dstNode.cmd( 'ip link show' )
     if not ( ' %s:' % intf ) in links:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
-                   ' not successfully moved to ' + node.name + '\n' )
+                   ' not successfully moved to ' + dstNode.name + '\n' )
         return False
     return True
 
-def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
+def moveIntf( intf, dstNode, srcNode=None, printError=False,
+             retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
-       node: Node object
+       dstNode: destination Node
+       srcNode: source Node or None (default) for root ns
        printError: if true, print error"""
-    retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
+    retry( retries, delaySecs, moveIntfNoRetry, intf, dstNode,
+          srcNode=srcNode, printError=printError )
 
 # Support for dumping network
 
