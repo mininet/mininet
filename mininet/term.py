@@ -6,7 +6,6 @@ Requires socat(1) and xterm(1).
 Optionally uses gnome-terminal.
 """
 
-from subprocess import Popen
 from os import environ
 
 from mininet.log import error
