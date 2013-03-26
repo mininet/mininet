@@ -115,8 +115,13 @@ class Node( object ):
         node = cls.outToNode.get( fd )
         return node or cls.inToNode.get( fd )
 
-    # Command support via shell process in namespace
+    def _popen( self, cmd, **params ):
+        """Internal method: spawn and return a process
+           cmd: command to run (list)
+           params: parameters to Popen()"""
+        return Popen( cmd, **params )
 
+    # Command support via shell process in namespace
     def startShell( self ):
         "Start a shell process for running commands"
         if self.shell:
@@ -136,7 +141,7 @@ class Node( object ):
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
         master, slave = pty.openpty()
-        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
+        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
                                   close_fds=False )
         self.stdin = os.fdopen( master )
         self.stdout = self.stdin
@@ -159,7 +164,7 @@ class Node( object ):
                 break
             self.pollOut.poll()
         self.waiting = False
-        self.cmd( 'stty -echo' )
+        self.pid = int( self.cmd( 'stty -echo; echo $$' ) )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -335,6 +340,7 @@ class Node( object ):
         """Execute a command using popen
            returns: out, err, exitcode"""
         popen = self.popen( *args, **kwargs)
+        # Warning: this can fail with large numbers of fds!
         out, err = popen.communicate()
         exitcode = popen.wait()
         return out, err, exitcode
@@ -353,7 +359,7 @@ class Node( object ):
             return max( self.ports.values() ) + 1
         return self.portBase
 
-    def addIntf( self, intf, port=None ):
+    def addIntf( self, intf, port=None, srcNode=None ):
         """Add an interface.
            intf: interface
            port: port number (optional, typically OpenFlow port number)"""
@@ -364,9 +370,9 @@ class Node( object ):
         self.nameToIntf[ intf.name ] = intf
         debug( '\n' )
         debug( 'added intf %s:%d to node %s\n' % ( intf, port, self.name ) )
-        if self.inNamespace:
+        if self.inNamespace or ( srcNode and srcNode.inNamespace ):
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
-            moveIntf( intf.name, self )
+            moveIntf( intf.name, self, srcNode=srcNode )
 
     def defaultIntf( self ):
         "Return interface for lowest port"

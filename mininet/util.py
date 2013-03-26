@@ -145,14 +145,16 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2 ):
+def makeIntfPair( intf1, intf2, node=None ):
     """Make a veth pair connecting intf1 and intf2.
        intf1: string, interface
        intf2: string, interface
-       returns: success boolean"""
+       node: node to run on or None (default)
+       returns: ip link add result"""
+    run = quietRun if node is None else node.cmd
     # Delete any old interfaces with the same names
-    quietRun( 'ip link del ' + intf1 )
-    quietRun( 'ip link del ' + intf2 )
+    run( 'ip link del ' + intf1 )
+    run( 'ip link del ' + intf2 )
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
     cmdOutput = quietRun( cmd )
