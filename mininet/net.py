@@ -156,6 +156,7 @@ class Mininet( object ):
         self.hosts = []
         self.switches = []
         self.controllers = []
+        self.links = []
 
         self.nameToNode = {}  # name to Node (Host/Switch) objects
 
@@ -337,7 +338,9 @@ class Mininet( object ):
         defaults.update( params )
         if not cls:
             cls = self.link
-        return cls( node1, node2, **defaults )
+        link = cls( node1, node2, **defaults )
+        self.links.append( link )
+        return link
 
     def configHosts( self ):
         "Configure a set of hosts."
@@ -477,6 +480,11 @@ class Mininet( object ):
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
+            switch.terminate()
+        info( '\n' )
+        info( '*** Stopping %i links\n' % len( self.links ) )
+        for link in self.links:
+            link.stop()
         info( '\n' )
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:

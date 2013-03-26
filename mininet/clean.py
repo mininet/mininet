@@ -21,6 +21,21 @@ def sh( cmd ):
     info( cmd + '\n' )
     return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
 
+def killprocs( pattern ):
+    "Reliably terminate processes matching a pattern (including args)"
+    sh( 'pkill -9 -f %s' % pattern )
+    # Make sure they are gone
+    while True:
+        try:
+            pids = co( 'pgrep -f %s' % pattern )
+        except:
+            pids = ''
+        if pids:
+            sh( 'pkill -f 9 mininet:' )
+            sleep( .5 )
+        else:
+            break
+
 def cleanup():
     """Clean up junk which might be left over from old runs;
        do fast stuff before slow dp and link removal!"""
@@ -70,17 +85,11 @@ def cleanup():
             sh( "ip link del " + link )
 
     info( "*** Killing stale mininet node processes\n" )
-    sh( 'pkill -9 -f mininet:' )
-    # Make sure they are gone
-    while True:
-        try:
-            pids = co( 'pgrep -f mininet:'.split() )
-        except:
-            pids = ''
-        if pids:
-            sh( 'pkill -f 9 mininet:' )
-            sleep( .5 )
-        else:
-            break
+    killprocs( 'mininet:' )
 
+    info ( "*** Shutting down stale tunnels\n" )
+    killprocs( 'Tunnel=Ethernet' )
+    killprocs( '.ssh/mn')
+    sh( 'rm -f ~/.ssh/mn/*' )
+    
     info( "*** Cleanup complete.\n" )
