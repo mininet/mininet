@@ -80,8 +80,8 @@ class Node( object ):
         # Make sure class actually works
         self.checkSetup()
 
-        self.name = name
-        self.inNamespace = inNamespace
+        self.name = params.get( 'name', name )
+        self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -116,29 +116,28 @@ class Node( object ):
         return node or cls.inToNode.get( fd )
 
     # Command support via shell process in namespace
-
-    def startShell( self ):
+    def startShell( self, mnopts=None ):
         "Start a shell process for running commands"
         if self.shell:
-            error( "%s: shell is already running" )
+            error( "%s: shell is already running\n" % self.name )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
-        opts = '-cd'
+        opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
             opts += 'n'
         # bash -m: enable job control, i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        os.environ[ 'PS1' ] = chr( 127 )
-        cmd = [ 'mnexec', opts, 'bash', '--norc', '-mis', 'mininet:' + self.name ]
+        cmd = [ 'mnexec', opts, 'env',  'PS1=' + chr( 127 ),
+                'bash', '--norc', '-mis', 'mininet:' + self.name ]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
         master, slave = pty.openpty()
-        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
+        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
                                   close_fds=False )
-        self.stdin = os.fdopen( master )
+        self.stdin = os.fdopen( master, 'rw' )
         self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
@@ -161,6 +160,12 @@ class Node( object ):
         self.waiting = False
         self.cmd( 'stty -echo' )
         self.cmd( 'set +m' )
+
+    def _popen( self, cmd, **params ):
+        """Internal method: spawn and return a process
+            cmd: command to run (list)
+            params: parameters to Popen()"""
+        return Popen( cmd, **params )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -206,7 +211,8 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         if self.shell:
-            os.killpg( self.pid, signal.SIGHUP )
+            if self.shell.poll() is None:
+                os.killpg( self.shell.pid, signal.SIGHUP )
         self.cleanup()
 
     def stop( self ):
@@ -251,12 +257,14 @@ class Node( object ):
 
     def sendInt( self, intr=chr( 3 ) ):
         "Interrupt running command."
+        debug( 'sendInt: writing chr(%d)\n' % ord( intr ) )
         self.write( intr )
 
     def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
-           timeoutms: timeout in ms or None to wait indefinitely."""
+           timeoutms: timeout in ms or None to wait indefinitely
+           findPid: look for PID from mnexec -p"""
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         pidre = r'\[\d+\] \d+\r\n'
@@ -282,7 +290,7 @@ class Node( object ):
             data = data.replace( chr( 127 ), '' )
         return data
 
-    def waitOutput( self, verbose=False ):
+    def waitOutput( self, verbose=False, findPid=True ):
         """Wait for a command to complete.
            Completion is signaled by a sentinel character, ASCII(127)
            appearing in the output stream.  Wait for the sentinel and return
@@ -331,18 +339,19 @@ class Node( object ):
             # popen( cmd, arg1, arg2... )
             cmd = list( args )
         # Attach to our namespace  using mnexec -a
-        mncmd = defaults[ 'mncmd' ]
-        del defaults[ 'mncmd' ]
-        cmd = mncmd + cmd
+        cmd = defaults.pop( 'mncmd' ) + cmd
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        return Popen( cmd, **defaults )
+        popen = self._popen( cmd, **defaults )
+        return popen
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
            returns: out, err, exitcode"""
-        popen = self.popen( *args, **kwargs)
+        popen = self.popen( *args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                           **kwargs )
+        # Warning: this can fail with large numbers of fds!
         out, err = popen.communicate()
         exitcode = popen.wait()
         return out, err, exitcode
@@ -361,20 +370,22 @@ class Node( object ):
             return max( self.ports.values() ) + 1
         return self.portBase
 
-    def addIntf( self, intf, port=None ):
+    def addIntf( self, intf, port=None, moveIntfFn=moveIntf ):
         """Add an interface.
            intf: interface
-           port: port number (optional, typically OpenFlow port number)"""
+           port: port number (optional, typically OpenFlow port number)
+           moveIntfFn: function to move interface (optional)"""
         if port is None:
             port = self.newPort()
         self.intfs[ port ] = intf
         self.ports[ intf ] = port
         self.nameToIntf[ intf.name ] = intf
         debug( '\n' )
-        debug( 'added intf %s:%d to node %s\n' % ( intf, port, self.name ) )
+        debug( 'added intf %s (%d) to node %s\n' % (
+                intf, port, self.name ) )
         if self.inNamespace:
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
-            moveIntf( intf.name, self )
+            moveIntfFn( intf.name, self  )
 
     def defaultIntf( self ):
         "Return interface for lowest port"
@@ -1105,7 +1116,8 @@ class OVSSwitch( Switch ):
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
                           '-- set Interface %s ' % intf +
                           'ofport_request=%s ' % self.ports[ intf ]
-                         for intf in self.intfList() if not intf.IP() )
+                         for intf in self.intfList()
+                         if self.ports[ intf ] and not intf.IP() )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
                          for c in controllers )
         if self.listenPort:

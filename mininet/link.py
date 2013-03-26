@@ -32,7 +32,8 @@ class Intf( object ):
 
     "Basic interface object that can configure itself."
 
-    def __init__( self, name, node=None, port=None, link=None, mac=None, **params ):
+    def __init__( self, name, node=None, port=None, link=None,
+                  mac=None, srcNode=None, **params ):
         """name: interface name (e.g. h1-eth0)
            node: owning node (where this intf most likely lives)
            link: parent link if we're part of a link
@@ -188,6 +189,14 @@ class Intf( object ):
         if self.node.inNamespace:
             # Link may have been dumped into root NS
             quietRun( 'ip link del ' + self.name )
+
+    def status( self ):
+        "Return intf status as a string"
+        links, err_, result_ = self.node.pexec( 'ip link show' )
+        if self.name in links:
+            return "OK"
+        else:
+            return "MISSING"
 
     def __repr__( self ):
         return '<%s %s>' % ( self.__class__.__name__, self.name )
@@ -367,16 +376,27 @@ class Link( object ):
            params1: parameters for interface 1
            params2: parameters for interface 2"""
         # This is a bit awkward; it seems that having everything in
-        # params would be more orthogonal, but being able to specify
-        # in-line arguments is more convenient!
-        if port1 is None:
-            port1 = node1.newPort()
-        if port2 is None:
-            port2 = node2.newPort()
+        # params is more orthogonal, but being able to specify
+        # in-line arguments is more convenient! So we support both.
+        if params1 is None:
+            params1 = {}
+        if params2 is None:
+            params2 = {}
+        # Allow passing in params1=params2
+        if params2 is params1:
+            params2 = dict( params1 )
+        if port1 is not None:
+            params1[ 'port' ] = port1
+        if port2 is not None:
+            params2[ 'port' ] = port2
+        if 'port' not in params1:
+            params1[ 'port' ] = node1.newPort()
+        if 'port' not in params2:
+            params2[ 'port' ] = node2.newPort()
         if not intfName1:
-            intfName1 = self.intfName( node1, port1 )
+            intfName1 = self.intfName( node1, params1[ 'port' ] )
         if not intfName2:
-            intfName2 = self.intfName( node2, port2 )
+            intfName2 = self.intfName( node2, params2[ 'port' ] )
 
         self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
 
@@ -384,37 +404,40 @@ class Link( object ):
             cls1 = intf
         if not cls2:
             cls2 = intf
-        if not params1:
-            params1 = {}
-        if not params2:
-            params2 = {}
 
-        intf1 = cls1( name=intfName1, node=node1, port=port1,
+        intf1 = cls1( name=intfName1, node=node1,
                       link=self, mac=addr1, **params1  )
-        intf2 = cls2( name=intfName2, node=node2, port=port2,
+        intf2 = cls2( name=intfName2, node=node2,
                       link=self, mac=addr2, **params2 )
 
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
 
-    @classmethod
-    def intfName( cls, node, n ):
+    def intfName( _self, node, n ):
         "Construct a canonical interface name node-ethN for interface n."
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( cls, intf1, intf2, addr1=None, addr2=None ):
+    def makeIntfPair( _cls, intfname1, intfname2, addr1=None, addr2=None ):
         """Create pair of interfaces
-           intf1: name of interface 1
-           intf2: name of interface 2
-           (override this class method [and possibly delete()]
+           intfname1: name of interface 1
+           intfname2: name of interface 2
+           (override this method [and possibly delete()]
            to change link type)"""
-        makeIntfPair( intf1, intf2, addr1, addr2 )
+        return makeIntfPair( intfname1, intfname2, addr1, addr2 )
 
     def delete( self ):
         "Delete this link"
         self.intf1.delete()
         self.intf2.delete()
+
+    def stop( self ):
+        "Override to stop and clean up link as needed"
+        pass
+
+    def status( self ):
+        "Return link status as a string"
+        return "(%s %s)" % ( self.intf1.status(), self.intf2.status() )
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
@@ -430,4 +453,4 @@ class TCLink( Link ):
                        cls2=TCIntf,
                        addr1=addr1, addr2=addr2,
                        params1=params,
-                       params2=params)
+                       params2=params )
