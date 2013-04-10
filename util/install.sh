@@ -133,8 +133,10 @@ function mn_deps {
 
     # Add sysctl parameters as noted in the INSTALL file to increase kernel
     # limits to support larger setups:
-    sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
-
+    if ! grep Mininet /etc/sysctl.conf; then
+        echo "Adding Mininet sysctl settings"
+        sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
+    fi
     # Load new sysctl settings:
     sudo sysctl -p
 
@@ -165,18 +167,6 @@ function of {
     ./configure
     make
     sudo make install
-
-    # Remove avahi-daemon, which may cause unwanted discovery packets to be
-    # sent during tests, near link status changes:
-    $remove avahi-daemon
-
-    # Disable IPv6.  Add to /etc/modprobe.d/blacklist:
-    if [ "$DIST" = "Ubuntu" ]; then
-        BLACKLIST=/etc/modprobe.d/blacklist.conf
-    else
-        BLACKLIST=/etc/modprobe.d/blacklist
-    fi
-    sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
     cd ~
 }
 
@@ -214,7 +204,7 @@ function of13 {
 function wireshark {
     echo "Installing Wireshark dissector..."
 
-    sudo apt-get install -y wireshark libgtk2.0-dev
+    sudo apt-get install -y wireshark tshark libgtk2.0-dev
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
         # Install newer version
@@ -478,14 +468,38 @@ function cbench {
 }
 
 function other {
-    echo "Doing other setup tasks..."
+    echo "Doing other Mininet VM setup tasks..."
+
+    # Remove avahi-daemon, which may cause unwanted discovery packets to be
+    # sent during tests, near link status changes:
+    echo "Removing avahi-daemon"
+    $remove avahi-daemon
+
+    # was: Disable IPv6.  Add to /etc/modprobe.d/blacklist:
+    #echo "Attempting to disable IPv6"
+    #if [ "$DIST" = "Ubuntu" ]; then
+    #    BLACKLIST=/etc/modprobe.d/blacklist.conf
+    #else
+    #    BLACKLIST=/etc/modprobe.d/blacklist
+    #fi
+    #sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
+
+    # Disable IPv6
+    if ! grep 'disable IPv6' /etc/sysctl.conf; then
+        echo 'Disabling IPv6'
+        echo '
+# Mininet: disable IPv6
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee /etc/sysctl.conf > /dev/null
+    fi
 
     # Enable command auto completion using sudo; modify ~/.bashrc:
     sed -i -e 's|# for examples$|&\ncomplete -cf sudo|' ~/.bashrc
 
-    # Install tcpdump and tshark, cmd-line packet dump tools.  Also install gitk,
+    # Install tcpdump, cmd-line packet dump tool.  Also install gitk,
     # a graphical git history viewer.
-    $install tcpdump tshark gitk
+    $install tcpdump gitk
 
     # Install common text editors
     $install vim nano emacs
