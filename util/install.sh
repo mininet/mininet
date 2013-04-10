@@ -491,7 +491,14 @@ function other {
 # Mininet: disable IPv6
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
-net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee /etc/sysctl.conf > /dev/null
+net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
+    fi
+    # Disabling IPv6 breaks X11 forwarding via ssh
+    line='AddressFamily inet'
+    file='/etc/ssh/sshd_config'
+    echo "Adding $line to $file"
+    if ! grep "$line" $file > /dev/null; then
+        echo "$line" | sudo tee -a $file > /dev/null
     fi
 
     # Enable command auto completion using sudo; modify ~/.bashrc:
