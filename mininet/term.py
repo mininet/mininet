@@ -49,7 +49,7 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
         error( 'invalid terminal type: %s' % term )
         return
     display, tunnel = tunnelX11( node, display )
-    term = node.popen( cmds[ term ] + [ display ] )
+    term = node.popen( cmds[ term ] + [ display, '-e', 'env TERM=ansi bash'] )
     return [ tunnel, term ] if tunnel else [ term ]
 
 def cleanUpScreens():
