@@ -9,10 +9,16 @@ else
   host=$1
 fi
 
-pid=`pgrep -f mininet:$host`
+pid=`ps ax | grep mininet:$host | grep bash | awk '{print $1};'`
+
+if echo $pid | grep -q ' '; then
+  echo "Error: found multiple mininet:$host processes"
+  exit 2
+fi
+
 if [ "$pid" == "" ]; then
   echo "Could not find Mininet host $host"
-  exit 2
+  exit 3
 fi
 
 if [ -z $2 ]; then
