@@ -166,6 +166,14 @@ class Intf( object ):
             # Link may have been dumped into root NS
             quietRun( 'ip link del ' + self.name )
 
+    def status( self ):
+        "Return intf status as a string"
+        links, err_, result_ = self.node.pexec( 'ip link show' )
+        if self.name in links:
+            return "OK"
+        else:
+            return "MISSING"
+
     def __repr__( self ):
         return '<%s %s>' % ( self.__class__.__name__, self.name )
 
@@ -387,6 +395,14 @@ class Link( object ):
         "Delete this link"
         self.intf1.delete()
         self.intf2.delete()
+
+    def stop( self ):
+        "Override to stop and clean up link as needed"
+        pass
+
+    def status( self ):
+        "Return link status as a string"
+        return "(%s %s)" % ( self.intf1.status(), self.intf2.status() )
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
