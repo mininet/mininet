@@ -80,8 +80,8 @@ class Node( object ):
         # Make sure class actually works
         self.checkSetup()
 
-        self.name = name
-        self.inNamespace = inNamespace
+        self.name = params.get( 'name', name )
+        self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -229,7 +229,7 @@ class Node( object ):
            args: command and arguments, or string
            printPid: print command's PID?"""
         assert not self.waiting
-        printPid = kwargs.get( 'printPid', True )
+        printPid = kwargs.get( 'printPid', False )
         # Allow sendCmd( [ list ] )
         if len( args ) == 1 and type( args[ 0 ] ) is list:
             cmd = args[ 0 ]
@@ -260,7 +260,8 @@ class Node( object ):
     def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
-           timeoutms: timeout in ms or None to wait indefinitely."""
+           timeoutms: timeout in ms or None to wait indefinitely
+           findPid: look for PID from mnexec -p"""
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
@@ -279,7 +280,7 @@ class Node( object ):
             data = data.replace( chr( 127 ), '' )
         return data
 
-    def waitOutput( self, verbose=False ):
+    def waitOutput( self, verbose=False, findPid=True ):
         """Wait for a command to complete.
            Completion is signaled by a sentinel character, ASCII(127)
            appearing in the output stream.  Wait for the sentinel and return
@@ -334,7 +335,10 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        return Popen( cmd, **defaults )
+        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
+        popen = self._popen( cmd, **defaults )
+        signal.signal( signal.SIGINT, old )
+        return popen
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
