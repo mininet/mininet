@@ -75,7 +75,7 @@ class CLI( Cmd ):
                 for node in self.mn.values():
                     while node.waiting:
                         node.sendInt()
-                        node.monitor()
+                        node.waitOutput()
                 if self.isatty():
                     quietRun( 'stty echo sane intr "^C"' )
                 self.cmdloop()
@@ -331,6 +331,11 @@ class CLI( Cmd ):
         elapsed = time.time() - start
         self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
+    def do_links( self, line ):
+        "Report on links"
+        for link in self.mn.links:
+            print link, link.status()
+
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
         Overridden to run shell commands when a node is the first CLI argument.
@@ -369,8 +374,14 @@ class CLI( Cmd ):
         bothPoller.register( node.stdout, POLLIN )
         if self.isatty():
             # Buffer by character, so that interactive
-            # commands sort of work
+            # commands sort of work, and disable interrupts
             quietRun( 'stty -icanon min 1' )
+        # For local nodes, we need the pty to forward the
+        # interrupt to the shell, but for remote nodes we
+        # DON'T want to send an interrupt to ssh, because
+        # that will cause the connection to die.
+        if hasattr( node, 'server' ):
+            quietRun( [ 'stty', 'intr', ''] )
         while True:
             try:
                 bothPoller.poll()
@@ -394,6 +405,9 @@ class CLI( Cmd ):
                 # it's possible to interrupt ourselves after we've
                 # read data but before it has been printed.
                 node.sendInt()
+        if self.isatty():
+            quietRun( 'stty intr "^C"')
+
 
 
 # Helper functions
