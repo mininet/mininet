@@ -373,7 +373,8 @@ class Node( object ):
         self.ports[ intf ] = port
         self.nameToIntf[ intf.name ] = intf
         debug( '\n' )
-        debug( 'added intf %s:%d to node %s\n' % ( intf, port, self.name ) )
+        debug( 'added intf %s (%d) to node %s srcNode %s\n' % (
+                intf, port, self.name, srcNode ) )
         if self.inNamespace or ( srcNode and srcNode.inNamespace ):
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
             moveIntf( intf.name, self, srcNode=srcNode )
