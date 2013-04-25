@@ -107,20 +107,26 @@ class Node( object ):
 
     # Command support via shell process in namespace
 
+    def _popen( self, *args, **kwargs ):
+        "Internal wrapper for Popen"
+        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
+        result = Popen( *args, **kwargs )
+        signal.signal( signal.SIGINT, old )
+        return result
+
     def startShell( self ):
         "Start a shell process for running commands"
         if self.shell:
             error( "%s: shell is already running" )
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace
-        opts = '-cdp'
-        if self.inNamespace:
-            opts += 'n'
         # bash -m: enable job control
         # -s: pass $* to shell, and make process easy to find in ps
-        cmd = [ 'mnexec', opts, 'bash', '-ms', 'mininet:' + self.name ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+        cmd = [ 'bash', '-ms', 'mininet:' + self.name ]
+        if self.inNamespace:
+            quietRun( 'ip netns del ' + self.name )
+            errFail( 'ip netns add ' + self.name )
+            cmd = [ 'ip', 'netns', 'exec', self.name ] + cmd
+        self.shell = self._popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                             close_fds=True )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
@@ -144,6 +150,7 @@ class Node( object ):
             for intfName in self.intfNames():
                 if self.name in intfName:
                     quietRun( 'ip link del ' + intfName )
+        errRun( 'ip netns del ' + self.name )
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -312,7 +319,7 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        return Popen( cmd, **defaults )
+        return self._popen( cmd, **defaults )
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
@@ -346,10 +353,8 @@ class Node( object ):
         self.ports[ intf ] = port
         self.nameToIntf[ intf.name ] = intf
         debug( '\n' )
+        assert intf.name in self.cmd( 'ip link show' )
         debug( 'added intf %s:%d to node %s\n' % ( intf, port, self.name ) )
-        if self.inNamespace:
-            debug( 'moving', intf, 'into namespace for', self.name, '\n' )
-            moveIntf( intf.name, self )
 
     def defaultIntf( self ):
         "Return interface for lowest port"

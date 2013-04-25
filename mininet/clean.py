@@ -27,7 +27,7 @@ def cleanup():
     info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd udpbwtest mnexec'
+    zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec'
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
@@ -59,5 +59,13 @@ def cleanup():
     for link in links:
         if link != '':
             sh( "ip link del " + link )
+
+    info( "*** Killing stale mininet processes\n" )
+    sh( 'pkill -9 -f mininet')
+    info( "*** Removing stale namespaces\n" )
+    nses = sh( "ip netns list" ).split( '\n' )
+    for ns in nses:
+        if ns != '':
+            sh( "ip netns del " + ns )
 
     info( "*** Cleanup complete.\n" )

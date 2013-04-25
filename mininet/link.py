@@ -347,7 +347,7 @@ class Link( object ):
         if not intfName2:
             intfName2 = self.intfName( node2, port2 )
 
-        self.makeIntfPair( intfName1, intfName2 )
+        self.makeIntfPair( intfName1, intfName2, node1, node2 )
 
         if not cls1:
             cls1 = intf
@@ -372,13 +372,21 @@ class Link( object ):
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( cls, intf1, intf2 ):
+    def makeIntfPair( cls, intf1, intf2, node1=None, node2=None ):
         """Create pair of interfaces
            intf1: name of interface 1
            intf2: name of interface 2
            (override this class method [and possibly delete()]
            to change link type)"""
-        makeIntfPair( intf1, intf2  )
+        cmd = 'ip link add %s type veth peer name %s netns ' % ( intf1, intf2 )
+        if node2.inNamespace:
+            cmd += node2.name
+        else:
+            cmd += '1'
+        if node1:
+            node1.cmd( cmd )
+        else:
+            errFail( cmd )
 
     def delete( self ):
         "Delete this link"
