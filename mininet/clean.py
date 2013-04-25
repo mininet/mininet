@@ -10,22 +10,28 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT, check_output as co
+from sys import stdout, exit
+from time import sleep
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
 
 def sh( cmd ):
-    "Print a command and send it to the shell"
+    "Run a command in the shell and return non-empty output lines"
     info( cmd + '\n' )
-    return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+    output = ( Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE )
+            .communicate()[ 0 ]
+            .strip()
+            .split( '\n' ) )
+    return [ s for s in output if s ]
 
 def cleanup():
     """Clean up junk which might be left over from old runs;
        do fast stuff before slow dp and link removal!"""
 
-    info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
-         "\n")
+    info( "*** Removing excess "
+          "controllers/ofprotocols/ofdatapaths/pings/noxes\n" )
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
     zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec'
     # Note: real zombie processes can't actually be killed, since they
@@ -43,29 +49,43 @@ def cleanup():
     cleanUpScreens()
 
     info( "*** Removing excess kernel datapaths\n" )
-    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).split( '\n' )
+    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" )
     for dp in dps:
-        if dp != '':
-            sh( 'dpctl deldp ' + dp )
+        sh( 'dpctl deldp ' + dp )
 
-    info( "***  Removing OVS datapaths" )
-    dps = sh("ovs-vsctl list-br").split( '\n' )
+    info( "*** Removing OVS datapaths\n" )
+    dps = sh("ovs-vsctl list-br")
     for dp in dps:
-        if dp:
-            sh( 'ovs-vsctl del-br ' + dp )
+        sh( 'ovs-vsctl del-br ' + dp )
+    if co( 'ovs-vsctl list-br', shell=True ):
+        raise Excpetion( "Error: could not remove all OVS datapaths" )
 
     info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" )
     for link in links:
-        if link != '':
-            sh( "ip link del " + link )
+        sh( "ip link del " + link )
+    if sh( "ip link show | egrep -o '(\w+-eth\w+)'" ):
+        raise Exception( "Error could not remove stale links")
 
     info( "*** Killing stale mininet processes\n" )
-    sh( 'pkill -9 -f mininet')
+    sh( 'pkill -9 -f mininet' )
+    # Make sure they are gone
+    while True:
+        try:
+            pids = co( 'pgrep -f mininet'.split() )
+        except:
+            pids = ''
+        if pids:
+            sh( 'pkill -f 9 mininet' )
+            sleep( .5 )
+        else:
+            break
+
     info( "*** Removing stale namespaces\n" )
-    nses = sh( "ip netns list" ).split( '\n' )
+    nses = sh( "ip netns list" )
     for ns in nses:
-        if ns != '':
-            sh( "ip netns del " + ns )
+        sh( "ip netns del " + ns )
+    if co( "ip netns list", shell=True ):
+        raise Exception( "Error: could not remove stale namespaces" )
 
     info( "*** Cleanup complete.\n" )
