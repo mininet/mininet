@@ -50,6 +50,7 @@ import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
 from sys import stdout
+from time import sleep
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -147,12 +148,14 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
-        if not self.inNamespace:
-            for intfName in self.intfNames():
-                if self.name in intfName:
-                    quietRun( 'ip link del ' + intfName )
-        errRun( 'ip netns del ' + self.name )
-        self.shell = None
+        if self.shell:
+            self.shell.terminate()
+            self.shell.wait()
+            self.shell = None
+        if self.inNamespace:
+            # Note: this will only work if there are no other
+            # processes running in namespaces, but we'll do it anyway
+            quietRun( 'ip netns del ' + self.name )
 
     # Subshell I/O, commands and control
 
