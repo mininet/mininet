@@ -9,18 +9,6 @@ else
   host=$1
 fi
 
-pid=`ps ax | grep mininet:$host | grep bash | awk '{print $1};'`
-
-if echo $pid | grep -q ' '; then
-  echo "Error: found multiple mininet:$host processes"
-  exit 2
-fi
-
-if [ "$pid" == "" ]; then
-  echo "Could not find Mininet host $host"
-  exit 3
-fi
-
 if [ -z $2 ]; then
   cmd='bash'
 else
@@ -28,9 +16,11 @@ else
   cmd=$*
 fi
 
+# We could do this in this script, and we may want to eventually,
+# but for now we'll use mnexec to attach to the host's cgroup
 cgroup=/sys/fs/cgroup/cpu/$host
 if [ -d "$cgroup" ]; then
   cg="-g $host"
 fi
 
-exec sudo mnexec -a $pid $cg $cmd
+exec sudo ip netns exec $host mnexec $cg $cmd
