@@ -97,7 +97,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link, Intf
-from mininet.util import quietRun, fixLimits, numCores, ensureRoot
+from mininet.util import quietRun, errFail, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -375,26 +375,34 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
+        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
+        for controller in self.controllers:
+            info( controller.name + ' ' )
+            controller.stop()
         info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop( deleteIntfs=False )
         info( '\n' )
-        info( '*** Removing %i links\n' % len( self.links ) )
+        info( '*** Removing links\n' )
         for link in self.links:
             info( '.' )
             link.delete()
+        info( '\n*** Terminating switches\n' )
+        for switch in self.switches:
+            info( '.' )
+            switch.terminate()
         info( '\n' )
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
         info( '\n' )
-        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
-        for controller in self.controllers:
-            info( controller.name + ' ' )
-            controller.stop()
+        nses = quietRun( 'ip netns list').strip().split()
+        info( '*** Removing namespaces' )
+        for ns in nses:
+            errFail( 'ip netns del ' + ns )
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
