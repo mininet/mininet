@@ -14,7 +14,7 @@ from subprocess import Popen, PIPE, STDOUT, check_output as co
 from sys import stdout, exit
 from time import sleep
 
-from mininet.log import info
+from mininet.log import info, error
 from mininet.term import cleanUpScreens
 
 def sh( cmd ):
@@ -67,16 +67,16 @@ def cleanup():
     if sh( "ip link show | egrep -o '(\w+-eth\w+)'" ):
         raise Exception( "Error could not remove stale links")
 
-    info( "*** Killing stale mininet processes\n" )
-    sh( 'pkill -9 -f mininet' )
+    info( "*** Killing stale mininet node processes\n" )
+    sh( 'pkill -9 -f mininet:' )
     # Make sure they are gone
     while True:
         try:
-            pids = co( 'pgrep -f mininet'.split() )
+            pids = co( 'pgrep -f mininet:'.split() )
         except:
             pids = ''
         if pids:
-            sh( 'pkill -f 9 mininet' )
+            sh( 'pkill -f 9 mininet:' )
             sleep( .5 )
         else:
             break
@@ -86,6 +86,7 @@ def cleanup():
     for ns in nses:
         sh( "ip netns del " + ns )
     if co( "ip netns list", shell=True ):
-        raise Exception( "Error: could not remove stale namespaces" )
+        error( "Error: could not remove all namespaces - exiting\n" )
+        exit( 1 )
 
     info( "*** Cleanup complete.\n" )
