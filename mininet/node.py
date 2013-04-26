@@ -49,6 +49,7 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
+from sys import stdout
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -405,6 +406,7 @@ class Node( object ):
         for intf in self.intfs.values():
             intf.delete()
             info( '.' )
+            stdout.flush()
 
     # Routing support
 
@@ -840,11 +842,12 @@ class UserSwitch( Switch ):
                   ' --fail=closed ' + self.opts +
                   ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Stop OpenFlow reference user datapath."
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 
 class OVSLegacyKernelSwitch( Switch ):
@@ -891,11 +894,12 @@ class OVSLegacyKernelSwitch( Switch ):
                   ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 
 class OVSSwitch( Switch ):
@@ -974,10 +978,11 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
 
-    def stop( self ):
-        "Terminate OVS switch."
+    def stop( self, deleteIntfs=True ):
+        "Stop OVS switch."
         self.cmd( 'ovs-vsctl del-br', self )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 OVSKernelSwitch = OVSSwitch
 

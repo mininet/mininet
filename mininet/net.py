@@ -152,7 +152,8 @@ class Mininet( object ):
         self.hosts = []
         self.switches = []
         self.controllers = []
-
+        self.links = []
+        
         self.nameToNode = {}  # name to Node (Host/Switch) objects
 
         self.terms = []  # list of spawned xterm processes
@@ -252,7 +253,9 @@ class Mininet( object ):
         defaults.update( params )
         if not cls:
             cls = self.link
-        return cls( node1, node2, **defaults )
+        link = cls( node1, node2, **defaults )
+        self.links.append( link )
+        return link
 
     def configHosts( self ):
         "Configure a set of hosts."
@@ -372,15 +375,21 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
-        for host in self.hosts:
-            info( host.name + ' ' )
-            host.terminate()
         info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ' )
-            switch.stop()
+            switch.stop( deleteIntfs=False )
+        info( '\n' )
+        info( '*** Removing %i links\n' % len( self.links ) )
+        for link in self.links:
+            info( '.' )
+            link.delete()
+        info( '\n' )
+        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
+        for host in self.hosts:
+            info( host.name + ' ' )
+            host.terminate()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
