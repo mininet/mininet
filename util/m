@@ -20,7 +20,7 @@ fi
 # but for now we'll use mnexec to attach to the host's cgroup
 cgroup=/sys/fs/cgroup/cpu/$host
 if [ -d "$cgroup" ]; then
-  cg="-g $host"
+  cg="mnexec -g $host"
 fi
 
-exec sudo ip netns exec $host mnexec $cg $cmd
+exec sudo ip netns exec $host $cg $cmd
