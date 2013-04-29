@@ -924,8 +924,8 @@ class OVSSwitch( Switch ):
             exit( 1 )
 
     def dpctl( self, *args ):
-        "Run ovs-dpctl command"
-        return self.cmd( 'ovs-dpctl', args[ 0 ], self, *args[ 1: ] )
+        "Run ovs-ofctl command"
+        return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
 
     @staticmethod
     def TCReapply( intf ):

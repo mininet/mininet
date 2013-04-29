@@ -289,7 +289,7 @@ class CLI( Cmd ):
         self.inputFile = None
 
     def do_dpctl( self, line ):
-        "Run dpctl command on all switches."
+        "Run dpctl (or ovs-ofctl) command on all switches."
         args = line.split()
         if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
