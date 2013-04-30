@@ -42,6 +42,10 @@ We have several options including OF capsulator, socat, vxlan, VDE, l2tp, etc.
 It's not clear what the best one is.  Probably ssh tunnels if we're going to
 have ssh connections to the mininet servers.
 
+How are tunnels destroyed?
+
+They are destroyed when the links are deleted in Mininet.stop()
+
 How does RemoteNode.popen() work?
 
 It could work in a variety of ways. One way would be to create a shared ssh
@@ -60,6 +64,7 @@ We don't currently multiplex the ssh connections.
 from mininet.node import Node, Host, OVSSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.net import Mininet
+from mininet.topo import LinearTopo
 from mininet.util import quietRun, makeIntfPair
 from mininet.cli import CLI
 from mininet.log import setLogLevel, debug
@@ -86,15 +91,6 @@ class RemoteNode( Node ):
         self.user = user
         Node.__init__( self, name, **kwargs )
 
-    def cleanup( self ):
-        "Help python collect its garbage."
-        if not self.inNamespace:
-            for intfName in self.intfNames():
-                if self.name in intfName:
-                    # Warning: this can fail with many fds!!!!
-                    self.pexec( 'ip link del ' + intfName )
-        self.shell = None
-
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
@@ -113,8 +109,11 @@ class RemoteNode( Node ):
         signal( SIGINT, old )
         return popen
 
+
 class RemoteHost( RemoteNode ):
+
     "A RemoteHost is simply a RemoteNode"
+    
     pass
 
 
@@ -164,7 +163,6 @@ class RemoteLink( Link ):
         # For now, tunnels must be in the root namespace
         # In the future we can create them in the root NS and then
         # move them into the node NSes as necessary.
-        
         assert not node1.inNamespace and not node2.inNamespace
         # 1. Create tap interfaces
         for node in node1, node2:
@@ -206,28 +204,14 @@ class RemoteLink( Link ):
             status = "OK"
         return "%s %s" % ( Link.status( self ), status )
 
-"""
-Notes:
 
-ip tuntap add dev s1-tap0 mode tap
-    ip link set tap0 name s1-tap0
-
-    ssh -v -o Tunnel=Ethernet -w 0:0 openflow@ubuntu12
-
-Hmm... how do we shut down the ssh tunnel??!?!! arrgh.....
-we could run it in the background on the node and rely on sighup perhaps???
-
-Or we could rely on the destructor being called and use weak references
-to break the reference cycle.... (probably the weak ref would be from the
-Link to its interfaces, since the Intfs are the things which are going away...
-or we could put the Links in a list in the Mininet object....)
-
-Or we could explicitly keep track of them and delete them in Mininet()
-
-"""
-
+# It's a bit annoying that we duplicate code here.
+# We would like RemoteOVSSwitch to be a RemoteNode() *and*
+# an OVSSwitch, but it seems wise to avoid multiple inheritance
+# madness or other trickery.
 
 class RemoteOVSSwitch( OVSSwitch ):
+
     "Remote instance of Open vSwitch"
     
     def __init__( self, name, failMode='secure', server="localhost",
@@ -246,10 +230,6 @@ class RemoteOVSSwitch( OVSSwitch ):
         OVSSwitch.startShell( self, *args, **kwargs )
         self.pid = int( self.cmd( 'echo $$' ) )
 
-    def cleanup( self ):
-        "Help python collect its garbage."
-        self.shell = None
-
     def _popen( self, cmd, **params):
         """Spawn a process on a remote node
             cmd: remote command to run (list)
@@ -261,9 +241,15 @@ class RemoteOVSSwitch( OVSSwitch ):
         signal( SIGINT, old )
         return popen
 
-# Test remote Node classes
+
+# High-level/Topo API example
+#
+# This shows how existing Mininet topologies may be used in cluster
+# mode by creating node placement functions and a controller which
+# can be accessed remotely.
 
 remoteHosts = [ 'h2' ]
+remoteSwitches = [ 's2' ]
 remoteServer = 'ubuntu12'
 
 def HostPlacer( name, *args, **params ):
@@ -274,19 +260,33 @@ def HostPlacer( name, *args, **params ):
         return Host( name, *args, **params )
 
 def SwitchPlacer( name, *args, **params ):
-    "Custom Host() constructor which places hosts on servers"
+    "Custom Switch() constructor which places switches on servers"
     if name in remoteSwitches:
-        return RemoteSwitch( name, *args, server=remoteServer, **params )
+        return RemoteOVSSwitch( name, *args, server=remoteServer, **params )
     else:
         return OVSSwitch( name, *args, **params )
 
-def testRemoteNet1():
-    "Test remote Node classes using topology"
+def ClusterController( *args, **kwargs):
+    "Custom Controller() constructor which updates its eth0 IP address"
+    controller = Controller( *args, **kwargs )
+    # Find out its IP address so that cluster switches can connect
+    Intf( 'eth0', node=controller ).updateIP()
+    return controller
+
+def testRemoteTopo():
+    "Test remote Node classes using Mininet()/Topo() API"
     topo = LinearTopo( 2 )
-    net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer )
+    net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
+                  link=RemoteLink, controller=ClusterController )
     net.start()
     net.pingAll()
     net.stop()
+
+
+# Manual topology creation with net.add*()
+#
+# This shows how node options may be used to manage
+# cluster placement using the net.add*() API
 
 def testRemoteNet():
     "Test remote Node classes"
@@ -295,8 +295,8 @@ def testRemoteNet():
     rswitch = dict( cls=RemoteOVSSwitch, server='ubuntu12' )
     net = Mininet( link=RemoteLink )
     c0 = net.addController( 'c0' )
-    eth0 = Intf( 'eth0', node=c0 )
-    eth0.updateIP()
+    # Make sure controller knows its non-loopback address
+    Intf( 'eth0', node=c0 ).updateIP()
     print "*** Creating local h1"
     h1 = net.addHost( 'h1' )
     print "*** Creating remote h2"
@@ -320,4 +320,5 @@ def testRemoteNet():
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
+    testRemoteTopo()
     testRemoteNet()
