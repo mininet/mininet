@@ -76,25 +76,26 @@ import pty
 import os
 from time import sleep
 
-class RemoteNode( Node ):
+class RemoteMixin( object ):
 
-    "A RemoteNode is a Node which is running on a remote server."
+    "A mix-in class to turn local nodes into remote nodes"
 
-    def __init__( self, name, server="ubuntu12", user=None, **kwargs):
-        """Instantiate a RemoteNode
-           remoteHost: name of remote host
+    def __init__( self, name, server=None, user=None, **kwargs):
+        """Instantiate a remote node
+           name: name of remote node
            **kwargs: see Node()"""
         self.remote = True
+        assert server
         self.server = server
         if not user:
             user = quietRun( 'who am i' ).split()[ 0 ]
         self.user = user
-        Node.__init__( self, name, **kwargs )
+        super( RemoteMixin, self).__init__( name, **kwargs )
 
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
-        Node.startShell( self, *args, **kwargs )
+        super( RemoteMixin, self ).startShell( *args, **kwargs )
         self.pid = int( self.cmd( 'echo $$' ) )
 
     def _popen( self, cmd, **params):
@@ -105,15 +106,23 @@ class RemoteNode( Node ):
         cmd = [ 'ssh', '-tt', '%s@%s' % ( self.user, self.server),
                'sudo', '-E' ] + cmd
         old = signal( SIGINT, SIG_IGN )
-        popen = Node._popen( self, cmd, **params )
+        popen = super( RemoteMixin, self )._popen( cmd, **params )
         signal( SIGINT, old )
         return popen
 
 
-class RemoteHost( RemoteNode ):
+class RemoteNode( RemoteMixin, Node ):
+    "A node on a remote server"
+    pass
 
+
+class RemoteHost( RemoteNode ):
     "A RemoteHost is simply a RemoteNode"
-    
+    pass
+
+
+class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
+    "Remote instance of Open vSwitch"
     pass
 
 
@@ -203,43 +212,6 @@ class RemoteLink( Link ):
         else:
             status = "OK"
         return "%s %s" % ( Link.status( self ), status )
-
-
-# It's a bit annoying that we duplicate code here.
-# We would like RemoteOVSSwitch to be a RemoteNode() *and*
-# an OVSSwitch, but it seems wise to avoid multiple inheritance
-# madness or other trickery.
-
-class RemoteOVSSwitch( OVSSwitch ):
-
-    "Remote instance of Open vSwitch"
-    
-    def __init__( self, name, failMode='secure', server="localhost",
-                 user=None, **kwargs):
-        """Instantiate a RemoteNode
-            remoteHost: name of remote host
-            **kwargs: see Node()"""
-        self.remote = True
-        self.server = server
-        if not user:
-            self.user = quietRun( 'who am i' ).split()[ 0 ]
-        OVSSwitch.__init__( self, name, failMode=failMode, **kwargs )
-
-    def startShell( self, *args, **kwargs ):
-        "startShell that sets remote PID"
-        OVSSwitch.startShell( self, *args, **kwargs )
-        self.pid = int( self.cmd( 'echo $$' ) )
-
-    def _popen( self, cmd, **params):
-        """Spawn a process on a remote node
-            cmd: remote command to run (list)
-            **params: parameters to Popen()
-            returns: Popen() object"""
-        cmd = [ 'ssh', '-tt', '%s@%s' % ( self.user, self.server), 'sudo', '-E' ] + cmd
-        old = signal( SIGINT, SIG_IGN )
-        popen = Node._popen( self, cmd, **params )
-        signal( SIGINT, old )
-        return popen
 
 
 # High-level/Topo API example
