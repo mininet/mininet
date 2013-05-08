@@ -125,7 +125,7 @@ class Node( object ):
     def startShell( self ):
         "Start a shell process for running commands"
         if self.shell:
-            error( "%s: shell is already running" )
+            error( "%s: shell is already running\n" % self.name )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
