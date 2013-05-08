@@ -65,9 +65,10 @@ from mininet.node import Node, Host, OVSSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
-from mininet.util import quietRun, makeIntfPair
+from mininet.topolib import TreeTopo
+from mininet.util import quietRun, makeIntfPair, errRun
 from mininet.cli import CLI
-from mininet.log import setLogLevel, debug
+from mininet.log import setLogLevel, debug, info
 
 from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
@@ -75,26 +76,45 @@ import select
 import pty
 import os
 from time import sleep
+from random import randrange
+
+
+# BL note: so little code is required for remote nodes,
+# we will probably just want to update the main Node()
+# class to enable it for remote access! However, there
+# are a large number of potential failure conditions with
+# remote nodes which we may want to detect and handle.
+# Another interesting point is that we could put everything
+# in a mix-in class and easily add cluster mode to 2.0.
 
 class RemoteMixin( object ):
 
     "A mix-in class to turn local nodes into remote nodes"
 
-    def __init__( self, name, server=None, user=None, **kwargs):
+    def __init__( self, name, server=None, user=None, controlPath=None,
+                 delayShell=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
+           server: remote server (optional)
+           user: user on remote server (optional)
+           controlPath: ssh control path to server (optional)
+           delayShell: delay calling startShell()
            **kwargs: see Node()"""
-        self.remote = True
-        assert server
         self.server = server
-        if not user:
+        if server and not user:
             user = quietRun( 'who am i' ).split()[ 0 ]
         self.user = user
+        self.controlPath = controlPath
+        self.delayShell = delayShell
         super( RemoteMixin, self).__init__( name, **kwargs )
 
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
+        if self.delayShell:
+            # Defer starting shell to wait for placement
+            self.delayShell = False
+            return
         super( RemoteMixin, self ).startShell( *args, **kwargs )
         self.pid = int( self.cmd( 'echo $$' ) )
 
@@ -103,8 +123,14 @@ class RemoteMixin( object ):
             cmd: remote command to run (list)
             **params: parameters to Popen()
             returns: Popen() object"""
-        cmd = [ 'ssh', '-tt', '%s@%s' % ( self.user, self.server),
-               'sudo', '-E' ] + cmd
+        if self.user and self.server and self.server != 'localhost':
+            if self.controlPath:
+                cmd = [ 'ssh', '-tt', '-S', self.controlPath,
+                        '%s@%s' % ( self.user, self.server),
+                       'sudo', '-E' ] + cmd
+            else:
+                cmd = [ 'ssh', '-tt', '%s@%s' % ( self.user, self.server),
+                       'sudo', '-E' ] + cmd
         old = signal( SIGINT, SIG_IGN )
         popen = super( RemoteMixin, self )._popen( cmd, **params )
         signal( SIGINT, old )
@@ -125,6 +151,15 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     "Remote instance of Open vSwitch"
     pass
 
+
+# RemoteController should really be renamed ExternalController
+class RController( RemoteMixin, Controller ):
+    "Remote instance of Controller()"
+    def start( *args, **kwargs ):
+        "Start and update IP address"
+        print "UPDATING IP ADDRESS"
+        Intf( 'eth0', node=self ).updateIP()
+        super( RController, self ).start( *args, **kwargs )
 
 class RemoteLink( Link ):
 
@@ -184,7 +219,8 @@ class RemoteLink( Link ):
             node.cmd( cmd )
             assert 'tap9' in node.cmd( 'ip link show' )
         # 2. Create ssh tunnel between tap interfaces
-        cmd = [ 'ssh', '-o', 'Tunnel=Ethernet', '-w', '9:9',
+        # -n: close stdin
+        cmd = [ 'ssh', '-n', '-o', 'Tunnel=Ethernet', '-w', '9:9',
                  '%s@%s' %  ( node2.user, node2.server ), 'echo a' ]
         self.cmd = cmd
         old = signal( SIGINT, SIG_IGN )
@@ -214,45 +250,193 @@ class RemoteLink( Link ):
         return "%s %s" % ( Link.status( self ), status )
 
 
-# High-level/Topo API example
-#
-# This shows how existing Mininet topologies may be used in cluster
-# mode by creating node placement functions and a controller which
-# can be accessed remotely.
 
-remoteHosts = [ 'h2' ]
-remoteSwitches = [ 's2' ]
-remoteServer = 'ubuntu12'
+# Some simple placement algorithms for MininetCluster
 
-def HostPlacer( name, *args, **params ):
-    "Custom Host() constructor which places hosts on servers"
-    if name in remoteHosts:
-        return RemoteHost( name, *args, server=remoteServer, **params )
-    else:
-        return Host( name, *args, **params )
+class Placer( object ):
+    "Node placement algorithm for MininetCluster"
+    
+    def __init__( self, servers=None, nodes=None, hosts=None,
+                 switches=None, controllers=None ):
+        """Initialize placement object
+           servers: list of servers
+           nodes: list of all nodes
+           hosts: list of hosts
+           switches: list of switches
+           controllers: list of controllers
+           (all arguments are optional)"""
+        self.servers = servers or []
+        self.nodes = nodes or []
+        self.hosts = hosts or []
+        self.switches = switches or []
+        self.controllers = controllers or []
+    
+    def place( self, node ):
+        "Return server for a given node"
+        return 'localhost'
 
-def SwitchPlacer( name, *args, **params ):
-    "Custom Switch() constructor which places switches on servers"
-    if name in remoteSwitches:
-        return RemoteOVSSwitch( name, *args, server=remoteServer, **params )
-    else:
-        return OVSSwitch( name, *args, **params )
 
-def ClusterController( *args, **kwargs):
-    "Custom Controller() constructor which updates its eth0 IP address"
-    controller = Controller( *args, **kwargs )
-    # Find out its IP address so that cluster switches can connect
-    Intf( 'eth0', node=controller ).updateIP()
-    return controller
+class RandomPlacer( Placer ):
+    "Random placement"
+    def place( self, nodename ):
+        """Random placement function
+            nodename: node name"""
+        # This may be slow with lots of servers
+        return self.servers[ randrange( 0, len( self.servers ) ) ]
 
-def testRemoteTopo():
-    "Test remote Node classes using Mininet()/Topo() API"
-    topo = LinearTopo( 2 )
-    net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
-                  link=RemoteLink, controller=ClusterController )
-    net.start()
-    net.pingAll()
-    net.stop()
+
+class RoundRobinPlacer( Placer ):
+    "Round-robin placement"
+    
+    def __init__( self, *args, **kwargs ):
+        Placer.__init__( self, *args, **kwargs )
+        next = 0
+
+    def place( self, nodename ):
+        """Round-robin placement function
+            nodename: node name"""
+        # This may be slow with lots of servers
+        server = self.servers[ self.next ]
+        self.next = ( self.next + 1 ) % len( net.servers )
+        return server
+
+class BinPlacer( Placer ):
+    "Placement into evenly-sized bins"
+
+    def __init__( self, *args, **kwargs ):
+        Placer.__init__( self, *args, **kwargs )
+        # Calculate bin sizes
+        scount = len( self.servers )
+        self.hbin = max( int( len( self.hosts ) / scount ), 1 )
+        self.sbin = max( int( len( self.switches ) / scount ), 1 )
+        self.cbin = max( int( len( self.controllers ) / scount ) , 1 )
+        print "scount", scount
+        print "bins:", self.hbin, self.sbin, self.cbin
+        # Dicts for easy lookup
+        self.hdict = { h: True for h in self.hosts }
+        self.sdict = { s: True for s in self.switches }
+        self.cdict = { c: True for c in self.controllers }
+        self.hind, self.sind, self.cind = 0, 0, 0
+    
+    def place( self, nodename ):
+        """Simple placement algorithm:
+            place nodes into evenly sized bins"""
+        # Place nodes into bins
+        if nodename in self.hdict:
+            server = self.servers[ self.hind / self.hbin ]
+            self.hind += 1
+        elif nodename in self.sdict:
+            server = self.servers[ self.sind / self.sbin ]
+            self.sind += 1
+        elif nodename in self.cdict:
+            server = self.servers[ self.cind / self.cbin ]
+            self.cind += 1
+        else:
+            info( 'warning: unknown node', nodename )
+            server = servers[ 0 ]
+        return server
+
+
+
+# The MininetCluster class is not strictly necessary.
+# However, it has several purposes:
+# 1. To set up ssh connection sharing/multiplexing
+# 2. To pre-flight the system so that everything is more likely to work
+# 3. To allow connection/connectivity monitoring
+# 4. To support pluggable placement algorithms
+
+class MininetCluster( Mininet ):
+
+    "Cluster-enhanced version of Mininet class"
+
+    def __init__( self, *args, **kwargs ):
+        """servers: a list of servers to use (note: include
+           localhost or None to use local system as well)
+           placement: f( servers, nodename ) -> server"""
+        params = { 'host': RemoteHost,
+                   'switch': RemoteOVSSwitch,
+                   'controller': ClusterController,
+                   'link': RemoteLink }
+        params.update( kwargs )
+        self.servers = params.pop( 'servers', [] )
+        self.user = params.pop( 'user', None )
+        if self.servers and not self.user:
+            self.user = quietRun( 'who am i' ).split()[ 0 ]
+        self.connections = {}
+        self.placement = params.pop( 'placement', BinPlacer )
+        self.startConnections()
+        Mininet.__init__( self, *args, **params )
+
+    def popen( self, cmd ):
+        "Popen() for server connections"
+        old = signal( SIGINT, SIG_IGN )
+        conn = Popen( cmd, stdout=PIPE, stderr=PIPE, close_fds=True )
+        signal( SIGINT, old )
+        return conn
+
+    def startConnections( self ):
+        "Initialize master ssh connections to servers"
+        # Make sure control directory exists
+        cdir = os.environ[ 'HOME' ] + '/.ssh/controlmasters'
+        errRun( [ 'mkdir', '-p', cdir ] )
+        # Create ssh master connections
+        info( '*** Starting server connections\n')
+        for server in self.servers:
+            dest = '%s@%s' % ( self.user, server )
+            cfile = '%s/%s' % ( cdir, dest )
+            cmd = [ 'ssh', '-n', '-M', '-S', cfile, dest, 'echo a' ]
+            info( dest, '' )
+            conn = self.popen( cmd )
+            self.connections[ server ] = ( dest, conn, cfile )
+        # Wait for them to start up
+        for server in self.servers:
+            _dest, conn, _cfile = self.connections[ server ]
+            conn.stdout.read()
+            info( '.' )
+        info( '\n' )
+
+    def stopConnections( self ):
+        for server in self.servers:
+            dest, conn, cfile = self.connections[ server ]
+            cmd = [ 'ssh', '-O', 'stop', '-S', cfile, dest ]
+            errRun( cmd )
+            conn.terminate()
+            conn.wait()
+        self.connections = []
+
+    def placeNodes( self ):
+        """Place nodes on servers (if they don't have a server), and
+           start shell processes"""
+        if not self.servers or not self.topo:
+            # No shirt, no shoes, no service
+            return
+        nodes = self.topo.nodes()
+        placer = self.placement( servers=self.servers,
+                                 nodes=self.topo.nodes(),
+                                 hosts=self.topo.hosts(),
+                                 switches=self.topo.switches() )
+        for node in nodes:
+            config = self.topo.node_info[ node ]
+            server = config.setdefault( 'server', placer.place( node ) )
+            _dest, _conn, cfile = self.connections.get( server,
+                                    ( None, None, None ) )
+            if cfile:
+                config.setdefault( 'controlPath', cfile )
+            info( '%s:%s ' % ( node, server ) )
+
+    def buildFromTopo( self, *args, **kwargs ):
+        "Start network"
+        info( '*** Placing nodes\n' )
+        self.placeNodes()
+        info( '\n' )
+        Mininet.buildFromTopo( self, *args, **kwargs )
+
+    def stop( self ):
+        "Stop network"
+        Mininet.stop( self )
+        info( '*** Stopping server connections\n' )
+        self.stopConnections()
+
 
 
 # Manual topology creation with net.add*()
@@ -290,7 +474,66 @@ def testRemoteNet():
     net.stop()
 
 
+# High-level/Topo API example
+#
+# This shows how existing Mininet topologies may be used in cluster
+# mode by creating node placement functions and a controller which
+# can be accessed remotely. This implements a very compatible version
+# of cluster edition with a minimum of code!
+
+remoteHosts = [ 'h2' ]
+remoteSwitches = [ 's2' ]
+remoteServer = 'ubuntu12'
+
+def HostPlacer( name, *args, **params ):
+    "Custom Host() constructor which places hosts on servers"
+    if name in remoteHosts:
+        return RemoteHost( name, *args, server=remoteServer, **params )
+    else:
+        return Host( name, *args, **params )
+
+def SwitchPlacer( name, *args, **params ):
+    "Custom Switch() constructor which places switches on servers"
+    if name in remoteSwitches:
+        return RemoteOVSSwitch( name, *args, server=remoteServer, **params )
+    else:
+        return OVSSwitch( name, *args, **params )
+
+def ClusterController( *args, **kwargs):
+    "Custom Controller() constructor which updates its eth0 IP address"
+    controller = Controller( *args, **kwargs )
+    # Find out its IP address so that cluster switches can connect
+    Intf( 'eth0', node=controller ).updateIP()
+    return controller
+
+def testRemoteTopo():
+    "Test remote Node classes using Mininet()/Topo() API"
+    topo = LinearTopo( 2 )
+    net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
+                  link=RemoteLink, controller=ClusterController )
+    net.start()
+    net.pingAll()
+    net.stop()
+
+
+# The MininetCluster() class integrates pluggable placement
+# functions, for maximum ease of use. MininetCluster() also
+# pre-flights and multiplexes server connections.
+
+def testMininetCluster():
+    "Test MininetCluster()"
+    servers = [ 'localhost', 'ubuntu12' ]
+    user = 'openflow'
+    topo = LinearTopo( 15 )
+    net = MininetCluster( topo=topo, servers=servers, user=user,
+                          placement=RandomPlacer )
+    net.start()
+    net.pingAll()
+    net.stop()
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    testRemoteTopo()
-    testRemoteNet()
+    # testRemoteTopo()
+    # testRemoteNet()
+    testMininetCluster()
+
