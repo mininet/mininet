@@ -89,5 +89,7 @@ def cleanup():
 
     info ( "*** Shutting down stale tunnels\n" )
     killprocs( 'Tunnel=Ethernet' )
-
+    killprocs( '.ssh/mn')
+    sh( 'rm -f ~/.ssh/mn/*' )
+    
     info( "*** Cleanup complete.\n" )
