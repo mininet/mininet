@@ -111,7 +111,7 @@ class RemoteMixin( object ):
     "A mix-in class to turn local nodes into remote nodes"
 
     def __init__( self, name, server=None, user=None, controlPath=None,
-                 delayShell=False, **kwargs):
+                 serverIP=None, splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
            server: remote server (optional)
@@ -123,13 +123,15 @@ class RemoteMixin( object ):
         if server == 'localhost':
             server = None
         self.server = server
-        self.serverIP = self.findServerIP( server )
+        if not serverIP:
+                serverIP = self.findServerIP( server )
+        self.serverIP = serverIP
         if not user:
             user = quietRun( 'who am i' ).split()[ 0 ]
         self.user = user
         self.dest = '%s@%s' % ( self.user, self.serverIP )
         self.controlPath = controlPath
-        self.delayShell = delayShell
+        self.splitInit = splitInit
         super( RemoteMixin, self).__init__( name, **kwargs )
 
     # Determine IP address of local host
@@ -157,12 +159,14 @@ class RemoteMixin( object ):
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
-        if self.delayShell:
-            # Defer starting shell to wait for placement
-            self.delayShell = False
-            return
         super( RemoteMixin, self ).startShell( *args, **kwargs )
-        self.pid = int( self.cmd( 'echo $$' ) )
+        if self.splitInit:
+            self.sendCmd( 'echo $$' )
+        else:
+            self.pid = int( self.cmd( 'echo $$' ) )
+
+    def finishInit( self ):
+        self.pid = int( self.waitOutput() )
 
     # Run command on node's server's root namespace
     # This is important for things like ssh control
@@ -184,15 +188,17 @@ class RemoteMixin( object ):
         result = ''
         # local host: use local Popen
         if not self.server:
-            return Popen( cmd, stdout=PIPE, stderr=PIPE, close_fds=True )
+            return Popen( cmd, stdout=PIPE,  close_fds=True )
         # remote host: use ssh and controlPath
         ssh = [ 'ssh',  '-n' ]  # do not read from stdin
+        assert self.controlPath
         if self.controlPath:
             ssh += [ '-S', self.controlPath ]
         if sudo:
             cmd = [ 'sudo', '-E' ] + cmd
         cmd = ssh + [ self.dest ] + cmd
-        popen = Popen( cmd, stdout=PIPE, stderr=PIPE, close_fds=True )
+        # print 'rpopen', cmd
+        popen = Popen( cmd, stdout=PIPE,  close_fds=True )
         return popen
 
     def rcmd( self, *cmd, **opts):
@@ -565,6 +571,7 @@ class MininetCluster( Mininet ):
         servers = params.pop( 'servers', [] )
         servers = [ s if s != 'localhost' else None for s in servers ]
         self.servers = servers
+        self.serverIP = {}
         self.user = params.pop( 'user', None )
         if self.servers and not self.user:
             self.user = quietRun( 'who am i' ).split()[ 0 ]
@@ -578,10 +585,14 @@ class MininetCluster( Mininet ):
     def popen( self, cmd ):
         "Popen() for server connections"
         old = signal( SIGINT, SIG_IGN )
-        conn = Popen( cmd, stdout=PIPE, stderr=PIPE, close_fds=True )
+        conn = Popen( cmd, stdout=PIPE, close_fds=True )
         signal( SIGINT, old )
         return conn
 
+
+    def baddLink( self, *args, **kwargs ):
+        "break addlink for testing"
+        pass
 
     def startConnection( self, server1=None, server2=None ):
         """Start a master ssh connection between node1 and node2,
@@ -595,60 +606,71 @@ class MininetCluster( Mininet ):
         # Use a canonical order
         # Note that None will end up as server1
         server1, server2 = sorted( ( server1, server2 ) )
-        ip2 = RemoteMixin.findServerIP( server1 )
-        dest = '%s@%s' % ( self.user, ip2 )
-        cfile = '%s/%s-%s' % ( self.cdir, server1, server2 )
-        cmd = [ 'ssh', '-n', '-M', '-S', cfile, dest, 'echo OK' ]
-        # See if we already have a connection to server1
-        if ( server1, server2 ) in self.connections:
-            return
-        if not server1:
-            # Create and return local connection
-            conn = self.popen( cmd )
-            return dest, cfile, conn
-        # Create remote connection
-        # XXX to be implemented
-        assert False
-
-    def waitConnected( _self, conn ):
+        if server2 in self.serverIP:
+            ip2 = self.serverIP[ server2 ]
+        else:
+            ip2 = RemoteMixin.findServerIP( server2 )
+            self.serverIP[ server2 ] = ip2
+        dest2 = '%s@%s' % ( self.user, ip2 )
+        cfile2 = '%s/%s-%s' % ( self.cdir, server1, server2 )
+        cmd = [ 'ssh', '-n', '-o', 'ControlPersist=yes',
+               '-M', '-S', cfile2,
+               dest2, 'echo OK' ]
+        if server1:
+            # Create remote connection
+            # We MUST have an existing connection to server1
+            dest1, cfile1, _conn = self.connections[ ( None, server1 ) ]
+            ssh = [ 'ssh', '-n', '-S', cfile1, dest1 ]
+            cmd = ssh + cmd
+        # Create and return connection
+        conn2 = self.popen( cmd )
+        return dest2, cfile2, conn2
+    
+    def waitConnected( _self, conns ):
         "Wait for a specific ssh connection to start up"
-        assert conn.stdout.read( 2 ) == 'OK'
+        for _dest, _cfile, conn in conns:
+            assert conn.stdout.read( 2 ) == 'OK'
+            info( '.' )
+
+    def modifiedaddHost( self, *args, **kwargs ):
+        "Slightly modify addHost"
+        kwargs[ 'splitInit' ] = True
+        return Mininet.addHost( *args, **kwargs )
 
     def startConnections( self ):
         "Initialize master ssh connections to servers"
         # Create ssh master connections
+        conns = []
         for server in self.servers:
             if not server:
                 continue
             key = ( None, server )
             if key not in self.connections:
                 info( server, '' )
-                self.connections[ key ] = self.startConnection( server )
-        # Wait for them to start up
-        # Note: this should really be asynchronous...
-        for server in self.servers:
-            if server in self.connections:
-                _dest, _cfile, conn = self.connections[ server ]
-                self.waitConnected( conn )
-                info( '.' )
+                conn = self.startConnection( *key )
+                self.connections[ key ] = conn
+                conns.append( conn )
+        self.waitConnected( conns )
         info( '\n' )
 
     def startLinkConnections( self ):
         "Create control connections for server pairs"
         links = self.topo.links()
+        conns = []
         for link in links:
             node1, node2 = link
             # Server pair for link
-            server1, server2 = sorted( ( node1.server, node2.server ) )
+            server1, server2 = [
+                self.topo.node_info[ n ][ 'server' ] for n in node1, node2 ]
+            server1, server2 = sorted( ( server1, server2 ) )
             key = ( server1, server2 )
-            if ( server1, server2 ) in self.connections:
-                _dest, cfile, _conn = self.connections( key )
-            else:
+            if server1 != server2 and key not in self.connections:
                 # Create a new control connection
-                conn = startConnection( server1, server2 )
-                self.waitConnected( conn )
-                self.connections[ ( server1, server2 ) ] = conn
-        # INCOMPLETE!!!
+                info( '(%s,%s)' % ( server1, server2 ) )
+                conn = self.startConnection( *key )
+                self.connections[ key ] = conn
+                conns.append( conn )
+        self.waitConnected( conns )
 
     def stopConnections( self ):
         for dest, cfile, conn in self.connections.values():
@@ -673,6 +695,8 @@ class MininetCluster( Mininet ):
         for node in nodes:
             config = self.topo.node_info[ node ]
             server = config.setdefault( 'server', placer.place( node ) )
+            if server:
+                config.setdefault( 'serverIP', self.serverIP[ server ] )
             info( '%s:%s ' % ( node, server ) )
             key = ( None, server )
             _dest, cfile, _conn = self.connections.get(
@@ -687,6 +711,9 @@ class MininetCluster( Mininet ):
         info( '\n' )
         info( '*** Placing nodes\n' )
         self.placeNodes()
+        info( '\n' )
+        info( '*** Starting link connections\n' )
+        self.startLinkConnections()
         info( '\n' )
         Mininet.buildFromTopo( self, *args, **kwargs )
 

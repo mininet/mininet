@@ -10,7 +10,7 @@ from mininet.examples.clustercli import DemoCLI as CLI
 
 def demo():
     "Simple Demo of Cluster Mode"
-    servers = [ 'localhost', 'ubuntu2' ]
+    servers = [ 'localhost', 'ubuntu2', 'ubuntu3' ]
     topo = TreeTopo( depth=3, fanout=3 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
