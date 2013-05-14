@@ -58,7 +58,7 @@ Maybe, but it doesn't seem to support L2 tunneling.
 Should we preflight the entire network, including all server-to-server
 connections?
 
-Yes, but we don't currently do that!
+Yes! We don't yet do this with link connections however.
 
 Should we multiplex the link ssh connections?
 
@@ -69,6 +69,12 @@ For example, they could be server1-server2
 Note on ssh and DNS:
 Please add UseDNS: no to your /etc/ssh/sshd_config!!!
 
+Things to do:
+
+- control paths for links
+- asynchronous/pipelined startup
+- ssh debugging/profiling
+- make connections into real objects
 
 """
 
@@ -78,7 +84,7 @@ from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun, makeIntfPair, errRun, retry
-from mininet.cli import CLI
+from mininet.cli import CLI as CLIbase
 from mininet.log import setLogLevel, debug, info, error
 
 from signal import signal, SIGINT, SIG_IGN
@@ -114,6 +120,8 @@ class RemoteMixin( object ):
            delayShell: delay calling startShell()
            **kwargs: see Node()"""
         # We connect to servers via IP address
+        if server == 'localhost':
+            server = None
         self.server = server
         self.serverIP = self.findServerIP( server )
         if not user:
@@ -127,21 +135,22 @@ class RemoteMixin( object ):
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
 
-    def findServerIP( self, server, intf='eth0' ):
+    @classmethod
+    def findServerIP( cls, server, intf='eth0' ):
         "Return our server's IP address"
         # Check for this server
-        if not server or server == 'localhost':
+        if not server:
             output = quietRun( 'ifconfig %s' % intf  )
         # Otherwise, handle remote server
         else:
             # First, check for an IP address
             if server:
-                ipmatch = self._ipMatchRegex.findall( server )
+                ipmatch = cls._ipMatchRegex.findall( server )
                 if ipmatch:
                     return ipmatch[ 0 ]
             # Otherwise, look up remote server
             output = quietRun( 'host %s' % server )
-        ips = self._ipMatchRegex.findall( output )
+        ips = cls._ipMatchRegex.findall( output )
         ip = ips[ 0 ] if ips else None
         return ip
 
@@ -174,7 +183,7 @@ class RemoteMixin( object ):
                                 type( args[ 0 ] ) )
         result = ''
         # local host: use local Popen
-        if not self.server or self.server == 'localhost':
+        if not self.server:
             return Popen( cmd, stdout=PIPE, stderr=PIPE, close_fds=True )
         # remote host: use ssh and controlPath
         ssh = [ 'ssh',  '-n' ]  # do not read from stdin
@@ -210,11 +219,13 @@ class RemoteMixin( object ):
             **params: parameters to Popen()
             returns: Popen() object"""
         cmd = [ 'sudo', '-E' ] + cmd
-        if self.user and self.server and self.server != 'localhost':
+        if self.user and self.server:
             if self.controlPath:
                 cmd = [ 'ssh', '-tt', '-S', self.controlPath,
                         '%s@%s' % ( self.user, self.serverIP) ] + cmd
             else:
+                raise Exception( 'NO CONTROL PATH TO %s:%s' % (
+                 self.name, self.serverIP ) )
                 cmd = [ 'ssh', '-tt', '%s@%s'
                        % ( self.user, self.serverIP ) ] + cmd
         old = signal( SIGINT, SIG_IGN )
@@ -245,7 +256,6 @@ class RController( RemoteMixin, Controller ):
         "Start and update IP address"
         Intf( 'eth0', node=self ).updateIP()
         super( RController, self ).start( *args, **kwargs )
-
 
 
 
@@ -391,7 +401,8 @@ class Placer( object ):
 
     def place( self, node ):
         "Return server for a given node"
-        return 'localhost'
+        # Default placement: run locally
+        return None
 
 
 class RandomPlacer( Placer ):
@@ -551,13 +562,17 @@ class MininetCluster( Mininet ):
                    'controller': RController,
                    'link': RemoteLink }
         params.update( kwargs )
-        self.servers = params.pop( 'servers', [] )
+        servers = params.pop( 'servers', [] )
+        servers = [ s if s != 'localhost' else None for s in servers ]
+        self.servers = servers
         self.user = params.pop( 'user', None )
         if self.servers and not self.user:
             self.user = quietRun( 'who am i' ).split()[ 0 ]
         self.connections = {}
         self.placement = params.pop( 'placement', SwitchBinPlacer )
-        self.startConnections()
+        # Make sure control directory exists
+        self.cdir = os.environ[ 'HOME' ] + '/.ssh/mn'
+        errRun( [ 'mkdir', '-p', self.cdir ] )
         Mininet.__init__( self, *args, **params )
 
     def popen( self, cmd ):
@@ -567,30 +582,76 @@ class MininetCluster( Mininet ):
         signal( SIGINT, old )
         return conn
 
+
+    def startConnection( self, server1=None, server2=None ):
+        """Start a master ssh connection between node1 and node2,
+           on one of their servers (lowest alphabetically)
+           and add it to our list of connections
+           (wait for 'OK' before it actually starts up)
+           returns: user@ip, control path, connection or None"""
+        if server1 == server2:
+            # No connection is required
+            return
+        # Use a canonical order
+        # Note that None will end up as server1
+        server1, server2 = sorted( ( server1, server2 ) )
+        ip2 = RemoteMixin.findServerIP( server1 )
+        dest = '%s@%s' % ( self.user, ip2 )
+        cfile = '%s/%s-%s' % ( self.cdir, server1, server2 )
+        cmd = [ 'ssh', '-n', '-M', '-S', cfile, dest, 'echo OK' ]
+        # See if we already have a connection to server1
+        if ( server1, server2 ) in self.connections:
+            return
+        if not server1:
+            # Create and return local connection
+            conn = self.popen( cmd )
+            return dest, cfile, conn
+        # Create remote connection
+        # XXX to be implemented
+        assert False
+
+    def waitConnected( _self, conn ):
+        "Wait for a specific ssh connection to start up"
+        assert conn.stdout.read( 2 ) == 'OK'
+
     def startConnections( self ):
         "Initialize master ssh connections to servers"
-        # Make sure control directory exists
-        cdir = os.environ[ 'HOME' ] + '/.ssh/controlmasters'
-        errRun( [ 'mkdir', '-p', cdir ] )
         # Create ssh master connections
-        info( '*** Starting server connections\n')
         for server in self.servers:
-            dest = '%s@%s' % ( self.user, server )
-            cfile = '%s/%s' % ( cdir, dest )
-            cmd = [ 'ssh', '-n', '-M', '-S', cfile, dest, 'echo OK' ]
-            info( dest, '' )
-            conn = self.popen( cmd )
-            self.connections[ server ] = ( dest, conn, cfile )
+            if not server:
+                continue
+            key = ( None, server )
+            if key not in self.connections:
+                info( server, '' )
+                self.connections[ key ] = self.startConnection( server )
         # Wait for them to start up
+        # Note: this should really be asynchronous...
         for server in self.servers:
-            _dest, conn, _cfile = self.connections[ server ]
-            assert conn.stdout.read( 2 ) == 'OK'
-            info( '.' )
+            if server in self.connections:
+                _dest, _cfile, conn = self.connections[ server ]
+                self.waitConnected( conn )
+                info( '.' )
         info( '\n' )
 
+    def startLinkConnections( self ):
+        "Create control connections for server pairs"
+        links = self.topo.links()
+        for link in links:
+            node1, node2 = link
+            # Server pair for link
+            server1, server2 = sorted( ( node1.server, node2.server ) )
+            key = ( server1, server2 )
+            if ( server1, server2 ) in self.connections:
+                _dest, cfile, _conn = self.connections( key )
+            else:
+                # Create a new control connection
+                conn = startConnection( server1, server2 )
+                self.waitConnected( conn )
+                self.connections[ ( server1, server2 ) ] = conn
+        # INCOMPLETE!!!
+
     def stopConnections( self ):
-        for server in self.servers:
-            dest, conn, cfile = self.connections[ server ]
+        for dest, cfile, conn in self.connections.values():
             cmd = [ 'ssh', '-O', 'stop', '-S', cfile, dest ]
             errRun( cmd )
             conn.terminate()
@@ -612,14 +673,18 @@ class MininetCluster( Mininet ):
         for node in nodes:
             config = self.topo.node_info[ node ]
             server = config.setdefault( 'server', placer.place( node ) )
-            _dest, _conn, cfile = self.connections.get( server,
-                                    ( None, None, None ) )
+            info( '%s:%s ' % ( node, server ) )
+            key = ( None, server )
+            _dest, cfile, _conn = self.connections.get(
+                        key, ( None, None, None ) )
             if cfile:
                 config.setdefault( 'controlPath', cfile )
-            info( '%s:%s ' % ( node, server ) )
 
     def buildFromTopo( self, *args, **kwargs ):
         "Start network"
+        info( '*** Starting server connections\n' )
+        self.startConnections()
+        info( '\n' )
         info( '*** Placing nodes\n' )
         self.placeNodes()
         info( '\n' )
@@ -630,7 +695,6 @@ class MininetCluster( Mininet ):
         Mininet.stop( self )
         info( '*** Stopping server connections\n' )
         self.stopConnections()
-
 
 
 def testNsTunnels():
@@ -748,7 +812,7 @@ def testMininetCluster():
     servers = [ 'localhost', 'ubuntu12' ]
     topo = TreeTopo( depth=3, fanout=3 )
     net = MininetCluster( topo=topo, servers=servers,
-                          placement=RandomPlacer )
+                          placement=SwitchBinPlacer )
     net.start()
     net.pingAll()
     net.stop()
