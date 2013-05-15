@@ -176,6 +176,8 @@ class RemoteMixin( object ):
         """"Create a popen object runing in server's root namespace
             args: strings, or single list of strings"""
         sudo = opts.pop( 'sudo', True )
+        opts.setdefault( 'stdout', PIPE )
+        opts.setdefault( 'close_fds', True )
         # single list of strings
         if len( args ) == 1:
             if type( args[ 0 ] ) is list:
@@ -188,7 +190,7 @@ class RemoteMixin( object ):
         result = ''
         # local host: use local Popen
         if not self.server:
-            return Popen( cmd, stdout=PIPE,  close_fds=True )
+            return Popen( cmd, **opts )
         # remote host: use ssh and controlPath
         ssh = [ 'ssh',  '-n' ]  # do not read from stdin
         assert self.controlPath
@@ -198,7 +200,7 @@ class RemoteMixin( object ):
             cmd = [ 'sudo', '-E' ] + cmd
         cmd = ssh + [ self.dest ] + cmd
         # print 'rpopen', cmd
-        popen = Popen( cmd, stdout=PIPE,  close_fds=True )
+        popen = Popen( cmd, **opts )
         return popen
 
     def rcmd( self, *cmd, **opts):
@@ -207,7 +209,7 @@ class RemoteMixin( object ):
            args: string or list of strings
            returns: stdout and stderr"""
         sudo = opts.pop( 'sudo', True )
-        popen = self.rpopen( *cmd, sudo=sudo )
+        popen = self.rpopen( *cmd, sudo=sudo, **opts )
         # These loops are tricky to get right.
         # Once the process exits, we can read
         # EOF twice if necessary.
@@ -329,7 +331,7 @@ class RemoteLink( Link ):
         # 1. Create tap interfaces
         for node in node1, node2:
             # For now we are hard-wiring tap9, which we will rename
-            node.rcmd( 'ip link delete tap9' )
+            node.rcmd( 'ip link delete tap9', stderr=PIPE )
             cmd = 'ip tuntap add dev tap9 mode tap user ' + node.user
             node.rcmd( cmd )
             links = node.rcmd( 'ip link show' )
