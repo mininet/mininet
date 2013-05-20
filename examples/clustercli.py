@@ -41,12 +41,13 @@ class DemoCLI( CLI ):
         color = dict( zip( servers, self.colorsFor( servers ) ) )
         # Plot it!
         pos = nx.graphviz_layout( g )
-        opts = { 'ax': None, 'font_weight': 'bold' }
+        opts = { 'ax': None, 'font_weight': 'bold',
+		 'width': 2, 'edge_color': 'darkblue' }
         hcolors = [ color[ h.server ] for h in hosts ]
         scolors = [ color[ s.server ] for s in switches ]
-        nx.draw_networkx( g, pos=pos, nodelist=hosts,
+        nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800, label='host',
                           node_color=hcolors, node_shape='s', **opts )
-        nx.draw_networkx( g, pos=pos, nodelist=switches,
+        nx.draw_networkx( g, pos=pos, nodelist=switches, node_size=1000,
                           node_color=scolors, node_shape='o', **opts )
         # Get rid of axes, add title, and show
         fig = plt.gcf()
