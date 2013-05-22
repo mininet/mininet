@@ -27,7 +27,7 @@ def cleanup():
     info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd udpbwtest mnexec'
+    zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec'
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
