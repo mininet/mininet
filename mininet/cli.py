@@ -321,7 +321,7 @@ class CLI( Cmd ):
         if first in self.nodemap:
             node = self.nodemap[ first ]
             # Substitute IP addresses for node names in command
-            rest = [ self.nodemap[ arg ].IP()
+            rest = [ self.nodemap[ arg ].defaultIntf().updateIP()
                      if arg in self.nodemap else arg
                      for arg in rest ]
             rest = ' '.join( rest )
