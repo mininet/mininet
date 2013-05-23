@@ -493,7 +493,7 @@ class Node( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
-        self.setParam( r, 'defaultRoute', defaultRoute=defaultRoute )
+        self.setParam( r, 'setDefaultRoute', defaultRoute=defaultRoute )
         # This should be examined
         self.cmd( 'ifconfig lo ' + lo )
         return r
