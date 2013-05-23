@@ -196,6 +196,11 @@ class MininetRunner( object ):
 
         self.options, self.args = opts.parse_args()
 
+        # We don't accept extra arguments after the options
+        if self.args:
+            opts.print_help()
+            exit()
+
     def setup( self ):
         "Setup and validate environment."
 
