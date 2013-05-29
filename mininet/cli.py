@@ -33,7 +33,7 @@ import sys
 import time
 
 from mininet.log import info, output, error
-from mininet.term import makeTerms
+from mininet.term import makeTerms, runX11
 from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
 
 class CLI( Cmd ):
@@ -240,6 +240,17 @@ class CLI( Cmd ):
                 else:
                     node = self.nodemap[ arg ]
                     self.mn.terms += makeTerms( [ node ], term = term )
+
+    def do_x( self, line ):
+        """Create an X11 tunnel to the given node,
+           optionally starting a client."""
+        args = line.split()
+        if not args:
+            error( 'usage: x node [cmd args]...\n' )
+        else:
+            node = self.mn[ args[ 0 ] ]
+            cmd = args[ 1: ]
+            self.mn.terms += runX11( node, cmd )
 
     def do_gterm( self, line ):
         "Spawn gnome-terminal(s) for the given node(s)."

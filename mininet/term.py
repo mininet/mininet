@@ -52,6 +52,12 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
     term = node.popen( cmds[ term ] + [ display, '-e', 'env TERM=ansi bash'] )
     return [ tunnel, term ] if tunnel else [ term ]
 
+def runX11( node, cmd ):
+    "Run an X11 client on a node"
+    display, tunnel = tunnelX11( node )
+    popen = node.popen( cmd )
+    return [ tunnel, popen ]
+
 def cleanUpScreens():
     "Remove moldy socat X11 tunnels."
     errRun( "pkill -9 -f mnexec.*socat" )
