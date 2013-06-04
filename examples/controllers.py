@@ -6,13 +6,20 @@ different controllers, by creating a custom Switch() subclass.
 """
 
 from mininet.net import Mininet
-from mininet.node import OVSSwitch, Controller
+from mininet.node import OVSSwitch, Controller, RemoteController
 from mininet.topolib import TreeTopo
+from mininet.log import setLogLevel
 from mininet.cli import CLI
 
+setLogLevel( 'info' )
+
+# Two local and one "external" controller (which is actually c0)
+# Ignore the warning message that the remote isn't (yet) running
 c0 = Controller( 'c0' )
-c1 = Controller( 'c1', ip='127.0.0.2' )
-cmap = { 's1': c0, 's2': c1, 's3': c1 }
+c1 = Controller( 'c1' )
+c2 = RemoteController( 'c2', ip='127.0.0.1' )
+
+cmap = { 's1': c0, 's2': c1, 's3': c2 }
 
 class MultiSwitch( OVSSwitch ):
     "Custom Switch() subclass that connects to different controllers"
