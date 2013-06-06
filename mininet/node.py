@@ -896,12 +896,14 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, failMode='secure', **params ):
+    def __init__( self, name, failMode='secure', userSpace=False, **params ):
         """Init.
            name: name for switch
-           failMode: controller loss behavior (secure|open)"""
+           failMode: controller loss behavior (secure|open)
+           userSpace: userspace mode rather than kernel mode (true|false)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
+        self.userSpace = str(userSpace).lower() != "false"
 
     @classmethod
     def setup( cls ):
@@ -956,6 +958,8 @@ class OVSSwitch( Switch ):
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
         self.cmd( 'ovs-vsctl add-br', self )
+        if self.userSpace:
+            self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
         self.cmd( 'ovs-vsctl -- set Bridge', self,
                   'other_config:datapath-id=' + self.dpid )
         self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
