@@ -968,6 +968,19 @@ class OVSSwitch( Switch ):
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
+        # Set controllers to reconnect quickly
+        controllers = self.cmd( 'ovs-vsctl --columns=controller find Bridge '
+                                'name=' + str(self) ).split(':',2)[-1].strip()
+
+        if controllers.startswith('[') and controllers.endswith(']'):
+            controllers = [c.strip() for c in controllers[1:-1].split(',')]
+            for uuid in controllers:
+                if uuid.count('-') != 4:
+                    # Doesn't look like a UUID
+                    continue
+                uuid = uuid.strip()
+                self.cmd( 'ovs-vsctl set Controller', uuid,
+                          'max_backoff=1000' )
 
     def stop( self ):
         "Terminate OVS switch."
