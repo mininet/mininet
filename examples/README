@@ -68,6 +68,12 @@ multitest.py:
 
 This example creates a network and runs multiple tests on it.
 
+nat.py:
+
+This example shows how to connect a Mininet network to the Internet
+using NAT. It also answers the eternal question "why can't I ping
+google?"
+
 popen.py:
 
 This example monitors a number of hosts using host.popen() and
