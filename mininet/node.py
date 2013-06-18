@@ -418,11 +418,18 @@ class Node( object ):
 
     def setDefaultRoute( self, intf=None ):
         """Set the default route to go through intf.
-           intf: string, interface name"""
-        if not intf:
-            intf = self.defaultIntf()
-        self.cmd( 'ip route flush root 0/0' )
-        return self.cmd( 'route add default %s' % intf )
+           intf: Intf or {dev <intfname> via <gw-ip> ...}"""
+        # Note setParam won't call us if intf is none
+        # See if interface is an actual interface
+        intf = self.intf( intf )
+        if intf in self.ports:
+            params = 'dev %s' % intf
+        elif type( intf ) is str:
+            params = intf
+        else:
+            raise ValueError( 'intf or param string required' )
+        self.cmd( 'ip route del default' )
+        return self.cmd( 'ip route add default dev %s' % intf )
 
     # Convenience and configuration methods
 

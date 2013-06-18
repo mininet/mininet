@@ -260,7 +260,7 @@ class Mininet( object ):
             info( host.name + ' ' )
             intf = host.defaultIntf()
             if intf:
-                host.configDefault( defaultRoute=intf )
+                host.configDefault()
             else:
                 # Don't configure nonexistent intf
                 host.configDefault( ip=None, mac=None )
