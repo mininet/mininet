@@ -557,6 +557,7 @@ function all {
 function vm_clean {
     echo "Cleaning VM..."
     sudo apt-get clean
+    sudo apt-get autoremove
     sudo rm -rf /tmp/*
     sudo rm -rf openvswitch*.tar.gz
 
@@ -576,6 +577,9 @@ function vm_clean {
     # Clear git changes
     git config --global user.name "None"
     git config --global user.email "None"
+
+    echo "Zeroing out file blocks for efficient compaction"
+    time sudo cp /dev/zero /tmp/; sync ; sleep 1 ; sync ; sudo rm -f /tmp/zero
 
 }
 
