@@ -463,7 +463,7 @@ function cbench {
     sudo make install || true # make install fails; force past this
 }
 
-function other {
+function vm_other {
     echo "Doing other Mininet VM setup tasks..."
 
     # Remove avahi-daemon, which may cause unwanted discovery packets to be
@@ -550,8 +550,6 @@ function all {
     pox
     oftest
     cbench
-    other
-    echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
     echo "Enjoy Mininet!"
 }
 
@@ -579,8 +577,6 @@ function vm_clean {
     git config --global user.name "None"
     git config --global user.email "None"
 
-    # Remove mininet install script
-    rm -f install-mininet.sh
 }
 
 function usage {
@@ -604,7 +600,7 @@ function usage {
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
     printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
-    printf -- ' -t: install o(T)her stuff\n' >&2
+    printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
@@ -637,7 +633,7 @@ else
       n)    mn_deps;;
       p)    pox;;
       r)    remove_ovs;;
-      t)    other;;
+      t)    vm_other;;
       v)    ovs;;
       w)    wireshark;;
       x)    case $OF_VERSION in

@@ -27,6 +27,8 @@ git clone git://github.com/mininet/mininet
 cd mininet
 cd
 time mininet/util/install.sh
+# Finalize VM
+time mininet/util/install.sh -tc
 # Ignoring this since NOX classic is deprecated
 #if ! grep NOX_CORE_DIR .bashrc; then
 #  echo "export NOX_CORE_DIR=~/noxcore/build/src/" >> .bashrc
