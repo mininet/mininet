@@ -178,7 +178,8 @@ function of13 {
 
     # Install netbee
     NBEESRC="nbeesrc-jan-10-2013"
-    wget -nc http://www.nbee.org/download/${NBEESRC}.zip
+    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
+    wget -nc ${NBEEURL}${NBEESRC}.zip
     unzip ${NBEESRC}.zip
     cd ${NBEESRC}/src
     cmake .
