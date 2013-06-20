@@ -40,6 +40,10 @@ class Graph( object ):
             for dest in self.data[ src ]:
                 yield ( src, dest )
 
+    def __getitem__( self, node ):
+        "Return link dict for the given node"
+        return self.data[node]
+
 
 class Topo(object):
     "Data center network representation for structured multi-trees."
