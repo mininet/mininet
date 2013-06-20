@@ -578,8 +578,11 @@ function vm_clean {
     git config --global user.name "None"
     git config --global user.email "None"
 
-    echo "Zeroing out file blocks for efficient compaction"
-    time sudo cp /dev/zero /tmp/; sync ; sleep 1 ; sync ; sudo rm -f /tmp/zero
+    # Note: you can shrink the .vmdk in vmware using
+    # vmware-vdiskmanager -k *.vmdk
+    echo "Zeroing out file blocks for efficient compaction..."
+    time sudo dd if=/dev/zero of=/tmp/zero bs=1M
+    sync ; sleep 1 ; sync ; sudo rm -f /tmp/zero
 
 }
 
