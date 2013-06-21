@@ -29,6 +29,7 @@ class Graph( object ):
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
+        self.data[ dest ].append( src )
 
     def nodes( self ):
         "Return list of graph nodes"
