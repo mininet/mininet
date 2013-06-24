@@ -33,4 +33,5 @@ time mininet/util/install.sh -tc
 #if ! grep NOX_CORE_DIR .bashrc; then
 #  echo "export NOX_CORE_DIR=~/noxcore/build/src/" >> .bashrc
 #fi
+echo "Done preparing Mininet VM."
 
