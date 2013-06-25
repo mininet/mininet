@@ -371,7 +371,7 @@ class Node( object ):
         """
         if not intf:
             return self.defaultIntf()
-        elif type( intf) is str:
+        elif type( intf ) is str:
             return self.nameToIntf[ intf ]
         else:
             return intf
@@ -420,16 +420,12 @@ class Node( object ):
         """Set the default route to go through intf.
            intf: Intf or {dev <intfname> via <gw-ip> ...}"""
         # Note setParam won't call us if intf is none
-        # See if interface is an actual interface
-        intf = self.intf( intf )
-        if intf in self.ports:
-            params = 'dev %s' % intf
-        elif type( intf ) is str:
+        if type( intf ) is str and ' ' in intf:
             params = intf
         else:
-            raise ValueError( 'intf or param string required' )
+            params = 'dev %s' % intf
         self.cmd( 'ip route del default' )
-        return self.cmd( 'ip route add default dev %s' % intf )
+        return self.cmd( 'ip route add default', params )
 
     # Convenience and configuration methods
 
