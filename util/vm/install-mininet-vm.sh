@@ -14,7 +14,8 @@ sudo update-grub
 sudo sed -i -e 's/us.archive.ubuntu.com/mirrors.kernel.org/' \
 	/etc/apt/sources.list
 sudo sed -i -e 's/\/archive.ubuntu.com/\/mirrors.kernel.org/' \
-	/etc/apt/sources.listsudo apt-get update
+	/etc/apt/sources.list
+sudo apt-get update
 # Clean up vmware easy install junk if present
 if [ -e /etc/issue.backup ]; then
     sudo mv /etc/issue.backup /etc/issue
