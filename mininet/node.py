@@ -976,12 +976,12 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
         # Set controllers to reconnect quickly
-        controllers = self.cmd( 'ovs-vsctl --columns=controller find Bridge '
-                                'name=' + str(self) ).split(':',2)[-1].strip()
-
-        if controllers.startswith('[') and controllers.endswith(']'):
-            controllers = [c.strip() for c in controllers[1:-1].split(',')]
-            for uuid in controllers:
+        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+                               'Controller' ).strip()
+        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
+            controllers = controllers[ 1 : -1 ]
+            uuids = [ c.strip() for c in controllers.split( ',' ) ]
+            for uuid in uuids:
                 if uuid.count('-') != 4:
                     # Doesn't look like a UUID
                     continue
