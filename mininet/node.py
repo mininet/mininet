@@ -801,9 +801,10 @@ class UserSwitch( Switch ):
 
     dpidLen = 12
 
-    def __init__( self, name, dpopts='', **kwargs ):
+    def __init__( self, name, dpopts='--no-slicing', **kwargs ):
         """Init.
-           name: name for the switch"""
+           name: name for the switch
+           dpopts: additional arguments to ofdatapath (--no-slicing)"""
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
                    moduleName='the OpenFlow reference user switch' +
