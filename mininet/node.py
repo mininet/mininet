@@ -801,7 +801,7 @@ class UserSwitch( Switch ):
 
     dpidLen = 12
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, dpopts='', **kwargs ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
@@ -810,6 +810,7 @@ class UserSwitch( Switch ):
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        self.dpopts = dpopts
 
     @classmethod
     def setup( cls ):
@@ -840,7 +841,8 @@ class UserSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-                  ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
+                  ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
+                  self.dpopts +
                   ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
                   ' ' + clist +
