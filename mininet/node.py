@@ -49,6 +49,7 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
+from operator import or_
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -784,6 +785,10 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                    self.name )
 
+    def connected( self ):
+        "Is the switch connected to a controller? (override this method)"
+        return False
+
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
@@ -818,6 +823,10 @@ class UserSwitch( Switch ):
             return "can't run dpctl without passive listening port"
         return self.cmd( 'dpctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
+
+    def connected( self ):
+        "Is the switch connected to a controller?"
+        return 'remote.is-connected=true' in self.dpctl( 'status' )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
@@ -950,6 +959,23 @@ class OVSSwitch( Switch ):
         "Disconnect a data port"
         self.cmd( 'ovs-vsctl del-port', self, intf )
 
+    def controllerUUIDs( self ):
+        "Return ovsdb UUIDs for our controllers"
+        uuids = []
+        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+                               'Controller' ).strip()
+        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
+            controllers = controllers[ 1 : -1 ]
+            uuids = [ c.strip() for c in controllers.split( ',' ) ]
+        return uuids
+
+    def connected( self ):
+        "Are we connected to at least one of our controllers?"
+        results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
+                                         uuid, 'is_connected' )
+                    for uuid in self.controllerUUIDs() ]
+        return reduce( or_, results, False )
+
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
@@ -976,18 +1002,13 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
-        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
-                               'Controller' ).strip()
-        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
-            controllers = controllers[ 1 : -1 ]
-            uuids = [ c.strip() for c in controllers.split( ',' ) ]
-            for uuid in uuids:
-                if uuid.count( '-' ) != 4:
-                    # Doesn't look like a UUID
-                    continue
-                uuid = uuid.strip()
-                self.cmd( 'ovs-vsctl set Controller', uuid,
-                          'max_backoff=1000' )
+        for uuid in self.controllerUUIDs():
+            if uuid.count( '-' ) != 4:
+                # Doesn't look like a UUID
+                continue
+            uuid = uuid.strip()
+            self.cmd( 'ovs-vsctl set Controller', uuid,
+                      'max_backoff=1000' )
 
     def stop( self ):
         "Terminate OVS switch."
