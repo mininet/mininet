@@ -55,7 +55,7 @@ from sys import exit
 from time import time
 
 # boot can be slooooow!!!! need to debug/optimize somehow
-TIMEOUT=120
+TIMEOUT=600
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -167,15 +167,17 @@ def addMininetUser( img ):
     print '* Adding mininet user to', img
     # 1. We bind-mount / into a temporary directory, and
     # then mount the volume's /etc and /home on top of it!
-    bind = mkdtemp()
     mnt = mkdtemp()
-    srun( 'mount -B / ' + bind )
+    bind = mkdtemp()
     srun( 'mount %s %s' % ( img, mnt ) )
+    srun( 'mount -B / ' + bind )
     srun( 'mount -B %s/etc %s/etc' % ( mnt, bind ) )
     srun( 'mount -B %s/home %s/home' % ( mnt, bind ) )
     def chroot( cmd ):
         "Chroot into bind mount and run command"
         call( 'sudo chroot %s ' % bind + cmd, shell=True )
+    # 1a. Add hostname entry in /etc/hosts
+    addTo( bind + '/etc/hosts', '127.0.1.1 mininet-vm' )
     # 2. Next, we delete any old mininet user and add a new one
     chroot( 'deluser mininet' )
     chroot( 'useradd --create-home mininet' )
@@ -187,16 +189,17 @@ def addMininetUser( img ):
     # 2b. Disable cloud junk
     disableCloud( bind )
     chroot( 'sudo update-rc.d landscape-client disable' )
-        # 2c. Add serial getty
+    # 2c. Add serial getty
     print '* Adding getty on ttyS0'
     chroot( 'cp /etc/init/tty1.conf /etc/init/ttyS0.conf' )
     chroot( 'sed -i "s/tty1/ttyS0/g" /etc/init/ttyS0.conf' )
     # 3. Lastly, we umount and clean up everything
     run( 'sync' )
-    srun( 'umount %s/etc ' % bind )
     srun( 'umount %s/home ' % bind )
+    srun( 'umount %s/etc ' % bind )
     srun( 'umount %s' % bind )
     srun( 'umount ' + mnt )
+    run( 'rmdir ' + bind )
     run( 'rmdir ' + mnt )
     # 4. Just to make sure, we check the filesystem
     run( 'e2fsck -y ' + img )
@@ -212,6 +215,8 @@ def makeCOWDisk( image ):
     print '* Resizing COW disk and file system'
     run( 'qemu-img resize %s +8G' % cow )
     srun( 'modprobe nbd')
+    # Ideally we should check if it's being used...
+    srun( 'qemu-nbd -d /dev/nbd0' )
     srun( 'qemu-nbd -c /dev/nbd0 ' + cow )
     srun( 'e2fsck -fy /dev/nbd0' )
     srun( 'resize2fs /dev/nbd0' )
@@ -288,15 +293,18 @@ def interact( vm ):
     vm.expect( prompt )
     print '* Testing Mininet'
     vm.sendline( 'sudo mn --test pingall' )
-    vm.expect( '0% dropped' )
-    print '* Basic test succeeded'
+    if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=30 ):
+        print '* Sanity check succeeded'
+    else:
+        print '* Sanity check FAILED'
+    vm.expect( prompt )
+    print '* Making sure cgroups are mounted'
+    vm.sendline( 'sudo service cgroup-lite restart' )
+    vm.expect( prompt )
+    vm.sendline( 'sudo cgroups-mount' )
     vm.expect( prompt )
     print '* Running make test'
     vm.sendline( 'cd ~/mininet; sudo make test' )
-    vm.expect( 'OK' )
-    print '* Basic test succeeded'
-    vm.expect( 'OK' )
-    print '* Hi-Fi test succeeded'
     vm.expect( prompt )
     print '* Shutting down'
     vm.sendline( 'sync; sudo shutdown -h now' )
