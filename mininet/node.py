@@ -989,6 +989,7 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl add-br', self )
         if self.datapath == 'user':
             self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
+        int( self.dpid, 16 ) # DPID must be a hex string
         self.cmd( 'ovs-vsctl -- set Bridge', self,
                   'other_config:datapath-id=' + self.dpid )
         self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
