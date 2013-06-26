@@ -60,18 +60,16 @@ class Singleton( type ):
        See http://en.wikipedia.org/wiki/SingletonPattern#Python
 
        Intended to be used as a __metaclass_ param, as shown for the class
-       below.
+       below."""
 
-       Changed cls first args to mcs to satisfy pylint."""
+    def __init__( cls, name, bases, dict_ ):
+        super( Singleton, cls ).__init__( name, bases, dict_ )
+        cls.instance = None
 
-    def __init__( mcs, name, bases, dict_ ):
-        super( Singleton, mcs ).__init__( name, bases, dict_ )
-        mcs.instance = None
-
-    def __call__( mcs, *args, **kw ):
-        if mcs.instance is None:
-            mcs.instance = super( Singleton, mcs ).__call__( *args, **kw )
-            return mcs.instance
+    def __call__( cls, *args, **kw ):
+        if cls.instance is None:
+            cls.instance = super( Singleton, cls ).__call__( *args, **kw )
+            return cls.instance
 
 
 class MininetLogger( Logger, object ):

@@ -10,10 +10,9 @@ Glen Gibb, February 2011
 """
 
 from mininet.cli import CLI
-from mininet.log import lg, info
+from mininet.log import lg
 from mininet.node import Node
 from mininet.topolib import TreeNet
-from mininet.util import quietRun
 
 #################################
 def startNAT( root, inetIntf='eth0', subnet='10.0/8' ):
@@ -75,7 +74,6 @@ def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
        subnet: Mininet subnet"""
     switch = network.get( switch )
     prefixLen = subnet.split( '/' )[ 1 ]
-    routes = [ subnet ]  # host networks to route to
 
     # Create a node in root namespace
     root = Node( 'root', inNamespace=False )

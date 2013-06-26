@@ -759,7 +759,7 @@ class Switch( Node ):
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
         try:
-            dpid = int( re.findall( '\d+', self.name )[ 0 ] )
+            dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
             dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
             return dpid
@@ -787,7 +787,7 @@ class Switch( Node ):
 
     def connected( self ):
         "Is the switch connected to a controller? (override this method)"
-        return False
+        return False and self  # satisfy pylint
 
     def __repr__( self ):
         "More informative string representation"

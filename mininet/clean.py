@@ -55,7 +55,7 @@ def cleanup():
             sh( 'ovs-vsctl del-br ' + dp )
 
     info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+    links = sh( r"ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
     for link in links:
         if link != '':
             sh( "ip link del " + link )
