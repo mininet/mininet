@@ -1018,6 +1018,71 @@ class OVSSwitch( Switch ):
 OVSKernelSwitch = OVSSwitch
 
 
+class IVSSwitch(Switch):
+    """IVS virtual switch
+       Currently only works in the root namespace.
+    """
+
+    def __init__( self, name, **kwargs ):
+        Switch.__init__( self, name, **kwargs )
+        self.process = None
+        if self.inNamespace:
+            error( "IVSSwitch currently only works"
+                   " in the root namespace.\n" )
+            exit( 1 )
+
+    @classmethod
+    def setup( cls ):
+        "Make sure IVS is installed"
+        pathCheck( 'ivs-ctl', 'ivs',
+                   moduleName="Indigo Virtual Switch (projectfloodlight.org)" )
+        out, err, exitcode = errRun( 'ivs-ctl show' )
+        if exitcode:
+            error( out + err +
+                   'ivs-ctl exited with code %d\n' % exitcode +
+                   '*** The openvswitch kernel module might '
+                   'not be loaded. Try modprobe openvswitch.\n' )
+            exit( 1 )
+
+    def start( self, controllers ):
+        "Start up a new IVS switch"
+        args = ['ivs']
+        args.extend( ['--name', self.name] )
+        args.extend( ['--dpid', self.dpid] )
+        args.extend( ['--verbose'] )
+        for intf in self.intfs.values():
+            if not intf.IP():
+                args.extend( ['-i', intf.name] )
+        for c in controllers:
+            args.extend( ['-c', '%s:%d' % (c.IP(), c.port)] )
+
+        with open( '/tmp/ivs.%s.log' % self.name, 'w' ) as logfile:
+            with open( '/dev/null', 'w' ) as nullfile:
+                self.process = Popen( args, stdout=logfile, stderr=STDOUT,
+                                      stdin=nullfile, preexec_fn=os.setsid )
+        self.execed = False
+
+    def stop( self ):
+        "Terminate IVS switch."
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+            self.process = None
+        self.deleteIntfs()
+
+    def attach( self, intf ):
+        "Connect a data port"
+        self.cmd( 'ivs-ctl', 'add-port', '--datapath', self.name, intf )
+
+    def detach( self, intf ):
+        "Disconnect a data port"
+        self.cmd( 'ivs-ctl', 'del-port', '--datapath', self.name, intf )
+
+    def dpctl( self, *args ):
+        "Run dpctl command"
+        return "dpctl not supported\n" or args or self # satisfy pylint
+
+
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
