@@ -1055,6 +1055,8 @@ class IVSSwitch(Switch):
                 args.extend( ['-i', intf.name] )
         for c in controllers:
             args.extend( ['-c', '%s:%d' % (c.IP(), c.port)] )
+        if self.listenPort:
+            args.extend( ['--listen', '127.0.0.1:%i' % self.listenPort] )
 
         with open( '/tmp/ivs.%s.log' % self.name, 'w' ) as logfile:
             with open( '/dev/null', 'w' ) as nullfile:
@@ -1080,7 +1082,10 @@ class IVSSwitch(Switch):
 
     def dpctl( self, *args ):
         "Run dpctl command"
-        return "dpctl not supported\n" or args or self # satisfy pylint
+        if not self.listenPort:
+            return "can't run dpctl without passive listening port"
+        return self.cmd( 'dpctl ' + ' '.join( args ) +
+                         ' tcp:127.0.0.1:%i' % self.listenPort )
 
 
 class Controller( Node ):
