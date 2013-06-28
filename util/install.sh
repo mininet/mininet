@@ -77,6 +77,9 @@ OVS_TAG=v$OVS_RELEASE
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
+IVS_TAG=v0.3
+IVS_SRC=~/ivs
+
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
@@ -348,6 +351,18 @@ function remove_ovs {
     echo "Done removing OVS"
 }
 
+function ivs {
+    # Install dependencies
+    $install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
+
+    # Install IVS from source
+    cd ~/
+    git clone git://github.com/floodlight/ivs $IVS_SRC -b $IVS_TAG --recursive
+    cd $IVS_SRC
+    make
+    sudo make install
+}
+
 # Install NOX with tutorial files
 function nox {
     echo "Installing NOX w/tutorial files..."
@@ -551,6 +566,7 @@ function all {
     pox
     oftest
     cbench
+    ivs
     echo "Enjoy Mininet!"
 }
 
@@ -588,7 +604,7 @@ function vm_clean {
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhkmnprtvwx03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhikmnprtvwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -603,6 +619,7 @@ function usage {
     printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2
     printf -- ' -f: install open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
+    printf -- ' -i: install Indigo (V)irtual Switch\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
@@ -623,7 +640,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnprtvwx03' OPTION
+    while getopts 'abcdfhikmnprtvwx03' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -636,6 +653,7 @@ else
             *)  echo "Invalid OpenFlow version $OF_VERSION";;
             esac;;
       h)    usage;;
+      i)    ivs;;
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
