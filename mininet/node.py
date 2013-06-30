@@ -1084,7 +1084,7 @@ class IVSSwitch(Switch):
         "Run dpctl command"
         if not self.listenPort:
             return "can't run dpctl without passive listening port"
-        return self.cmd( 'dpctl ' + ' '.join( args ) +
+        return self.cmd( 'ovs-ofctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
 
 
