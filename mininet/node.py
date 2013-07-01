@@ -1019,17 +1019,11 @@ OVSKernelSwitch = OVSSwitch
 
 
 class IVSSwitch(Switch):
-    """IVS virtual switch
-       Currently only works in the root namespace.
-    """
+    """IVS virtual switch"""
 
     def __init__( self, name, **kwargs ):
         Switch.__init__( self, name, **kwargs )
         self.process = None
-        if self.inNamespace:
-            error( "IVSSwitch currently only works"
-                   " in the root namespace.\n" )
-            exit( 1 )
 
     @classmethod
     def setup( cls ):
