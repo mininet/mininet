@@ -107,7 +107,6 @@ info( '* Stopping Data Network\n' )
 net.stop()
 
 info( '* Stopping Control Network\n' )
-net.hosts = []  # Avoid stopping controllers twice
 cnet.stop()
 
 
