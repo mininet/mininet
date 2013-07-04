@@ -28,6 +28,11 @@ This example creates a network with multiple controllers by
 creating an empty network, adding nodes to it, and manually
 starting the switches.
 
+controlnet.py:
+
+This examples shows how you can model the control network as well
+as the data network, by actually creating two Mininet objects.
+
 cpu.py:
 
 This example tests iperf bandwidth for varying CPU limits.
