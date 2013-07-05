@@ -25,7 +25,7 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair
+from mininet.util import makeIntfPair, errFail, quietRun
 from time import sleep
 import re
 
@@ -109,7 +109,7 @@ class Intf( object ):
     def rename( self, newname ):
         "Rename interface"
         self.ifconfig( 'down' )
-        result = self.cmd( 'ip link set', self.name, 'name', newname )
+        result = self.cmd( 'ip link set dev', self.name, 'name', newname )
         self.name = newname
         self.ifconfig( 'up' )
         return result
@@ -378,15 +378,18 @@ class Link( object ):
            intf2: name of interface 2
            (override this class method [and possibly delete()]
            to change link type)"""
-        cmd = 'ip link add %s type veth peer name %s netns ' % ( intf1, intf2 )
-        if node2.inNamespace:
-            cmd += node2.name
-        else:
-            cmd += '1'
-        if node1:
-            node1.cmd( cmd )
-        else:
-            errFail( cmd )
+        # To be compatible with pid namespaces and chroot in the future
+        # we create links in the root namespace and then move
+        # the ends as needed.
+        # First, make sure there aren't stale links sitting around
+        quietRun( 'ip link delete %s type veth' % intf1 )
+        quietRun( 'ip link delete %s type veth' % intf2 )
+        cmd = 'ip link add %s type veth peer name %s' % ( intf1, intf2 )
+        if node2 and node2.inNamespace:
+            cmd += ' netns %s' % node2
+        errFail( cmd )
+        if node1 and node1.inNamespace:
+            errFail( 'ip link set dev %s netns %s' % ( intf1, node1 ) )
 
     def delete( self ):
         "Delete this link"
@@ -395,6 +398,7 @@ class Link( object ):
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
+
 
 class TCLink( Link ):
     "Link with symmetric TC interfaces configured via opts"
