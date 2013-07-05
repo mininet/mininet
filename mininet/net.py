@@ -372,15 +372,15 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
-        for host in self.hosts:
-            info( host.name + ' ' )
-            host.terminate()
-        info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
+        info( '\n' )
+        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
+        for host in self.hosts:
+            info( host.name + ' ' )
+            host.terminate()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:

@@ -141,10 +141,10 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
-        if not self.inNamespace:
-            for intfName in self.intfNames():
-                if self.name in intfName:
-                    quietRun( 'ip link del ' + intfName )
+        # Intfs may end up in root NS
+        for intfName in self.intfNames():
+            if self.name in intfName:
+                quietRun( 'ip link del ' + intfName )
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -391,16 +391,19 @@ class Node( object ):
                     connections += [ ( intf, link.intf1 ) ]
         return connections
 
-    def deleteIntfs( self ):
-        "Delete all of our interfaces."
+    def deleteIntfs( self, checkName=True ):
+        """Delete all of our interfaces.
+           checkName: only delete interfaces that contain our name"""
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
         for intf in self.intfs.values():
-            intf.delete()
-            info( '.' )
+            # Protect against deleting hardware interfaces
+            if ( self.name in intf.name ) or ( not checkName ):
+                intf.delete()
+                info( '.' )
 
     # Routing support
 
