@@ -7,16 +7,19 @@ This creates hosts with private directories as desired.
 """
 
 from mininet.net import Mininet
-from mininet.node import Host, Switch, Controller
+from mininet.node import Host
 from mininet.cli import CLI
 from mininet.util import errFail, quietRun, errRun
 from mininet.topo import SingleSwitchTopo
 from mininet.log import setLogLevel, info, debug
 
-from os.path import join, realpath
+from os.path import realpath
 from functools import partial
 
+
 # Utility functions for unmounting a tree
+
+MNRUNDIR = realpath( '/var/run/mn' )
 
 def mountPoints():
     "Return list of mounted file systems"
@@ -31,7 +34,7 @@ def mountPoints():
         mounts.append( mount )
     return mounts
 
-def unmountAll( dir='/var/run/mn' ):
+def unmountAll( dir=MNRUNDIR ):
     "Unmount all mounts under a directory tree"
     dir = realpath( dir )
     # Find all mounts below dir
@@ -53,11 +56,17 @@ def unmountAll( dir='/var/run/mn' ):
 class HostWithPrivateDirs( Host ):
     "Host with private directories"
 
-    mnRunDir = realpath( '/var/run/mn' )
+    mnRunDir = MNRUNDIR
 
     def __init__(self, name, *args, **kwargs ):
-        "privateDirs: list of private directories"
+        """privateDirs: list of private directories
+           remounts: dirs to remount
+           unmount: unmount dirs in cleanup? (True)
+           Note: if unmount is False, you must call unmountAll()
+           manually."""
         self.privateDirs = kwargs.pop( 'privateDirs', [] )
+        self.remounts = kwargs.pop( 'remounts', [] )
+        self.unmount = kwargs.pop( 'unmount', True )
         Host.__init__( self, name, *args, **kwargs )
         self.rundir = '%s/%s' % ( self.mnRunDir, name )
         if self.privateDirs:
@@ -86,19 +95,28 @@ class HostWithPrivateDirs( Host ):
             errFail( 'mount -B %s %s' %
                            ( privateDir, mountPoint) )
 
-    def remountDirs( self, fstypes=[ 'nfs' ] ):
-        "Remount mounted file systems"
-        dirs = self.cmd( 'cat /proc/mounts' ).strip().split( '\n' )
+    def mountDirs( self, dirs ):
+        "Mount a list of directories"
+        for dir in dirs:
+            mountpoint = self.root + dir
+            errFail( 'mount -B %s %s' %
+                     ( dir, mountpoint ) )
+
+    @classmethod
+    def findRemounts( cls, fstypes=[ 'nfs' ] ):
+        """Identify mount points in /proc/mounts to remount
+           fstypes: file system types to match"""
+        dirs = quietRun( 'cat /proc/mounts' ).strip().split( '\n' )
+        remounts = []
         for dir in dirs:
             line = dir.split()
             mountpoint, fstype = line[ 1 ], line[ 2 ]
             # Don't re-remount directories!!!
-            if mountpoint.find( self.mnRunDir ) == 0:
+            if mountpoint.find( cls.mnRunDir ) == 0:
                 continue
             if fstype in fstypes:
-                print "remounting:", mountpoint
-                errFail( 'mount -B %s %s' % (
-                         mountpoint, self.root + mountpoint ) )
+                remounts.append( mountpoint )
+        return remounts
 
     def createBindMounts( self ):
         """Create a chroot directory structure,
@@ -113,7 +131,7 @@ class HostWithPrivateDirs( Host ):
         # Recursively mount / in private doort
         # note we'll remount /sys and /proc later
         errFail( 'mount -B / ' + self.root )
-        self.remountDirs()
+        self.mountDirs( self.remounts )
         self.mountPrivateDirs()
 
     def unmountBindMounts( self ):
@@ -131,33 +149,45 @@ class HostWithPrivateDirs( Host ):
         return Host.popen( self, *args, **kwargs )
 
     def cleanup( self ):
-        "Clean up, then unmount bind mounts"
+        """Clean up, then unmount bind mounts
+           unmount: actually unmount bind mounts?"""
         # Wait for process to actually terminate
         self.shell.wait()
         Host.cleanup( self )
-        self.unmountBindMounts()
-        errFail( 'rmdir ' + self.root )
+        if self.unmount:
+            self.unmountBindMounts()
+            errFail( 'rmdir ' + self.root )
+
+
+# Convenience aliases
+
+findRemounts = HostWithPrivateDirs.findRemounts
+
 
 # Sample usage
 
 def testHostWithPrivateDirs():
     "Test bind mounts"
-    topo = SingleSwitchTopo( 2 )
+    topo = SingleSwitchTopo( 10 )
+    remounts = findRemounts( fstypes=[ 'nfs' ] )
     privateDirs = [ '/var/log', '/var/run' ]
-    host = partial( HostWithPrivateDirs, privateDirs=privateDirs )
+    host = partial( HostWithPrivateDirs, remounts=remounts,
+                    privateDirs=privateDirs, unmount=False )
     net = Mininet( topo=topo, host=host )
     net.start()
-    print 'Private Directories:', privateDirs
+    info( 'Private Directories:', privateDirs, '\n' )
     CLI( net )
     net.stop()
+    # We do this all at once to save a bit of time
+    info( 'Unmounting host bind mounts...\n' )
+    unmountAll()
 
 
 if __name__ == '__main__':
     unmountAll()
     setLogLevel( 'info' )
     testHostWithPrivateDirs()
-    unmountAll()
-
+    info( 'Done.\n')
 
 
 
