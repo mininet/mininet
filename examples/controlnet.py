@@ -107,6 +107,8 @@ info( '* Stopping Data Network\n' )
 net.stop()
 
 info( '* Stopping Control Network\n' )
+# dataControllers have already been stopped
+cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
 cnet.stop()
 
 
