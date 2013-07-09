@@ -619,8 +619,8 @@ class CPULimitedHost( Host ):
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
-        super(CPULimitedHost, self).cleanup()
-        "Clean up our cgroup"
+        "Clean up Node, then clean up our cgroup"
+        super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     def chrt( self ):
