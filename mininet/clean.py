@@ -49,7 +49,7 @@ def cleanup():
             sh( 'dpctl deldp ' + dp )
 
     info( "***  Removing OVS datapaths" )
-    dps = sh("ovs-vsctl list-br").split( '\n' )
+    dps = sh("ovs-vsctl --timeout=1 list-br").split( '\n' )
     for dp in dps:
         if dp:
             sh( 'ovs-vsctl del-br ' + dp )
