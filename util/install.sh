@@ -9,6 +9,18 @@ set -e
 # Fail on unset var usage
 set -o nounset
 
+# Get directory containing mininet folder
+MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+# Set up build directory, which by default is the working directory
+#  unless the working directory is a subdirectory of mininet, 
+#  in which case we use the directory containing mininet
+BUILD_DIR=$PWD
+case $PWD in
+  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+  *) BUILD_DIR=$PWD;;
+esac
+
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
@@ -72,7 +84,7 @@ OVS_RELEASE=1.4.0
 OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
 OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
-OVS_SRC=~/openvswitch
+OVS_SRC=$BUILD_DIR/openvswitch
 OVS_TAG=v$OVS_RELEASE
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
@@ -116,7 +128,7 @@ function kernel_clean {
     fi
 
     # Also remove downloaded packages:
-    rm -f ~/linux-headers-* ~/linux-image-*
+    rm -f $HOME/linux-headers-* $HOME/linux-image-*
 }
 
 # Install Mininet deps
@@ -130,13 +142,13 @@ function mn_deps {
     # limits to support larger setups:
     if ! grep Mininet /etc/sysctl.conf; then
         echo "Adding Mininet sysctl settings"
-        sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
+        sudo su -c "cat $MININET_DIR/mininet/util/sysctl_addon >> /etc/sysctl.conf"
     fi
     # Load new sysctl settings:
     sudo sysctl -p
 
     echo "Installing Mininet core"
-    pushd ~/mininet
+    pushd $MININET_DIR/mininet
     sudo make install
     popd
 }
@@ -148,26 +160,26 @@ function mn_deps {
 # ... modified to use Debian Lenny rather than unstable.
 function of {
     echo "Installing OpenFlow reference implementation..."
-    cd ~/
+    cd $BUILD_DIR/
     $install git-core autoconf automake autotools-dev pkg-config \
 		make gcc libtool libc6-dev
     git clone git://openflowswitch.org/openflow.git
-    cd ~/openflow
+    cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < ~/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
     ./configure
     make
     sudo make install
-    cd ~
+    cd $BUILD_DIR
 }
 
 function of13 {
     echo "Installing OpenFlow 1.3 soft switch implementation..."
-    cd ~/
+    cd $BUILD_DIR/
     $install  git-core autoconf automake autotools-dev pkg-config \
         make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
         unzip libpcre3-dev flex bison libboost-dev
@@ -184,18 +196,18 @@ function of13 {
     cd ${NBEESRC}/src
     cmake .
     make
-    cd ~/
+    cd $BUILD_DIR/
     sudo cp ${NBEESRC}/bin/libn*.so /usr/local/lib
     sudo ldconfig
     sudo cp -R ${NBEESRC}/include/ /usr/
 
     # Resume the install:
-    cd ~/ofsoftswitch13
+    cd $BUILD_DIR/ofsoftswitch13
     ./boot.sh
     ./configure
     make
     sudo make install
-    cd ~
+    cd $BUILD_DIR
 }
 
 function wireshark {
@@ -207,7 +219,7 @@ function wireshark {
         # Install newer version
         sudo apt-get install -y scons mercurial libglib2.0-dev
         sudo apt-get install -y libwiretap-dev libwireshark-dev
-        cd ~
+        cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
         cd of-dissector/src
         export WIRESHARK=/usr/include/wireshark
@@ -219,14 +231,14 @@ function wireshark {
         echo "Copied openflow plugin to $WSPLUGDIR"
     else
         # Install older version from reference source
-        cd ~/openflow/utilities/wireshark_dissectors/openflow
+        cd $BUILD_DIR/openflow/utilities/wireshark_dissectors/openflow
         make
         sudo make install
     fi
 
     # Copy coloring rules: OF is white-on-blue:
-    mkdir -p ~/.wireshark
-    cp ~/mininet/util/colorfilters ~/.wireshark
+    mkdir -p $HOME/.wireshark
+    cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 }
 
 
@@ -284,7 +296,7 @@ function ovs {
 
     if [ $ovspresent = 1 ]; then
         echo "Done (hopefully) installing packages"
-        cd ~
+        cd $BUILD_DIR
         return
     fi
 
@@ -307,7 +319,7 @@ function ovs {
     fi
 
     # Install OVS from release
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://openvswitch.org/openvswitch $OVS_SRC
     cd $OVS_SRC
     git checkout $OVS_TAG
@@ -366,7 +378,7 @@ function nox {
     $install libsqlite3-dev python-simplejson
 
     # Fetch NOX destiny
-    cd ~/
+    cd $BUILD_DIR/
     git clone https://github.com/noxrepo/nox-classic.git noxcore
     cd noxcore
     if ! git checkout -b destiny remotes/origin/destiny ; then
@@ -375,9 +387,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am ~/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
-        git am ~/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build
@@ -389,7 +401,7 @@ function nox {
     #make check
 
     # Add NOX_CORE_DIR env var:
-    sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=~/noxcore/build/src|' ~/.bashrc
+    sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=$BUILD_DIR/noxcore/build/src|' ~/.bashrc
 
     # To verify this install:
     #cd ~/noxcore/build/src
@@ -412,7 +424,7 @@ function nox13 {
     fi
 
     # Fetch NOX destiny
-    cd ~/
+    cd $BUILD_DIR/
     git clone https://github.com/CPqD/nox13oflib.git
     cd nox13oflib
 
@@ -432,8 +444,8 @@ function nox13 {
 
 # "Install" POX
 function pox {
-    echo "Installing POX into $HOME/pox..."
-    cd ~
+    echo "Installing POX into $BUILD_DIR/pox..."
+    cd $BUILD_DIR
     git clone https://github.com/noxrepo/pox.git
 }
 
@@ -445,7 +457,7 @@ function oftest {
     $install tcpdump python-scapy
 
     # Install oftest:
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://github.com/floodlight/oftest
 }
 
@@ -454,12 +466,12 @@ function cbench {
     echo "Installing cbench..."
 
     $install libsnmp-dev libpcap-dev libconfig-dev
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://openflow.org/oflops.git
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
-    ./configure --with-openflow-src-dir=$HOME/openflow
+    ./configure --with-openflow-src-dir=$BUILD_DIR/openflow
     make
     sudo make install || true # make install fails; force past this
 }
@@ -614,6 +626,7 @@ function usage {
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
+    printf -- ' -i < directory >: sets the (I)nstallation directory for Mininet dependencies\n' >&2
     exit 2
 }
 
@@ -623,7 +636,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnprtvwx03' OPTION
+    while getopts 'abcdfhkmnprtvwx03i:' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -651,6 +664,9 @@ else
             esac;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
+      i)    mkdir -p $OPTARG; # ensure the directory is created
+            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path of the directory
+            echo "Dependency installation directory: $BUILD_DIR";;
       ?)    usage;;
       esac
     done
