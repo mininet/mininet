@@ -468,9 +468,13 @@ class Mininet( object ):
                     lost += sent - received
                     output( ( '%s ' % dest.name ) if received else 'X ' )
             output( '\n' )
+        if packets > 0:
             ploss = 100 * lost / packets
-        output( "*** Results: %i%% dropped (%d/%d lost)\n" %
-                ( ploss, lost, packets ) )
+            output( "*** Results: %i%% dropped (%d/%d lost)\n" %
+                    ( ploss, lost, packets ) )
+        else:
+            ploss = 0
+            output( "*** Warning: No packets sent\n" )
         return ploss
 
     @staticmethod
