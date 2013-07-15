@@ -46,7 +46,7 @@ void usage(char *name)
 
 int setns(int fd, int nstype)
 {
-	return syscall(__NR_setns, fd, nstype);
+    return syscall(__NR_setns, fd, nstype);
 }
 
 /* Validate alphanumeric path foo1/bar2/baz */
@@ -112,9 +112,9 @@ int main(int argc, char *argv[])
                     case -1:
                         perror("fork");
                         return 1;
-                    case 0:		/* child */
+                    case 0:     /* child */
                         break;
-                    default:	/* parent */
+                    default:    /* parent */
                         return 0;
                 }
             }
