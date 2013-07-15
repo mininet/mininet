@@ -136,6 +136,7 @@ function mn_deps {
     echo "Installing Mininet dependencies"
     $install gcc make socat psmisc xterm ssh iperf iproute telnet \
         python-setuptools cgroup-bin ethtool help2man \
+        doxygen doxypy texlive-fonts-recommended \
         pyflakes pylint pep8
 
     # Add sysctl parameters as noted in the INSTALL file to increase kernel
