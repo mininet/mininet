@@ -95,7 +95,7 @@ from itertools import chain
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.node import Host, OVSKernelSwitch, Controller, NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -112,7 +112,8 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None ):
+                  listenPort=None,
+                  gateway=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -129,7 +130,8 @@ class Mininet( object ):
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
-               each additional switch in the net if inNamespace=False"""
+               each additional switch in the net if inNamespace=False
+           gateway: node that provides connectivity to the Internet"""
         self.topo = topo
         self.switch = switch
         self.host = host
@@ -148,6 +150,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+        self.gateway = gateway
 
         self.hosts = []
         self.switches = []
@@ -163,6 +166,9 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
+    # list of Node subclasses that provide gateway service
+    gateways = [ NAT ]
+
     def addHost( self, name, cls=None, **params ):
         """Add host.
            name: name of host to add
@@ -175,17 +181,22 @@ class Mininet( object ):
                                   prefixLen=self.prefixLen ) +
                                   '/%s' % self.prefixLen }
         if self.autoSetMacs:
-            defaults[ 'mac'] = macColonHex( self.nextIP )
+            defaults[ 'mac' ] = macColonHex( self.nextIP )
         if self.autoPinCpus:
             defaults[ 'cores' ] = self.nextCore
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
         self.nextIP += 1
         defaults.update( params )
+        # TODO: clean this up
+        if params.get( 'isNAT', False ):
+            cls = NAT
         if not cls:
             cls = self.host
         h = cls( name, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
+        if cls in self.gateways:
+            self.gateway = h
         return h
 
     def addSwitch( self, name, cls=None, **params ):
@@ -226,6 +237,16 @@ class Mininet( object ):
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
+
+    # TODO: incomplete
+    def addNAT( self, name='nat0', connect=True, **params ):
+        nat = self.addHost( name, cls=NAT, **params )
+        # find first switch and create link
+        print "net/addNAT"
+        if connect:
+            #connect the nat to the first switch
+            self.addLink( nat, self.switches[ 0 ] )
+        return nat
 
     # BL: We now have four ways to look up nodes
     # This may (should?) be cleaned up in the future.
@@ -305,6 +326,19 @@ class Mininet( object ):
             host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
+    def configGateway( self ):
+        """Add gateway routes to all hosts if the networks has a gateway."""
+        if self.gateway:
+            gatewayIP = self.gateway.defaultIntf().IP()
+            for host in self.hosts:
+                if host.inNamespace and self.gateway:
+                    host.cmd( 'ip route flush root 0/0' )
+                    host.cmd( 'route add -net', self.ipBase, 'dev', host.defaultIntf() )
+                    host.cmd( 'route add default gw', gatewayIP )
+                else:
+                    # Don't mess with hosts in the root namespace
+                    pass
+
     def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
@@ -363,6 +397,7 @@ class Mininet( object ):
             self.startTerms()
         if self.autoStaticArp:
             self.staticArp()
+        self.configGateway()
         self.built = True
 
     def startTerms( self ):

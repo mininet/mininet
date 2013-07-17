@@ -193,6 +193,9 @@ class MininetRunner( object ):
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
+        opts.add_option( '--nat', action='store_true',
+                         default=False, help="adds a NAT to the topology "
+                         "that connects Mininet to the physical network" )
         opts.add_option( '--version', action='callback', callback=version )
 
         self.options, self.args = opts.parse_args()
@@ -223,6 +226,8 @@ class MininetRunner( object ):
         start = time.time()
 
         topo = buildTopo( TOPOS, self.options.topo )
+        if self.options.nat:
+          topo.addNAT()
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
         controller = customConstructor( CONTROLLERS, self.options.controller )

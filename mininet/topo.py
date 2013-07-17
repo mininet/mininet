@@ -89,6 +89,16 @@ class Topo(object):
         result = self.addNode(name, isSwitch=True, **opts)
         return result
 
+    def addNAT(self, name='nat', connect=True, **opts):
+        """Convenience method: Add NAT to graph.
+           name: NAT name
+           connect: True will automatically connect to the first switch"""
+        nat = self.addNode(name, isNAT=True, inNamespace=False)
+        if connect:
+            # connect the NAT to the first switch
+            self.addLink(name, self.switches()[ 0 ])
+        return nat
+
     def addLink(self, node1, node2, port1=None, port2=None,
                 **opts):
         """node1, node2: nodes to link together
