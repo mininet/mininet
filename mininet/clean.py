@@ -11,6 +11,7 @@ nothing irreplaceable!
 """
 
 from subprocess import Popen, PIPE
+import time
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
@@ -31,6 +32,9 @@ def cleanup():
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
+    # Send SIGTERM first to give processes a chance to shutdown cleanly.
+    sh( 'killall ' + zombies + ' 2> /dev/null' )
+    time.sleep(1)
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
     # And kill off sudo mnexec
