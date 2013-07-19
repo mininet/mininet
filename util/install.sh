@@ -136,7 +136,6 @@ function mn_deps {
     echo "Installing Mininet dependencies"
     $install gcc make socat psmisc xterm ssh iperf iproute telnet \
         python-setuptools cgroup-bin ethtool help2man \
-        doxygen doxypy texlive-fonts-recommended \
         pyflakes pylint pep8
 
     # Add sysctl parameters as noted in the INSTALL file to increase kernel
@@ -152,6 +151,12 @@ function mn_deps {
     pushd $MININET_DIR/mininet
     sudo make install
     popd
+}
+
+# Install Mininet developer dependencies
+function mn_dev {
+    echo "Installing Mininet developer dependencies"
+    $install doxygen doxypy texlive-fonts-recommended
 }
 
 # The following will cause a full OF install, covering:
@@ -565,6 +570,7 @@ function all {
     echo "Running all commands..."
     kernel
     mn_deps
+    mn_dev
     of
     wireshark
     ovs
@@ -628,6 +634,7 @@ function usage {
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
+    printf -- ' -e: install mininet d(E)veloper dependencies\n' >&2
     printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
     printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
@@ -646,7 +653,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnprtvwx03i:' OPTION
+    while getopts 'abcdefhkmnprtvwx03i:' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -662,6 +669,7 @@ else
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
+      e)    mn_dev;;
       p)    pox;;
       r)    remove_ovs;;
       t)    vm_other;;
