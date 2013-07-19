@@ -363,13 +363,13 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'mount' )
+    mounts = quietRun( 'cat /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
-    if ('cgroup on %s' % cgdir not in mounts and
-            'cgroups on %s' % cgdir not in mounts):
+    if ('cgroup %s' % cgdir not in mounts and
+            'cgroups %s' % cgdir not in mounts):
         raise Exception( "cgroups not mounted on " + cgdir )
-    if 'cpuset on %s' % csdir not in mounts:
+    if 'cpuset %s' % csdir not in mounts:
         errRun( 'mkdir -p ' + csdir )
         errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
 
