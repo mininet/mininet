@@ -9,6 +9,18 @@ set -e
 # Fail on unset var usage
 set -o nounset
 
+# Get directory containing mininet folder
+MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+# Set up build directory, which by default is the working directory
+#  unless the working directory is a subdirectory of mininet, 
+#  in which case we use the directory containing mininet
+BUILD_DIR=$PWD
+case $PWD in
+  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+  *) BUILD_DIR=$PWD;;
+esac
+
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
 
@@ -72,7 +84,7 @@ OVS_RELEASE=1.4.0
 OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
 OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
-OVS_SRC=~/openvswitch
+OVS_SRC=$BUILD_DIR/openvswitch
 OVS_TAG=v$OVS_RELEASE
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
@@ -116,30 +128,27 @@ function kernel_clean {
     fi
 
     # Also remove downloaded packages:
-    rm -f ~/linux-headers-* ~/linux-image-*
+    rm -f $HOME/linux-headers-* $HOME/linux-image-*
 }
 
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    $install gcc make screen psmisc xterm ssh iperf iproute telnet \
-        python-setuptools python-networkx cgroup-bin ethtool help2man \
+    $install gcc make socat psmisc xterm ssh iperf iproute telnet \
+        python-setuptools cgroup-bin ethtool help2man \
         pyflakes pylint pep8
-
-    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" = "10.04" ]; then
-        echo "Upgrading networkx to avoid deprecation warning"
-        sudo easy_install --upgrade networkx
-    fi
 
     # Add sysctl parameters as noted in the INSTALL file to increase kernel
     # limits to support larger setups:
-    sudo su -c "cat $HOME/mininet/util/sysctl_addon >> /etc/sysctl.conf"
-
+    if ! grep Mininet /etc/sysctl.conf; then
+        echo "Adding Mininet sysctl settings"
+        sudo su -c "cat $MININET_DIR/mininet/util/sysctl_addon >> /etc/sysctl.conf"
+    fi
     # Load new sysctl settings:
     sudo sysctl -p
 
     echo "Installing Mininet core"
-    pushd ~/mininet
+    pushd $MININET_DIR/mininet
     sudo make install
     popd
 }
@@ -151,45 +160,66 @@ function mn_deps {
 # ... modified to use Debian Lenny rather than unstable.
 function of {
     echo "Installing OpenFlow reference implementation..."
-    cd ~/
+    cd $BUILD_DIR/
     $install git-core autoconf automake autotools-dev pkg-config \
 		make gcc libtool libc6-dev
     git clone git://openflowswitch.org/openflow.git
-    cd ~/openflow
+    cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < ~/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
     ./configure
     make
     sudo make install
+    cd $BUILD_DIR
+}
 
-    # Remove avahi-daemon, which may cause unwanted discovery packets to be
-    # sent during tests, near link status changes:
-    $remove avahi-daemon
+function of13 {
+    echo "Installing OpenFlow 1.3 soft switch implementation..."
+    cd $BUILD_DIR/
+    $install  git-core autoconf automake autotools-dev pkg-config \
+        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
+        unzip libpcre3-dev flex bison libboost-dev
 
-    # Disable IPv6.  Add to /etc/modprobe.d/blacklist:
-    if [ "$DIST" = "Ubuntu" ]; then
-        BLACKLIST=/etc/modprobe.d/blacklist.conf
-    else
-        BLACKLIST=/etc/modprobe.d/blacklist
+    if [ ! -d "ofsoftswitch13" ]; then
+         git clone https://github.com/CPqD/ofsoftswitch13.git
     fi
-    sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
-    cd ~
+
+    # Install netbee
+    NBEESRC="nbeesrc-jan-10-2013"
+    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
+    wget -nc ${NBEEURL}${NBEESRC}.zip
+    unzip ${NBEESRC}.zip
+    cd ${NBEESRC}/src
+    cmake .
+    make
+    cd $BUILD_DIR/
+    sudo cp ${NBEESRC}/bin/libn*.so /usr/local/lib
+    sudo ldconfig
+    sudo cp -R ${NBEESRC}/include/ /usr/
+
+    # Resume the install:
+    cd $BUILD_DIR/ofsoftswitch13
+    ./boot.sh
+    ./configure
+    make
+    sudo make install
+    cd $BUILD_DIR
 }
 
 function wireshark {
     echo "Installing Wireshark dissector..."
 
-    sudo apt-get install -y wireshark libgtk2.0-dev
+    sudo apt-get install -y wireshark tshark libgtk2.0-dev
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
         # Install newer version
         sudo apt-get install -y scons mercurial libglib2.0-dev
         sudo apt-get install -y libwiretap-dev libwireshark-dev
-        cd ~
+        cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
         cd of-dissector/src
         export WIRESHARK=/usr/include/wireshark
@@ -201,14 +231,14 @@ function wireshark {
         echo "Copied openflow plugin to $WSPLUGDIR"
     else
         # Install older version from reference source
-        cd ~/openflow/utilities/wireshark_dissectors/openflow
+        cd $BUILD_DIR/openflow/utilities/wireshark_dissectors/openflow
         make
         sudo make install
     fi
 
     # Copy coloring rules: OF is white-on-blue:
-    mkdir -p ~/.wireshark
-    cp ~/mininet/util/colorfilters ~/.wireshark
+    mkdir -p $HOME/.wireshark
+    cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 }
 
 
@@ -266,7 +296,7 @@ function ovs {
 
     if [ $ovspresent = 1 ]; then
         echo "Done (hopefully) installing packages"
-        cd ~
+        cd $BUILD_DIR
         return
     fi
 
@@ -289,7 +319,7 @@ function ovs {
     fi
 
     # Install OVS from release
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://openvswitch.org/openvswitch $OVS_SRC
     cd $OVS_SRC
     git checkout $OVS_TAG
@@ -348,7 +378,7 @@ function nox {
     $install libsqlite3-dev python-simplejson
 
     # Fetch NOX destiny
-    cd ~/
+    cd $BUILD_DIR/
     git clone https://github.com/noxrepo/nox-classic.git noxcore
     cd noxcore
     if ! git checkout -b destiny remotes/origin/destiny ; then
@@ -357,9 +387,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am ~/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
-        git am ~/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build
@@ -371,17 +401,51 @@ function nox {
     #make check
 
     # Add NOX_CORE_DIR env var:
-    sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=~/noxcore/build/src|' ~/.bashrc
+    sed -i -e 's|# for examples$|&\nexport NOX_CORE_DIR=$BUILD_DIR/noxcore/build/src|' ~/.bashrc
 
     # To verify this install:
     #cd ~/noxcore/build/src
     #./nox_core -v -i ptcp:
 }
 
+# Install NOX Classic/Zaku for OpenFlow 1.3
+function nox13 {
+    echo "Installing NOX w/tutorial files..."
+
+    # Install NOX deps:
+    $install autoconf automake g++ libtool python python-twisted \
+        swig libssl-dev make
+    if [ "$DIST" = "Debian" ]; then
+        $install libboost1.35-dev
+    elif [ "$DIST" = "Ubuntu" ]; then
+        $install python-dev libboost-dev
+        $install libboost-filesystem-dev
+        $install libboost-test-dev
+    fi
+
+    # Fetch NOX destiny
+    cd $BUILD_DIR/
+    git clone https://github.com/CPqD/nox13oflib.git
+    cd nox13oflib
+
+    # Build
+    ./boot.sh
+    mkdir build
+    cd build
+    ../configure
+    make -j3
+    #make check
+
+    # To verify this install:
+    #cd ~/nox13oflib/build/src
+    #./nox_core -v -i ptcp:
+}
+
+
 # "Install" POX
 function pox {
-    echo "Installing POX into $HOME/pox..."
-    cd ~
+    echo "Installing POX into $BUILD_DIR/pox..."
+    cd $BUILD_DIR
     git clone https://github.com/noxrepo/pox.git
 }
 
@@ -393,11 +457,8 @@ function oftest {
     $install tcpdump python-scapy
 
     # Install oftest:
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://github.com/floodlight/oftest
-    cd oftest
-    cd tools/munger
-    sudo make install
 }
 
 # Install cbench
@@ -405,25 +466,56 @@ function cbench {
     echo "Installing cbench..."
 
     $install libsnmp-dev libpcap-dev libconfig-dev
-    cd ~/
+    cd $BUILD_DIR/
     git clone git://openflow.org/oflops.git
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
-    ./configure --with-openflow-src-dir=$HOME/openflow
+    ./configure --with-openflow-src-dir=$BUILD_DIR/openflow
     make
     sudo make install || true # make install fails; force past this
 }
 
-function other {
-    echo "Doing other setup tasks..."
+function vm_other {
+    echo "Doing other Mininet VM setup tasks..."
+
+    # Remove avahi-daemon, which may cause unwanted discovery packets to be
+    # sent during tests, near link status changes:
+    echo "Removing avahi-daemon"
+    $remove avahi-daemon
+
+    # was: Disable IPv6.  Add to /etc/modprobe.d/blacklist:
+    #echo "Attempting to disable IPv6"
+    #if [ "$DIST" = "Ubuntu" ]; then
+    #    BLACKLIST=/etc/modprobe.d/blacklist.conf
+    #else
+    #    BLACKLIST=/etc/modprobe.d/blacklist
+    #fi
+    #sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
+
+    # Disable IPv6
+    if ! grep 'disable IPv6' /etc/sysctl.conf; then
+        echo 'Disabling IPv6'
+        echo '
+# Mininet: disable IPv6
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
+    fi
+    # Disabling IPv6 breaks X11 forwarding via ssh
+    line='AddressFamily inet'
+    file='/etc/ssh/sshd_config'
+    echo "Adding $line to $file"
+    if ! grep "$line" $file > /dev/null; then
+        echo "$line" | sudo tee -a $file > /dev/null
+    fi
 
     # Enable command auto completion using sudo; modify ~/.bashrc:
     sed -i -e 's|# for examples$|&\ncomplete -cf sudo|' ~/.bashrc
 
-    # Install tcpdump and tshark, cmd-line packet dump tools.  Also install gitk,
+    # Install tcpdump, cmd-line packet dump tool.  Also install gitk,
     # a graphical git history viewer.
-    $install tcpdump tshark gitk
+    $install tcpdump gitk
 
     # Install common text editors
     $install vim nano emacs
@@ -471,8 +563,6 @@ function all {
     pox
     oftest
     cbench
-    other
-    echo "Please reboot, then run ./mininet/util/install.sh -c to remove unneeded packages."
     echo "Enjoy Mininet!"
 }
 
@@ -480,6 +570,7 @@ function all {
 function vm_clean {
     echo "Cleaning VM..."
     sudo apt-get clean
+    sudo apt-get autoremove
     sudo rm -rf /tmp/*
     sudo rm -rf openvswitch*.tar.gz
 
@@ -500,16 +591,20 @@ function vm_clean {
     git config --global user.name "None"
     git config --global user.email "None"
 
-    # Remove mininet install script
-    rm -f install-mininet.sh
+    # Note: you can shrink the .vmdk in vmware using
+    # vmware-vdiskmanager -k *.vmdk
+    echo "Zeroing out disk blocks for efficient compaction..."
+    time sudo dd if=/dev/zero of=/tmp/zero bs=1M
+    sync ; sleep 1 ; sync ; sudo rm -f /tmp/zero
+
 }
 
 function usage {
-    printf 'Usage: %s [-acdfhkmntvxy]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhkmnprtvwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 10.04, 11.10\n' >&2
-    printf 'and Debian 5.0 (Lenny). If you run into trouble, try\n' >&2
+    printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
+    printf 'If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
 
@@ -523,38 +618,55 @@ function usage {
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
+    printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
-    printf -- ' -t: install o(T)her stuff\n' >&2
+    printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
     printf -- ' -v: install open (V)switch\n' >&2
     printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
-    printf -- ' -x: install NO(X) OpenFlow controller\n' >&2
-    printf -- ' -y: install (A)ll packages\n' >&2
-
+    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
+    printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
+    printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
+    printf -- ' -i < directory >: sets the (I)nstallation directory for Mininet dependencies\n' >&2
     exit 2
 }
+
+OF_VERSION=1.0
 
 if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdfhkmnprtvwx' OPTION
+    while getopts 'abcdfhkmnprtvwx03i:' OPTION
     do
       case $OPTION in
       a)    all;;
       b)    cbench;;
       c)    kernel_clean;;
       d)    vm_clean;;
-      f)    of;;
+      f)    case $OF_VERSION in
+            1.0) of;;
+            1.3) of13;;
+            *)  echo "Invalid OpenFlow version $OF_VERSION";;
+            esac;;
       h)    usage;;
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
       p)    pox;;
       r)    remove_ovs;;
-      t)    other;;
+      t)    vm_other;;
       v)    ovs;;
       w)    wireshark;;
-      x)    nox;;
+      x)    case $OF_VERSION in
+            1.0) nox;;
+            1.3) nox13;;
+            *)  echo "Invalid OpenFlow version $OF_VERSION";;
+            esac;;
+      0)    OF_VERSION=1.0;;
+      3)    OF_VERSION=1.3;;
+      i)    mkdir -p $OPTARG; # ensure the directory is created
+            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path of the directory
+            echo "Dependency installation directory: $BUILD_DIR";;
       ?)    usage;;
       esac
     done

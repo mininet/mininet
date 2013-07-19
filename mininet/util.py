@@ -4,7 +4,7 @@ from mininet.log import output, info, error, warn
 
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
-from select import poll, POLLIN
+from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 import re
 from fcntl import fcntl, F_GETFL, F_SETFL
@@ -171,27 +171,35 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
-def moveIntfNoRetry( intf, node, printError=False ):
+def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
     """Move interface to node, without retrying.
        intf: string, interface
-       node: Node object
-       printError: if true, print error"""
-    cmd = 'ip link set ' + intf + ' netns ' + repr( node.pid )
-    quietRun( cmd )
-    links = node.cmd( 'ip link show' )
+        dstNode: destination Node
+        srcNode: source Node or None (default) for root ns
+        printError: if true, print error"""
+    intf = str( intf )
+    cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
+    if srcNode:
+        srcNode.cmd( cmd )
+    else:
+        quietRun( cmd )
+    links = dstNode.cmd( 'ip link show' )
     if not ( ' %s:' % intf ) in links:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
-                   ' not successfully moved to ' + node.name + '\n' )
+                   ' not successfully moved to ' + dstNode.name + '\n' )
         return False
     return True
 
-def moveIntf( intf, node, printError=False, retries=3, delaySecs=0.001 ):
+def moveIntf( intf, dstNode, srcNode=None, printError=False,
+             retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
-       node: Node object
+       dstNode: destination Node
+       srcNode: source Node or None (default) for root ns
        printError: if true, print error"""
-    retry( retries, delaySecs, moveIntfNoRetry, intf, node, printError )
+    retry( retries, delaySecs, moveIntfNoRetry, intf, dstNode,
+          srcNode=srcNode, printError=printError )
 
 # Support for dumping network
 
@@ -242,9 +250,8 @@ def macColonHex( mac ):
 def ipStr( ip ):
     """Generate IP address string from an unsigned int.
        ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
-       returns: ip address string w.x.y.z, or 10.x.y.z if w==0"""
+       returns: ip address string w.x.y.z"""
     w = ( ip >> 24 ) & 0xff
-    w = 10 if w == 0 else w
     x = ( ip >> 16 ) & 0xff
     y = ( ip >> 8 ) & 0xff
     z = ip & 0xff
@@ -261,10 +268,10 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
        prefixLen: optional IP prefix length
        ipBaseNum: option base IP address as int
        returns IP address as string"""
-    # Ugly but functional
-    assert i < ( 1 << ( 32 - prefixLen ) )
-    mask = 0xffffffff ^ ( ( 1 << prefixLen ) - 1 )
-    ipnum = i + ( ipBaseNum & mask )
+    imax = 0xffffffff >> prefixLen
+    assert i <= imax
+    mask = 0xffffffff ^ imax
+    ipnum = ( ipBaseNum & mask ) + i
     return ipStr( ipnum )
 
 def ipParse( ip ):
@@ -326,27 +333,24 @@ def pmonitor(popens, timeoutms=500, readline=True,
             # Use non-blocking reads
             flags = fcntl( fd, F_GETFL )
             fcntl( fd, F_SETFL, flags | O_NONBLOCK )
-    while True:
+    while popens:
         fds = poller.poll( timeoutms )
         if fds:
-            for fd, _event in fds:
+            for fd, event in fds:
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
-                if readline:
-                    # Attempt to read a line of output
-                    # This blocks until we receive a newline!
-                    line = popen.stdout.readline()
-                else:
-                    line = popen.stdout.read( readmax )
-                yield host, line
+                if event & POLLIN:
+                    if readline:
+                        # Attempt to read a line of output
+                        # This blocks until we receive a newline!
+                        line = popen.stdout.readline()
+                    else:
+                        line = popen.stdout.read( readmax )
+                    yield host, line
                 # Check for EOF
-                if not line:
-                    popen.poll()
-                    if popen.returncode is not None:
-                        poller.unregister( fd )
-                        del popens[ host ]
-                        if not popens:
-                            return
+                elif event & POLLHUP:
+                    poller.unregister( fd )
+                    del popens[ host ]
         else:
             yield None, ''
 
@@ -419,7 +423,7 @@ def splitArgs( argstr ):
     args = [ makeNumeric( s ) for s in params if '=' not in s ]
     kwargs = {}
     for s in [ p for p in params if '=' in p ]:
-        key, val = s.split( '=' )
+        key, val = s.split( '=', 1 )
         kwargs[ key ] = makeNumeric( val )
     return fn, args, kwargs
 

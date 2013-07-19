@@ -33,7 +33,7 @@ import sys
 import time
 
 from mininet.log import info, output, error
-from mininet.term import makeTerms
+from mininet.term import makeTerms, runX11
 from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
 
 class CLI( Cmd ):
@@ -121,12 +121,12 @@ class CLI( Cmd ):
         "Run an external shell command"
         call( line, shell=True )
 
-    # do_py() needs to catch any exception during eval()
+    # do_py() and do_px() need to catch any exception during eval()/exec()
     # pylint: disable-msg=W0703
 
     def do_py( self, line ):
         """Evaluate a Python expression.
-           Node names may be used, e.g.: h1.cmd('ls')"""
+           Node names may be used, e.g.: py h1.cmd('ls')"""
         try:
             result = eval( line, globals(), self.locals )
             if not result:
@@ -138,7 +138,18 @@ class CLI( Cmd ):
         except Exception, e:
             output( str( e ) + '\n' )
 
-    # pylint: enable-msg=W0703
+    # We are in fact using the exec() pseudo-function
+    # pylint: disable-msg=W0122
+
+    def do_px( self, line ):
+        """Execute a Python statement.
+            Node names may be used, e.g.: px print h1.cmd('ls')"""
+        try:
+            exec( line, globals(), self.locals )
+        except Exception, e:
+            output( str( e ) + '\n' )
+
+    # pylint: enable-msg=W0703,W0122
 
     def do_pingall( self, _line ):
         "Ping between all hosts."
@@ -230,6 +241,17 @@ class CLI( Cmd ):
                     node = self.nodemap[ arg ]
                     self.mn.terms += makeTerms( [ node ], term = term )
 
+    def do_x( self, line ):
+        """Create an X11 tunnel to the given node,
+           optionally starting a client."""
+        args = line.split()
+        if not args:
+            error( 'usage: x node [cmd args]...\n' )
+        else:
+            node = self.mn[ args[ 0 ] ]
+            cmd = args[ 1: ]
+            self.mn.terms += runX11( node, cmd )
+
     def do_gterm( self, line ):
         "Spawn gnome-terminal(s) for the given node(s)."
         self.do_xterm( line, term='gterm' )
@@ -278,7 +300,7 @@ class CLI( Cmd ):
         self.inputFile = None
 
     def do_dpctl( self, line ):
-        "Run dpctl command on all switches."
+        "Run dpctl (or ovs-ofctl) command on all switches."
         args = line.split()
         if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
@@ -310,7 +332,7 @@ class CLI( Cmd ):
         if first in self.nodemap:
             node = self.nodemap[ first ]
             # Substitute IP addresses for node names in command
-            rest = [ self.nodemap[ arg ].IP()
+            rest = [ self.nodemap[ arg ].defaultIntf().updateIP()
                      if arg in self.nodemap else arg
                      for arg in rest ]
             rest = ' '.join( rest )

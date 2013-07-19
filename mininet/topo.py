@@ -11,12 +11,40 @@ A Topo object can be a topology database for NOX, can represent a physical
 setup for testing, and can even be emulated with the Mininet package.
 '''
 
-# BL: we may have to fix compatibility here.
-# networkx is also a fairly heavyweight dependency
-# from networkx.classes.graph import Graph
-
-from networkx import Graph
 from mininet.util import irange, natural, naturalSeq
+
+class Graph( object ):
+    "Utility class to track nodes and edges - replaces networkx.Graph"
+
+    def __init__( self ):
+        self.data = {}
+
+    def add_node( self, node ):
+        "Add node to graph"
+        if node not in self.data.keys():
+            self.data[ node ] = []
+
+    def add_edge( self, src, dest ):
+        "Add edge to graph"
+        self.add_node( src )
+        self.add_node( dest )
+        self.data[ src ].append( dest )
+        self.data[ dest ].append( src )
+
+    def nodes( self ):
+        "Return list of graph nodes"
+        return self.data.keys()
+
+    def edges( self ):
+        "Iterator: return graph edges"
+        for src in self.data.keys():
+            for dest in self.data[ src ]:
+                yield ( src, dest )
+
+    def __getitem__( self, node ):
+        "Return link dict for the given node"
+        return self.data[node]
+
 
 class Topo(object):
     "Data center network representation for structured multi-trees."

@@ -71,8 +71,7 @@ TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
 ALTSPELLING = { 'pingall': 'pingAll',
                 'pingpair': 'pingPair',
                 'iperfudp': 'iperfUdp',
-                'iperfUDP': 'iperfUdp',
-                'prefixlen': 'prefixLen' }
+                'iperfUDP': 'iperfUdp' }
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
@@ -190,15 +189,17 @@ class MininetRunner( object ):
                          help='CLI script to run before tests' )
         opts.add_option( '--post', type='string', default=None,
                          help='CLI script to run after tests' )
-        opts.add_option( '--prefixlen', type='int', default=8,
-                         help='prefix length (e.g. /8) for automatic '
-                         'network configuration' )
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
         opts.add_option( '--version', action='callback', callback=version )
 
         self.options, self.args = opts.parse_args()
+
+        # We don't accept extra arguments after the options
+        if self.args:
+            opts.print_help()
+            exit()
 
     def setup( self ):
         "Setup and validate environment."

@@ -25,8 +25,7 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair
-from time import sleep
+from mininet.util import makeIntfPair, quietRun
 import re
 
 class Intf( object ):
@@ -162,8 +161,9 @@ class Intf( object ):
     def delete( self ):
         "Delete interface"
         self.cmd( 'ip link del ' + self.name )
-        # Does it help to sleep to let things run?
-        sleep( 0.001 )
+        if self.node.inNamespace:
+            # Link may have been dumped into root NS
+            quietRun( 'ip link del ' + self.name )
 
     def __repr__( self ):
         return '<%s %s>' % ( self.__class__.__name__, self.name )
@@ -196,36 +196,36 @@ class TCIntf( Intf ):
             # are specifying the correct sizes. For now I have used
             # the same settings we had in the mininet-hifi code.
             if use_hfsc:
-                cmds += [ '%s qdisc add dev %s root handle 1:0 hfsc default 1',
-                          '%s class add dev %s parent 1:0 classid 1:1 hfsc sc '
+                cmds += [ '%s qdisc add dev %s root handle 5:0 hfsc default 1',
+                          '%s class add dev %s parent 5:0 classid 5:1 hfsc sc '
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
                 if latency_ms is None:
                     latency_ms = 15 * 8 / bw
-                cmds += [ '%s qdisc add dev %s root handle 1: tbf ' +
+                cmds += [ '%s qdisc add dev %s root handle 5: tbf ' +
                           'rate %fMbit burst 15000 latency %fms' %
                           ( bw, latency_ms ) ]
             else:
-                cmds += [ '%s qdisc add dev %s root handle 1:0 htb default 1',
-                          '%s class add dev %s parent 1:0 classid 1:1 htb ' +
+                cmds += [ '%s qdisc add dev %s root handle 5:0 htb default 1',
+                          '%s class add dev %s parent 5:0 classid 5:1 htb ' +
                           'rate %fMbit burst 15k' % bw ]
-            parent = ' parent 1:1 '
+            parent = ' parent 5:1 '
 
             # ECN or RED
             if enable_ecn:
                 cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit 1000000 ' +
+                          'handle 6: red limit 1000000 ' +
                           'min 30000 max 35000 avpkt 1500 ' +
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1 ecn' % bw ]
-                parent = ' parent 10: '
+                parent = ' parent 6: '
             elif enable_red:
                 cmds += [ '%s qdisc add dev %s' + parent +
-                          'handle 10: red limit 1000000 ' +
+                          'handle 6: red limit 1000000 ' +
                           'min 30000 max 35000 avpkt 1500 ' +
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1' % bw ]
-                parent = ' parent 10: '
+                parent = ' parent 6: '
         return cmds, parent
 
     @staticmethod
@@ -251,7 +251,8 @@ class TCIntf( Intf ):
                 cmds = [ '%s qdisc add dev %s ' + parent +
                          ' handle 10: netem ' +
                          netemargs ]
-        return cmds
+                parent = ' parent 10:1 '
+        return cmds, parent
 
     def tc( self, cmd, tc='tc' ):
         "Execute tc command for our interface"
@@ -289,9 +290,10 @@ class TCIntf( Intf ):
         cmds += bwcmds
 
         # Delay/jitter/loss/max_queue_size using netem
-        cmds += self.delayCmds( delay=delay, jitter=jitter, loss=loss,
-                                max_queue_size=max_queue_size,
+        delaycmds, parent = self.delayCmds( delay=delay, jitter=jitter,
+                                loss=loss, max_queue_size=max_queue_size,
                                 parent=parent )
+        cmds += delaycmds
 
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
@@ -308,6 +310,7 @@ class TCIntf( Intf ):
         debug( "cmds:", cmds, '\n' )
         debug( "outputs:", tcoutputs, '\n' )
         result[ 'tcoutputs'] = tcoutputs
+        result[ 'parent' ] = parent
 
         return result
 

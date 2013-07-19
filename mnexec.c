@@ -46,7 +46,7 @@ void usage(char *name)
 
 int setns(int fd, int nstype)
 {
-	return syscall(308, fd, nstype);
+	return syscall(__NR_setns, fd, nstype);
 }
 
 /* Validate alphanumeric path foo1/bar2/baz */

@@ -91,6 +91,7 @@ import re
 import select
 import signal
 from time import sleep
+from itertools import chain
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -216,8 +217,8 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    # BL: is this better than just using nameToNode[] ?
-    # Should it have a better name?
+    # BL: We now have four ways to look up nodes
+    # This may (should?) be cleaned up in the future.
     def getNodeByName( self, *args ):
         "Return node(s) with given name(s)"
         if len( args ) == 1:
@@ -227,6 +228,15 @@ class Mininet( object ):
     def get( self, *args ):
         "Convenience alias for getNodeByName"
         return self.getNodeByName( *args )
+
+    # Even more convenient syntax for node lookup and iteration
+    def __getitem__( self, *args ):
+        """net [ name ] operator: Return node(s) with given name(s)"""
+        return self.getNodeByName( *args )
+
+    def __iter__( self ):
+        "return iterator over nodes"
+        return chain( self.hosts, self.switches, self.controllers )
 
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
@@ -250,7 +260,7 @@ class Mininet( object ):
             info( host.name + ' ' )
             intf = host.defaultIntf()
             if intf:
-                host.configDefault( defaultRoute=intf )
+                host.configDefault()
             else:
                 # Don't configure nonexistent intf
                 host.configDefault( ip=None, mac=None )
@@ -362,15 +372,15 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
-        for host in self.hosts:
-            info( host.name + ' ' )
-            host.terminate()
-        info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
+        info( '\n' )
+        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
+        for host in self.hosts:
+            info( host.name + ' ' )
+            host.terminate()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
@@ -458,9 +468,13 @@ class Mininet( object ):
                     lost += sent - received
                     output( ( '%s ' % dest.name ) if received else 'X ' )
             output( '\n' )
+        if packets > 0:
             ploss = 100 * lost / packets
-        output( "*** Results: %i%% dropped (%d/%d lost)\n" %
-                ( ploss, lost, packets ) )
+            output( "*** Results: %i%% dropped (%d/%d lost)\n" %
+                    ( ploss, lost, packets ) )
+        else:
+            ploss = 0
+            output( "*** Warning: No packets sent\n" )
         return ploss
 
     @staticmethod

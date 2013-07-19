@@ -27,16 +27,19 @@ def cleanup():
     info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd udpbwtest'
+    zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec'
     # Note: real zombie processes can't actually be killed, since they
     # are already (un)dead. Then again,
     # you can't connect to them either, so they're mostly harmless.
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
+    # And kill off sudo mnexec
+    sh( 'pkill -9 -f "sudo mnexec"')
+
     info( "*** Removing junk from /tmp\n" )
     sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
 
-    info( "*** Removing old screen sessions\n" )
+    info( "*** Removing old X11 tunnels\n" )
     cleanUpScreens()
 
     info( "*** Removing excess kernel datapaths\n" )
@@ -52,7 +55,7 @@ def cleanup():
             sh( 'ovs-vsctl del-br ' + dp )
 
     info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+    links = sh( r"ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
     for link in links:
         if link != '':
             sh( "ip link del " + link )

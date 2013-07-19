@@ -1,60 +1,73 @@
 """
 Terminal creation and cleanup.
-Utility functions to run a term (connected via screen(1)) on each host.
+Utility functions to run a terminal (connected via socat(1)) on each host.
 
-Requires GNU screen(1) and xterm(1).
+Requires socat(1) and xterm(1).
 Optionally uses gnome-terminal.
 """
 
-import re
-from subprocess import Popen
+from os import environ
 
 from mininet.log import error
-from mininet.util import quietRun
+from mininet.util import quietRun, errRun
 
-def quoteArg( arg ):
-    "Quote an argument if it contains spaces."
-    return repr( arg ) if ' ' in arg else arg
+def tunnelX11( node, display=None):
+    """Create an X11 tunnel from node:6000 to the root host
+       display: display on root host (optional)
+       returns: node $DISPLAY, Popen object for tunnel"""
+    if display is None:
+        display = environ[ 'DISPLAY' ]
+    host, screen = display.split( ':' )
+    # Unix sockets should work
+    if not host or host == 'unix':
+        # GDM3 doesn't put credentials in .Xauthority,
+        # so allow root to just connect
+        quietRun( 'xhost +si:localuser:root' )
+        return display, None
+    else:
+        # Create a tunnel for the TCP connection
+        port = 6000 + int( float( screen ) )
+        connection = r'TCP\:%s\:%s' % ( host, port )
+        cmd = [ "socat", "TCP-LISTEN:%d,fork,reuseaddr" % port,
+               "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
+    return 'localhost:' + screen, node.popen( cmd )
 
-def makeTerm( node, title='Node', term='xterm' ):
-    """Run screen on a node, and hook up a terminal.
+def makeTerm( node, title='Node', term='xterm', display=None ):
+    """Create an X11 tunnel to the node and start up a terminal.
        node: Node object
        title: base title
        term: 'xterm' or 'gterm'
-       returns: process created"""
+       returns: two Popen objects, tunnel and terminal"""
     title += ': ' + node.name
     if not node.inNamespace:
         title += ' (root)'
     cmds = {
-        'xterm': [ 'xterm', '-title', title, '-e' ],
-        'gterm': [ 'gnome-terminal', '--title', title, '-e' ]
+        'xterm': [ 'xterm', '-title', title, '-display' ],
+        'gterm': [ 'gnome-terminal', '--title', title, '--display' ]
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
         return
-    if not node.execed:
-        node.cmd( 'screen -dmS ' + 'mininet.' + node.name)
-        args = [ 'screen', '-D', '-RR', '-S', 'mininet.' + node.name ]
-    else:
-        args = [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
-    if term == 'gterm':
-        # Compress these for gnome-terminal, which expects one token
-        # to follow the -e option
-        args = [ ' '.join( [ quoteArg( arg ) for arg in args ] ) ]
-    return Popen( cmds[ term ] + args )
+    display, tunnel = tunnelX11( node, display )
+    term = node.popen( cmds[ term ] + [ display, '-e', 'env TERM=ansi bash'] )
+    return [ tunnel, term ] if tunnel else [ term ]
+
+def runX11( node, cmd ):
+    "Run an X11 client on a node"
+    _display, tunnel = tunnelX11( node )
+    popen = node.popen( cmd )
+    return [ tunnel, popen ]
 
 def cleanUpScreens():
-    "Remove moldy old screen sessions."
-    r = r'(\d+\.mininet\.[hsc]\d+)'
-    output = quietRun( 'screen -ls' ).split( '\n' )
-    for line in output:
-        m = re.search( r, line )
-        if m:
-            quietRun( 'screen -S ' + m.group( 1 ) + ' -X quit' )
+    "Remove moldy socat X11 tunnels."
+    errRun( "pkill -9 -f mnexec.*socat" )
 
 def makeTerms( nodes, title='Node', term='xterm' ):
     """Create terminals.
        nodes: list of Node objects
        title: base title for each
-       returns: list of created terminal processes"""
-    return [ makeTerm( node, title, term ) for node in nodes ]
+       returns: list of created tunnel/terminal processes"""
+    terms = []
+    for node in nodes:
+        terms += makeTerm( node, title, term )
+    return terms

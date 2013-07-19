@@ -19,7 +19,19 @@ graphical monitoring.
 
 controllers.py:
 
-This example creates a network and adds multiple controllers to it.
+This example creates a network with multiple controllers, by
+using a custom Switch() subclass.
+
+controllers2.py:
+
+This example creates a network with multiple controllers by
+creating an empty network, adding nodes to it, and manually
+starting the switches.
+
+controlnet.py:
+
+This examples shows how you can model the control network as well
+as the data network, by actually creating two Mininet objects.
 
 cpu.py:
 
@@ -60,6 +72,12 @@ This example demonstrates monitoring output files from multiple hosts.
 multitest.py:
 
 This example creates a network and runs multiple tests on it.
+
+nat.py:
+
+This example shows how to connect a Mininet network to the Internet
+using NAT. It also answers the eternal question "why can't I ping
+google?"
 
 popen.py:
 

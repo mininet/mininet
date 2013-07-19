@@ -4,14 +4,18 @@
 # a brand-new Ubuntu virtual machine,
 # to create a fully usable "tutorial" VM.
 set -e
-echo `whoami` ALL=NOPASSWD: ALL | sudo tee -a /etc/sudoers
+echo `whoami` ALL=NOPASSWD: ALL | sudo tee -a /etc/sudoers > /dev/null
 sudo sed -i -e 's/Default/#Default/' /etc/sudoers
-sudo sed -i -e 's/ubuntu/mininet-vm/' /etc/hostname
+echo mininet-vm | sudo tee /etc/hostname > /dev/null
 sudo sed -i -e 's/ubuntu/mininet-vm/g' /etc/hosts
 sudo hostname `cat /etc/hostname`
 sudo sed -i -e 's/quiet splash/text/' /etc/default/grub
 sudo update-grub
+# 12.10 and earlier
 sudo sed -i -e 's/us.archive.ubuntu.com/mirrors.kernel.org/' \
+	/etc/apt/sources.list
+# 13.04 and later
+sudo sed -i -e 's/\/archive.ubuntu.com/\/mirrors.kernel.org/' \
 	/etc/apt/sources.list
 sudo apt-get update
 # Clean up vmware easy install junk if present
@@ -27,14 +31,11 @@ git clone git://github.com/mininet/mininet
 cd mininet
 cd
 time mininet/util/install.sh
+# Finalize VM
+time mininet/util/install.sh -tc
 # Ignoring this since NOX classic is deprecated
 #if ! grep NOX_CORE_DIR .bashrc; then
 #  echo "export NOX_CORE_DIR=~/noxcore/build/src/" >> .bashrc
 #fi
-echo <<EOF
-You may need to reboot and then:
-sudo dpkg-reconfigure openvswitch-datapath-dkms
-sudo service openvswitch-switch start
-EOF
-
+echo "Done preparing Mininet VM."
 

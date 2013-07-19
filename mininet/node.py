@@ -49,6 +49,7 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
+from operator import or_
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -118,7 +119,8 @@ class Node( object ):
         if self.inNamespace:
             opts += 'n'
         # bash -m: enable job control
-        cmd = [ 'mnexec', opts, 'bash', '-m' ]
+        # -s: pass $* to shell, and make process easy to find in ps
+        cmd = [ 'mnexec', opts, 'bash', '-ms', 'mininet:' + self.name ]
         self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                             close_fds=True )
         self.stdin = self.shell.stdin
@@ -139,10 +141,10 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
-        if not self.inNamespace:
-            for intfName in self.intfNames():
-                if self.name in intfName:
-                    quietRun( 'ip link del ' + intfName )
+        # Intfs may end up in root NS
+        for intfName in self.intfNames():
+            if self.name in intfName:
+                quietRun( 'ip link del ' + intfName )
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -290,7 +292,7 @@ class Node( object ):
            kwargs: Popen() keyword args"""
         defaults = { 'stdout': PIPE, 'stderr': PIPE,
                      'mncmd':
-                     [ 'mnexec', '-a', str( self.pid ) ] }
+                     [ 'mnexec', '-da', str( self.pid ) ] }
         defaults.update( kwargs )
         if len( args ) == 1:
             if type( args[ 0 ] ) is list:
@@ -370,7 +372,7 @@ class Node( object ):
         """
         if not intf:
             return self.defaultIntf()
-        elif type( intf) is str:
+        elif type( intf ) is str:
             return self.nameToIntf[ intf ]
         else:
             return intf
@@ -389,16 +391,19 @@ class Node( object ):
                     connections += [ ( intf, link.intf1 ) ]
         return connections
 
-    def deleteIntfs( self ):
-        "Delete all of our interfaces."
+    def deleteIntfs( self, checkName=True ):
+        """Delete all of our interfaces.
+           checkName: only delete interfaces that contain our name"""
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
         for intf in self.intfs.values():
-            intf.delete()
-            info( '.' )
+            # Protect against deleting hardware interfaces
+            if ( self.name in intf.name ) or ( not checkName ):
+                intf.delete()
+                info( '.' )
 
     # Routing support
 
@@ -417,11 +422,14 @@ class Node( object ):
 
     def setDefaultRoute( self, intf=None ):
         """Set the default route to go through intf.
-           intf: string, interface name"""
-        if not intf:
-            intf = self.defaultIntf()
-        self.cmd( 'ip route flush root 0/0' )
-        return self.cmd( 'route add default %s' % intf )
+           intf: Intf or {dev <intfname> via <gw-ip> ...}"""
+        # Note setParam won't call us if intf is none
+        if type( intf ) is str and ' ' in intf:
+            params = intf
+        else:
+            params = 'dev %s' % intf
+        self.cmd( 'ip route del default' )
+        return self.cmd( 'ip route add default', params )
 
     # Convenience and configuration methods
 
@@ -447,7 +455,7 @@ class Node( object ):
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
-        return self.intf( intf ).IP()
+        return self.intf( intf ).MAC()
 
     def intfIsUp( self, intf=None ):
         "Check if an interface is up."
@@ -492,7 +500,7 @@ class Node( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
-        self.setParam( r, 'defaultRoute', defaultRoute=defaultRoute )
+        self.setParam( r, 'setDefaultRoute', defaultRoute=defaultRoute )
         # This should be examined
         self.cmd( 'ifconfig lo ' + lo )
         return r
@@ -604,14 +612,15 @@ class CPULimitedHost( Host ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         # Tell mnexec to execute command in our cgroup
-        mncmd = [ 'mnexec', '-a', str( self.pid ),
+        mncmd = [ 'mnexec', '-da', str( self.pid ),
                   '-g', self.name ]
         if self.sched == 'rt':
             mncmd += [ '-r', str( self.rtprio ) ]
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
-        "Clean up our cgroup"
+        "Clean up Node, then clean up our cgroup"
+        super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     def chrt( self ):
@@ -754,7 +763,7 @@ class Switch( Node ):
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
         try:
-            dpid = int( re.findall( '\d+', self.name )[ 0 ] )
+            dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
             dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
             return dpid
@@ -780,6 +789,10 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                    self.name )
 
+    def connected( self ):
+        "Is the switch connected to a controller? (override this method)"
+        return False and self  # satisfy pylint
+
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
@@ -792,15 +805,17 @@ class UserSwitch( Switch ):
 
     dpidLen = 12
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, dpopts='--no-slicing', **kwargs ):
         """Init.
-           name: name for the switch"""
+           name: name for the switch
+           dpopts: additional arguments to ofdatapath (--no-slicing)"""
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
                    moduleName='the OpenFlow reference user switch' +
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        self.dpopts = dpopts
 
     @classmethod
     def setup( cls ):
@@ -815,6 +830,10 @@ class UserSwitch( Switch ):
         return self.cmd( 'dpctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
 
+    def connected( self ):
+        "Is the switch connected to a controller?"
+        return 'remote.is-connected=true' in self.dpctl( 'status' )
+
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
@@ -827,7 +846,8 @@ class UserSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-                  ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
+                  ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
+                  self.dpopts +
                   ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
                   ' ' + clist +
@@ -895,12 +915,14 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, failMode='secure', **params ):
+    def __init__( self, name, failMode='secure', datapath='kernel', **params ):
         """Init.
            name: name for switch
-           failMode: controller loss behavior (secure|open)"""
+           failMode: controller loss behavior (secure|open)
+           datapath: userspace or kernel mode (kernel|user)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
+        self.datapath = datapath
 
     @classmethod
     def setup( cls ):
@@ -923,8 +945,8 @@ class OVSSwitch( Switch ):
             exit( 1 )
 
     def dpctl( self, *args ):
-        "Run ovs-dpctl command"
-        return self.cmd( 'ovs-dpctl', args[ 0 ], self, *args[ 1: ] )
+        "Run ovs-ofctl command"
+        return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
 
     @staticmethod
     def TCReapply( intf ):
@@ -944,6 +966,23 @@ class OVSSwitch( Switch ):
         "Disconnect a data port"
         self.cmd( 'ovs-vsctl del-port', self, intf )
 
+    def controllerUUIDs( self ):
+        "Return ovsdb UUIDs for our controllers"
+        uuids = []
+        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+                               'Controller' ).strip()
+        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
+            controllers = controllers[ 1 : -1 ]
+            uuids = [ c.strip() for c in controllers.split( ',' ) ]
+        return uuids
+
+    def connected( self ):
+        "Are we connected to at least one of our controllers?"
+        results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
+                                         uuid, 'is_connected' )
+                    for uuid in self.controllerUUIDs() ]
+        return reduce( or_, results, False )
+
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
@@ -955,6 +994,9 @@ class OVSSwitch( Switch ):
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
         self.cmd( 'ovs-vsctl add-br', self )
+        if self.datapath == 'user':
+            self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
+        int( self.dpid, 16 ) # DPID must be a hex string
         self.cmd( 'ovs-vsctl -- set Bridge', self,
                   'other_config:datapath-id=' + self.dpid )
         self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
@@ -967,6 +1009,14 @@ class OVSSwitch( Switch ):
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
+        # Reconnect quickly to controllers (1s vs. 15s max_backoff)
+        for uuid in self.controllerUUIDs():
+            if uuid.count( '-' ) != 4:
+                # Doesn't look like a UUID
+                continue
+            uuid = uuid.strip()
+            self.cmd( 'ovs-vsctl set Controller', uuid,
+                      'max_backoff=1000' )
 
     def stop( self ):
         "Terminate OVS switch."
