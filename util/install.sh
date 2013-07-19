@@ -221,7 +221,11 @@ function wireshark {
         sudo apt-get install -y libwiretap-dev libwireshark-dev
         cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
-        cd of-dissector/src
+        cd of-dissector
+        if [[ -n "$WS_DISSECTOR_REV" ]]; then
+            hg checkout ${WS_DISSECTOR_REV}
+        fi
+        cd src
         export WIRESHARK=/usr/include/wireshark
         scons
         # libwireshark0/ on 11.04; libwireshark1/ on later
