@@ -185,7 +185,12 @@ function of13 {
         unzip libpcre3-dev flex bison libboost-dev
 
     if [ ! -d "ofsoftswitch13" ]; then
-         git clone https://github.com/CPqD/ofsoftswitch13.git
+        git clone https://github.com/CPqD/ofsoftswitch13.git
+        if [[ -n "$OF13_SWITCH_REV" ]]; then
+            cd ofsoftswitch13
+            git checkout ${OF13_SWITCH_REV}
+            cd ..
+        fi
     fi
 
     # Install netbee
@@ -221,7 +226,11 @@ function wireshark {
         sudo apt-get install -y libwiretap-dev libwireshark-dev
         cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
-        cd of-dissector/src
+        cd of-dissector
+        if [[ -n "$WS_DISSECTOR_REV" ]]; then
+            hg checkout ${WS_DISSECTOR_REV}
+        fi
+        cd src
         export WIRESHARK=/usr/include/wireshark
         scons
         # libwireshark0/ on 11.04; libwireshark1/ on later
