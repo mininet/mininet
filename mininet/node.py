@@ -1023,7 +1023,6 @@ class IVSSwitch(Switch):
 
     def __init__( self, name, **kwargs ):
         Switch.__init__( self, name, **kwargs )
-        self.process = None
 
     @classmethod
     def setup( cls ):
@@ -1052,18 +1051,13 @@ class IVSSwitch(Switch):
         if self.listenPort:
             args.extend( ['--listen', '127.0.0.1:%i' % self.listenPort] )
 
-        with open( '/tmp/ivs.%s.log' % self.name, 'w' ) as logfile:
-            with open( '/dev/null', 'w' ) as nullfile:
-                self.process = Popen( args, stdout=logfile, stderr=STDOUT,
-                                      stdin=nullfile, preexec_fn=os.setsid )
-        self.execed = False
+        logfile = '/tmp/ivs.%s.log' % self.name
+
+        self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):
         "Terminate IVS switch."
-        if self.process:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
+        self.cmd( 'kill %ivs' )
         self.deleteIntfs()
 
     def attach( self, intf ):
