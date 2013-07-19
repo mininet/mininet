@@ -185,7 +185,12 @@ function of13 {
         unzip libpcre3-dev flex bison libboost-dev
 
     if [ ! -d "ofsoftswitch13" ]; then
-         git clone https://github.com/CPqD/ofsoftswitch13.git
+        git clone https://github.com/CPqD/ofsoftswitch13.git
+        if [[ -n "$OF13_SWITCH_REV" ]]; then
+            cd ofsoftswitch13
+            git checkout ${OF13_SWITCH_REV}
+            cd ..
+        fi
     fi
 
     # Install netbee
