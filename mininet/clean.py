@@ -9,6 +9,7 @@ code), this script may be used to get rid of unwanted garbage.
 It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
+import os
 
 from subprocess import Popen, PIPE
 
@@ -19,6 +20,21 @@ def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
     return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+
+def putzero():
+    os.chdir('mininet')
+    filename = open('alpha.py')
+    with filename as f:
+        content = f.readlines()
+    filename.close()
+    f = open('alpha.py', 'w')
+    for i in range (0, len(content)):
+        temp = content[i].partition(' = ')
+        content[i] = temp[0] + temp[1] + str(0) + '\n'
+        f.write(content[i])
+    f.close()
+    os.chdir('..')
+
 
 def cleanup():
     """Clean up junk which might be left over from old runs;
@@ -55,9 +71,10 @@ def cleanup():
             sh( 'ovs-vsctl del-br ' + dp )
 
     info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( r"ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+    links = sh( "ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
     for link in links:
         if link != '':
             sh( "ip link del " + link )
+    putzero()
 
     info( "*** Cleanup complete.\n" )

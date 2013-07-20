@@ -100,6 +100,7 @@ from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
+from mininet.utilib import *
 
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.0.0"
@@ -112,7 +113,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None ):
+                  listenPort=None):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -287,6 +288,7 @@ class Mininet( object ):
 
         if not self.controllers:
             # Add a default controller
+            
             info( '*** Adding controller\n' )
             classes = self.controller
             if type( classes ) is not list:
@@ -372,15 +374,15 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i switches\n' % len( self.switches ) )
-        for switch in self.switches:
-            info( switch.name + ' ' )
-            switch.stop()
-        info( '\n' )
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
+        info( '\n' )
+        info( '*** Stopping %i switches\n' % len( self.switches ) )
+        for switch in self.switches:
+            info( switch.name + ' ' )
+            switch.stop()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
@@ -468,13 +470,9 @@ class Mininet( object ):
                     lost += sent - received
                     output( ( '%s ' % dest.name ) if received else 'X ' )
             output( '\n' )
-        if packets > 0:
             ploss = 100 * lost / packets
-            output( "*** Results: %i%% dropped (%d/%d lost)\n" %
-                    ( ploss, lost, packets ) )
-        else:
-            ploss = 0
-            output( "*** Warning: No packets sent\n" )
+        output( "*** Results: %i%% dropped (%d/%d lost)\n" %
+                ( ploss, lost, packets ) )
         return ploss
 
     @staticmethod

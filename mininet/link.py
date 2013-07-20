@@ -25,7 +25,8 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair, quietRun
+from mininet.util import makeIntfPair
+from time import sleep
 import re
 
 class Intf( object ):
@@ -161,9 +162,8 @@ class Intf( object ):
     def delete( self ):
         "Delete interface"
         self.cmd( 'ip link del ' + self.name )
-        if self.node.inNamespace:
-            # Link may have been dumped into root NS
-            quietRun( 'ip link del ' + self.name )
+        # Does it help to sleep to let things run?
+        sleep( 0.001 )
 
     def __repr__( self ):
         return '<%s %s>' % ( self.__class__.__name__, self.name )

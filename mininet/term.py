@@ -54,7 +54,7 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
 
 def runX11( node, cmd ):
     "Run an X11 client on a node"
-    _display, tunnel = tunnelX11( node )
+    display, tunnel = tunnelX11( node )
     popen = node.popen( cmd )
     return [ tunnel, popen ]
 

@@ -11,6 +11,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 
+
 # Command execution support
 
 def run( cmd ):
@@ -217,10 +218,20 @@ def dumpNodeConnections( nodes ):
             else:
                 output( ' ' )
 
-    for node in nodes:
-        output( node.name )
-        dumpConnections( node )
-        output( '\n' )
+    if isinstance(nodes, list):
+        for index in range (0, len(nodes)):
+            if isinstance(nodes[index], list):
+                for node in nodes[index]:
+                    output( node.name )
+                    dumpConnections( node )
+                    output( '\n' )
+    
+            else:
+                for node in nodes:
+                    output( node.name )
+                    dumpConnections( node )
+                    output( '\n' )
+                break
 
 def dumpNetConnections( net ):
     "Dump connections in network"
@@ -245,6 +256,7 @@ def macColonHex( mac ):
     """Generate MAC colon-hex string from unsigned int.
        mac: MAC address as unsigned int
        returns: macStr MAC colon-hex string"""
+
     return _colonHex( mac, 6 )
 
 def ipStr( ip ):
@@ -363,13 +375,13 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'cat /proc/mounts' )
+    mounts = quietRun( 'mount' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
-    if ('cgroup %s' % cgdir not in mounts and
-            'cgroups %s' % cgdir not in mounts):
+    if ('cgroup on %s' % cgdir not in mounts and
+            'cgroups on %s' % cgdir not in mounts):
         raise Exception( "cgroups not mounted on " + cgdir )
-    if 'cpuset %s' % csdir not in mounts:
+    if 'cpuset on %s' % csdir not in mounts:
         errRun( 'mkdir -p ' + csdir )
         errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
 
@@ -433,6 +445,7 @@ def customConstructor( constructors, argStr ):
     when the generated constructor is later used.
     """
     cname, newargs, kwargs = splitArgs( argStr )
+    #print "cname %s, newargs %s, kwargs %s" % (cname, newargs, kwargs)
     constructor = constructors.get( cname, None )
 
     if not constructor:
