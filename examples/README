@@ -118,3 +118,8 @@ This example attempts to create a 1024-host network, and then runs the
 CLI on it. It may run into scalability limits, depending on available
 memory and sysctl configuration (see INSTALL.)
 
+dynamicnet.py:
+
+This example builds a network based on command line arguments and uses 
+a remote controller. It is a good option to use with POX controller and
+develop Software Defined Networks. 
