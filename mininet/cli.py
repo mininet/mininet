@@ -24,7 +24,7 @@ list all nodes ('nodes'), to print out the network topology
 ('net') and to check connectivity ('pingall', 'pingpair')
 and bandwidth ('iperf'.)
 """
-import os
+
 from subprocess import call
 from cmd import Cmd
 from os import isatty
@@ -32,7 +32,6 @@ from select import poll, POLLIN
 import sys
 import time
 
-from mininet.utilib import *
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
 from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
@@ -43,29 +42,20 @@ class CLI( Cmd ):
     prompt = 'mininet> '
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
-        #if isinstance(mininet, list):
-        self.mn = []
-        self.nodelist = []
-        self.nodemap = []
-        self.locals = []
-        self.stdin = []
-        self.inPoller = []
-
-        for index in range (0, len(mininet)):
-            self.mn.append( mininet[index])
-            self.nodelist.append(self.mn[index].controllers + self.mn[index].switches + self.mn[index].hosts)
-            self.nodemap.append({})  # map names to Node objects
-            for node in self.nodelist[index]:
-                self.nodemap[index][ node.name ] = node
-            # Local variable bindings for py command
-            self.locals.append( { 'net': mininet[index] } )
-            self.locals[index].update( self.nodemap[index] )
-            # Attempt to handle input
-            self.stdin.append( stdin )
-            self.inPoller.append( poll() )
-            self.inPoller[index].register( stdin )
+        self.mn = mininet
+        self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
+        self.nodemap = {}  # map names to Node objects
+        for node in self.nodelist:
+            self.nodemap[ node.name ] = node
+        # Local variable bindings for py command
+        self.locals = { 'net': mininet }
+        self.locals.update( self.nodemap )
+        # Attempt to handle input
+        self.stdin = stdin
+        self.inPoller = poll()
+        self.inPoller.register( stdin )
         self.inputFile = script
-        Cmd.__init__( self, rangetype = len(mininet) )
+        Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
         if self.inputFile:
             self.do_source( self.inputFile )
@@ -73,11 +63,10 @@ class CLI( Cmd ):
         while True:
             try:
                 # Make sure no nodes are still waiting
-                for index in range (0, len(mininet)):
-                    for node in self.nodelist[index]:
-                        while node.waiting:
-                            node.sendInt()
-                            node.monitor()
+                for node in self.nodelist:
+                    while node.waiting:
+                        node.sendInt()
+                        node.monitor()
                 if self.isatty():
                     quietRun( 'stty sane' )
                 self.cmdloop()
@@ -121,9 +110,8 @@ class CLI( Cmd ):
 
     def do_nodes( self, _line ):
         "List all nodes."
-        for index in range (0, len(self.mn)):
-            nodes = ' '.join( [ node.name for node in sorted( self.nodelist[index] ) ] )
-            output( 'available nodes are: \n%s\n' % nodes )
+        nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
+        output( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, _line ):
         "List network connections."
@@ -165,23 +153,19 @@ class CLI( Cmd ):
 
     def do_pingall( self, _line ):
         "Ping between all hosts."
-        for index in range(0, len(self.mn)):
-            self.mn[index].pingAll()
+        self.mn.pingAll()
 
     def do_pingpair( self, _line ):
-        for index in range(0, len(self.mn)):
-            "Ping between first two hosts, useful for testing."
-            self.mn[index].pingPair()
+        "Ping between first two hosts, useful for testing."
+        self.mn.pingPair()
 
     def do_pingallfull( self, _line ):
         "Ping between first two hosts, returns all ping results."
-        for index in range(0, len(self.mn)):
-            self.mn[index].pingAllFull()
+        self.mn.pingAllFull()
 
     def do_pingpairfull( self, _line ):
         "Ping between first two hosts, returns all ping results."
-        for index in range(0, len(self.mn)):
-            self.mn[index].pingPairFull()
+        self.mn.pingPairFull()
 
     def do_iperf( self, line ):
         "Simple iperf TCP test between two (optionally specified) hosts."
@@ -222,7 +206,7 @@ class CLI( Cmd ):
         else:
             error( 'invalid number of args: iperfudp bw src dst\n' +
                    'bw examples: 10M\n' )
-    
+
     def do_intfs( self, _line ):
         "List interfaces."
         for node in self.nodelist:
@@ -231,10 +215,8 @@ class CLI( Cmd ):
 
     def do_dump( self, _line ):
         "Dump node info."
-        for nodeset in self.nodelist:
-            for node in nodeset:
-                output( '%s\n' % repr( node ) )
-            info( '\n' )
+        for node in self.nodelist:
+            output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
         "Bring link(s) between two nodes up or down."
@@ -252,16 +234,12 @@ class CLI( Cmd ):
         if not args:
             error( 'usage: %s node1 node2 ...\n' % term )
         else:
-            #This is unable to create terminals for each hosts in multinetwork
             for arg in args:
-                for index in range(0, len(self.nodemap)):
-                    '''print self.nodemap[index].keys()
-                    print arg'''
-                    if arg not in self.nodemap[index].keys():
-                        error( "node '%s' not in network\n" % arg )
-                    else:
-                       node = self.nodemap[index][ arg ]
-                       self.mn[index].terms += makeTerms( [ node ], term = term )
+                if arg not in self.nodemap:
+                    error( "node '%s' not in network\n" % arg )
+                else:
+                    node = self.nodemap[ arg ]
+                    self.mn.terms += makeTerms( [ node ], term = term )
 
     def do_x( self, line ):
         """Create an X11 tunnel to the given node,
@@ -293,8 +271,7 @@ class CLI( Cmd ):
 
     def isatty( self ):
         "Is our standard input a tty?"
-        for index in range (0, len(self.mininet)):
-            yield isatty( self.stdin[index].fileno() )
+        return isatty( self.stdin.fileno() )
 
     def do_noecho( self, line ):
         "Run an interactive command with echoing turned off."
@@ -325,14 +302,12 @@ class CLI( Cmd ):
     def do_dpctl( self, line ):
         "Run dpctl (or ovs-ofctl) command on all switches."
         args = line.split()
-        print args
         if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
             return
-        for index in range(0, len(self.mn)):
-            for sw in self.mn[index].switches:
-                output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
-                output( sw.dpctl( *args ) )
+        for sw in self.mn.switches:
+            output( '*** ' + sw.name + ' ' + ('-' * 72) + '\n' )
+            output( sw.dpctl( *args ) )
 
     def do_time( self, line ):
         "Measure time taken for any command in Mininet."
@@ -354,43 +329,30 @@ class CLI( Cmd ):
             args = args[ :-1 ]
         rest = args.split( ' ' )
 
-        flag = 0
-        for index in range(0, len(self.nodemap)):
-            if first in self.nodemap[index]:
-                flag = 1
-                node = self.nodemap[index][first]
-
-                # Substitute IP addresses for node names in command
-                for arg in rest:
-                    for jIndex in range(0, len(self.nodemap)):
-                        if arg in self.nodemap[jIndex]:
-                            rest[rest.index(arg)] = self.nodemap[jIndex][arg].defaultIntf().updateIP()
-                            break
-
-
-                '''rest = [ self.nodemap[index][ arg ].defaultIntf().updateIP()
-                         if arg in self.nodemap[index] else arg
-                         for arg in rest ]'''
-                rest = ' '.join( rest )
-                # Run cmd on node:
-                builtin = isShellBuiltin( first )
-                node.sendCmd( rest, printPid=( not builtin ) )
-                self.waitForNode( node, index )
-                break
-        if flag == 0:
+        if first in self.nodemap:
+            node = self.nodemap[ first ]
+            # Substitute IP addresses for node names in command
+            rest = [ self.nodemap[ arg ].defaultIntf().updateIP()
+                     if arg in self.nodemap else arg
+                     for arg in rest ]
+            rest = ' '.join( rest )
+            # Run cmd on node:
+            builtin = isShellBuiltin( first )
+            node.sendCmd( rest, printPid=( not builtin ) )
+            self.waitForNode( node )
+        else:
             error( '*** Unknown command: %s\n' % first )
 
     # pylint: enable-msg=R0201
 
-    def waitForNode( self, node, index):
+    def waitForNode( self, node ):
         "Wait for a node to finish, and  print its output."
         # Pollers
         nodePoller = poll()
         nodePoller.register( node.stdout )
         bothPoller = poll()
-        bothPoller.register( self.stdin[index], POLLIN )
+        bothPoller.register( self.stdin, POLLIN )
         bothPoller.register( node.stdout, POLLIN )
-
         if self.isatty():
             # Buffer by character, so that interactive
             # commands sort of work
@@ -405,16 +367,9 @@ class CLI( Cmd ):
                         node.write(key)
                     else:
                         self.inputFile = None
-                ## changes made here ##
-                '''if index == 'a':
-                    if isReadable( self.inPoller ):
-                        key = self.stdin.read( 1 )
-                        node.write( key )
-                else:'''
-                if isReadable( self.inPoller[index] ):
-                    key = self.stdin[index].read( 1 )
+                if isReadable( self.inPoller ):
+                    key = self.stdin.read( 1 )
                     node.write( key )
-                ## changes made till here ##
                 if isReadable( nodePoller ):
                     data = node.monitor()
                     output( data )

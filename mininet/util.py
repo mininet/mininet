@@ -11,7 +11,6 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 
-
 # Command execution support
 
 def run( cmd ):
@@ -218,20 +217,10 @@ def dumpNodeConnections( nodes ):
             else:
                 output( ' ' )
 
-    if isinstance(nodes, list):
-        for index in range (0, len(nodes)):
-            if isinstance(nodes[index], list):
-                for node in nodes[index]:
-                    output( node.name )
-                    dumpConnections( node )
-                    output( '\n' )
-    
-            else:
-                for node in nodes:
-                    output( node.name )
-                    dumpConnections( node )
-                    output( '\n' )
-                break
+    for node in nodes:
+        output( node.name )
+        dumpConnections( node )
+        output( '\n' )
 
 def dumpNetConnections( net ):
     "Dump connections in network"
@@ -256,7 +245,6 @@ def macColonHex( mac ):
     """Generate MAC colon-hex string from unsigned int.
        mac: MAC address as unsigned int
        returns: macStr MAC colon-hex string"""
-
     return _colonHex( mac, 6 )
 
 def ipStr( ip ):
@@ -288,16 +276,35 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
 
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
-    args = [ int( arg ) for arg in ip.split( '.' ) ]
-    return ipNum( *args )
+    if isinstance(ip, str):
+        args = [ int( arg ) for arg in ip.split( '.' ) ]
+        return ipNum( *args )
+    else:
+        args = []
+        for index in range (0, len(ip)):
+            ipNumElement = [ int( arg ) for arg in ip[index].split( '.' ) ] 
+            args.append(ipNum( *ipNumElement))
+        return args
 
 def netParse( ipstr ):
     """Parse an IP network specification, returning
        address and prefix len as unsigned ints"""
     prefixLen = 0
-    if '/' in ipstr:
-        ip, pf = ipstr.split( '/' )
-        prefixLen = int( pf )
+    if isinstance(ipstr, str):
+        if '/' in ipstr:
+            ip, pf = ipstr.split( '/' )
+            prefixLen = int( pf )
+    else:
+        return_ip = []
+        return_pf = []
+        for index in range(0, len(ipstr)):
+            if '/' in ipstr:
+                ip, pf = ipstr[index].split( '/' )
+                prefixLen = int( pf )
+                return_ip.append(ip)
+                return_pf.append(prefixLen)
+        ip, prefixLen = return_ip, return_pf
+ 
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):
@@ -375,13 +382,13 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'mount' )
+    mounts = quietRun( 'cat /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
-    if ('cgroup on %s' % cgdir not in mounts and
-            'cgroups on %s' % cgdir not in mounts):
+    if ('cgroup %s' % cgdir not in mounts and
+            'cgroups %s' % cgdir not in mounts):
         raise Exception( "cgroups not mounted on " + cgdir )
-    if 'cpuset on %s' % csdir not in mounts:
+    if 'cpuset %s' % csdir not in mounts:
         errRun( 'mkdir -p ' + csdir )
         errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
 
@@ -445,7 +452,6 @@ def customConstructor( constructors, argStr ):
     when the generated constructor is later used.
     """
     cname, newargs, kwargs = splitArgs( argStr )
-    #print "cname %s, newargs %s, kwargs %s" % (cname, newargs, kwargs)
     constructor = constructors.get( cname, None )
 
     if not constructor:
@@ -466,14 +472,14 @@ def customConstructor( constructors, argStr ):
     customized.__name__ = 'customConstructor(%s)' % argStr
     return customized
 
-def buildTopo( topos, topoStr ):
+def buildTopo( topos, topoStr, index ):
     """Create topology from string with format (object, arg1, arg2,...).
     input topos is a dict of topo names to constructors, possibly w/args.
     """
     topo, args, kwargs = splitArgs( topoStr )
     if topo not in topos:
         raise Exception( 'Invalid topo name %s' % topo )
-    return topos[ topo ]( *args, **kwargs )
+    return topos[ topo ]( index, *args, **kwargs )
 
 def ensureRoot():
     """Ensure that we are running as root.

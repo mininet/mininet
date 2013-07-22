@@ -1,62 +1,9 @@
-import os
-import copy
-import glob
-
 def popleft(ipbase):
     ipbase.reverse()
     number = int(ipbase.pop())
     ipbase.reverse()
     return number, ipbase
     
-## Updating value for unique naming ##
-def valueupdate(entity):
-    os.chdir('mininet')
-    filename = open('alpha.py')
-    with filename as f:
-        content = f.readlines()
-    filename.close()
-    f = open('alpha.py', 'w')
-    for i in range (0, len(content)):
-        temp = content[i].partition(' = ')
-        if temp[0] == entity:
-            number = int(temp[2].split('\n')[0])
-            #return this number and write the updated value in file
-            number = number + 1
-            content[i] = temp[0] + temp[1] + str(number) + '\n'
-        f.write(content[i])
-    f.close()
-    os.chdir('..')
-
-def valuefind(entity):
-    os.chdir("mininet")
-    filename = open('alpha.py')
-    with filename as f:
-        content = f.readlines()
-    filename.close()
-    os.chdir("..")
-    for i in range (0, len(content)):
-        temp = content[i].partition(' = ')
-        if temp[0] == entity:
-            number = int(temp[2].split('\n')[0])
-            if entity != 'multinet':
-                number = number + 1
-            return (number)
-
-## Clearing the values of the file ##
-def putzero():
-    os.chdir('mininet')
-    filename = open('alpha.py')
-    with filename as f:
-        content = f.readlines()
-    filename.close()
-    f = open('alpha.py', 'w')
-    for i in range (0, len(content)):
-        temp = content[i].partition(' = ')
-        content[i] = temp[0] + temp[1] + str(0) + '\n'
-        f.write(content[i])
-    f.close()
-    os.chdir('..')
-
 ## To avoid common network ips entered ##
 def inttobin(power):
     num = 0
@@ -100,13 +47,10 @@ def networkcheck(ipbaseargs):
             print 'Networks: ' + ipbaseargs[index] + ' and ' + ipbaseargs[index + 1] + ' coincide!'
             return True
 
-def switchconnect (mn):
-    '''for index in range (0, len(mn) - 1):
-        print mn[index].switches'''
+'''def switchconnect (mn):
     con1 =  mn[0].nameToNode[ 'sA1' ]
     con2 =  mn[1].nameToNode[ 'sB1' ]
-    
-    mn[0].addLink(con1, con2, 3, 3, {})
+    mn[0].addLink(con1, con2, 3, 3, {})'''
 
 def getipbasefornetwork(ipdefaultbase, index):
     ipbaseaddr = ipdefaultbase.split('/')
@@ -114,4 +58,3 @@ def getipbasefornetwork(ipdefaultbase, index):
     netw[0] = str(int(netw[0]) + index)
     ipbaseaddr = netw[0] + '.' + netw[1] + '.' + netw[2] + '.' + netw[3] + '/' + ipbaseaddr[1]
     return ipbaseaddr
-                    

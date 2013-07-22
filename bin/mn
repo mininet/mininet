@@ -2,13 +2,14 @@
 
 """
 Mininet runner
+Mininet runner
 author: Brandon Heller (brandonh@stanford.edu)
 
 To see options:
-  sudo mn -h
+  sudo nm -h
 
 Example to pull custom params (topo, switch, etc.) from a file:
-  sudo mn --custom ~/mininet/custom/custom_example.py
+  sudo nm --custom ~/mininet/custom/custom_example.py
 """
 
 from optparse import OptionParser
@@ -20,6 +21,7 @@ import time
 if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
 
+from mininet.utilib import *
 from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info
@@ -36,7 +38,7 @@ from mininet.util import buildTopo
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'
-TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
+TOPOS = { 'minimal': lambda: SingleSwitchTopo(index, k=2 ),
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
@@ -169,8 +171,12 @@ class MininetRunner( object ):
                          help='|'.join( TESTS ) )
         opts.add_option( '--xterms', '-x', action='store_true',
                          default=False, help='spawn xterms for each node' )
+        ## Changes made from here ##
         opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
-                         help='base IP address for hosts' )
+                         help='base IP address for host' )
+        opts.add_option( '--network', '-n', type='string',default='1',
+                         help='base IP address for multiple topos' )
+        ## Changes made till here ##
         opts.add_option( '--mac', action='store_true',
                          default=False, help='automatically set host MACs' )
         opts.add_option( '--arp', action='store_true',
@@ -220,8 +226,38 @@ class MininetRunner( object ):
             exit()
 
         start = time.time()
+        mn = []
+        ipdefaultbase = self.options.ipbase
+        topoargs = self.options.topo.split(';')
+        ipbaseargs = self.options.network.split(',')
+        if len(ipbaseargs) > 1:
+            number, ipbaseargs = popleft(ipbaseargs)
+            try:
+                number = int(number)
+            except ValueError:
+                print "Error: The argument corresponding to network should be an integer"
+                exit()
 
-        topo = buildTopo( TOPOS, self.options.topo )
+            ipcheck = copy.deepcopy(ipbaseargs)
+            if networkcheck(ipcheck):
+                print "Please try again"
+                exit()
+        else:
+            try:
+                number = int(ipbaseargs[0])
+            except ValueError:
+                print "Error: The argument corresponding to --network should be an integer"
+                exit()
+
+        topo = []
+        if isinstance(topoargs, list):
+            for index in range (0, number):
+                print "Looped"
+                if index < len(topoargs):
+                    topo.append(buildTopo( TOPOS, topoargs[index], index ))
+                else:
+                    topo.append(buildTopo( TOPOS, TOPODEF, index))
+
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
         controller = customConstructor( CONTROLLERS, self.options.controller )
@@ -232,7 +268,15 @@ class MininetRunner( object ):
 
         inNamespace = self.options.innamespace
         Net = MininetWithControlNet if inNamespace else Mininet
-        ipBase = self.options.ipbase
+        #Assigning network number to each network
+        if len(ipbaseargs) == 1:
+            #this is a ipstring
+            ipBase = ipdefaultbase
+        else:
+            #this is a list
+            ipBase = ipbaseargs
+        print "ipBase for this network is: " + ipBase
+        ## Validation to prevent same network has been done before ##
         xterms = self.options.xterms
         mac = self.options.mac
         arp = self.options.arp
@@ -247,8 +291,8 @@ class MininetRunner( object ):
                   inNamespace=inNamespace,
                   xterms=xterms, autoSetMacs=mac,
                   autoStaticArp=arp, autoPinCpus=pin,
-                  listenPort=listenPort )
-
+                  listenPort=listenPort,
+                  network=number )
         if self.options.pre:
             CLI( mn, script=self.options.pre )
 

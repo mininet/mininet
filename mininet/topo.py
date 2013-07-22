@@ -10,43 +10,8 @@ This package includes code to represent network topologies.
 A Topo object can be a topology database for NOX, can represent a physical
 setup for testing, and can even be emulated with the Mininet package.
 '''
-import os
-import glob 
-from mininet.utilib import *
-from mininet.util import irange, natural, naturalSeq
-'''def valueupdate(entity):
-    os.chdir("mininet")
-    filename = open('alpha.py')
-    with filename as f:
-        content = f.readlines()
-    filename.close()
-    f = open('alpha.py', 'w')
-    os.chdir("..")
-    for i in range (0, len(content)):
-        temp = content[i].partition(' = ')
-        if temp[0] == entity:
-            number = int(temp[2].split('\n')[0])
-            #return this number and write the updated value in file
-            number = number + 1
-            content[i] = temp[0] + temp[1] + str(number) + '\n'
-        f.write(content[i])
-    f.close()
 
-def valuefind(entity):
-    os.chdir("mininet")
-    filename = open('alpha.py')
-    with filename as f:
-        content = f.readlines()
-    filename.close()
-    os.chdir("..")
-    for i in range (0, len(content)):
-        temp = content[i].partition(' = ')
-        if temp[0] == entity:
-            number = int(temp[2].split('\n')[0])
-            if entity != 'multinet':
-                number = number + 1
-            return (number)'''
-    
+from mininet.util import irange, natural, naturalSeq
 
 class Graph( object ):
     "Utility class to track nodes and edges - replaces networkx.Graph"
@@ -64,6 +29,7 @@ class Graph( object ):
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
+        self.data[ dest ].append( src )
 
     def nodes( self ):
         "Return list of graph nodes"
@@ -74,6 +40,10 @@ class Graph( object ):
         for src in self.data.keys():
             for dest in self.data[ src ]:
                 yield ( src, dest )
+
+    def __getitem__( self, node ):
+        "Return link dict for the given node"
+        return self.data[node]
 
 
 class Topo(object):
@@ -201,6 +171,12 @@ class Topo(object):
             assert dst in self.ports and src in self.ports[dst]
             return (self.ports[src][dst], self.ports[dst][src])
 
+    def switchPort(self, node):
+        print self.ports
+        print node
+        if node in self.ports:
+            return self.ports[node]
+
     def linkInfo( self, src, dst ):
         "Return link metadata"
         src, dst = self.sorted([src, dst])
@@ -227,7 +203,8 @@ class Topo(object):
 
 class SingleSwitchTopo(Topo):
     '''Single switch connected to k hosts.'''
-    def __init__(self, k=2, **opts):
+
+    def __init__(self, index, k=2, **opts):
         '''Init.
 
         @param k number of hosts
@@ -237,21 +214,11 @@ class SingleSwitchTopo(Topo):
 
         self.k = k
 
-        '''if valuefind('multinet') == 0:
-            switch = self.addSwitch('s1')
-            for h in irange(1, k):
-                host = self.addHost('h%s' % h)
-                self.addLink(host, switch)
-        else:'''
-        ## Therefore multiple networks are requested ##
-        switchalpha = valuefind('switchalpha')
-        #hostalpha = valuefind('hostalpha')
-        #valueupdate('hostalpha')
-        valueupdate('switchalpha')
-        switch = self.addSwitch('s%s' % chr(switchalpha + 64) + '1' )
+        switch = self.addSwitch('s%s1' % chr(index + 65))
         for h in irange(1, k):
-            host = self.addHost('h%s' % chr(switchalpha + 64) + '%s' % h )
+            host = self.addHost('h%s%s' % (chr(index + 65), h))
             self.addLink(host, switch)
+
 
 class SingleSwitchReversedTopo(Topo):
     '''Single switch connected to k hosts, with reversed ports.
@@ -260,7 +227,7 @@ class SingleSwitchReversedTopo(Topo):
 
     Useful to verify that Mininet properly handles custom port numberings.
     '''
-    def __init__(self, k=2, **opts):
+    def __init__(self, index, k=2, **opts):
         '''Init.
 
         @param k number of hosts
@@ -268,24 +235,16 @@ class SingleSwitchReversedTopo(Topo):
         '''
         super(SingleSwitchReversedTopo, self).__init__(**opts)
         self.k = k
-        '''if valuefind('multinet') == 0:
-            switch = self.addSwitch('s1')
-            for h in irange(1, k):
-                host = self.addHost('h%s' % h)
-                self.addLink(host, switch,
-                             port1=0, port2=(k - h + 1))
-        else:'''
-        switchalpha = valuefind('switchalpha')
-        valueupdate('switchalpha')
-        switch = self.addSwitch('s%s' % chr(switchalpha + 64) + '1' )
+        switch = self.addSwitch('s%s1' % chr(index + 65))
         for h in irange(1, k):
-            host = self.addHost('h%s' % chr(switchalpha + 64) + '%s' % h )
-            self.addLink(host, switch, port1=0, port2=(k - h + 1))
+            host = self.addHost('h%s%s' % (chr(index + 65), h))
+            self.addLink(host, switch,
+                         port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
     "Linear topology of k switches, with one host per switch."
 
-    def __init__(self, k=2, **opts):
+    def __init__(self, index, k=2, **opts):
         """Init.
            k: number of switches (and hosts)
            hconf: host configuration options
@@ -295,26 +254,11 @@ class LinearTopo(Topo):
 
         self.k = k
 
-        '''if valuefind('multinet') == 0:
-            lastSwitch = None
-            for i in irange(1, k):
-                host = self.addHost('h%s' % i)
-                switch = self.addSwitch('s%s' % i)
-                self.addLink( host, switch)
-                if lastSwitch:
-                    self.addLink( switch, lastSwitch)
-                lastSwitch = switch
-        else:'''
-        ## if multiple networks are requested ##
-        switchalpha = valuefind('switchalpha')
-        #hostalpha = valuefind('hostalpha')
-        #valueupdate('hostalpha')
-        valueupdate('switchalpha')
         lastSwitch = None
         for i in irange(1, k):
-            switch = self.addSwitch('s%s' % chr(switchalpha + 64) + str(i) )
-            host = self.addHost('h%s' % chr(switchalpha + 64) + str(i) )
-            self.addLink(host, switch)
+            host = self.addHost('h%s%s' % (chr(index + 65), i ))
+            switch = self.addSwitch('s%s%s' % (chr(index + 65), i))
+            self.addLink( host, switch)
             if lastSwitch:
-                self.addLink(switch, lastSwitch)
+                self.addLink( switch, lastSwitch)
             lastSwitch = switch

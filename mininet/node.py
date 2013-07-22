@@ -49,6 +49,7 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
+from operator import or_
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -140,10 +141,10 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
-        if not self.inNamespace:
-            for intfName in self.intfNames():
-                if self.name in intfName:
-                    quietRun( 'ip link del ' + intfName )
+        # Intfs may end up in root NS
+        for intfName in self.intfNames():
+            if self.name in intfName:
+                quietRun( 'ip link del ' + intfName )
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -371,7 +372,7 @@ class Node( object ):
         """
         if not intf:
             return self.defaultIntf()
-        elif type( intf) is str:
+        elif type( intf ) is str:
             return self.nameToIntf[ intf ]
         else:
             return intf
@@ -390,16 +391,19 @@ class Node( object ):
                     connections += [ ( intf, link.intf1 ) ]
         return connections
 
-    def deleteIntfs( self ):
-        "Delete all of our interfaces."
+    def deleteIntfs( self, checkName=True ):
+        """Delete all of our interfaces.
+           checkName: only delete interfaces that contain our name"""
         # In theory the interfaces should go away after we shut down.
         # However, this takes time, so we're better off removing them
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
         for intf in self.intfs.values():
-            intf.delete()
-            info( '.' )
+            # Protect against deleting hardware interfaces
+            if ( self.name in intf.name ) or ( not checkName ):
+                intf.delete()
+                info( '.' )
 
     # Routing support
 
@@ -420,16 +424,12 @@ class Node( object ):
         """Set the default route to go through intf.
            intf: Intf or {dev <intfname> via <gw-ip> ...}"""
         # Note setParam won't call us if intf is none
-        # See if interface is an actual interface
-        intf = self.intf( intf )
-        if intf in self.ports:
-            params = 'dev %s' % intf
-        elif type( intf ) is str:
+        if type( intf ) is str and ' ' in intf:
             params = intf
         else:
-            raise ValueError( 'intf or param string required' )
+            params = 'dev %s' % intf
         self.cmd( 'ip route del default' )
-        return self.cmd( 'ip route add default dev %s' % intf )
+        return self.cmd( 'ip route add default', params )
 
     # Convenience and configuration methods
 
@@ -619,7 +619,8 @@ class CPULimitedHost( Host ):
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
-        "Clean up our cgroup"
+        "Clean up Node, then clean up our cgroup"
+        super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     def chrt( self ):
@@ -762,7 +763,7 @@ class Switch( Node ):
     def defaultDpid( self ):
         "Derive dpid from switch name, s1 -> 1"
         try:
-            dpid = int( re.findall( '\d+', self.name )[ 0 ] )
+            dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
             dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
             return dpid
@@ -788,6 +789,10 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                    self.name )
 
+    def connected( self ):
+        "Is the switch connected to a controller? (override this method)"
+        return False and self  # satisfy pylint
+
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
@@ -800,15 +805,17 @@ class UserSwitch( Switch ):
 
     dpidLen = 12
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, dpopts='--no-slicing', **kwargs ):
         """Init.
-           name: name for the switch"""
+           name: name for the switch
+           dpopts: additional arguments to ofdatapath (--no-slicing)"""
         Switch.__init__( self, name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
                    moduleName='the OpenFlow reference user switch' +
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        self.dpopts = dpopts
 
     @classmethod
     def setup( cls ):
@@ -823,6 +830,10 @@ class UserSwitch( Switch ):
         return self.cmd( 'dpctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
 
+    def connected( self ):
+        "Is the switch connected to a controller?"
+        return 'remote.is-connected=true' in self.dpctl( 'status' )
+
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
@@ -835,7 +846,8 @@ class UserSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
-                  ' punix:/tmp/' + self.name + ' -d ' + self.dpid +
+                  ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
+                  self.dpopts +
                   ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
         self.cmd( 'ofprotocol unix:/tmp/' + self.name +
                   ' ' + clist +
@@ -954,6 +966,23 @@ class OVSSwitch( Switch ):
         "Disconnect a data port"
         self.cmd( 'ovs-vsctl del-port', self, intf )
 
+    def controllerUUIDs( self ):
+        "Return ovsdb UUIDs for our controllers"
+        uuids = []
+        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+                               'Controller' ).strip()
+        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
+            controllers = controllers[ 1 : -1 ]
+            uuids = [ c.strip() for c in controllers.split( ',' ) ]
+        return uuids
+
+    def connected( self ):
+        "Are we connected to at least one of our controllers?"
+        results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
+                                         uuid, 'is_connected' )
+                    for uuid in self.controllerUUIDs() ]
+        return reduce( or_, results, False )
+
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
@@ -967,6 +996,7 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl add-br', self )
         if self.datapath == 'user':
             self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
+        int( self.dpid, 16 ) # DPID must be a hex string
         self.cmd( 'ovs-vsctl -- set Bridge', self,
                   'other_config:datapath-id=' + self.dpid )
         self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
@@ -979,6 +1009,14 @@ class OVSSwitch( Switch ):
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
         self.cmd( 'ovs-vsctl set-controller', self, clist )
+        # Reconnect quickly to controllers (1s vs. 15s max_backoff)
+        for uuid in self.controllerUUIDs():
+            if uuid.count( '-' ) != 4:
+                # Doesn't look like a UUID
+                continue
+            uuid = uuid.strip()
+            self.cmd( 'ovs-vsctl set Controller', uuid,
+                      'max_backoff=1000' )
 
     def stop( self ):
         "Terminate OVS switch."

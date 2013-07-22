@@ -90,6 +90,7 @@ import os
 import re
 import select
 import signal
+import sys
 from time import sleep
 from itertools import chain
 
@@ -100,7 +101,6 @@ from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
-from mininet.utilib import *
 
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.0.0"
@@ -113,7 +113,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None):
+                  listenPort=None, network=1 ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -131,13 +131,13 @@ class Mininet( object ):
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
                each additional switch in the net if inNamespace=False"""
-        self.topo = topo
+        self.topo = topo #this is a list
         self.switch = switch
         self.host = host
         self.controller = controller
         self.link = link
         self.intf = intf
-        self.ipBase = ipBase
+        self.ipBase = ipBase #this could be list or string
         self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
         self.nextIP = 1  # start for address allocation
         self.inNamespace = inNamespace
@@ -149,6 +149,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+        self.network = network
 
         self.hosts = []
         self.switches = []
@@ -274,7 +275,7 @@ class Mininet( object ):
             host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
-    def buildFromTopo( self, topo=None ):
+    def buildFromTopo( self, topo=None, network=1 ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
            and up."""
@@ -288,7 +289,6 @@ class Mininet( object ):
 
         if not self.controllers:
             # Add a default controller
-            
             info( '*** Adding controller\n' )
             classes = self.controller
             if type( classes ) is not list:
@@ -296,25 +296,46 @@ class Mininet( object ):
             for i, cls in enumerate( classes ):
                 self.addController( 'c%d' % i, cls )
 
-        info( '*** Adding hosts:\n' )
-        for hostName in topo.hosts():
-            self.addHost( hostName, **topo.nodeInfo( hostName ) )
-            info( hostName + ' ' )
+        switchToLink = []
+	for index in range(0, network):
+            info( '*** Adding hosts:\n' )
+            for hostName in topo[index].hosts():
+                self.addHost( hostName, **topo[index].nodeInfo( hostName ) )
+                info( hostName + ' ' )
 
-        info( '\n*** Adding switches:\n' )
-        for switchName in topo.switches():
-            self.addSwitch( switchName, **topo.nodeInfo( switchName) )
-            info( switchName + ' ' )
+            info( '\n*** Adding switches:\n' )
+            for switchName in topo[index].switches():
+                self.addSwitch( switchName, **topo[index].nodeInfo( switchName) )
+                info( switchName + ' ' )
 
-        info( '\n*** Adding links:\n' )
-        for srcName, dstName in topo.links(sort=True):
-            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
-            params = topo.linkInfo( srcName, dstName )
-            srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort, **params )
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
-
-        info( '\n' )
+            info( '\n*** Adding links:\n' )
+            printflag = 0
+            for srcName, dstName in topo[index].links(sort=True):
+                if printflag == 0:
+                    printflag = 1
+                else:
+                    info( '(%s, %s) ' % ( src.name, dst.name ) )
+                    printflag = 0
+                src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
+                params = topo[index].linkInfo( srcName, dstName )
+                srcPort, dstPort = topo[index].port( srcName, dstName )
+                self.addLink( src, dst, srcPort, dstPort, **params )
+            info( '\n' )
+            '''info ( '\n*** Adding links between switches across network:\n' )
+            for switchIndex in range (0, len(switchToLink) - 1):
+                srcName = switchToLink[switchIndex]
+                dstName = switchToLink[switchIndex + 1]
+                src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
+                srcPort = topo[switchIndex].switchPort(srcName)
+                dstPort = topo[switchIndex + 1].switchPort(dstName)
+                print "*******************"
+                print srcPort
+                print dstPort
+                print "*******************"
+                self.addLink( src, dst, len(srcPort), len(dstPort), {})
+                info( '(%s, %s) ' % (src.name, dst.name) )
+            info ('\n' )
+                '''
 
     def configureControlNetwork( self ):
         "Control net config hook: override in subclass"
@@ -324,7 +345,7 @@ class Mininet( object ):
     def build( self ):
         "Build mininet."
         if self.topo:
-            self.buildFromTopo( self.topo )
+            self.buildFromTopo( self.topo, network=self.network )
         if ( self.inNamespace ):
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
@@ -374,15 +395,15 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
-        for host in self.hosts:
-            info( host.name + ' ' )
-            host.terminate()
-        info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
+        info( '\n' )
+        info( '*** Stopping %i hosts\n' % len( self.hosts ) )
+        for host in self.hosts:
+            info( host.name + ' ' )
+            host.terminate()
         info( '\n' )
         info( '*** Stopping %i controllers\n' % len( self.controllers ) )
         for controller in self.controllers:
@@ -470,9 +491,13 @@ class Mininet( object ):
                     lost += sent - received
                     output( ( '%s ' % dest.name ) if received else 'X ' )
             output( '\n' )
+        if packets > 0:
             ploss = 100 * lost / packets
-        output( "*** Results: %i%% dropped (%d/%d lost)\n" %
-                ( ploss, lost, packets ) )
+            output( "*** Results: %i%% dropped (%d/%d lost)\n" %
+                    ( ploss, lost, packets ) )
+        else:
+            ploss = 0
+            output( "*** Warning: No packets sent\n" )
         return ploss
 
     @staticmethod
