@@ -5,6 +5,10 @@ Mininet runner
 Mininet runner
 author: Brandon Heller (brandonh@stanford.edu)
 
+Changes made from the actual source code
+author: Prasoon Telang (prasoontelang@gmail.com)
+        Asmita Vikas (vikasmita20@gmail.com)
+
 To see options:
   sudo nm -h
 
@@ -16,6 +20,9 @@ from optparse import OptionParser
 import os
 import sys
 import time
+
+sys.dont_write_bytecode = True
+
 
 # Fix setuptools' evil madness, and open up (more?) security holes
 if 'PYTHONPATH' in os.environ:
@@ -38,7 +45,7 @@ from mininet.util import buildTopo
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'
-TOPOS = { 'minimal': lambda: SingleSwitchTopo(index, k=2 ),
+TOPOS = { 'minimal': SingleSwitchTopo,
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
@@ -293,6 +300,8 @@ class MininetRunner( object ):
                   autoStaticArp=arp, autoPinCpus=pin,
                   listenPort=listenPort,
                   network=number )
+
+        #switchconnect(mn)
         if self.options.pre:
             CLI( mn, script=self.options.pre )
 

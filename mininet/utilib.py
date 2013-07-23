@@ -47,10 +47,11 @@ def networkcheck(ipbaseargs):
             print 'Networks: ' + ipbaseargs[index] + ' and ' + ipbaseargs[index + 1] + ' coincide!'
             return True
 
-'''def switchconnect (mn):
+def switchconnect (mn):
     con1 =  mn[0].nameToNode[ 'sA1' ]
     con2 =  mn[1].nameToNode[ 'sB1' ]
-    mn[0].addLink(con1, con2, 3, 3, {})'''
+    
+    mn[0].addLink(con1, con2, 3, 3, {})
 
 def getipbasefornetwork(ipdefaultbase, index):
     ipbaseaddr = ipdefaultbase.split('/')
@@ -58,3 +59,4 @@ def getipbasefornetwork(ipdefaultbase, index):
     netw[0] = str(int(netw[0]) + index)
     ipbaseaddr = netw[0] + '.' + netw[1] + '.' + netw[2] + '.' + netw[3] + '/' + ipbaseaddr[1]
     return ipbaseaddr
+                    

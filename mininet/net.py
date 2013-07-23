@@ -165,17 +165,23 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def addHost( self, name, cls=None, **params ):
+    def addHost( self, name, index=-1, cls=None, **params ):
         """Add host.
            name: name of host to add
            cls: custom host class/constructor (optional)
            params: parameters for host
            returns: added host"""
         # Default IP and MAC addresses
-        defaults = { 'ip': ipAdd( self.nextIP,
-                                  ipBaseNum=self.ipBaseNum,
-                                  prefixLen=self.prefixLen ) +
-                                  '/%s' % self.prefixLen }
+        if isinstance(self.ipBaseNum, list):
+            defaults = { 'ip': ipAdd( self.nextIP,
+                                      ipBaseNum=self.ipBaseNum[index],
+                                      prefixLen=self.prefixLen[index] ) +
+                                      '/%s' % self.prefixLen[index] }
+        else:
+            defaults = { 'ip': ipAdd( self.nextIP,
+                                      ipBaseNum=self.ipBaseNum,
+                                      prefixLen=self.prefixLen ) +
+                                      '/%s' % self.prefixLen }
         if self.autoSetMacs:
             defaults[ 'mac'] = macColonHex( self.nextIP )
         if self.autoPinCpus:
@@ -251,6 +257,7 @@ class Mininet( object ):
         defaults = { 'port1': port1,
                      'port2': port2,
                      'intf': self.intf }
+        print defaults
         defaults.update( params )
         if not cls:
             cls = self.link
@@ -297,14 +304,16 @@ class Mininet( object ):
                 self.addController( 'c%d' % i, cls )
 
         switchToLink = []
-	for index in range(0, network):
+        for index in range(0, network):
             info( '*** Adding hosts:\n' )
             for hostName in topo[index].hosts():
-                self.addHost( hostName, **topo[index].nodeInfo( hostName ) )
+                self.addHost( hostName, index, **topo[index].nodeInfo( hostName ) )
                 info( hostName + ' ' )
 
             info( '\n*** Adding switches:\n' )
             for switchName in topo[index].switches():
+                if topo[index].switches().index(switchName) == 0:
+                    switchToLink.append(switchName)
                 self.addSwitch( switchName, **topo[index].nodeInfo( switchName) )
                 info( switchName + ' ' )
 
@@ -318,24 +327,29 @@ class Mininet( object ):
                     printflag = 0
                 src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
                 params = topo[index].linkInfo( srcName, dstName )
+                print "Printing params"
+                print params
                 srcPort, dstPort = topo[index].port( srcName, dstName )
                 self.addLink( src, dst, srcPort, dstPort, **params )
             info( '\n' )
-            '''info ( '\n*** Adding links between switches across network:\n' )
-            for switchIndex in range (0, len(switchToLink) - 1):
-                srcName = switchToLink[switchIndex]
-                dstName = switchToLink[switchIndex + 1]
-                src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
-                srcPort = topo[switchIndex].switchPort(srcName)
-                dstPort = topo[switchIndex + 1].switchPort(dstName)
-                print "*******************"
-                print srcPort
-                print dstPort
-                print "*******************"
-                self.addLink( src, dst, len(srcPort), len(dstPort), {})
-                info( '(%s, %s) ' % (src.name, dst.name) )
-            info ('\n' )
-                '''
+            if not isinstance(self.ipBaseNum, list):
+                ipBase = self.ipBase.split('.')
+                ipBase[0] = str(int(ipBase[0]) + index + 1)
+                ipBase = '%s.%s.%s.%s' % (ipBase[0], ipBase[1], ipBase[2], ipBase[3])
+                self.ipBaseNum, self.prefixLen = netParse(ipBase)
+            self.nextIP = 1
+
+        info ( '\n*** Adding links between switches across network:\n' )
+        '''for switchIndex in range (0, len(switchToLink) - 1):
+            srcName = switchToLink[switchIndex]
+            dstName = switchToLink[switchIndex + 1]
+            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
+            #params = topo[switchIndex].switchLinkInfo( srcName )
+            srcPort = topo[switchIndex].switchPort(srcName)
+            dstPort = topo[switchIndex + 1].switchPort(dstName)
+            self.addLink( src, dst, len(srcPort) + 1, len(dstPort) + 1, {})
+            info( '(%s, %s) ' % (src.name, dst.name) )
+        info ('\n' )'''
 
     def configureControlNetwork( self ):
         "Control net config hook: override in subclass"

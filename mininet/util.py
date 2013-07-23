@@ -278,13 +278,14 @@ def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     if isinstance(ip, str):
         args = [ int( arg ) for arg in ip.split( '.' ) ]
-        return ipNum( *args )
+        args = ipNum( *args )
+        #return ipNum( *args )
     else:
         args = []
         for index in range (0, len(ip)):
-            ipNumElement = [ int( arg ) for arg in ip[index].split( '.' ) ] 
+            ipNumElement = [ int( arg ) for arg in ip[index].split( '.' ) ]
             args.append(ipNum( *ipNumElement))
-        return args
+    return args
 
 def netParse( ipstr ):
     """Parse an IP network specification, returning
@@ -301,8 +302,8 @@ def netParse( ipstr ):
             if '/' in ipstr:
                 ip, pf = ipstr[index].split( '/' )
                 prefixLen = int( pf )
-                return_ip.append(ip)
-                return_pf.append(prefixLen)
+                return_ip.append( ip )
+                return_pf.append( prefixLen )
         ip, prefixLen = return_ip, return_pf
  
     return ipParse( ip ), prefixLen

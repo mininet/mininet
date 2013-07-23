@@ -59,5 +59,6 @@ def cleanup():
     for link in links:
         if link != '':
             sh( "ip link del " + link )
-
+    sh ( 'service network-manager restart' )
+    info ( "Network manager restarted" )
     info( "*** Cleanup complete.\n" )
