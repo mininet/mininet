@@ -138,6 +138,7 @@ class Mininet( object ):
         self.intf = intf
         self.ipBase = ipBase
         self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
+        print self.ipBaseNum
         self.nextIP = 1  # start for address allocation
         self.inNamespace = inNamespace
         self.xterms = xterms
@@ -250,6 +251,7 @@ class Mininet( object ):
                      'port2': port2,
                      'intf': self.intf }
         defaults.update( params )
+        print "net.py is called"
         if not cls:
             cls = self.link
         return cls( node1, node2, **defaults )
