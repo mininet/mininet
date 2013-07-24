@@ -89,6 +89,12 @@ OVS_TAG=v$OVS_RELEASE
 OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
 OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
 
+# Command-line versions overrides that simplify custom VM creation
+# To use, pass in the vars on the cmd line before install.sh, e.g.
+# WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
+WS_DISSECTOR_REV=${WS_DISSECTOR_REV:-""}
+OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
+
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
