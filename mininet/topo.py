@@ -236,23 +236,30 @@ class SingleSwitchReversedTopo(Topo):
                          port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
-    "Linear topology of k switches, with one host per switch."
+    "Linear topology of k switches, with n hosts per switch."
 
-    def __init__(self, k=2, **opts):
+    def __init__(self, k=2, n=1, **opts):
         """Init.
-           k: number of switches (and hosts)
+           k: number of switches
+           n: number of hosts per switch
            hconf: host configuration options
            lconf: link configuration options"""
 
         super(LinearTopo, self).__init__(**opts)
 
         self.k = k
+        self.n = n
 
         lastSwitch = None
         for i in irange(1, k):
-            host = self.addHost('h%s' % i)
+            # Add switch
             switch = self.addSwitch('s%s' % i)
-            self.addLink( host, switch)
+            # Add hosts to switch
+            for j in irange(1, n):
+              hostNum = (i-1)*n + j
+              host = self.addHost('h%s' % hostNum)
+              self.addLink(host, switch)
+            # Connect switch to previous
             if lastSwitch:
-                self.addLink( switch, lastSwitch)
+                self.addLink(switch, lastSwitch)
             lastSwitch = switch
