@@ -480,19 +480,26 @@ class Mininet( object ):
     @staticmethod
     def _parsePingFull( pingOutput ):
         "Parse ping output and return all data."
+        errorTuple = (1, 0, 0, 0, 0, 0)
         # Check for downed link
-        if 'connect: Network is unreachable' in pingOutput:
-            return (1, 0)
+        r = r'[uU]nreachable'
+        m = re.search( r, pingOutput )
+        if m is not None:
+            return errorTuple
         r = r'(\d+) packets transmitted, (\d+) received'
         m = re.search( r, pingOutput )
         if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
                    pingOutput )
-            return (1, 0, 0, 0, 0, 0)
+            return errorTuple
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         r = r'rtt min/avg/max/mdev = '
         r += r'(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+) ms'
         m = re.search( r, pingOutput )
+        if m is None:
+            error( '*** Error: could not parse ping output: %s\n' %
+                   pingOutput )
+            return errorTuple
         rttmin = float( m.group( 1 ) )
         rttavg = float( m.group( 2 ) )
         rttmax = float( m.group( 3 ) )
