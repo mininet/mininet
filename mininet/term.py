@@ -15,8 +15,11 @@ def tunnelX11( node, display=None):
     """Create an X11 tunnel from node:6000 to the root host
        display: display on root host (optional)
        returns: node $DISPLAY, Popen object for tunnel"""
-    if display is None:
+    if display is None and 'DISPLAY' in environ:
         display = environ[ 'DISPLAY' ]
+    if display is None:
+        error( "Error: Cannot connect to display\n" )
+        return None, None
     host, screen = display.split( ':' )
     # Unix sockets should work
     if not host or host == 'unix':
@@ -49,12 +52,16 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
         error( 'invalid terminal type: %s' % term )
         return
     display, tunnel = tunnelX11( node, display )
+    if display is None:
+        return []
     term = node.popen( cmds[ term ] + [ display, '-e', 'env TERM=ansi bash'] )
     return [ tunnel, term ] if tunnel else [ term ]
 
 def runX11( node, cmd ):
     "Run an X11 client on a node"
     _display, tunnel = tunnelX11( node )
+    if _display is None:
+        return []
     popen = node.popen( cmd )
     return [ tunnel, popen ]
 

@@ -335,6 +335,9 @@ class Mininet( object ):
 
     def startTerms( self ):
         "Start a terminal for each node."
+        if 'DISPLAY' not in os.environ:
+            error( "Error starting terms: Cannot connect to display\n" )
+            return
         info( "*** Running terms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
         self.terms += makeTerms( self.controllers, 'controller' )
