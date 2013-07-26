@@ -3,8 +3,7 @@ def popleft(ipbase):
     number = int(ipbase.pop())
     ipbase.reverse()
     return number, ipbase
-    
-## To avoid common network ips entered ##
+
 def inttobin(power):
     num = 0
     for i in range(0, power):
@@ -34,7 +33,7 @@ def networkcheck(ipbaseargs):
             else:
                 net1[j] = str(int(net1[j]) | inttobin(8))
             subnet1 = subnet1 - 8
-        broadcast1 = net1[0] + net1[1] + net1[2] + net1[3]
+        broadcast1 = '%s.%s.%s.%s' % (net1[0], net1[1], net1[2], net1[3])
         while subnet2 >= 0 :
             if subnet2 < 8:
                 subnet2 = subnet2 % 8
@@ -42,16 +41,10 @@ def networkcheck(ipbaseargs):
             else:
                 net2[j] = str(int(net2[j]) | inttobin(8))
             subnet2 = subnet2 - 8
-        broadcast2 = net2[0] + net2[1] + net2[2] + net2[3]
+        broadcast2 = '%s.%s.%s.%s' % (net2[0], net2[1], net2[2], net2[3])
         if compare(network1, network2, broadcast1, broadcast2):
             print 'Networks: ' + ipbaseargs[index] + ' and ' + ipbaseargs[index + 1] + ' coincide!'
             return True
-
-def switchconnect (mn):
-    con1 =  mn[0].nameToNode[ 'sA1' ]
-    con2 =  mn[1].nameToNode[ 'sB1' ]
-    
-    mn[0].addLink(con1, con2, 3, 3, {})
 
 def getipbasefornetwork(ipdefaultbase, index):
     ipbaseaddr = ipdefaultbase.split('/')

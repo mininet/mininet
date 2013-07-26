@@ -299,7 +299,7 @@ def netParse( ipstr ):
         return_ip = []
         return_pf = []
         for index in range(0, len(ipstr)):
-            if '/' in ipstr:
+            if '/' in ipstr[index]:
                 ip, pf = ipstr[index].split( '/' )
                 prefixLen = int( pf )
                 return_ip.append( ip )

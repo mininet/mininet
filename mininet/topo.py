@@ -98,7 +98,6 @@ class Topo(object):
            returns: link info key"""
         if not opts and self.lopts:
             opts = self.lopts
-        print 'topo called'
         self.addPort(node1, node2, port1, port2)
         key = tuple(self.sorted([node1, node2]))
         self.link_info[key] = opts
@@ -173,8 +172,6 @@ class Topo(object):
             return (self.ports[src][dst], self.ports[dst][src])
 
     def switchPort(self, node):
-        print self.ports
-        print node
         if node in self.ports:
             return self.ports[node]
 

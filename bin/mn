@@ -20,6 +20,7 @@ from optparse import OptionParser
 import os
 import sys
 import time
+import copy 
 
 sys.dont_write_bytecode = True
 
@@ -28,7 +29,7 @@ sys.dont_write_bytecode = True
 if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
 
-from mininet.utilib import *
+from mininet.utilib import networkcheck, popleft
 from mininet.clean import cleanup
 from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info
@@ -178,12 +179,10 @@ class MininetRunner( object ):
                          help='|'.join( TESTS ) )
         opts.add_option( '--xterms', '-x', action='store_true',
                          default=False, help='spawn xterms for each node' )
-        ## Changes made from here ##
         opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
                          help='base IP address for host' )
         opts.add_option( '--network', '-n', type='string',default='1',
                          help='base IP address for multiple topos' )
-        ## Changes made till here ##
         opts.add_option( '--mac', action='store_true',
                          default=False, help='automatically set host MACs' )
         opts.add_option( '--arp', action='store_true',
@@ -259,7 +258,6 @@ class MininetRunner( object ):
         topo = []
         if isinstance(topoargs, list):
             for index in range (0, number):
-                print "Looped"
                 if index < len(topoargs):
                     topo.append(buildTopo( TOPOS, topoargs[index], index ))
                 else:
@@ -282,7 +280,6 @@ class MininetRunner( object ):
         else:
             #this is a list
             ipBase = ipbaseargs
-        print "ipBase for this network is: " + ipBase
         ## Validation to prevent same network has been done before ##
         xterms = self.options.xterms
         mac = self.options.mac
@@ -301,7 +298,6 @@ class MininetRunner( object ):
                   listenPort=listenPort,
                   network=number )
 
-        #switchconnect(mn)
         if self.options.pre:
             CLI( mn, script=self.options.pre )
 

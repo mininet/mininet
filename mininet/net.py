@@ -139,7 +139,6 @@ class Mininet( object ):
         self.intf = intf
         self.ipBase = ipBase #this could be list or string
         self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
-        print self.ipBaseNum
         self.nextIP = 1  # start for address allocation
         self.inNamespace = inNamespace
         self.xterms = xterms
@@ -258,9 +257,7 @@ class Mininet( object ):
         defaults = { 'port1': port1,
                      'port2': port2,
                      'intf': self.intf }
-        print defaults
         defaults.update( params )
-        print "net.py is called"
         if not cls:
             cls = self.link
         return cls( node1, node2, **defaults )
@@ -329,8 +326,6 @@ class Mininet( object ):
                     printflag = 0
                 src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
                 params = topo[index].linkInfo( srcName, dstName )
-                print "Printing params"
-                print params
                 srcPort, dstPort = topo[index].port( srcName, dstName )
                 self.addLink( src, dst, srcPort, dstPort, **params )
             info( '\n' )
@@ -340,18 +335,6 @@ class Mininet( object ):
                 ipBase = '%s.%s.%s.%s' % (ipBase[0], ipBase[1], ipBase[2], ipBase[3])
                 self.ipBaseNum, self.prefixLen = netParse(ipBase)
             self.nextIP = 1
-
-        info ( '\n*** Adding links between switches across network:\n' )
-        '''for switchIndex in range (0, len(switchToLink) - 1):
-            srcName = switchToLink[switchIndex]
-            dstName = switchToLink[switchIndex + 1]
-            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
-            #params = topo[switchIndex].switchLinkInfo( srcName )
-            srcPort = topo[switchIndex].switchPort(srcName)
-            dstPort = topo[switchIndex + 1].switchPort(dstName)
-            self.addLink( src, dst, len(srcPort) + 1, len(dstPort) + 1, {})
-            info( '(%s, %s) ' % (src.name, dst.name) )
-        info ('\n' )'''
 
     def configureControlNetwork( self ):
         "Control net config hook: override in subclass"
