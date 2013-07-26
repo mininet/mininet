@@ -284,7 +284,7 @@ if __name__ == "__main__":
         info( "Keyboard Interrupt. Shutting down and cleaning up...")
         cleanup()
     except Exception:
-        #Print exception
+        # Print exception
         type_, val_, trace_ = sys.exc_info()
         errorMsg = ( "-"*80 + "\n" +
                      "Caught exception. Cleaning up...\n\n" +
