@@ -66,7 +66,7 @@ Mininet includes:
 
   `mn -c`
 
-### What is difference in this mininet from the mininet where this had been forked?
+### What is the difference in this mininet from the mininet where this had been forked?
 
 * A command to create multiple networks distinguished by their network ip address.
   It will help in emulating a more real scenario based networks. The command to
