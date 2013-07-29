@@ -1,4 +1,3 @@
-
 Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 
@@ -66,6 +65,26 @@ Mininet includes:
   this if things stop working!
 
   `mn -c`
+
+### What is difference in this mininet from the mininet where this had been forked?
+
+* A command to create multiple networks distinguished by their network ip address.
+  It will help in emulating a more real scenario based networks. The command to
+  create multiple network is:
+
+  `mn --network=3,100.0.0.0/8,172.0.0.0/8,201.0.0.0/8`
+  
+  Here,
+  3 indicates the number of networks to be created and the ip addresses are the 
+  network numbers of each network.
+  
+* Extended features of --topo:
+  Now use `--topo "linear,3;tree,2,3"`
+  
+  Here, the topos mentioned within are the topology set for the corresponding ip
+  network in `--network`. In case if the topology mentioned is lesser than the
+  number of networks, default topology of 1 switch and 2 hosts is considered.
+  Do separate the topologies with a semi-colon `;`.
 
 ### New features in 2.0.0
 
