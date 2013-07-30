@@ -13,7 +13,7 @@ setup for testing, and can even be emulated with the Mininet package.
 
 from mininet.util import irange, natural, naturalSeq
 
-class Graph( object ):
+class MultiGraph( object ):
     "Utility class to track nodes and edges - replaces networkx.Graph"
 
     def __init__( self ):
@@ -21,15 +21,14 @@ class Graph( object ):
 
     def add_node( self, node ):
         "Add node to graph"
-        if node not in self.data.keys():
-            self.data[ node ] = []
+        self.data.setdefault( node, [] )
 
     def add_edge( self, src, dest ):
         "Add edge to graph"
+        src, dest = sorted( ( src, dest ) )
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
-        self.data[ dest ].append( src )
 
     def nodes( self ):
         "Return list of graph nodes"
@@ -54,7 +53,7 @@ class Topo(object):
            hinfo: default host options
            sopts: default switch options
            lopts: default link options"""
-        self.g = Graph()
+        self.g = MultiGraph()
         self.node_info = {}
         self.link_info = {}  # (src, dst) tuples hash to EdgeInfo objects
         self.hopts = {} if hopts is None else hopts
