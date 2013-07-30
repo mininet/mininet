@@ -255,9 +255,9 @@ class LinearTopo(Topo):
             switch = self.addSwitch('s%s' % i)
             # Add hosts to switch
             for j in irange(1, n):
-              hostNum = (i-1)*n + j
-              host = self.addHost('h%s' % hostNum)
-              self.addLink(host, switch)
+                hostNum = (i-1)*n + j
+                host = self.addHost('h%s' % hostNum)
+                self.addLink(host, switch)
             # Connect switch to previous
             if lastSwitch:
                 self.addLink(switch, lastSwitch)
