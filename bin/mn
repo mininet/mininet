@@ -22,7 +22,7 @@ if 'PYTHONPATH' in os.environ:
 
 from mininet.clean import cleanup
 from mininet.cli import CLI
-from mininet.log import lg, LEVELS, info
+from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, UserSwitch, OVSKernelSwitch,
@@ -278,4 +278,21 @@ class MininetRunner( object ):
 
 
 if __name__ == "__main__":
-    MininetRunner()
+    try:
+        MininetRunner()
+    except KeyboardInterrupt:
+        info( "Keyboard Interrupt. Shutting down and cleaning up...")
+        cleanup()
+    except Exception:
+        # Print exception
+        type_, val_, trace_ = sys.exc_info()
+        errorMsg = ( "-"*80 + "\n" +
+                     "Caught exception. Cleaning up...\n\n" +
+                     "%s: %s\n" % ( type_.__name__, val_ ) +
+                     "-"*80 + "\n" )
+        error( errorMsg )
+        # Print stack trace to debug log
+        import traceback
+        stackTrace = traceback.format_exc()
+        debug( stackTrace + "\n" )
+        cleanup()
