@@ -227,6 +227,20 @@ function of13 {
     cd $BUILD_DIR
 }
 
+function wireshark_version_check {
+    # Check Wireshark version
+    WS=$(which wireshark)
+    WS_VER_PATCH=(1 10) # targetting wireshark 1.10.0
+    WS_VER=($($WS --version | sed 's/[a-z ]*\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/'))
+    if [ "${WS_VER[0]}" -lt "${WS_VER_PATCH[0]}" ] ||
+       [[ "${WS_VER[0]}" -le "${WS_VER_PATCH[0]}" && "${WS_VER[1]}" -lt "${WS_VER_PATCH[1]}" ]]
+    then
+        # pre-1.10.0 wireshark
+        echo "Setting revision: pre-ws-1.10.0"
+        WS_DISSECTOR_REV="pre-ws-1.10.0" 
+    fi
+}
+
 function wireshark {
     echo "Installing Wireshark dissector..."
 
@@ -238,10 +252,14 @@ function wireshark {
         sudo apt-get install -y libwiretap-dev libwireshark-dev
         cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
+        if [[ -z "$WS_DISSECTOR_REV" ]]; then
+            wireshark_version_check
+        fi
         cd of-dissector
         if [[ -n "$WS_DISSECTOR_REV" ]]; then
             hg checkout ${WS_DISSECTOR_REV}
         fi
+        # Build dissector
         cd src
         export WIRESHARK=/usr/include/wireshark
         scons
