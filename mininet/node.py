@@ -1026,6 +1026,64 @@ class OVSSwitch( Switch ):
 OVSKernelSwitch = OVSSwitch
 
 
+class IVSSwitch(Switch):
+    """IVS virtual switch"""
+
+    def __init__( self, name, **kwargs ):
+        Switch.__init__( self, name, **kwargs )
+
+    @classmethod
+    def setup( cls ):
+        "Make sure IVS is installed"
+        pathCheck( 'ivs-ctl', 'ivs',
+                   moduleName="Indigo Virtual Switch (projectfloodlight.org)" )
+        out, err, exitcode = errRun( 'ivs-ctl show' )
+        if exitcode:
+            error( out + err +
+                   'ivs-ctl exited with code %d\n' % exitcode +
+                   '*** The openvswitch kernel module might '
+                   'not be loaded. Try modprobe openvswitch.\n' )
+            exit( 1 )
+
+    def start( self, controllers ):
+        "Start up a new IVS switch"
+        args = ['ivs']
+        args.extend( ['--name', self.name] )
+        args.extend( ['--dpid', self.dpid] )
+        args.extend( ['--verbose'] )
+        for intf in self.intfs.values():
+            if not intf.IP():
+                args.extend( ['-i', intf.name] )
+        for c in controllers:
+            args.extend( ['-c', '%s:%d' % (c.IP(), c.port)] )
+        if self.listenPort:
+            args.extend( ['--listen', '127.0.0.1:%i' % self.listenPort] )
+
+        logfile = '/tmp/ivs.%s.log' % self.name
+
+        self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
+
+    def stop( self ):
+        "Terminate IVS switch."
+        self.cmd( 'kill %ivs' )
+        self.deleteIntfs()
+
+    def attach( self, intf ):
+        "Connect a data port"
+        self.cmd( 'ivs-ctl', 'add-port', '--datapath', self.name, intf )
+
+    def detach( self, intf ):
+        "Disconnect a data port"
+        self.cmd( 'ivs-ctl', 'del-port', '--datapath', self.name, intf )
+
+    def dpctl( self, *args ):
+        "Run dpctl command"
+        if not self.listenPort:
+            return "can't run dpctl without passive listening port"
+        return self.cmd( 'ovs-ofctl ' + ' '.join( args ) +
+                         ' tcp:127.0.0.1:%i' % self.listenPort )
+
+
 class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
