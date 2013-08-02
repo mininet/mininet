@@ -84,16 +84,16 @@ OVS_RELEASE=1.4.0
 OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
 OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
-OVS_SRC=$BUILD_DIR/openvswitch
 OVS_TAG=v$OVS_RELEASE
-OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
-OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
+
+IVS_TAG=v0.3
 
 # Command-line versions overrides that simplify custom VM creation
 # To use, pass in the vars on the cmd line before install.sh, e.g.
 # WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
 WS_DISSECTOR_REV=${WS_DISSECTOR_REV:-""}
 OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
+
 
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
@@ -287,6 +287,10 @@ function wireshark {
 function ovs {
     echo "Installing Open vSwitch..."
 
+    OVS_SRC=$BUILD_DIR/openvswitch
+    OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
+    OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
+
     # Required for module build/dkms install
     $install $KERNEL_HEADERS
 
@@ -397,6 +401,22 @@ function remove_ovs {
         done
     fi
     echo "Done removing OVS"
+}
+
+function ivs {
+    echo "Installing Indigo Virtual Switch..."
+
+    IVS_SRC=$BUILD_DIR/ivs
+
+    # Install dependencies
+    $install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
+
+    # Install IVS from source
+    cd $BUILD_DIR
+    git clone git://github.com/floodlight/ivs $IVS_SRC -b $IVS_TAG --recursive
+    cd $IVS_SRC
+    make
+    sudo make install
 }
 
 # Install NOX with tutorial files
@@ -640,7 +660,7 @@ function vm_clean {
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhkmnprtvwx03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhikmnprtvwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -653,21 +673,22 @@ function usage {
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
     printf -- ' -c: (C)lean up after kernel install\n' >&2
     printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2
-    printf -- ' -f: install open(F)low\n' >&2
+    printf -- ' -e: install Mininet d(E)veloper dependencies\n' >&2
+    printf -- ' -f: install Open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
+    printf -- ' -i: install (I)ndigo Virtual Switch\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
-    printf -- ' -n: install mini(N)et dependencies + core files\n' >&2
-    printf -- ' -e: install mininet d(E)veloper dependencies\n' >&2
+    printf -- ' -n: install Mini(N)et dependencies + core files\n' >&2
     printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
+    printf -- ' -s <dir>: place dependency (S)ource/build trees in <dir>\n' >&2
     printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
-    printf -- ' -v: install open (V)switch\n' >&2
-    printf -- ' -w: install OpenFlow (w)ireshark dissector\n' >&2
+    printf -- ' -v: install Open (V)switch\n' >&2
+    printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
-    printf -- ' -i < directory >: sets the (I)nstallation directory for Mininet dependencies\n' >&2
     exit 2
 }
 
@@ -677,25 +698,29 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhkmnprtvwx03i:' OPTION
+    while getopts 'abcdefhikmnprs:tvwx03' OPTION
     do
       case $OPTION in
       a)    all;;
       b)    cbench;;
       c)    kernel_clean;;
       d)    vm_clean;;
+      e)    mn_dev;;
       f)    case $OF_VERSION in
             1.0) of;;
             1.3) of13;;
             *)  echo "Invalid OpenFlow version $OF_VERSION";;
             esac;;
       h)    usage;;
+      i)    ivs;;
       k)    kernel;;
       m)    modprobe;;
       n)    mn_deps;;
-      e)    mn_dev;;
       p)    pox;;
       r)    remove_ovs;;
+      s)    mkdir -p $OPTARG; # ensure the directory is created
+            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path
+            echo "Dependency installation directory: $BUILD_DIR";;
       t)    vm_other;;
       v)    ovs;;
       w)    wireshark;;
@@ -706,9 +731,6 @@ else
             esac;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
-      i)    mkdir -p $OPTARG; # ensure the directory is created
-            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path of the directory
-            echo "Dependency installation directory: $BUILD_DIR";;
       ?)    usage;;
       esac
     done
