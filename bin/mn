@@ -281,7 +281,7 @@ if __name__ == "__main__":
     try:
         MininetRunner()
     except KeyboardInterrupt:
-        info( "Keyboard Interrupt. Shutting down and cleaning up...")
+        info( "\n\nKeyboard Interrupt. Shutting down and cleaning up...\n\n")
         cleanup()
     except Exception:
         # Print exception
