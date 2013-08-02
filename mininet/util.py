@@ -2,8 +2,8 @@
 
 from mininet.log import output, info, error, warn
 
-from time import sleep
-from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
+from time import sleep, time
+from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 import re
@@ -355,11 +355,73 @@ def pmonitor(popens, timeoutms=500, readline=True,
             yield None, ''
 
 # Other stuff we use
+#PTY_LIMIT=8192
+# Mininet: Increase open file limit
+#fs.file-max = 100000
+
+# Mininet: increase network buffer space
+#net.core.wmem_max = 16777216
+#net.core.rmem_max = 16777216
+#net.ipv4.tcp_rmem = 10240 87380 16777216
+#net.ipv4.tcp_rmem = 10240 87380 16777216
+#net.core.netdev_max_backlog = 5000
+
+# Mininet: increase arp cache size
+#net.ipv4.neigh.default.gc_thresh1 = 4096
+#net.ipv4.neigh.default.gc_thresh2 = 8192
+#net.ipv4.neigh.default.gc_thresh3 = 16384
+
+# Mininet: increase routing table size
+#net.ipv4.route.max_size=32768
+
+def sysctlTestAndSet( name, limit ):
+    #read limit
+    oldLimit = quietRun( 'sysctl -n %s' % name )
+    #print name, type(limit), limit
+    if type( limit ) is int:
+        if int( oldLimit ) < limit:  # or True:
+            #print 'set new limit:', limit
+            output = errRun( 'sysctl -w %s=%s' % ( name, limit) )
+        #else:
+        #    print 'keep old limit'
+    else:
+        #print 'cmd:', 'sysctl', '-w', '%s=%s' % ( name, limit )
+        arg = '%s="%s"' % ( name, limit )
+        output = errRun( 'sysctl', '-w', '%s=%s' % ( name, limit ) )
+        #print output
+    #compare to limit
+    # set new limit if necessary
+    #print 'new limit:', quietRun( 'sysctl -n %s' % name )
+
+def rlimitTestAndSet( name, limit ):
+    #print 'old: ', name, getrlimit( name )
+    #read limit
+    soft, hard = getrlimit( name )
+    if soft < limit:
+        hardLimit = hard if limit < hard else limit
+        setrlimit( name, ( limit, hardLimit ) )
+    #compare to limit
+    # set new limit if necessary
+    #print 'new: ', name, getrlimit( name )
 
 def fixLimits():
     "Fix ridiculously small resource limits."
-    setrlimit( RLIMIT_NPROC, ( 8192, 8192 ) )
-    setrlimit( RLIMIT_NOFILE, ( 16384, 16384 ) )
+    start = time()
+    rlimitTestAndSet( RLIMIT_NPROC, 8192 )
+    rlimitTestAndSet( RLIMIT_NOFILE, 16384 )
+    sysctlTestAndSet( 'fs.file-max', 10000 )
+    sysctlTestAndSet( 'net.core.wmem_max', 16777216 )
+    sysctlTestAndSet( 'net.core.rmem_max', 16777216 )
+    sysctlTestAndSet( 'net.ipv4.tcp_rmem', '10240 87380 16777216' )
+    sysctlTestAndSet( 'net.ipv4.tcp_wmem', '10240 87380 16777216' )
+    sysctlTestAndSet( 'net.core.netdev_max_backlog', 5000 )
+    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh1', 4096 )
+    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh2', 8192 )
+    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh3', 16384 )
+    sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
+    sysctlTestAndSet( 'kernel.pty.max', 20000 )
+    end = time()
+    print 'limits:', start, end, end-start
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
