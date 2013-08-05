@@ -605,9 +605,14 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
 # a good idea to use a symbolic link in place of the copy below.
 function modprobe {
     echo "Setting up modprobe for OVS kmod..."
-
-    sudo cp $OVS_KMODS $DRIVERS_DIR
-    sudo depmod -a ${KERNEL_NAME}
+    set +o nounset
+    if [ -z "$OVS_KMODS" ]; then
+      echo "OVS_KMODS not set. Aborting."
+    else
+      sudo cp $OVS_KMODS $DRIVERS_DIR
+      sudo depmod -a ${KERNEL_NAME}
+    fi
+    set -o nounset
 }
 
 function all {
