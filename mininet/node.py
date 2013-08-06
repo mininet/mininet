@@ -878,13 +878,10 @@ class UserSwitch( Switch ):
                   ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         if "no-slicing" not in self.dpopts:
             # Only TCReapply if slicing is enable
-            print 'fooooooo'
             sleep(1) # Allow ofdatapath to start before re-arranging qdisc's
             for intf in self.intfList():
                 if not intf.IP():
                     self.TCReapply( intf )
-        else: 
-            print "no reapply"
 
     def stop( self ):
         "Stop OpenFlow reference user datapath."
