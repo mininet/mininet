@@ -50,6 +50,7 @@ import signal
 import select
 from subprocess import Popen, PIPE, STDOUT
 from operator import or_
+from time import sleep
 
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
@@ -834,6 +835,28 @@ class UserSwitch( Switch ):
         "Is the switch connected to a controller?"
         return 'remote.is-connected=true' in self.dpctl( 'status' )
 
+    @staticmethod
+    def TCReapply( intf ):
+        """Unfortunately user switch and Mininet are fighting
+           over tc queuing disciplines. To resolve the conflict,
+           we re-create the user switch's configuration, but as a
+           leaf of the TCIntf-created configuration."""
+        if type( intf ) is TCIntf:
+            ifspeed = 10000000000 # 10 Gbps
+            minspeed = ifspeed * 0.001
+
+            res = intf.config( **intf.params )
+            parent = res['parent']
+
+            # Re-add qdisc, root, and default classes user switch created, but
+            # with new parent, as setup by Mininet's TCIntf
+            intf.tc( "%s qdisc add dev %s " + parent +
+                     " handle 1: htb default 0xfffe" )
+            intf.tc( "%s class add dev %s classid 1:0xffff parent 1: htb rate "
+                     + str(ifspeed) )
+            intf.tc( "%s class add dev %s classid 1:0xfffe parent 1:0xffff " +
+                     "htb rate " + str(minspeed) + " ceil " + str(ifspeed) )
+
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
@@ -853,6 +876,15 @@ class UserSwitch( Switch ):
                   ' ' + clist +
                   ' --fail=closed ' + self.opts +
                   ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+        if "no-slicing" not in self.dpopts:
+            # Only TCReapply if slicing is enable
+            print 'fooooooo'
+            sleep(1) # Allow ofdatapath to start before re-arranging qdisc's
+            for intf in self.intfList():
+                if not intf.IP():
+                    self.TCReapply( intf )
+        else: 
+            print "no reapply"
 
     def stop( self ):
         "Stop OpenFlow reference user datapath."
