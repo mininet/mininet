@@ -43,7 +43,7 @@ class CLI( Cmd ):
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
         self.mn = mininet
-        # CLI locals for py commands
+        # Local variable bindings for py command
         self.locals = { 'net': mininet }
         # Attempt to handle input
         self.stdin = stdin
