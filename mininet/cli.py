@@ -43,6 +43,8 @@ class CLI( Cmd ):
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
         self.mn = mininet
+        # CLI locals for py commands
+        self.locals = { 'net': mininet }
         # Attempt to handle input
         self.stdin = stdin
         self.inPoller = poll()
@@ -71,11 +73,10 @@ class CLI( Cmd ):
         "Don't repeat last command when you hit return."
         pass
 
-    def locals( self ):
+    def getLocals( self ):
         "Local variable bindings for py command"
-        locals = { 'net': self.mn }
-        locals.update( self.mn )
-        return locals
+        self.locals.update( self.mn )
+        return self.locals
 
     # Disable pylint "Unused argument: 'arg's'" messages, as well as
     # "method could be a function" warning, since each CLI function
@@ -109,14 +110,12 @@ class CLI( Cmd ):
 
     def do_nodes( self, _line ):
         "List all nodes."
-        #                                                 self.mn.values()
-        nodes = ' '.join( [ node.name for node in sorted( self.mn ) ] )
+        nodes = ' '.join( sorted( self.mn ) )
         output( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, _line ):
         "List network connections."
-        #                    self.mn.values()
-        dumpNodeConnections( self.mn )
+        dumpNodeConnections( self.mn.values() )
 
     def do_sh( self, line ):
         "Run an external shell command"
@@ -129,7 +128,7 @@ class CLI( Cmd ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: py h1.cmd('ls')"""
         try:
-            result = eval( line, globals(), self.locals() )
+            result = eval( line, globals(), self.getLocals() )
             if not result:
                 return
             elif isinstance( result, str ):
@@ -146,7 +145,7 @@ class CLI( Cmd ):
         """Execute a Python statement.
             Node names may be used, e.g.: px print h1.cmd('ls')"""
         try:
-            exec( line, globals(), self.locals() )
+            exec( line, globals(), self.getLocals() )
         except Exception, e:
             output( str( e ) + '\n' )
 
@@ -177,7 +176,6 @@ class CLI( Cmd ):
             hosts = []
             err = False
             for arg in args:
-                #             self.mn.keys()
                 if arg not in self.mn:
                     err = True
                     error( "node '%s' not in network\n" % arg )
@@ -211,15 +209,13 @@ class CLI( Cmd ):
 
     def do_intfs( self, _line ):
         "List interfaces."
-        #           self.mn.values()
-        for node in self.mn:
+        for node in self.mn.values():
             output( '%s: %s\n' %
                     ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
         "Dump node info."
-        #           self.mn.values()
-        for node in self.mn:
+        for node in self.mn.values():
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
@@ -239,7 +235,6 @@ class CLI( Cmd ):
             error( 'usage: %s node1 node2 ...\n' % term )
         else:
             for arg in args:
-                #             self.mn.keys()
                 if arg not in self.mn:
                     error( "node '%s' not in network\n" % arg )
                 else:

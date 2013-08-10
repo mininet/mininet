@@ -237,21 +237,27 @@ class Mininet( object ):
     def __iter__( self ):
         "return iterator over nodes"
         #or dow we want to iterate of the keys i.e. node.name like a dict
-        return chain( self.hosts, self.switches, self.controllers )
+        for node in chain( self.hosts, self.switches, self.controllers ):
+            yield node.name
 
     def __len__( self ):
+        "returns number of nodes in net"
         return len( self.hosts ) + len( self.switches ) + len( self.controllers )
 
     def __contains__( self, item ):
+        "returns True if net contains named node"
         return item in self.keys()
 
     def keys( self ):
-        return [ node.name for node in self.__iter__() ]
-
-    def values( self ):
+        "return a list of all node names or net's keys"
         return list( self.__iter__() )
 
+    def values( self ):
+        "return a list of all nodes or net's values"
+        return [ self[name] for name in self.__iter__() ]
+
     def items( self ):
+        "return (key,value) tuple list for every node in net"
         return zip( self.keys(), self.values() )
 
     def addLink( self, node1, node2, port1=None, port2=None,
