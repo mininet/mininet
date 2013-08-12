@@ -43,13 +43,8 @@ class CLI( Cmd ):
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
         self.mn = mininet
-        self.nodelist = self.mn.controllers + self.mn.switches + self.mn.hosts
-        self.nodemap = {}  # map names to Node objects
-        for node in self.nodelist:
-            self.nodemap[ node.name ] = node
         # Local variable bindings for py command
         self.locals = { 'net': mininet }
-        self.locals.update( self.nodemap )
         # Attempt to handle input
         self.stdin = stdin
         self.inPoller = poll()
@@ -63,7 +58,7 @@ class CLI( Cmd ):
         while True:
             try:
                 # Make sure no nodes are still waiting
-                for node in self.nodelist:
+                for node in self.mn.values():
                     while node.waiting:
                         node.sendInt()
                         node.monitor()
@@ -77,6 +72,11 @@ class CLI( Cmd ):
     def emptyline( self ):
         "Don't repeat last command when you hit return."
         pass
+
+    def getLocals( self ):
+        "Local variable bindings for py command"
+        self.locals.update( self.mn )
+        return self.locals
 
     # Disable pylint "Unused argument: 'arg's'" messages, as well as
     # "method could be a function" warning, since each CLI function
@@ -110,12 +110,12 @@ class CLI( Cmd ):
 
     def do_nodes( self, _line ):
         "List all nodes."
-        nodes = ' '.join( [ node.name for node in sorted( self.nodelist ) ] )
+        nodes = ' '.join( sorted( self.mn ) )
         output( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, _line ):
         "List network connections."
-        dumpNodeConnections( self.nodelist )
+        dumpNodeConnections( self.mn.values() )
 
     def do_sh( self, line ):
         "Run an external shell command"
@@ -128,7 +128,7 @@ class CLI( Cmd ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: py h1.cmd('ls')"""
         try:
-            result = eval( line, globals(), self.locals )
+            result = eval( line, globals(), self.getLocals() )
             if not result:
                 return
             elif isinstance( result, str ):
@@ -145,7 +145,7 @@ class CLI( Cmd ):
         """Execute a Python statement.
             Node names may be used, e.g.: px print h1.cmd('ls')"""
         try:
-            exec( line, globals(), self.locals )
+            exec( line, globals(), self.getLocals() )
         except Exception, e:
             output( str( e ) + '\n' )
 
@@ -176,11 +176,11 @@ class CLI( Cmd ):
             hosts = []
             err = False
             for arg in args:
-                if arg not in self.nodemap:
+                if arg not in self.mn:
                     err = True
                     error( "node '%s' not in network\n" % arg )
                 else:
-                    hosts.append( self.nodemap[ arg ] )
+                    hosts.append( self.mn[ arg ] )
             if not err:
                 self.mn.iperf( hosts )
         else:
@@ -196,11 +196,11 @@ class CLI( Cmd ):
             hosts = []
             err = False
             for arg in args[ 1:3 ]:
-                if arg not in self.nodemap:
+                if arg not in self.mn:
                     err = True
                     error( "node '%s' not in network\n" % arg )
                 else:
-                    hosts.append( self.nodemap[ arg ] )
+                    hosts.append( self.mn[ arg ] )
             if not err:
                 self.mn.iperf( hosts, l4Type='UDP', udpBw=udpBw )
         else:
@@ -209,13 +209,13 @@ class CLI( Cmd ):
 
     def do_intfs( self, _line ):
         "List interfaces."
-        for node in self.nodelist:
+        for node in self.mn.values():
             output( '%s: %s\n' %
                     ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
         "Dump node info."
-        for node in self.nodelist:
+        for node in self.mn.values():
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
@@ -235,10 +235,10 @@ class CLI( Cmd ):
             error( 'usage: %s node1 node2 ...\n' % term )
         else:
             for arg in args:
-                if arg not in self.nodemap:
+                if arg not in self.mn:
                     error( "node '%s' not in network\n" % arg )
                 else:
-                    node = self.nodemap[ arg ]
+                    node = self.mn[ arg ]
                     self.mn.terms += makeTerms( [ node ], term = term )
 
     def do_x( self, line ):
@@ -329,11 +329,11 @@ class CLI( Cmd ):
             args = args[ :-1 ]
         rest = args.split( ' ' )
 
-        if first in self.nodemap:
-            node = self.nodemap[ first ]
+        if first in self.mn:
+            node = self.mn[ first ]
             # Substitute IP addresses for node names in command
-            rest = [ self.nodemap[ arg ].defaultIntf().updateIP()
-                     if arg in self.nodemap else arg
+            rest = [ self.mn[ arg ].defaultIntf().updateIP()
+                     if arg in self.mn else arg
                      for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
