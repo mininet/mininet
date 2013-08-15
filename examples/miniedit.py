@@ -563,7 +563,9 @@ class MiniEdit( Frame ):
             if 'Switch' in tags:
                 net.addSwitch( name )
             elif 'Host' in tags:
-                net.addHost( name, ip=ipStr( nodeNum ) )
+                #Generate IP adddress in the 10.0/8 block
+                ipAddr = ( 10 << 24 ) + nodeNum
+                net.addHost( name, ip=ipStr( ipAddr ) )
             else:
                 raise Exception( "Cannot create mystery node: " + name )
         # Make links
@@ -601,8 +603,7 @@ class MiniEdit( Frame ):
         if name not in self.net.nameToNode:
             return
         term = makeTerm( self.net.nameToNode[ name ], 'Host' )
-        self.net.terms.append( term )
-
+        self.net.terms += term
 
 def miniEditImages():
     "Create and return images for MiniEdit."
