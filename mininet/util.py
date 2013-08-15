@@ -359,17 +359,17 @@ def sysctlTestAndSet( name, limit ):
     "Helper function to set sysctl limits"
     #convert non-directory names into directory names
     if '/' not in name:
-        name = '/proc/sys/' + name.replace('.','/')
+        name = '/proc/sys/' + name.replace( '.', '/' )
     #read limit
-    f = open(name, 'r+')
+    f = open( name, 'r+' )
     oldLimit = f.readline()
     if type( limit ) is int:
         #compare integer limits before overriding
         if int( oldLimit ) < limit:
-            f.write("%d" % limit)
+            f.write( "%d" % limit )
     else:
         #overwrite non-integer limits
-        f.write(limit)
+        f.write( limit )
     f.close()
 
 def rlimitTestAndSet( name, limit ):
