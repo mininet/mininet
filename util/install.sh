@@ -144,15 +144,6 @@ function mn_deps {
         python-setuptools cgroup-bin ethtool help2man \
         pyflakes pylint pep8
 
-    # Add sysctl parameters as noted in the INSTALL file to increase kernel
-    # limits to support larger setups:
-    if ! grep Mininet /etc/sysctl.conf; then
-        echo "Adding Mininet sysctl settings"
-        sudo su -c "cat $MININET_DIR/mininet/util/sysctl_addon >> /etc/sysctl.conf"
-    fi
-    # Load new sysctl settings:
-    sudo sysctl -p
-
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
     sudo make install
