@@ -315,13 +315,19 @@ class ConsoleApp( Frame ):
 
     def updateGraph( self, _console, output ):
         "Update our graph."
-        output = output.split('\n')[ 0 ]
-        vals = output.split(',')
-        if not len(vals) == 9:
+        m = re.search( r'(\d+.?\d*) ([KMG]?bits)/sec', output )
+        if not m:
             return
-        self.updates += 1
+        val, units = float( m.group( 1 ) ), m.group( 2 )
         #convert to Gbps
-        self.bw +=  int( vals[-1] ) * ( 10 ** -9 )
+        if units[0] == 'M':
+            val *= 10 ** -3
+        elif units[0] == 'K':
+            val *= 10 ** -6
+        elif units[0] == 'b':
+            val *= 10 ** -9
+        self.updates += 1
+        self.bw +=  val
         if self.updates >= self.hostCount:
             self.graph.addBar( self.bw )
             self.bw = 0
@@ -418,7 +424,7 @@ class ConsoleApp( Frame ):
         for console in consoles:
             i = ( i + 1 ) % count
             ip = consoles[ i ].node.IP()
-            console.sendCmd( 'iperf -t 99999 -i 1 -y c -c ' + ip )
+            console.sendCmd( 'iperf -t 99999 -i 1 -c ' + ip )
 
     def stop( self, wait=True ):
         "Interrupt all hosts."
