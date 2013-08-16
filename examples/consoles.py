@@ -410,7 +410,8 @@ class ConsoleApp( Frame ):
         count = len( consoles )
         self.setOutputHook( self.updateGraph )
         for console in consoles:
-            console.node.cmd( 'iperf -sD' )
+            #sometimes iperf -sD doesn't return, so we run it in the background instead
+            console.node.cmd( 'iperf -s &' )
         i = 0
         for console in consoles:
             i = ( i + 1 ) % count
