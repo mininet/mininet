@@ -315,6 +315,7 @@ class ConsoleApp( Frame ):
 
     def updateGraph( self, _console, output ):
         "Update our graph."
+        output = output.split('\n')[ 0 ]
         vals = output.split(',')
         if not len(vals) == 9:
             return
