@@ -209,9 +209,16 @@ class Mininet( object ):
     def addController( self, name='c0', controller=None, **params ):
         """Add controller.
            controller: Controller class"""
+        #Get controller class
         if not controller:
             controller = self.controller
-        controller_new = controller( name, **params )
+        #Construct new controller if one is not given
+        if isinstance(name, Controller):
+            controller_new = name
+            name = controller_new.name
+        else:
+            controller_new = controller( name, **params )
+        #Add new controller to net
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
@@ -230,9 +237,9 @@ class Mininet( object ):
         return self.getNodeByName( *args )
 
     # Even more convenient syntax for node lookup and iteration
-    def __getitem__( self, *args ):
+    def __getitem__( self, key ):
         """net [ name ] operator: Return node(s) with given name(s)"""
-        return self.getNodeByName( *args )
+        return self.nameToNode[ key ]
 
     def __iter__( self ):
         "return iterator over nodes"
@@ -246,15 +253,17 @@ class Mininet( object ):
 
     def __contains__( self, item ):
         "returns True if net contains named node"
-        return item in self.keys()
+        return item in self.nameToNode
 
     def keys( self ):
         "return a list of all node names or net's keys"
-        return list( self.__iter__() )
+        #TODO: fix this
+        return list( self )
 
     def values( self ):
         "return a list of all nodes or net's values"
-        return [ self[name] for name in self.__iter__() ]
+        #TODO: fix this
+        return [ self[name] for name in self ]
 
     def items( self ):
         "return (key,value) tuple list for every node in net"
@@ -307,7 +316,7 @@ class Mininet( object ):
 
         info( '*** Creating network\n' )
 
-        if not self.controllers:
+        if not self.controllers and self.controller:
             # Add a default controller
             info( '*** Adding controller\n' )
             classes = self.controller

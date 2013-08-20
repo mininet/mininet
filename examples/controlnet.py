@@ -31,30 +31,43 @@ class DataController( Controller ):
         pass
 
 
-class CLI2( CLI ):
-    "CLI that can talk to two networks"
+class MininetFacade:
+    "TODO: CLI that can talk to two or more networks"
     
-    def __init__( self, *args, **kwargs ):
-        "cnet: second network"
-        self.cnet = kwargs.pop( 'cnet' )
-        CLI.__init__( self, *args, **kwargs )
+    def __init__( self, *args ):
+        self.nets = args
 
-    def updateVars( self ):
-        "Update variables to include cnet"
-        cnet = self.cnet
-        nodes2 = cnet.controllers + cnet.switches + cnet.hosts
-        self.nodelist += nodes2
-        for node in nodes2:
-            self.nodemap[ node.name ] = node
-        self.locals[ 'cnet' ] = cnet
-        self.locals.update( self.nodemap )
-    
-    def cmdloop( self, *args, **kwargs ):
-        "Patch to add cnet if needed"
-        if 'cnet' not in self.locals:
-            self.updateVars()
-        CLI.cmdloop( self, *args, **kwargs )
+    # default is first net
+    def __getattr__( self, name ):
+        return getattr( self.nets[ 0 ], name )
 
+    def __getitem__( self, key ):
+        for net in self.nets:
+            if key in net:
+                return net[ key ]
+
+    def __iter__( self ):
+        for net in self.nets:
+            for node in net:
+                yield node
+
+    def __len__( self ):
+        count = 0
+        for net in self.nets:
+            count += len(net)
+        return count
+
+    def __contains__( self, key ):
+        return key in self.keys()
+
+    def keys( self ):
+        return list( self )
+
+    def values( self ):
+        return [ self[ key ] for key in self ]
+
+    def items( self ):
+        return zip( self.keys(), self.values() )
 
 # A real control network!
 
@@ -83,32 +96,33 @@ setLogLevel( 'info' )
 
 info( '* Creating Control Network\n' )
 ctopo = ControlNetwork( n=4, dataController=DataController )
-cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', build=False )
+cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
 info( '* Adding Control Network Controller\n')
-cnet.addController( 'cc0' )
+cnet.addController( 'cc0', controller=Controller )
 info( '* Starting Control Network\n')
-cnet.build()
 cnet.start()
-dataControllers = cnet.hosts[ : -1 ]  # ignore 'root' node
 
 info( '* Creating Data Network\n' )
 topo = TreeTopo( depth=2, fanout=2 )
 # UserSwitch so we can easily test failover
-net = Mininet( topo=topo, switch=UserSwitch, build=False )
+net = Mininet( topo=topo, switch=UserSwitch, controller=None )
 info( '* Adding Controllers to Data Network\n' )
-net.controllers = dataControllers
-net.build()
+for host in cnet.hosts:
+    if isinstance(host, Controller):
+        net.addController( host )
 info( '* Starting Data Network\n')
 net.start()
 
-CLI2( net, cnet=cnet )
+mn = MininetFacade( net, cnet )
+mn.keys()
+CLI( mn )
 
 info( '* Stopping Data Network\n' )
 net.stop()
 
 info( '* Stopping Control Network\n' )
-# dataControllers have already been stopped
-cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
+# dataControllers have already been stopped -- now terminate is idempotent
+#cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
 cnet.stop()
 
 
