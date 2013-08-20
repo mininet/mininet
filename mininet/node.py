@@ -183,7 +183,8 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
-        os.kill( self.pid, signal.SIGKILL )
+        if self.shell:
+            os.kill( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
@@ -1238,3 +1239,4 @@ class RemoteController( Controller ):
         if 'Unable' in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
+
