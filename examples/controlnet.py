@@ -114,7 +114,6 @@ info( '* Starting Data Network\n')
 net.start()
 
 mn = MininetFacade( net, cnet )
-mn.keys()
 CLI( mn )
 
 info( '* Stopping Data Network\n' )
