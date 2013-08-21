@@ -47,6 +47,19 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
         $install bc
     fi
 fi
+test -e /etc/fedora-release && DIST="Fedora"
+if [ "$DIST" = "Fedora" ]; then
+    install='sudo yum -y install'
+    remove='sudo yum -y erase'
+    pkginst='sudo rpm -ivh'
+    # Prereqs for this script
+    if ! which lsb_release &> /dev/null; then
+        $install redhat-lsb-core
+    fi
+    if ! which bc &> /dev/null; then
+        $install bc
+    fi
+fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
     RELEASE=`lsb_release -rs`
@@ -67,8 +80,11 @@ elif [ "$DIST" = "Debian" ] && [ "$ARCH" = "i386" ] && [ "$CODENAME" = "lenny" ]
     KERNEL_NAME=2.6.33.1-mininet
     KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
     KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
+elif [ "$DIST" = "Fedora" ]; then
+    KERNEL_NAME=`uname -r`
+    KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 else
-    echo "Install.sh currently only supports Ubuntu and Debian Lenny i386."
+    echo "Install.sh currently only supports Ubuntu, Debian Lenny i386 and Fedora."
     exit 1
 fi
 
@@ -140,9 +156,15 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    $install gcc make socat psmisc xterm ssh iperf iproute telnet \
-        python-setuptools cgroup-bin ethtool help2man \
-        pyflakes pylint pep8
+    if [ "$DIST" = "Fedora" ]; then
+        $install gcc make socat psmisc xterm openssh-clients iperf \
+            iproute telnet python-setuptools libcgroup-tools \
+            ethtool help2man pyflakes pylint python-pep8
+    else
+        $install gcc make socat psmisc xterm ssh iperf iproute telnet \
+            python-setuptools cgroup-bin ethtool help2man \
+            pyflakes pylint pep8
+    fi
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
