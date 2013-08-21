@@ -30,18 +30,24 @@ class DataController( Controller ):
         "Ignore spurious error"
         pass
 
-
-class MininetFacade:
+class MininetFacade( object ):
     "TODO: CLI that can talk to two or more networks"
     
-    def __init__( self, *args ):
-        self.nets = args
+    def __init__( self, net, *args, **kwargs ):
+        self.net = net
+        self.nets = [ net ] + list( args ) + kwargs.values()
+        self.nameToNet = kwargs
+        self.nameToNet['net'] = net
 
     # default is first net
     def __getattr__( self, name ):
-        return getattr( self.nets[ 0 ], name )
+        return getattr( self.net, name )
 
     def __getitem__( self, key ):
+        #search kwargs for net named key
+        if key in self.nameToNet:
+            return self.nameToNet[ key ]
+        #search each net for node named key
         for net in self.nets:
             if key in net:
                 return net[ key ]
@@ -91,41 +97,52 @@ class ControlNetwork( Topo ):
 
 
 # Make it Happen!!
+def run( func=CLI ):
+    info( '* Creating Control Network\n' )
+    ctopo = ControlNetwork( n=4, dataController=DataController )
+    cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
+    info( '* Adding Control Network Controller\n')
+    cnet.addController( 'cc0', controller=Controller )
+    info( '* Starting Control Network\n')
+    cnet.start()
 
-setLogLevel( 'info' )
+    info( '* Creating Data Network\n' )
+    topo = TreeTopo( depth=2, fanout=2 )
+    # UserSwitch so we can easily test failover
+    net = Mininet( topo=topo, switch=UserSwitch, controller=None )
+    info( '* Adding Controllers to Data Network\n' )
+    for host in cnet.hosts:
+        if isinstance(host, Controller):
+            net.addController( host )
+    info( '* Starting Data Network\n')
+    net.start()
 
-info( '* Creating Control Network\n' )
-ctopo = ControlNetwork( n=4, dataController=DataController )
-cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
-info( '* Adding Control Network Controller\n')
-cnet.addController( 'cc0', controller=Controller )
-info( '* Starting Control Network\n')
-cnet.start()
+    mn = MininetFacade( net, cnet=cnet )
 
-info( '* Creating Data Network\n' )
-topo = TreeTopo( depth=2, fanout=2 )
-# UserSwitch so we can easily test failover
-net = Mininet( topo=topo, switch=UserSwitch, controller=None )
-info( '* Adding Controllers to Data Network\n' )
-for host in cnet.hosts:
-    if isinstance(host, Controller):
-        net.addController( host )
-info( '* Starting Data Network\n')
-net.start()
+    # run the function passed as an argument
+    func( mn )
 
-mn = MininetFacade( net, cnet )
-CLI( mn )
+    info( '* Stopping Data Network\n' )
+    net.stop()
 
-info( '* Stopping Data Network\n' )
-net.stop()
+    info( '* Stopping Control Network\n' )
+    # dataControllers have already been stopped -- now terminate is idempotent
+    #cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
+    cnet.stop()
 
-info( '* Stopping Control Network\n' )
-# dataControllers have already been stopped -- now terminate is idempotent
-#cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
-cnet.stop()
+def test( net ):
+    netLoss = net.pingAll()
+    cnetLoss = net['cnet'].pingAll()
 
+if __name__ == '__main__':
+    setLogLevel( 'info' )
 
+    import argparse
+    parser = argparse.ArgumentParser(description='TODO:description')
+    parser.add_argument('--test', dest='func', action='store_const',
+                        const=test, default=CLI,
+                        help='TODO: test help')
 
+    args = parser.parse_args()
 
-
-
+    run( func=args.func )
