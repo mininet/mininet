@@ -637,6 +637,14 @@ function modprobe {
 }
 
 function all {
+    if [ "$DIST" = "Fedora" ]; then
+        printf "\nFedora 19 support status:\n"
+        printf "the install script options -b, -f, -n, and -p should work.\n\n"
+        printf "Just try:\n"
+        printf "    install.sh -fnp\n"
+        printf "with Fedora's kernel (3.10) and openvswitch (1.10.0) packages.\n"
+        exit 3
+    fi
     echo "Running all commands..."
     kernel
     mn_deps
