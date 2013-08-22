@@ -186,8 +186,12 @@ function mn_dev {
 function of {
     echo "Installing OpenFlow reference implementation..."
     cd $BUILD_DIR/
-    $install git-core autoconf automake autotools-dev pkg-config \
-		make gcc libtool libc6-dev
+    $install autoconf automake libtool make gcc
+    if [ "$DIST" = "Fedora" ]; then
+        $install git pkgconfig glibc-devel
+    else
+        $install git-core autotools-dev pkg-config libc6-dev
+    fi
     git clone git://openflowswitch.org/openflow.git
     cd $BUILD_DIR/openflow
 
@@ -537,7 +541,11 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
 
-    $install libsnmp-dev libpcap-dev libconfig-dev
+    if [ "$DIST" = "Fedora" ]; then
+        $install net-snmp-devel libpcap-devel libconfig-devel
+    else
+        $install libsnmp-dev libpcap-dev libconfig-dev
+    fi
     cd $BUILD_DIR/
     git clone git://openflow.org/oflops.git
     cd oflops
