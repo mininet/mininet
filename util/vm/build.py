@@ -41,21 +41,40 @@ Something to think about:
 Maybe download the cloud image and customize it so that
 it is an actual usable/bootable image???
 
+More notes:
+
+We really want a full, partitioned disk image!
+
+This means we want to use the disk1.image file ???
+
+However, this means that we will need to change the grub2
+configuratin to use a serial console.
+
+/etc/default/grub:
+    GRUB_TERMINAL=serial
+    GRUB_SERIAL_COMMAND="serial --unit=0 --speed=38400 --word=8 --parity=no --stop=1"
+    BOOT_IMAGE="console=ttyS0"
+    
+# grub2-mkconfig -o /boot/grub2/grub.cfg
+
+by the way, we should use wget -c
 
 """
-
 
 import os
 from os import stat
 from stat import ST_MODE
-from os.path import exists, splitext
+from os.path import exists, splitext, abspath, realpath
 from sys import exit, argv
 from glob import glob
 from urllib import urlretrieve
 from subprocess import check_output, call, Popen, PIPE
-from tempfile import mkdtemp, NamedTemporaryFile
+from tempfile import mkdtemp
 from time import time
 import argparse
+
+pexpect = None  # For code check - imported dynamically
+
 
 # boot can be slooooow!!!! need to debug/optimize somehow
 TIMEOUT=600
@@ -87,7 +106,6 @@ def srun( cmd, **kwargs ):
 def depend():
     "Install packagedependencies"
     print '* Installing package dependencies'
-    packages = ( )
     run( 'sudo apt-get -y update' )
     run( 'sudo apt-get install -y'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
@@ -127,10 +145,9 @@ def fetchImage( image, path=None ):
     "Fetch base VM image if it's not there already"
     if not path:
         path = imagePath( image )
-    tgz = path + '.tar.gz'
+    tgz = path + '.disk1.img'
     disk = path + '.img'
     kernel = path + '-vmlinuz-generic'
-    floppy = path + '-floppy'
     if exists( disk ) and exists( kernel ):
         print '* Found', disk, 'and', kernel
         # Detect race condition with multiple builds
@@ -213,8 +230,11 @@ def addMininetUser( nbd ):
     srun( 'e2fsck -y ' + nbd )
 
 
-def connectCOWdevice( cow ):
-    "Attempt to connect a COW disk and return its nbd device"
+def attachNBD( cow, flags='' ):
+    """Attempt to attach a COW disk image and return its nbd device
+       flags: additional flags for qemu-nbd (e.g. -r for readonly)"""
+    # qemu-nbd requires an absolute path
+    cow = abspath( cow )
     print '* Checking for unused /dev/nbdX device ',
     for i in range ( 0, 63 ):
         nbd = '/dev/nbd%d' % i
@@ -224,31 +244,68 @@ def connectCOWdevice( cow ):
             continue
         # Fails without -v for some annoying reason...
         print
-        srun( 'qemu-nbd -c %s %s' % ( nbd, cow ) )
+        srun( 'qemu-nbd %s -c %s %s' % ( flags, nbd, cow ) )
         return nbd
     raise Exception( "Error: could not find unused /dev/nbdX device" )
 
 
-def disconnectCOWdevice( nbd ):
+def detachNBD( nbd ):
+    "Detatch an nbd device"
     srun( 'qemu-nbd -d ' + nbd )
 
 
-def makeCOWDisk( image ):
+def makeCOWDisk( image, dir='.' ):
     "Create new COW disk for image"
     disk, kernel = fetchImage( image )
-    cow = NamedTemporaryFile( prefix=image + '-', suffix='.qcow2',
-                              dir='.' ).name
+    cow = '%s/%s.qcow2' % ( dir, image )
     print '* Creating COW disk', cow
     run( 'qemu-img create -f qcow2 -b %s %s' % ( disk, cow ) )
     print '* Resizing COW disk and file system'
     run( 'qemu-img resize %s +8G' % cow )
     srun( 'modprobe nbd max-part=64')
-    nbd = connectCOWdevice( cow )
+    nbd = attachNBD( cow )
     srun( 'e2fsck -y ' + nbd )
     srun( 'resize2fs ' + nbd )
     addMininetUser( nbd )
-    disconnectCOWdevice( nbd )
+    detachNBD( nbd )
     return cow, kernel
+
+
+def makeVolume( volume, cylinders=1000  ):
+    """Create volume as a qcow2 and add a single boot partition
+       cylinders: number of ~8MB (255*63*512) cylinders in volume"""
+    heads, sectors, bytes = 255, 63, 512
+    size = cylinders * heads * sectors * bytes
+    print '* Creating volume of size', size
+    run( 'qemu-img create -f qcow2 %s %s' % ( volume, size ) )
+    print '* Partitioning volume'
+    # We need to mount it using qemu-nbd!!
+    nbd = attachNBD( volume )
+    # A bit hacky - we may change this to use parted(8) later
+    fdisk = Popen( [ 'sudo', 'fdisk', nbd ], stdin=PIPE )
+    cmds = 'x\nc\n%d\nr\no\nn\np\n1\n\n\na\n1\nw\n' % cylinders
+    fdisk.stdin.write( cmds )
+    fdisk.wait()
+    print '* Volume partition table:'
+    print srun( 'fdisk -l ' + nbd )
+    detachNBD( nbd )
+
+
+def initPartition( partition, volume ):
+    """Copy partition to volume-p1 and call addMininetUser"""
+    srcdev = attachNBD( partition, flags='-r' )
+    voldev = attachNBD( volume )
+    print srun( 'fdisk -l ' + voldev )
+    print srun( 'partx ' + voldev )
+    dstdev = voldev + 'p1'
+    print "* Copying partition from", srcdev, "to", dstdev
+    print srun( 'time dd if=%s of=%s bs=1M' % ( srcdev, dstdev ) )
+    print '* Resizing and adding Mininet user'
+    srun( 'resize2fs ' + dstdev )
+    srun( 'e2fsck -y ' + dstdev )
+    addMininetUser( dstdev )
+    detachNBD( voldev )
+    detachNBD( srcdev )
 
 
 def boot( cow, kernel, tap ):
@@ -276,7 +333,7 @@ def boot( cow, kernel, tap ):
             '-k en-us',
             '-kernel', kernel,
             '-drive file=%s,if=virtio' % cow,
-            '-append "root=/dev/vda init=/sbin/init console=ttyS0" ' ]
+            '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
     cmd = ' '.join( cmd )
     print '* STARTING VM'
     print cmd
@@ -315,7 +372,7 @@ def interact( vm ):
     vm.expect( prompt )
     print '* Testing Mininet'
     vm.sendline( 'sudo mn --test pingall' )
-    if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=30 ):
+    if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ):
         print '* Sanity check succeeded'
     else:
         print '* Sanity check FAILED'
@@ -343,34 +400,37 @@ def cleanup():
 def convert( cow, basename ):
     """Convert a qcow2 disk to a vmdk and put it a new directory
        basename: base name for output vmdk file"""
-    dir = mkdtemp( prefix=basename, dir='.' )
-    vmdk = '%s/%s.vmdk' % ( dir, basename )
+    vmdk = basename + '.vmdk'
     print '* Converting qcow2 to vmdk'
     run( 'qemu-img convert -f qcow2 -O vmdk %s %s' % ( cow, vmdk ) )
     return vmdk
 
 
-def build( flavor='raring-server-amd64' ):
+def build( flavor='raring32server' ):
     "Build a Mininet VM"
     start = time()
-    cow, kernel = makeCOWDisk( flavor )
-    print '* VM image for', flavor, 'created as', cow
-    with NamedTemporaryFile(
-        prefix='mn-build-%s-' % flavor, suffix='.log', dir='.' ) as logfile:
-        print '* Logging results to', logfile.name
-        vm = boot( cow, kernel, logfile )
-        vm.logfile_read = logfile
-        interact( vm )
-    # cow is a temporary file and will go away when we quit!
-    # We convert it to a .vmdk which can be used in most VMMs
-    vmdk = convert( cow, basename=flavor )
+    dir = mkdtemp( prefix=flavor + '-result-', dir='.' )
+    os.chdir( dir )
+    print '* Created working directory', dir
+    image, kernel = fetchImage( flavor )
+    volume = flavor + '.qcow2'
+    makeVolume( volume )
+    initPartition( image, volume )
+    print '* VM image for', flavor, 'created as', volume
+    logfile = open( flavor + '.log', 'w+' )
+    print '* Logging results to', abspath( logfile.name )
+    vm = boot( volume, kernel, logfile )
+    vm.logfile_read = logfile
+    interact( vm )
+    vmdk = convert( volume, basename=flavor )
     print '* Converted VM image stored as', vmdk
     end = time()
     elapsed = end - start
-    print '* Results logged to', logfile.name
+    print '* Results logged to', abspath( logfile.name )
     print '* Completed in %.2f seconds' % elapsed
     print '* %s VM build DONE!!!!! :D' % flavor
     print
+    os.chdir( '..' )
 
 
 def parseArgs():
