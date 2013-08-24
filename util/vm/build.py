@@ -6,11 +6,12 @@ build.py: build a Mininet VM
 Basic idea:
 
     prepare
-    - download cloud image if it's missing
-    - write-protect it
-
+    -> create base install image if it's missing
+        - download iso if it's missing
+        - install from iso onto image
+    
     build
-    -> create cow disk for vm
+    -> create cow disk for new VM, based on base image
     -> boot it in qemu/kvm with text /serial console
     -> install Mininet
 
@@ -23,72 +24,40 @@ Basic idea:
     -> shrink-wrap VM
     -> upload to storage
 
-
-Notes du jour:
-
-- our infrastructure is currently based on 12.04 LTS, so we
-  can't rely on cloud-localds which is only in 12.10+
-
-- as a result, we should download the tar image, extract it,
-  and boot with tty0 as the console (I think)
-
-- and we'll manually add the mininet user to it
- 
-- and use pexpect to interact with it on the serial console
-
-More notes:
-    
-- We use Ubuntu's cloud images, which means that we need to 
-  adapt them for our own (evil) purposes. This isn't ideal
-  but is the easiest way to get official Ubuntu images until
-  they start building official non-cloud images.
-
-- We could install grub into a raw ext4 partition rather than
-  partitioning everything. This would save time and it might
-  also confuse people who might be expecting a "normal" volume
-  and who might want to expand it and add more partitions.
-  On the other hand it makes the file system a lot easier to mount
-  and modify!! But vmware might not be able to boot it.
-
-- grub-install fails miserably unless you load part_msdos !!
-
-- Installing TexLive is just painful - I would like to avoid it
-  if we could... wireshark plugin build is also slow and painful...
-
-- Maybe we want to install our own packages for these things...
-  that would make the whole installation process a lot easier,
-  but it would mean that we don't automatically get upstream
-  updates
-
 """
 
 import os
-from os import stat
+from os import stat, path
 from stat import ST_MODE
-from os.path import exists, splitext, abspath
+from os.path import abspath
 from sys import exit, argv
 from glob import glob
 from urllib import urlretrieve
-from subprocess import check_output, call, Popen, PIPE
+from subprocess import check_output, call, Popen
 from tempfile import mkdtemp
 from time import time, strftime, localtime
 import argparse
 
 pexpect = None  # For code check - imported dynamically
 
-
 # boot can be slooooow!!!! need to debug/optimize somehow
 TIMEOUT=600
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
-ImageURLBase = {
+isoURLs = {
+    'quetzal32server':
+    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
+    'ubuntu-12.10-server-i386.iso',
+    'quetzal64server':
+    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
+    'ubuntu-12.04-server-amd64.iso',
     'raring32server':
-    'http://cloud-images.ubuntu.com/raring/current/'
-    'raring-server-cloudimg-i386',
+    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
+    'ubuntu-13.04-server-i386.iso',
     'raring64server':
-    'http://cloud-images.ubuntu.com/raring/current/'
-    'raring-server-cloudimg-amd64'
+    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
+    'ubuntu-13.04-server-amd64.iso',
 }
 
 logStartTime = time()
@@ -120,7 +89,7 @@ def srun( cmd, **kwargs ):
 
 
 def depend():
-    "Install packagedependencies"
+    "Install package dependencies"
     log( '* Installing package dependencies' )
     run( 'sudo apt-get -y update' )
     run( 'sudo apt-get install -y'
@@ -143,111 +112,30 @@ def remove( fname ):
     return run( 'rm -f %s' % fname )
 
 
-
-def imageURL( image ):
-    "Return base URL for VM image"
-    return ImageURLBase[ image ]
-
-
-def imagePath( image ):
-    "Return base pathname for VM image files"
-    url = imageURL( image )
-    fname = url.split( '/' )[ -1 ]
-    path = os.path.join( VMImageDir, fname )
-    return path
-
-
-def fetchImage( image, path=None ):
-    "Fetch base VM image if it's not there already"
-    if not path:
-        path = imagePath( image )
-    tgz = path + '.disk1.img'
-    disk = path + '.img'
-    kernel = path + '-vmlinuz-generic'
-    if exists( disk ):
-        log( '* Found', disk )
+def findiso( flavor ):
+    "Find iso, fetching it if it's not there already"
+    url = isoURLs[ flavor ]
+    name = path.basename( url )
+    iso = path.join( VMImageDir, name )
+    if path.exists( iso ):
         # Detect race condition with multiple builds
-        perms = stat( disk )[ ST_MODE ] & 0777
+        perms = stat( iso )[ ST_MODE ] & 0777
         if perms != 0444:
-            raise Exception( 'Error - %s is writable ' % disk +
+            raise Exception( 'Error - %s is writable ' % iso +
                              '; are multiple builds running?' )
     else:
-        dir = os.path.dirname( path )
-        run( 'mkdir -p %s' % dir )
-        if not os.path.exists( tgz ):
-            url = imageURL( image ) + '.tar.gz'
-            log( '* Retrieving', url )
-            urlretrieve( url, tgz )
-        log( '* Extracting', tgz )
-        run( 'tar -C %s -xzf %s' % ( dir, tgz ) )
-        # Write-protect disk image so it remains pristine;
-        # We will not use it directly but will use a COW disk
-        log( '* Write-protecting disk image', disk )
-        os.chmod( disk, 0444 )
-    return disk, kernel
-
-
-def addTo( file, line ):
-    "Add line to file if it's not there already"
-    if call( [ 'sudo', 'grep', line, file ] ) != 0:
-        call( 'echo "%s" | sudo tee -a %s > /dev/null' % ( line, file ),
-              shell=True )
-
-
-def disableCloud( bind ):
-    "Disable cloud junk for disk mounted at bind"
-    log( '* Disabling cloud startup scripts' )
-    modules = glob( '%s/etc/init/cloud*.conf' % bind )
-    for module in modules:
-        path, ext = splitext( module )
-        call( 'echo manual | sudo tee %s.override > /dev/null' % path,
-              shell=True )
-
-
-def addMininetUser( nbd ):
-    "Add mininet user/group to filesystem"
-    log( '* Adding mininet user to filesystem on device', nbd )
-    # 1. We bind-mount / into a temporary directory, and
-    # then mount the volume's /etc and /home on top of it!
-    mnt = mkdtemp()
-    bind = mkdtemp()
-    srun( 'mount %s %s' % ( nbd, mnt ) )
-    srun( 'mount -B / ' + bind )
-    srun( 'mount -B %s/etc %s/etc' % ( mnt, bind ) )
-    srun( 'mount -B %s/home %s/home' % ( mnt, bind ) )
-    def chroot( cmd ):
-        "Chroot into bind mount and run command"
-        call( 'sudo chroot %s ' % bind + cmd, shell=True )
-    # 1a. Add hostname entry in /etc/hosts
-    addTo( bind + '/etc/hosts', '127.0.1.1 mininet-vm' )
-    # 2. Next, we delete any old mininet user and add a new one
-    chroot( 'deluser mininet' )
-    chroot( 'useradd --create-home --shell /bin/bash mininet' )
-    log( '* Setting password' )
-    call( 'echo mininet:mininet | sudo chroot %s chpasswd -c SHA512'
-          % bind, shell=True )
-    # 2a. Add mininet to sudoers
-    addTo( bind + '/etc/sudoers', 'mininet ALL=NOPASSWD: ALL' )
-    # 2b. Disable cloud junk
-    disableCloud( bind )
-    chroot( 'sudo update-rc.d landscape-client disable' )
-    # 2c. Add serial getty
-    log( '* Adding getty on ttyS0' )
-    chroot( 'cp /etc/init/tty1.conf /etc/init/ttyS0.conf' )
-    chroot( 'sed -i "s/tty1/ttyS0/g" /etc/init/ttyS0.conf' )
-    # 3. Lastly, we umount and clean up everything
-    run( 'sync' )
-    srun( 'umount %s/home ' % bind )
-    srun( 'umount %s/etc ' % bind )
-    srun( 'umount %s' % bind )
-    srun( 'umount ' + mnt )
-    run( 'rmdir ' + bind )
-    run( 'rmdir ' + mnt )
+        log( '* Retrieving', url )
+        urlretrieve( url, iso )
+        # Write-protect iso, signaling it is complete
+        log( '* Write-protecting iso', iso)
+        os.chmod( iso, 0444 )
+    log( '* Using iso', iso )
+    return iso
 
 
 def attachNBD( cow, flags='' ):
     """Attempt to attach a COW disk image and return its nbd device
-       flags: additional flags for qemu-nbd (e.g. -r for readonly)"""
+        flags: additional flags for qemu-nbd (e.g. -r for readonly)"""
     # qemu-nbd requires an absolute path
     cow = abspath( cow )
     log( '* Checking for unused /dev/nbdX device ' )
@@ -268,94 +156,165 @@ def detachNBD( nbd ):
     srun( 'qemu-nbd -d ' + nbd )
 
 
-def makeCOWDisk( image, dir='.' ):
-    "Create new COW disk for image"
-    disk, kernel = fetchImage( image )
-    cow = '%s/%s.qcow2' % ( dir, image )
-    log( '* Creating COW disk', cow )
-    run( 'qemu-img create -f qcow2 -b %s %s' % ( disk, cow ) )
-    log( '* Resizing COW disk and file system' )
-    run( 'qemu-img resize %s +8G' % cow )
-    nbd = attachNBD( cow )
-    srun( 'e2fsck -y ' + nbd )
-    srun( 'resize2fs ' + nbd )
-    addMininetUser( nbd )
-    detachNBD( nbd )
-    return cow, kernel
+def kernelpath( flavor ):
+    "Return kernel path for flavor"
+    return path.join( VMImageDir, flavor + '-vmlinuz' )
 
 
-def makeVolume( volume, size='8G'  ):
-    """Create volume as a qcow2 and add a single boot partition"""
-    log( '* Creating volume of size', size )
-    run( 'qemu-img create -f qcow2 %s %s' % ( volume, size ) )
-    log( '* Partitioning volume' )
-    # We need to mount it using qemu-nbd!!
-    nbd = attachNBD( volume )
-    parted = Popen( [ 'sudo', 'parted', nbd ], stdin=PIPE )
-    cmds = [ 'mklabel msdos',
-             'mkpart primary ext4 1 %s' % size,
-             'set 1 boot on',
-             'quit' ]
-    parted.stdin.write( '\n'.join( cmds ) + '\n' )
-    parted.wait()
-    log( '* Volume partition table:' )
-    log( srun( 'fdisk -l ' + nbd ) )
-    detachNBD( nbd )
-
-
-def installGrub( voldev, partnum=1 ):
-    "Install grub2 on voldev to boot from partition partnum"
+def extractKernel( image, kernel ):
+    "Extract kernel from base image"
+    nbd = attachNBD( image )
+    print srun( 'partx ' + nbd )
+    # Assume kernel is in partition 1/boot/vmlinuz*generic for now
+    part = nbd + 'p1'
     mnt = mkdtemp()
-    # Find partitions and make sure we have partition 1
-    assert ( '# %d:' % partnum ) in srun( 'partx ' + voldev )
-    partdev = voldev + 'p%d' % partnum
-    srun( 'mount %s %s' % ( partdev, mnt ) )
-    # Make sure we have a boot directory
-    bootdir = mnt + '/boot'
-    run( 'ls ' + bootdir )
-    # Install grub - make sure we preload part_msdos !!
-    srun( 'grub-install --boot-directory=%s --modules=part_msdos %s' % (
-          bootdir, voldev ) )
+    srun( 'mount %s %s' % ( part, mnt  ) )
+    kernsrc = glob( '%s/boot/vmlinuz*generic' % mnt )[ 0 ]
+    run( 'cp %s %s' % ( kernsrc, kernel ) )
     srun( 'umount ' + mnt )
     run( 'rmdir ' + mnt )
+    detachNBD( image )
 
 
-def initPartition( partition, volume ):
-    """Copy partition to volume-p1 and initialize everything"""
-    srcdev = attachNBD( partition, flags='-r' )
-    voldev = attachNBD( volume )
-    log( srun( 'fdisk -l ' + voldev ) )
-    log( srun( 'partx ' + voldev ) )
-    dstdev = voldev + 'p1'
-    log( "* Copying partition from", srcdev, "to", dstdev )
-    log( srun( 'dd if=%s of=%s bs=1M' % ( srcdev, dstdev ) ) )
-    log( '* Resizing file system' )
-    srun( 'resize2fs ' + dstdev )
-    srun( 'e2fsck -y ' + dstdev )
-    log( '* Adding mininet user' )
-    addMininetUser( dstdev )
-    log( '* Installing grub2' )
-    installGrub( voldev, partnum=1 )
-    detachNBD( voldev )
-    detachNBD( srcdev )
+def findBaseImage( flavor, size='8G' ):
+    "Return base VM image and kernel, creating them if needed"
+    image = path.join( VMImageDir, flavor + '-base.img' )
+    kernel = path.join( VMImageDir, flavor + '-vmlinuz' )
+    if path.exists( image ):
+        # Detect race condition with multiple builds
+        perms = stat( image )[ ST_MODE ] & 0777
+        if perms != 0444:
+            raise Exception( 'Error - %s is writable ' % image +
+                            '; are multiple builds running?' )
+    else:
+        # We create VMImageDir here since we are called first
+        run( 'mkdir -p %s' % VMImageDir )
+        iso = findiso( flavor )
+        log( '* Creating image file', image )
+        run( 'qemu-img create %s %s' % ( image, size ) )
+        installUbuntu( iso, image )
+        log( '* Extracting kernel to', kernel )
+        extractKernel( image, kernel )
+        # Write-protect image, also signaling it is complete
+        log( '* Write-protecting image', image)
+        os.chmod( image, 0444 )
+    log( '* Using base image', image )
+    return image, kernel
 
 
-def boot( cow, kernel, tap ):
+def makeKickstartFloppy():
+    "Create and return kickstart floppy, kickstart, preseed"
+    kickstart = 'ks.cfg'
+    kstext = '\n'.join( [ '#Generated by Kickstart Configurator',
+                         '#platform=x86',
+                         '#System language',
+                         'lang en_US',
+                         '#Language modules to install',
+                         'langsupport en_US',
+                         '#System keyboard',
+                         'keyboard us',
+                         '#System mouse',
+                         'mouse',
+                         '#System timezone',
+                         'timezone America/Los_Angeles',
+                         '#Root password',
+                         'rootpw --disabled',
+                         '#Initial user'
+                         'user mininet --fullname "mininet" --password "mininet"',
+                         '#Use text mode install',
+                         'text',
+                         '#Install OS instead of upgrade',
+                         'install',
+                         '#Use CDROM installation media',
+                         'cdrom',
+                         '#System bootloader configuration',
+                         'bootloader --location=mbr',
+                         '#Clear the Master Boot Record',
+                         'zerombr yes',
+                         '#Partition clearing information',
+                         'clearpart --all --initlabel',
+                         '#Automatic partitioning',
+                         'autopart',
+                         '#System authorization infomation',
+                         'auth  --useshadow  --enablemd5',
+                         '#Firewall configuration',
+                         'firewall --disabled',
+                         '#Do not configure the X Window System',
+                         'skipx', '' ] )
+    with open( kickstart, 'w' ) as f:
+        f.write( kstext )
+    preseed = 'ks.preseed'
+    pstext = '\n'.join( [ 'd-i partman/confirm_write_new_label boolean true',
+                         'd-i partman/choose_partition select finish',
+                         'd-i partman/confirm boolean true',
+                         'd-i partman/confirm_nooverwrite boolean true',
+                         'd-i user-setup/allow-password-weak boolean true' ] )
+    with open( preseed, 'w' ) as f:
+        f.write( pstext )
+    # Create floppy and copy files to it
+    floppy = 'ksfloppy.img'
+    run( 'qemu-img create %s 1M' % floppy )
+    run( 'mcopy -i %s %s ::/' % ( floppy, kickstart ) )
+    run( 'mcopy -i %s %s ::/' % ( floppy, preseed ) )
+    log( '* Created floppy image %s containing %s and %s' %
+         ( floppy, kickstart, preseed ) )
+    return floppy, kickstart, preseed
+
+
+def kvmFor( name ):
+    "Guess kvm version for file name"
+    if 'amd64' in name:
+        kvm = 'qemu-system-x86_64'
+    elif 'i386' in name:
+        kvm = 'qemu-system-i386'
+    else:
+        log( "Error: can't discern CPU for file name", name )
+        exit( 1 )
+    return kvm
+
+
+def installUbuntu( iso, image ):
+    "Install Ubuntu from iso onto image"
+    kvm = kvmFor( iso )
+    floppy, kickstart, preseed = makeKickstartFloppy()
+    # Mount iso so we can use its kernel
+    mnt = mkdtemp()
+    srun( 'mount %s %s' % ( iso, mnt ) )
+    kernel = mnt + 'install/vmlinuz'
+    cmd = [ 'sudo', kvm,
+           '-machine accel=kvm',
+           '-nographic',
+           '-netdev user,id=mnbuild',
+           '-device virtio-net,netdev=mnbuild',
+           '-m 1024',
+           '-k en-us',
+           '-cdrom', iso,
+           '-drive file=%s,if=virtio' % image,
+           '-fda', floppy,
+           '-kernel', kernel,
+           '-append "root=/dev/vda1 init=/sbin/init console=ttyS0' +
+           'ks=floppy:/' + kickstart +
+           'preseed/file=floppy://' + preseed + '"' ]
+    cmd = ' '.join( cmd )
+    log( '* INSTALLING UBUNTU FROM', iso, 'ONTO', image )
+    log( cmd )
+    run( cmd )
+    # Unmount iso and clean up
+    srun( 'umount ' + mnt )
+    run( 'rmdir ' + mnt )
+    log( '* UBUNTU INSTALLATION COMPLETED FOR', image )
+
+
+def boot( cow, kernel, logfile ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
-       tap: tap device to connect to VM
+       logfile: log file for pexpect object
        returns: pexpect object to qemu process"""
     # pexpect might not be installed until after depend() is called
     global pexpect
     import pexpect
-    if 'amd64' in kernel:
-        kvm = 'qemu-system-x86_64'
-    elif 'i386' in kernel:
-        kvm = 'qemu-system-i386'
-    else:
-        log( "Error: can't discern CPU for image", cow )
-        exit( 1 )
+    kvm = kvmFor( kernel )
     cmd = [ 'sudo', kvm,
             '-machine accel=kvm',
             '-nographic',
@@ -367,9 +326,9 @@ def boot( cow, kernel, tap ):
             '-drive file=%s,if=virtio' % cow,
             '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
     cmd = ' '.join( cmd )
-    log( '* STARTING VM' )
+    log( '* BOOTING VM FROM', cow )
     log( cmd )
-    vm = pexpect.spawn( cmd, timeout=TIMEOUT )
+    vm = pexpect.spawn( cmd, timeout=TIMEOUT, logfile=logfile )
     return vm
 
 
@@ -444,15 +403,13 @@ def build( flavor='raring32server' ):
     dir = mkdtemp( prefix=flavor + '-result-', dir='.' )
     os.chdir( dir )
     log( '* Created working directory', dir )
-    image, kernel = fetchImage( flavor )
+    image, kernel = findBaseImage( flavor )
     volume = flavor + '.qcow2'
-    makeVolume( volume )
-    initPartition( image, volume )
+    run( 'qemu-img create -f qcow2 -b %s %s' % ( image, volume ) )
     log( '* VM image for', flavor, 'created as', volume )
     logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
     vm = boot( volume, kernel, logfile )
-    vm.logfile_read = logfile
     interact( vm )
     vmdk = convert( volume, basename=flavor )
     log( '* Converted VM image stored as', vmdk )
@@ -467,7 +424,8 @@ def build( flavor='raring32server' ):
 
 def listFlavors():
     "List valid build flavors"
-    print '\nvalid build flavors:', ' '.join( ImageURLBase ), '\n'
+    print '\nvalid build flavors:', ' '.join( isoURLs ), '\n'
+
 
 def parseArgs():
     "Parse command line arguments and run"
@@ -489,7 +447,7 @@ def parseArgs():
         cleanup()
     flavors = args.flavor[ 1: ]
     for flavor in flavors:
-        if flavor not in ImageURLBase:
+        if flavor not in isoURLs:
             parser.print_help()
             listFlavors()
             break
