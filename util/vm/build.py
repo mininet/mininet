@@ -413,7 +413,7 @@ def interact( vm ):
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
     vm.read()
-        log( '* Interaction complete' )
+    log( '* Interaction complete' )
 
 
 def cleanup():
