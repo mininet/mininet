@@ -279,8 +279,9 @@ def makeKickstartFloppy():
     return floppy, kickstart, preseed
 
 
-def kvmFor( name ):
-    "Guess kvm version for file name"
+def kvmFor( path ):
+    "Guess kvm version for file path"
+    name = path.basename( path )
     if '64' in name:
         kvm = 'qemu-system-x86_64'
     elif 'i386' in name or '32' in name:
@@ -431,7 +432,8 @@ def convert( cow, basename ):
 def build( flavor='raring32server' ):
     "Build a Mininet VM"
     start = time()
-    dir = mkdtemp( prefix=flavor + '-result-', dir='.' )
+    date = time.strftime( '%y%m%d-%H:%M:%S', time.localtime())
+    dir = os.mkdir( 'mn-' + flavor + date )
     os.chdir( dir )
     log( '* Created working directory', dir )
     image, kernel = findBaseImage( flavor )
