@@ -293,8 +293,6 @@ def kvmFor( name ):
 
 def installUbuntu( iso, image, logfilename='install.log' ):
     "Install Ubuntu from iso onto image"
-    global pexpect
-    import pexpect
     kvm = kvmFor( iso )
     floppy, kickstart, preseed = makeKickstartFloppy()
     # Mount iso so we can use its kernel
@@ -451,7 +449,7 @@ def build( flavor='raring32server' ):
     log( '* Results logged to', abspath( logfile.name ) )
     log( '* Completed in %.2f seconds' % elapsed )
     log( '* %s VM build DONE!!!!! :D' % flavor )
-        os.chdir( '..' )
+    os.chdir( '..' )
 
 
 def listFlavors():
