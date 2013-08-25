@@ -150,24 +150,29 @@ def detachNBD( nbd ):
 
 
 def extractKernel( image, flavor ):
-    "Extract kernel from base image"
+    "Extract kernel and initrd from base image"
     kernel = path.join( VMImageDir, flavor + '-vmlinuz' )
+    initrd = path.join( VMImageDir, flavor + '-initrd' )
     if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0777 ) == 0444:
-        return kernel
+        # If kernel is there, then initrd should also be there
+        return kernel, initrd
     log( '* Extracting kernel to', kernel )
     nbd = attachNBD( image, flags='-r' )
     print srun( 'partx ' + nbd )
     # Assume kernel is in partition 1/boot/vmlinuz*generic for now
     part = nbd + 'p1'
     mnt = mkdtemp()
-    srun( 'mount %s %s' % ( part, mnt  ) )
+    srun( 'mount -o ro %s %s' % ( part, mnt  ) )
     kernsrc = glob( '%s/boot/vmlinuz*generic' % mnt )[ 0 ]
-    run( 'sudo cp %s %s' % ( kernsrc, kernel ) )
-    run( 'sudo chmod 0444 ' + kernel )
+    initrdsrc = glob( '%s/boot/initrd*generic' % mnt )[ 0 ]
+    srun( 'cp %s %s' % ( initrdsrc, initrd ) )
+    srun( 'chmod 0444 ' + initrd )
+    srun( 'cp %s %s' % ( kernsrc, kernel ) )
+    srun( 'chmod 0444 ' + kernel )
     srun( 'umount ' + mnt )
     run( 'rmdir ' + mnt )
     detachNBD( nbd )
-    return kernel
+    return kernel, initrd
 
 
 def findBaseImage( flavor, size='8G' ):
@@ -189,9 +194,9 @@ def findBaseImage( flavor, size='8G' ):
         # Write-protect image, also signaling it is complete
         log( '* Write-protecting image', image)
         os.chmod( image, 0444 )
-    kernel = extractKernel( image, flavor )
+    kernel, initrd = extractKernel( image, flavor )
     log( '* Using base image', image, 'and kernel', kernel )
-    return image, kernel
+    return image, kernel, initrd
 
 
 # Kickstart and Preseed files for Ubuntu/Debian installer
@@ -279,9 +284,9 @@ def makeKickstartFloppy():
     return floppy, kickstart, preseed
 
 
-def kvmFor( path ):
+def kvmFor( filepath ):
     "Guess kvm version for file path"
-    name = path.basename( path )
+    name = path.basename( filepath )
     if '64' in name:
         kvm = 'qemu-system-x86_64'
     elif 'i386' in name or '32' in name:
@@ -335,7 +340,7 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     log( '* Ubuntu installation completed in %.2f seconds ' % elapsed )
 
 
-def boot( cow, kernel, logfile ):
+def boot( cow, kernel, initrd, logfile ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
@@ -353,6 +358,7 @@ def boot( cow, kernel, logfile ):
             '-m 1024',
             '-k en-us',
             '-kernel', kernel,
+            '-initrd', initrd,
             '-drive file=%s,if=virtio' % cow,
             '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
     cmd = ' '.join( cmd )
@@ -432,17 +438,21 @@ def convert( cow, basename ):
 def build( flavor='raring32server' ):
     "Build a Mininet VM"
     start = time()
-    date = time.strftime( '%y%m%d-%H:%M:%S', time.localtime())
-    dir = os.mkdir( 'mn-' + flavor + date )
+    date = strftime( '%y%m%d-%H-%M-%S', localtime())
+    dir = 'mn-%s-%s' % ( flavor, date )
+    try:
+        os.mkdir( dir )
+    except:
+        raise Exception( "Failed to create build directory %s" % dir )
     os.chdir( dir )
     log( '* Created working directory', dir )
-    image, kernel = findBaseImage( flavor )
+    image, kernel, initrd = findBaseImage( flavor )
     volume = flavor + '.qcow2'
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, volume ) )
     log( '* VM image for', flavor, 'created as', volume )
     logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
-    vm = boot( volume, kernel, logfile )
+    vm = boot( volume, kernel, initrd, logfile )
     interact( vm )
     vmdk = convert( volume, basename=flavor )
     log( '* Converted VM image stored as', abspath( vmdk ) )
@@ -463,7 +473,7 @@ def parseArgs():
     "Parse command line arguments and run"
     parser = argparse.ArgumentParser( description='Mininet VM build script' )
     parser.add_argument( '--depend', action='store_true',
-                         help='Install dependencies for this script' )
+                         help='install dependencies for this script' )
     parser.add_argument( '--list', action='store_true',
                          help='list valid build flavors' )
     parser.add_argument( '--clean', action='store_true',
