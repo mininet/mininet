@@ -607,13 +607,16 @@ function modprobe {
 }
 
 function all {
-    echo "Running all commands..."
+    echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
     kernel
     mn_deps
-    mn_dev
+    # Skip mn_dev (doxypy/texlive/fonts/etc.) because it's huge
+    # mn_dev
     of
     wireshark
     ovs
+    # We may add ivs once it's more mature
+    # ivs
     # NOX-classic is deprecated, but you can install it manually if desired.
     # nox
     pox
