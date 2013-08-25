@@ -45,12 +45,18 @@ TIMEOUT=600
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
 isoURLs = {
+    'precise32server':
+    'http://mirrors.kernel.org/ubuntu-releases/12.04/'
+    'ubuntu-12.04-server-i386.iso',
+    'precise64server':
+    'http://mirrors.kernel.org/ubuntu-releases/12.04/'
+    'ubuntu-12.04-server-amd64.iso',
     'quetzal32server':
     'http://mirrors.kernel.org/ubuntu-releases/12.10/'
     'ubuntu-12.10-server-i386.iso',
     'quetzal64server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
-    'ubuntu-12.04-server-amd64.iso',
+    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
+    'ubuntu-12.10-server-amd64.iso',
     'raring32server':
     'http://mirrors.kernel.org/ubuntu-releases/13.04/'
     'ubuntu-13.04-server-i386.iso',
@@ -500,6 +506,7 @@ def parseArgs():
         # exit( 1 )
     if not ( args.depend or args.list or args.clean or flavors ):
         parser.print_help()
+        listFlavors()
 
 if __name__ == '__main__':
     parseArgs()
