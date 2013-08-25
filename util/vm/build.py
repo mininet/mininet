@@ -408,7 +408,7 @@ def interact( vm ):
     log( '* Testing Mininet' )
     vm.sendline( 'sudo mn --test pingall' )
     if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
-        log( '* Sanity check succeeded' )
+        log( '* Sanity check OK' )
     else:
         log( '* Sanity check FAILED' )
     vm.expect( prompt )
@@ -419,6 +419,15 @@ def interact( vm ):
     vm.expect( prompt )
     log( '* Running make test' )
     vm.sendline( 'cd ~/mininet; sudo make test' )
+    # We should change "make test" to report the number of
+    # successful and failed tests. For now, we have to
+    # know the time for each test, which means that this
+    # script will have to change as we add more tests.
+    for test in range( 0, 2 ):
+        if vm.expect( [ 'OK', 'FAILED', pexpect.timeout ], timeout=60 ) == 0:
+            log( '* Test', test, 'OK' )
+        else:
+            log( '* Test', test, 'FAILED' )
     vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
