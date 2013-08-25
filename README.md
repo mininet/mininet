@@ -5,6 +5,10 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 Version 2.0.0
 
+Check section:
+What is the difference in this mininet from the mininet where this had been forked?
+after the features to see the changes made.
+
 ### What is Mininet?
 
 Mininet emulates a complete network of hosts, links, and switches
