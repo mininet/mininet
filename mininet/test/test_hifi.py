@@ -11,6 +11,7 @@ from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.topo import Topo
 from mininet.log import setLogLevel
+from mininet.util import quietRun
 
 # Number of hosts for each test
 N = 2
@@ -125,10 +126,13 @@ class testOptionsTopoOVSKernel( testOptionsTopoCommon, unittest.TestCase ):
     "Verify ability to create networks with host and link options (OVS kernel switch)."
     switchClass = OVSKernelSwitch
 
+@unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
     "Verify ability to create networks with host and link options (IVS switch)."
     switchClass = IVSSwitch
 
+@unittest.skipUnless( quietRun( 'which ofprotocol' ),
+                     'Reference user switch is not installed' )
 class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
     "Verify ability to create networks with host and link options (Userspace switch)."
     switchClass = UserSwitch
