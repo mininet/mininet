@@ -1050,6 +1050,8 @@ class OVSSwitch( Switch ):
     def stop( self ):
         "Terminate OVS switch."
         self.cmd( 'ovs-vsctl del-br', self )
+        if self.datapath == 'user':
+            self.cmd( 'ip link del', self )
         self.deleteIntfs()
 
 OVSKernelSwitch = OVSSwitch
