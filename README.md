@@ -72,14 +72,14 @@ Mininet includes:
 Mininet 2.1.0 provides a number of bug fixes as well as a
 number of new features, including:
 
-* Convenient access to Mininet() as a dict
-* X11 tunneling (wireshark in Mininet hosts!)
+* Convenient access to Mininet() as a dict of nodes
+* X11 tunneling (wireshark in Mininet hosts, finally!)
 * Accurate reflection of the Mininet() object in the CLI
 * Automatically detecting and adjusting resource limits
 * Automatic cleanup on failure of the `mn` command
-* Support for running OVS in user space mode
+* Preliminary support for running OVS in user space mode
 * Preliminary support for the Indigo Virtual Switch (IVSSwitch)
-* The ability to import examples as modules
+* The ability to import modules from mininet.examples
 
 We have provided several new examples which can also be
 imported to provide useful functionality, including:
