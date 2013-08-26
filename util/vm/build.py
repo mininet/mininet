@@ -35,7 +35,6 @@ from glob import glob
 from subprocess import check_output, call, Popen
 from tempfile import mkdtemp
 from time import time, strftime, localtime
-from lxml import etree
 import argparse
 
 pexpect = None  # For code check - imported dynamically
@@ -514,6 +513,8 @@ def build( flavor='raring32server' ):
     vm = boot( volume, kernel, initrd, logfile )
     interact( vm )
     vmdk = convert( volume, basename=flavor )
+    log( '* Removing qcow2 volume', volume )
+    os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
     end = time()
     elapsed = end - start
