@@ -4,10 +4,11 @@
    Test creation and all-pairs ping for each included mininet topo type."""
 
 import unittest
+from functools import partial
 
 from mininet.net import Mininet
 from mininet.node import Host, Controller
-from mininet.node import UserSwitch, OVSKernelSwitch, IVSSwitch
+from mininet.node import UserSwitch, OVSSwitch, IVSSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
@@ -32,8 +33,11 @@ class testSingleSwitchCommon( object ):
 
 class testSingleSwitchOVSKernel( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (OVS kernel switch)."
-    switchClass = OVSKernelSwitch
+    switchClass = OVSSwitch
 
+class testSingleSwitchOVSUser( testSingleSwitchCommon, unittest.TestCase ):
+    "Test ping with single switch topology (OVS user switch)."
+    switchClass = partial( OVSSwitch, datapath='user' )
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testSingleSwitchIVS( testSingleSwitchCommon, unittest.TestCase ):
@@ -61,7 +65,11 @@ class testLinearCommon( object ):
 
 class testLinearOVSKernel( testLinearCommon, unittest.TestCase ):
     "Test all-pairs ping with LinearNet (OVS kernel switch)."
-    switchClass = OVSKernelSwitch
+    switchClass = OVSSwitch
+
+class testLinearOVSUser( testLinearCommon, unittest.TestCase ):
+    "Test all-pairs ping with LinearNet (OVS user switch)."
+    switchClass = partial( OVSSwitch, datapath='user' )
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testLinearIVS( testLinearCommon, unittest.TestCase ):

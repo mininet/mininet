@@ -4,9 +4,10 @@
    Test creation and pings for topologies with link and/or CPU options."""
 
 import unittest
+from functools import partial
 
 from mininet.net import Mininet
-from mininet.node import OVSKernelSwitch, UserSwitch, IVSSwitch
+from mininet.node import OVSSwitch, UserSwitch, IVSSwitch
 from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.topo import Topo
@@ -124,7 +125,12 @@ class testOptionsTopoCommon( object ):
 
 class testOptionsTopoOVSKernel( testOptionsTopoCommon, unittest.TestCase ):
     "Verify ability to create networks with host and link options (OVS kernel switch)."
-    switchClass = OVSKernelSwitch
+    switchClass = OVSSwitch
+
+@unittest.skip( 'Skipping OVS user switch test for now' )
+class testOptionsTopoOVSUser( testOptionsTopoCommon, unittest.TestCase ):
+    "Verify ability to create networks with host and link options (OVS user switch)."
+    switchClass = partial( OVSSwitch, datapath='user' )
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
