@@ -34,10 +34,14 @@ class testSingleSwitchOVSKernel( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (OVS kernel switch)."
     switchClass = OVSKernelSwitch
 
+
+@unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testSingleSwitchIVS( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (IVS switch)."
     switchClass = IVSSwitch
 
+@unittest.skipUnless( quietRun( 'which ofprotocol' ),
+                     'Reference user switch is not installed' )
 class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (Userspace switch)."
     switchClass = UserSwitch
