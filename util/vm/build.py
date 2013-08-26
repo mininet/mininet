@@ -35,6 +35,7 @@ from glob import glob
 from subprocess import check_output, call, Popen
 from tempfile import mkdtemp
 from time import time, strftime, localtime
+from lxml import etree
 import argparse
 
 pexpect = None  # For code check - imported dynamically
@@ -47,10 +48,10 @@ VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 isoURLs = {
     'precise32server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
-    'ubuntu-12.04-server-i386.iso',
+    'ubuntu-12.04.3-server-i386.iso',
     'precise64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
-    'ubuntu-12.04-server-amd64.iso',
+    'ubuntu-12.04.3-server-amd64.iso',
     'quetzal32server':
     'http://mirrors.kernel.org/ubuntu-releases/12.10/'
     'ubuntu-12.10-server-i386.iso',
@@ -125,6 +126,9 @@ def findiso( flavor ):
     if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
         log( '* Retrieving', url )
         run( 'curl -C - -o %s %s' % ( iso, url ) )
+        if 'ISO' not in run( 'file ' + iso ):
+            os.remove( iso )
+            raise Exception( 'findiso: could not download iso from ' + url )
         # Write-protect iso, signaling it is complete
         log( '* Write-protecting iso', iso)
         os.chmod( iso, 0444 )
@@ -310,7 +314,6 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     # Mount iso so we can use its kernel
     mnt = mkdtemp()
     srun( 'mount %s %s' % ( iso, mnt ) )
-    srun( 'ls ' + mnt )
     kernel = path.join( mnt, 'install/vmlinuz' )
     initrd = path.join( mnt, 'install/initrd.gz' )
     cmd = [ 'sudo', kvm,
@@ -448,6 +451,47 @@ def convert( cow, basename ):
     log( '* Converting qcow2 to vmdk' )
     run( 'qemu-img convert -f qcow2 -O vmdk %s %s' % ( cow, vmdk ) )
     return vmdk
+
+
+# Template for virt-image(5) file
+
+VirtImageXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<image>
+    <name>%s</name>
+    <domain>
+        <boot type="hvm">
+            <guest>
+                <arch>%s/arch>
+            </guest>
+            <os>
+                <loader dev="hd"/>
+            </os>
+            <drive disk="root.raw" target="hda"/>
+        </boot>
+        <devices>
+            <vcpu>1</vcpu>
+            <memory>%s</memory>
+            <interface/>
+            <graphics/>
+        </devices>
+    </domain>
+        <storage>
+            <disk file="%s" size="%s" format="vmdk"/>
+        </storage>
+</image>
+"""
+
+def genVirtImage( name, mem, diskname, disksize ):
+    "Generate and return virt-image file name.xml"
+    # Our strategy is going to be: create a
+    # virt-image file and then use virt-convert to convert
+    # it to an .ovf file
+    xmlfile = name + '.xml'
+    xmltext = VirtImageXML % ( name, mem, diskname, disksize )
+    with open( xmlfile, 'w+' ) as f:
+        f.write( xmltext )
+    return xmlfile
 
 
 def build( flavor='raring32server' ):
