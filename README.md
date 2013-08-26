@@ -69,8 +69,8 @@ Mininet includes:
 
 ### New features in 2.1.0
 
-Mininet 2.1.0 provides a number of bug fixes as well as a
-number of new features, including:
+Mininet 2.1.0 provides a number of bug fixes as well as
+several new features, including:
 
 * Convenient access to Mininet() as a dict of nodes
 * X11 tunneling (wireshark in Mininet hosts, finally!)
@@ -84,9 +84,9 @@ number of new features, including:
 We have provided several new examples which can also be
 imported to provide useful functionality, including:
 
-* A simple NAT script to attach Mininet networks to your LAN
-* An example of modeling control and data networks
-* An example of per-host custom directories using bind mounts
+* Connecting Mininet hosts the internet (or a LAN) using NAT
+* Modeling control as well as data networks
+* Creating per-host custom directories using bind mounts
 
 Note that these are experimental features which may "graduate"
 into mainline Mininet in the future, so they should not be
