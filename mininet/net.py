@@ -257,12 +257,10 @@ class Mininet( object ):
 
     def keys( self ):
         "return a list of all node names or net's keys"
-        #TODO: fix this
         return list( self )
 
     def values( self ):
         "return a list of all nodes or net's values"
-        #TODO: fix this
         return [ self[name] for name in self ]
 
     def items( self ):
