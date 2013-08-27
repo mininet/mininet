@@ -109,7 +109,10 @@ class ControlNetwork( Topo ):
 
 
 # Make it Happen!!
+
 def run():
+    "Create control and data networks, and invoke the CLI"
+    
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )
     cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
@@ -131,7 +134,6 @@ def run():
 
     mn = MininetFacade( net, cnet=cnet )
 
-    # run the function passed as an argument
     CLI( mn )
 
     info( '* Stopping Data Network\n' )
@@ -140,7 +142,7 @@ def run():
     info( '* Stopping Control Network\n' )
     cnet.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
-
     run()
