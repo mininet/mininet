@@ -16,7 +16,7 @@ Basic idea:
     -> install Mininet
 
     test
-    -> make codecheck
+    -> sudo mn --test pingall
     -> make test
 
     release
