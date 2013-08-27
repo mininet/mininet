@@ -63,6 +63,12 @@ isoURLs = {
     'raring64server':
     'http://mirrors.kernel.org/ubuntu-releases/13.04/'
     'ubuntu-13.04-server-amd64.iso',
+    'saucy32server':
+    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
+    'ubuntu-13.10-server-i386.iso',
+    'saucy64server':
+    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
+    'ubuntu-13.10-server-amd64.iso',
 }
 
 logStartTime = time()
