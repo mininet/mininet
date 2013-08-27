@@ -34,20 +34,20 @@ def mountPoints():
         mounts.append( mount )
     return mounts
 
-def unmountAll( dir=MNRUNDIR ):
+def unmountAll( rootdir=MNRUNDIR ):
     "Unmount all mounts under a directory tree"
-    dir = realpath( dir )
-    # Find all mounts below dir
+    rootdir = realpath( rootdir )
+    # Find all mounts below rootdir
     # This is subtle because /foo is not
     # a parent of /foot
-    dirslash = dir + '/'
+    dirslash = rootdir + '/'
     mounts = [ m for m in mountPoints()
               if m == dir or m.find( dirslash ) == 0 ]
     # Unmount them from bottom to top
     mounts.sort( reverse=True )
     for mount in mounts:
         debug( 'Unmounting', mount, '\n' )
-        out, err, code = errRun( 'umount', mount )
+        _out, err, code = errRun( 'umount', mount )
         if code != 0:
             info( '*** Warning: failed to umount', mount, '\n' )
             info( err )
@@ -69,6 +69,7 @@ class HostWithPrivateDirs( Host ):
         self.unmount = kwargs.pop( 'unmount', True )
         Host.__init__( self, name, *args, **kwargs )
         self.rundir = '%s/%s' % ( self.mnRunDir, name )
+        self.root, self.private = None, None  # set in createBindMounts
         if self.privateDirs:
             self.privateDirs = [ realpath( d ) for d in self.privateDirs ]
             self.createBindMounts()
@@ -88,28 +89,30 @@ class HostWithPrivateDirs( Host ):
 
     def mountPrivateDirs( self ):
         "Create and bind mount private dirs"
-        for dir in self.privateDirs:
-            privateDir = self.private + dir
+        for dir_ in self.privateDirs:
+            privateDir = self.private + dir_
             errFail( 'mkdir -p ' + privateDir )
-            mountPoint = self.root + dir
+            mountPoint = self.root + dir_
             errFail( 'mount -B %s %s' %
                            ( privateDir, mountPoint) )
 
     def mountDirs( self, dirs ):
         "Mount a list of directories"
-        for dir in dirs:
-            mountpoint = self.root + dir
+        for dir_ in dirs:
+            mountpoint = self.root + dir_
             errFail( 'mount -B %s %s' %
-                     ( dir, mountpoint ) )
+                     ( dir_, mountpoint ) )
 
     @classmethod
-    def findRemounts( cls, fstypes=[ 'nfs' ] ):
+    def findRemounts( cls, fstypes=None ):
         """Identify mount points in /proc/mounts to remount
            fstypes: file system types to match"""
+        if fstypes is None:
+            fstypes = [ 'nfs' ]
         dirs = quietRun( 'cat /proc/mounts' ).strip().split( '\n' )
         remounts = []
-        for dir in dirs:
-            line = dir.split()
+        for dir_ in dirs:
+            line = dir_.split()
             mountpoint, fstype = line[ 1 ], line[ 2 ]
             # Don't re-remount directories!!!
             if mountpoint.find( cls.mnRunDir ) == 0:
