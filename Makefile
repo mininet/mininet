@@ -1,6 +1,6 @@
 MININET = mininet/*.py
 TEST = mininet/test/*.py
-EXAMPLES = examples/*.py
+EXAMPLES = mininet/examples/*.py
 MN = bin/mn
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
