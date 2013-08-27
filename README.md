@@ -78,19 +78,21 @@ several new features, including:
 * Automatically detecting and adjusting resource limits
 * Automatic cleanup on failure of the `mn` command
 * Preliminary support for running OVS in user space mode
-* Preliminary support for the Indigo Virtual Switch (IVSSwitch)
+* Preliminary support (`IVSSwitch()`) for the Indigo Virtual Switch
+* support for installing the OpenFlow 1.3 versions of the reference
+  user switch and NOX from CPqD
 * The ability to import modules from mininet.examples
 
-We have provided several new examples which can also be
-imported to provide useful functionality, including:
+We have provided several new examples (which can easily be
+imported to provide useful functionality) including:
 
+* Modeling separate control and data networks
 * Connecting Mininet hosts the internet (or a LAN) using NAT
-* Modeling control as well as data networks
 * Creating per-host custom directories using bind mounts
 
-Note that these are experimental features which may "graduate"
-into mainline Mininet in the future, so they should not be
-considered a stable part of the Mininet API!
+Note that examples contain experimental features which might
+"graduate" into mainline Mininet in the future, but they should 
+not be considered a stable part of the Mininet API!
 
 ### Installation
 
