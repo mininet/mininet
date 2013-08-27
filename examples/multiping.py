@@ -23,12 +23,7 @@ def chunks( l, n ):
 def startpings( host, targetips ):
     "Tell host to repeatedly ping targets"
 
-    targetips.append( '10.0.0.200' )
-
     targetips = ' '.join( targetips )
-
-    # BL: Not sure why loopback intf isn't up!
-    host.cmd( 'ifconfig lo up' )
 
     # Simple ping loop
     cmd = ( 'while true; do '
@@ -63,6 +58,8 @@ def multiping( netsize, chunksize, seconds):
     # Start pings
     for subnet in subnets:
         ips = [ host.IP() for host in subnet ]
+        #adding bogus to generate packet loss
+        ips.append( '10.0.0.200' )
         for host in subnet:
             startpings( host, ips )
 
