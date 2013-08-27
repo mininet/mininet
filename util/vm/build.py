@@ -520,7 +520,7 @@ def build( flavor='raring32server' ):
         raise Exception( "Failed to create build directory %s" % dir )
     os.chdir( dir )
     LogFile = open( 'build.log', 'w' )
-    log( '* Logging to ', abspath( LogFile.name ) )
+    log( '* Logging to', abspath( LogFile.name ) )
     log( '* Created working directory', dir )
     image, kernel, initrd = findBaseImage( flavor )
     volume = flavor + '.qcow2'
