@@ -71,6 +71,7 @@ isoURLs = {
     'ubuntu-13.10-server-amd64.iso',
 }
 
+
 LogStartTime = time()
 LogFile = None
 
@@ -91,6 +92,7 @@ def log( *args, **kwargs ):
         if cr:
             output += '\n'
         LogFile.write( output )
+        LogFile.flush()
 
 
 def run( cmd, **kwargs ):
