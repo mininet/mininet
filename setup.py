@@ -25,14 +25,14 @@ setup(
         Mininet is a network emulator which uses lightweight
         virtualization to create virtual networks for rapid
         prototyping of Software-Defined Network (SDN) designs
-        using OpenFlow. http://openflow.org/mininet
+        using OpenFlow. http://mininet.org
         """,
     classifiers=[
           "License :: OSI Approved :: BSD License",
           "Programming Language :: Python",
-          "Development Status :: 2 - Pre-Alpha",
+          "Development Status :: 5 - Production/Stable",
           "Intended Audience :: Developers",
-          "Topic :: Internet",
+          "Topic :: System :: Emulators",
     ],
     keywords='networking emulator protocol Internet OpenFlow SDN',
     license='BSD',
