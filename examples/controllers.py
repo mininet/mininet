@@ -29,8 +29,7 @@ class MultiSwitch( OVSSwitch ):
 topo = TreeTopo( depth=2, fanout=2 )
 net = Mininet( topo=topo, switch=MultiSwitch, build=False )
 for c in [ c0, c1 ]:
-	net.addController(c)
-
+    net.addController(c)
 net.build()
 net.start()
 CLI( net )
