@@ -9,7 +9,7 @@ Basic idea:
     -> create base install image if it's missing
         - download iso if it's missing
         - install from iso onto image
-    
+
     build
     -> create cow disk for new VM, based on base image
     -> boot it in qemu/kvm with text /serial console
@@ -51,10 +51,10 @@ isoURLs = {
     'precise64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
     'ubuntu-12.04.3-server-amd64.iso',
-    'quetzal32server':
+    'quantal32server':
     'http://mirrors.kernel.org/ubuntu-releases/12.10/'
     'ubuntu-12.10-server-i386.iso',
-    'quetzal64server':
+    'quantal64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.10/'
     'ubuntu-12.10-server-amd64.iso',
     'raring32server':
