@@ -71,13 +71,14 @@ isoURLs = {
     'ubuntu-13.10-server-amd64.iso',
 }
 
-logStartTime = time()
+LogStartTime = time()
+LogFile = None
 
 def log( *args, **kwargs ):
     """Simple log function: log( message along with local and elapsed time
        cr: False/0 for no CR"""
     cr = kwargs.get( 'cr', True )
-    elapsed = time() - logStartTime
+    elapsed = time() - LogStartTime
     clocktime = strftime( '%H:%M:%S', localtime() )
     msg = ' '.join( str( arg ) for arg in args )
     output = '%s [ %.3f ] %s' % ( clocktime, elapsed, msg )
@@ -85,6 +86,11 @@ def log( *args, **kwargs ):
         print output
     else:
         print output,
+    # Optionally mirror to LogFile
+    if type( LogFile ) is file:
+        if cr:
+            output += '\n'
+        LogFile.write( output )
 
 
 def run( cmd, **kwargs ):
@@ -350,6 +356,9 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     # Unmount iso and clean up
     srun( 'umount ' + mnt )
     run( 'rmdir ' + mnt )
+    if vm.returncode != 0:
+        raise Exception( 'Ubuntu installation returned error %d' %
+                          vm.returncode )
     log( '* UBUNTU INSTALLATION COMPLETED FOR', image )
     log( '* Ubuntu installation completed in %.2f seconds ' % elapsed )
 
@@ -501,6 +510,7 @@ def genVirtImage( name, mem, diskname, disksize ):
 
 def build( flavor='raring32server' ):
     "Build a Mininet VM"
+    global LogFile
     start = time()
     date = strftime( '%y%m%d-%H-%M-%S', localtime())
     dir = 'mn-%s-%s' % ( flavor, date )
@@ -509,6 +519,8 @@ def build( flavor='raring32server' ):
     except:
         raise Exception( "Failed to create build directory %s" % dir )
     os.chdir( dir )
+    LogFile = open( 'build.log', 'w' )
+    log( '* Logging to ', abspath( LogFile.name ) )
     log( '* Created working directory', dir )
     image, kernel, initrd = findBaseImage( flavor )
     volume = flavor + '.qcow2'
