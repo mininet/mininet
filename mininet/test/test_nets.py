@@ -29,7 +29,8 @@ class testSingleSwitchCommon( object ):
 
     def testSingle5( self ):
         "Ping test on 5-host single-switch topology"
-        mn = Mininet( SingleSwitchTopo( k=5 ), self.switchClass, Host, Controller )
+        mn = Mininet( SingleSwitchTopo( k=5 ), self.switchClass, Host,
+                      Controller )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 
