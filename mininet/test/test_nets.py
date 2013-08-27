@@ -13,6 +13,8 @@ from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
 
+# Tell pylint not to complain about calls to other class
+# pylint: disable=E1101
 
 class testSingleSwitchCommon( object ):
     "Test ping with single switch topology (common code)."
@@ -30,6 +32,8 @@ class testSingleSwitchCommon( object ):
         mn = Mininet( SingleSwitchTopo( k=5 ), self.switchClass, Host, Controller )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
+
+# pylint: enable=E1101
 
 class testSingleSwitchOVSKernel( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (OVS kernel switch)."
@@ -51,6 +55,9 @@ class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
     switchClass = UserSwitch
 
 
+# Tell pylint not to complain about calls to other class
+# pylint: disable=E1101
+
 class testLinearCommon( object ):
     "Test all-pairs ping with LinearNet (common code)."
 
@@ -61,6 +68,8 @@ class testLinearCommon( object ):
         mn = Mininet( LinearTopo( k=5 ), self.switchClass, Host, Controller )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
+
+# pylint: enable=E1101
 
 
 class testLinearOVSKernel( testLinearCommon, unittest.TestCase ):
