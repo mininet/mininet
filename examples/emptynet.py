@@ -27,8 +27,8 @@ def emptyNet():
     s3 = net.addSwitch( 's3' )
 
     info( '*** Creating links\n' )
-    h1.linkTo( s3 )
-    h2.linkTo( s3 )
+    net.addLink( h1, s3 )
+    net.addLink( h2, s3 )
 
     info( '*** Starting network\n')
     net.start()
