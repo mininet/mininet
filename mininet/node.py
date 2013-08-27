@@ -1143,7 +1143,7 @@ class Controller( Node ):
                              "installed." )
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
-        if 'Unable' not in listening:
+        if 'Connected' in listening:
             servers = self.cmd( 'netstat -atp' ).split( '\n' )
             pstr = ':%d ' % self.port
             clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
@@ -1238,7 +1238,7 @@ class RemoteController( Controller ):
         "Warn if remote controller is not accessible"
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
-        if 'Unable' in listening:
+        if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
