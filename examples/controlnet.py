@@ -10,8 +10,8 @@ control network to control the data network.
 Since we're using UserSwitch on the data network,
 it should correctly fail over to a backup controller.
 
-We also hack/subclass the CLI slightly so it can talk to
-both the control and data networks.
+We also use a Mininet Facade to talk to both the
+control and data networks from a single CLI.
 """
 
 from mininet.net import Mininet
@@ -31,19 +31,25 @@ class DataController( Controller ):
         pass
 
 class MininetFacade( object ):
-    "TODO: CLI that can talk to two or more networks"
+    """Mininet object facade that allows a single CLI to
+       talk to one or more networks"""
     
     def __init__( self, net, *args, **kwargs ):
+        """Create MininetFacade object.
+           net: Primary Mininet object
+           args: unnamed networks passed as arguments
+           kwargs: named networks passed as arguments"""
         self.net = net
         self.nets = [ net ] + list( args ) + kwargs.values()
         self.nameToNet = kwargs
         self.nameToNet['net'] = net
 
-    # default is first net
     def __getattr__( self, name ):
+        "returns attribute from Primary Mininet object"
         return getattr( self.net, name )
 
     def __getitem__( self, key ):
+        "returns primary/named networks or node from any net"
         #search kwargs for net named key
         if key in self.nameToNet:
             return self.nameToNet[ key ]
@@ -53,26 +59,32 @@ class MininetFacade( object ):
                 return net[ key ]
 
     def __iter__( self ):
+        "Iterate through all nodes in all Mininet objects"
         for net in self.nets:
             for node in net:
                 yield node
 
     def __len__( self ):
+        "returns aggregate number of nodes in all nets"
         count = 0
         for net in self.nets:
             count += len(net)
         return count
 
     def __contains__( self, key ):
+        "returns True if node is a member of any net"
         return key in self.keys()
 
     def keys( self ):
+        "returns a list of all node names in all networks"
         return list( self )
 
     def values( self ):
+        "returns a list of all nodes in all networks"
         return [ self[ key ] for key in self ]
 
     def items( self ):
+        "returns (key,value) tuple list for every node in all networks"
         return zip( self.keys(), self.values() )
 
 # A real control network!
@@ -126,8 +138,6 @@ def run():
     net.stop()
 
     info( '* Stopping Control Network\n' )
-    # dataControllers have already been stopped -- now terminate is idempotent
-    #cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
     cnet.stop()
 
 if __name__ == '__main__':
