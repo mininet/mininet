@@ -250,9 +250,9 @@ class LinearTopo(Topo):
         self.n = n
 
         if n == 1:
-            genHostName = lambda i,j: 'h%s' % i
+            genHostName = lambda i, j: 'h%s' % i
         else:
-            genHostName = lambda i,j: 'h%ss%d' % (j,i)
+            genHostName = lambda i, j: 'h%ss%d' % (j, i)
 
 
         lastSwitch = None
