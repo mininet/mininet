@@ -97,7 +97,7 @@ class ControlNetwork( Topo ):
 
 
 # Make it Happen!!
-def run( func=CLI ):
+def run():
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )
     cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
@@ -120,7 +120,7 @@ def run( func=CLI ):
     mn = MininetFacade( net, cnet=cnet )
 
     # run the function passed as an argument
-    func( mn )
+    CLI( mn )
 
     info( '* Stopping Data Network\n' )
     net.stop()
@@ -130,19 +130,7 @@ def run( func=CLI ):
     #cnet.hosts = list( set( cnet.hosts ) - set( dataControllers ) )
     cnet.stop()
 
-def test( net ):
-    netLoss = net.pingAll()
-    cnetLoss = net['cnet'].pingAll()
-
 if __name__ == '__main__':
     setLogLevel( 'info' )
 
-    import argparse
-    parser = argparse.ArgumentParser(description='TODO:description')
-    parser.add_argument('--test', dest='func', action='store_const',
-                        const=test, default=CLI,
-                        help='TODO: test help')
-
-    args = parser.parse_args()
-
-    run( func=args.func )
+    run()
