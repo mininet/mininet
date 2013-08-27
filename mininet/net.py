@@ -209,16 +209,19 @@ class Mininet( object ):
     def addController( self, name='c0', controller=None, **params ):
         """Add controller.
            controller: Controller class"""
-        #Get controller class
+        # Get controller class
         if not controller:
             controller = self.controller
-        #Construct new controller if one is not given
+        # Construct new controller if one is not given
         if isinstance(name, Controller):
             controller_new = name
+            # Pylint thinks controller is a str()
+            # pylint: disable=E1103
             name = controller_new.name
+            # pylint: enable=E1103
         else:
             controller_new = controller( name, **params )
-        #Add new controller to net
+        # Add new controller to net
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
@@ -249,7 +252,8 @@ class Mininet( object ):
 
     def __len__( self ):
         "returns number of nodes in net"
-        return len( self.hosts ) + len( self.switches ) + len( self.controllers )
+        return ( len( self.hosts ) + len( self.switches ) +
+                 len( self.controllers ) )
 
     def __contains__( self, item ):
         "returns True if net contains named node"
