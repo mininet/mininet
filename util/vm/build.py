@@ -186,7 +186,7 @@ def extractKernel( image, flavor ):
 
 def findBaseImage( flavor, size='8G' ):
     "Return base VM image and kernel, creating them if needed"
-    image = path.join( VMImageDir, flavor + '-base.img' )
+    image = path.join( VMImageDir, flavor + '-base.qcow2' )
     if path.exists( image ):
         # Detect race condition with multiple builds
         perms = stat( image )[ ST_MODE ] & 0777
@@ -198,7 +198,7 @@ def findBaseImage( flavor, size='8G' ):
         run( 'mkdir -p %s' % VMImageDir )
         iso = findiso( flavor )
         log( '* Creating image file', image )
-        run( 'qemu-img create %s %s' % ( image, size ) )
+        run( 'qemu-img create -f qcow2 %s %s' % ( image, size ) )
         installUbuntu( iso, image )
         # Write-protect image, also signaling it is complete
         log( '* Write-protecting image', image)
