@@ -113,7 +113,7 @@ like to contribute an installation script, we would welcome it!)
      modules (e.g. tun and ofdatapath for the reference kernel
      implementation) must be loaded.
 
-   * Python, `bash`, `ping`, `iperf`, etc.`
+   * Python, `bash`, `ping`, `iperf`, etc.
 
    * Root privileges (required for network device access)
 
