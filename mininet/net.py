@@ -245,8 +245,7 @@ class Mininet( object ):
         return self.nameToNode[ key ]
 
     def __iter__( self ):
-        "return iterator over nodes"
-        #or dow we want to iterate of the keys i.e. node.name like a dict
+        "return iterator over node names"
         for node in chain( self.hosts, self.switches, self.controllers ):
             yield node.name
 
