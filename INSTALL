@@ -15,7 +15,7 @@ like to contribute an installation script, we would welcome it!)
 1. Easiest "installation" - use our pre-built VM image!
 
    The easiest way to get Mininet running is to start with one of our
-   pre-built virtual machine images from <http://openflow.org/mininet>
+   pre-built virtual machine images from <http://mininet.org/>
 
    Boot up the VM image, log in, and follow the instructions on the
    Mininet web site.
@@ -80,6 +80,11 @@ like to contribute an installation script, we would welcome it!)
         mininet/util/install.sh -a
 
    This takes about 4 minutes on our test system.
+
+   You can change the directory where the dependencies are installed using
+   the -s <directory> flag.
+
+        mininet/util/install.sh -s <directory> -a
 
 4. Creating your own Mininet/OpenFlow tutorial VM
 
