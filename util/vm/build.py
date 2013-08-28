@@ -115,7 +115,7 @@ def depend():
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs '
          ' landscape-client'
-         ' python-setuptools' )
+         ' python-setuptools mtools' )
     run( 'sudo easy_install pexpect' )
 
 
