@@ -10,15 +10,15 @@ set -e
 set -o nounset
 
 # Get directory containing mininet folder
-MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
 # Set up build directory, which by default is the working directory
 #  unless the working directory is a subdirectory of mininet, 
 #  in which case we use the directory containing mininet
-BUILD_DIR=$PWD
-case $PWD in
+BUILD_DIR="$(pwd -P)"
+case $BUILD_DIR in
   $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
-  *) BUILD_DIR=$PWD;;
+  *) BUILD_DIR=$BUILD_DIR;;
 esac
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
