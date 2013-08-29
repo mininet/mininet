@@ -9,27 +9,185 @@ GUI application using Mininet as the network model.
 Development version - not entirely functional!
 
 Bob Lantz, April 2010
+
 """
 
-from Tkinter import Frame, Button, Label, Scrollbar, Canvas
-from Tkinter import Menu, BitmapImage, PhotoImage, Wm, Toplevel
-
+from optparse import OptionParser
+from Tkinter import *
+#from Tkinter import Frame, Button, Label, Scrollbar, Canvas, Entry, OptionMenu
+#from Tkinter import Menu, BitmapImage, PhotoImage, Wm, Toplevel
+from tkMessageBox import showinfo
+from subprocess import call
+import tkFont
+import csv
+import tkFileDialog
+import tkSimpleDialog
 # someday: from ttk import *
 
 from mininet.log import setLogLevel
 from mininet.net import Mininet
-from mininet.util import ipStr
+from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.term import makeTerm, cleanUpScreens
+from mininet.node import Controller, RemoteController, NOX, OVSController
+from mininet.link import TCLink
+from mininet.node import CPULimitedHost
+
+
+CONTROLLERDEF = 'ref'
+CONTROLLERS = { 'ref': Controller,
+                'ovsc': OVSController,
+                'nox': NOX,
+                'remote': RemoteController,
+                'none': lambda name: None }
+
+class PrefsDialog(tkSimpleDialog.Dialog):
+
+        def __init__(self, parent, title, prefDefaults):
+
+            self.prefValues = prefDefaults
+
+            tkSimpleDialog.Dialog.__init__(self, parent, title)
+
+        def body(self, master):
+
+            Label(master, text="IP Base:").grid(row=0, sticky=E)
+            Label(master, text="Defaul Terminal:").grid(row=1, sticky=E)
+
+            # Field for Base IP
+            self.e1 = Entry(master)
+            self.e1.grid(row=0, column=1)
+            ipBase =  self.prefValues['ipBase']
+            self.e1.insert(0, ipBase)
+
+            # Selection of terminal type
+            self.var = StringVar(master)
+            self.o1 = OptionMenu(master, self.var, "xterm", "gterm")
+            self.o1.grid(row=1, column=1, sticky=W)
+            terminalType = self.prefValues['terminalType']
+            self.var.set(terminalType)
+
+            return self.e1 # initial focus
+
+        def apply(self):
+            ipBase = self.e1.get()
+            terminalType = self.var.get()
+            print 'Dialog='+ipBase
+            print 'Terminal='+terminalType
+            self.result = ipBase, terminalType
+
+class LinkDialog(tkSimpleDialog.Dialog):
+
+        def __init__(self, parent, title, linkDefaults):
+
+            self.linkValues = linkDefaults
+
+            tkSimpleDialog.Dialog.__init__(self, parent, title)
+
+        def body(self, master):
+
+            self.var = StringVar(master)
+            Label(master, text="Bandwidth:").grid(row=0, sticky=E)
+            Label(master, text="Delay:").grid(row=1, sticky=E)
+            Label(master, text="Loss:").grid(row=2, sticky=E)
+            Label(master, text="Max Queue size:").grid(row=3, sticky=E)
+
+            self.e1 = Entry(master)
+            self.e2 = Entry(master)
+            self.e3 = Entry(master)
+            self.e4 = Entry(master)
+
+            self.e1.grid(row=0, column=1)
+            self.e2.grid(row=1, column=1)
+            self.e3.grid(row=2, column=1)
+            self.e4.grid(row=3, column=1)
+
+            Label(master, text="Mbit").grid(row=0, column=2, sticky=W)
+            Label(master, text="%").grid(row=2, column=2, sticky=W)
+
+            bw = ''
+            delay = ''
+            loss = ''
+            max_queue_size = ''
+            use_htb = False
+            if 'bw' in self.linkValues:
+                bw =  str(self.linkValues['bw'])
+            if 'delay' in self.linkValues:
+                delay =  self.linkValues['delay']
+            if 'loss' in self.linkValues:
+                loss =  self.linkValues['loss']
+            if 'max_queue_size' in self.linkValues:
+                max_queue_size =  self.linkValues['max_queue_size']
+            self.e1.insert(0, bw)
+            self.e2.insert(0, delay)
+            self.e3.insert(0, loss)
+            self.e4.insert(0, max_queue_size)
+
+            return self.e1 # initial focus
+
+        def apply(self):
+            bw = self.e1.get()
+            delay = self.e2.get()
+            loss = self.e3.get()
+            max_queue_size = self.e4.get()
+            self.result = bw, delay, loss, max_queue_size
+
+class ControllerDialog(tkSimpleDialog.Dialog):
+
+        def __init__(self, parent, title, ctrlrDefaults=None):
+
+            if ctrlrDefaults:
+                self.ctrlrValues = ctrlrDefaults
+
+            tkSimpleDialog.Dialog.__init__(self, parent, title)
+
+        def body(self, master):
+
+            self.var = StringVar(master)
+            Label(master, text="Controller Type:").grid(row=0, sticky=E)
+            Label(master, text="Remote IP:").grid(row=1, sticky=E)
+            Label(master, text="Remote Port:").grid(row=2, sticky=E)
+
+            # Field for Remove Controller IP
+            self.e1 = Entry(master)
+            self.e1.grid(row=1, column=1)
+            self.e1.insert(0, self.ctrlrValues['remoteIP'])
+
+            # Field for Remove Controller Port
+            self.e2 = Entry(master)
+            self.e2.grid(row=2, column=1)
+            self.e2.insert(0, self.ctrlrValues['remotePort'])
+
+            # Field for Controller Type
+            controllerType = self.ctrlrValues['controllerType']
+            self.o1 = OptionMenu(master, self.var, "remote", "ref")
+            self.o1.grid(row=0, column=1, sticky=W)
+            self.var.set(controllerType)
+
+            return self.o1 # initial focus
+
+        def apply(self):
+            controllerType = self.var.get()
+            if controllerType == 'remote':
+                first = self.e1.get()
+                second = int(self.e2.get())
+                self.result = self.var.get(), first, second
+            else:
+                self.result = [self.var.get()]
 
 class MiniEdit( Frame ):
 
     "A simple network editor for Mininet."
 
-    def __init__( self, parent=None, cheight=200, cwidth=500 ):
+    def __init__( self, parent=None, cheight=400, cwidth=800 ):
 
+        self.defaultIpBase='10.0.0.0/8'
+        self.defaultTerminal='xterm'
+
+        self.minieditIpBase=self.defaultIpBase
         Frame.__init__( self, parent )
         self.action = None
         self.appName = 'MiniEdit'
+        self.fixedFont = tkFont.Font ( family="DejaVu Sans Mono", size="14" )
 
         # Style
         self.font = ( 'Geneva', 9 )
@@ -48,6 +206,10 @@ class MiniEdit( Frame ):
         self.cframe, self.canvas = self.createCanvas()
 
         # Toolbar
+        self.controllers = {}
+        self.controllerbar = self.createControllerBar()
+
+        # Toolbar
         self.images = miniEditImages()
         self.buttons = {}
         self.active = None
@@ -60,6 +222,7 @@ class MiniEdit( Frame ):
         self.cframe.grid( column=1, row=0 )
         self.columnconfigure( 1, weight=1 )
         self.rowconfigure( 0, weight=1 )
+        self.controllerbar.grid( column=2, row=0, sticky='nsew' )
         self.pack( expand=True, fill='both' )
 
         # About box
@@ -83,13 +246,31 @@ class MiniEdit( Frame ):
         self.bind( '<KeyPress-BackSpace>', self.deleteSelection )
         self.focus()
 
+        self.hostPopup = Menu(self.top, tearoff=0)
+        self.hostPopup.add_command(label='Host Options', font=self.font)
+        self.hostPopup.add_separator()
+        self.hostPopup.add_command(label='Terminal', font=self.font, command=self.xterm )
+
+        self.switchPopup = Menu(self.top, tearoff=0)
+        self.switchPopup.add_command(label='Swtich Options', font=self.font)
+        self.switchPopup.add_separator()
+        self.switchPopup.add_command(label='List bridge details', font=self.font, command=self.listBridge )
+
+        self.linkPopup = Menu(self.top, tearoff=0)
+        self.linkPopup.add_command(label='Link Options', font=self.font)
+        self.linkPopup.add_separator()
+        self.linkPopup.add_command(label='Properties', font=self.font, command=self.linkDetails )
+
+
+
         # Event handling initalization
         self.linkx = self.linky = self.linkItem = None
         self.lastSelection = None
 
         # Model initialization
         self.links = {}
-        self.nodeCount = 0
+        self.hostCount = 0
+        self.switchCount = 0
         self.net = None
 
         # Close window gracefully
@@ -108,34 +289,33 @@ class MiniEdit( Frame ):
         mbar = Menu( self.top, font=font )
         self.top.configure( menu=mbar )
 
-        # Application menu
-        appMenu = Menu( mbar, tearoff=False )
-        mbar.add_cascade( label=self.appName, font=font, menu=appMenu )
-        appMenu.add_command( label='About MiniEdit', command=self.about,
-                             font=font)
-        appMenu.add_separator()
-        appMenu.add_command( label='Quit', command=self.quit, font=font )
 
-        #fileMenu = Menu( mbar, tearoff=False )
-        #mbar.add_cascade( label="File", font=font, menu=fileMenu )
-        #fileMenu.add_command( label="Load...", font=font )
-        #fileMenu.add_separator()
-        #fileMenu.add_command( label="Save", font=font )
-        #fileMenu.add_separator()
-        #fileMenu.add_command( label="Print", font=font )
+        fileMenu = Menu( mbar, tearoff=False )
+        mbar.add_cascade( label="File", font=font, menu=fileMenu )
+        fileMenu.add_command( label="New", font=font, command=self.newTopology )
+        fileMenu.add_command( label="Open", font=font, command=self.loadTopology )
+        fileMenu.add_command( label="Save", font=font, command=self.saveTopology )
+        fileMenu.add_command( label="Export", font=font, command=self.exportTopology )
+        fileMenu.add_separator()
+        fileMenu.add_command( label='Quit', command=self.quit, font=font )
 
         editMenu = Menu( mbar, tearoff=False )
         mbar.add_cascade( label="Edit", font=font, menu=editMenu )
         editMenu.add_command( label="Cut", font=font,
                               command=lambda: self.deleteSelection( None ) )
+        editMenu.add_command( label="Preferences", font=font, command=self.prefDetails)
 
         runMenu = Menu( mbar, tearoff=False )
         mbar.add_cascade( label="Run", font=font, menu=runMenu )
         runMenu.add_command( label="Run", font=font, command=self.doRun )
         runMenu.add_command( label="Stop", font=font, command=self.doStop )
-        runMenu.add_separator()
-        runMenu.add_command( label='Xterm', font=font, command=self.xterm )
+        runMenu.add_command( label='Show OVS Summary', font=font, command=self.ovsShow )
 
+        # Application menu
+        appMenu = Menu( mbar, tearoff=False )
+        mbar.add_cascade( label="Help", font=font, menu=appMenu )
+        appMenu.add_command( label='About MiniEdit', command=self.about,
+                             font=font)
     # Canvas
 
     def createCanvas( self ):
@@ -200,6 +380,24 @@ class MiniEdit( Frame ):
         # Activate dynamic bindings
         self.active = toolName
 
+    def createControllerBar( self ):
+        "Create and return our Controller Bar frame."
+
+        controllerbar = Frame( self )
+        Label( controllerbar, text='Controllers' ).pack()
+        b = Button( controllerbar, text='c0', font=self.smallFont, command=self.controllerDetails)
+        b.pack( fill='x' )
+
+        ctrlr = { 'controllerType': 'ref',
+                'remoteIP': '127.0.0.1',
+                'remotePort': 6633}
+
+        #     controllerType = remote|default|nox
+
+        self.controllers['c0'] = ctrlr
+
+        return controllerbar
+
     def createToolbar( self ):
         "Create and return our toolbar frame."
 
@@ -240,6 +438,283 @@ class MiniEdit( Frame ):
         self.stop()
         for tool in self.tools:
             self.buttons[ tool ].config( state='normal' )
+
+    def addNode( self, node, nodeNum, x, y):
+        "Add a new node to our canvas."
+        if 'Switch' == node:
+            self.switchCount += 1
+        if 'Host' == node:
+            self.hostCount += 1
+        name = self.nodePrefixes[ node ] + nodeNum
+        self.addNamedNode(node, name, x, y)
+
+    def addNamedNode( self, node, name, x, y):
+        "Add a new node to our canvas."
+        c = self.canvas
+        icon = self.nodeIcon( node, name )
+        item = self.canvas.create_window( x, y, anchor='c', window=icon,
+                                          tags=node )
+        self.widgetToItem[ icon ] = item
+        self.itemToWidget[ item ] = icon
+        icon.links = {}
+
+    def loadTopology( self ):
+        "Load command."
+        self.newTopology()
+        
+        myFormats = [
+            ('Mininet Topology','*.mn'),
+            ('All Files','*'),
+        ]
+        fin = tkFileDialog.askopenfile(filetypes=myFormats, mode='rb')
+        csvreader = csv.reader(fin)
+        for row in csvreader:
+            if row[0] == 'a':
+                self.minieditIpBase = row[1]
+            if row[0] == 'c':
+                controllerType = row[1]
+                self.controllers['c0']['controllerType'] = controllerType
+                if controllerType == 'remote':
+                    self.controllers['c0']['remoteIP'] = row[2]
+                    self.controllers['c0']['remotePort'] = int(row[3])
+            if row[0] == 'h':
+                nodeNum = row[1]
+                x = row[2]
+                y = row[3]
+                self.addNode('Host', nodeNum, float(x), float(y))
+            if row[0] == 's':
+                nodeNum = row[1]
+                x = row[2]
+                y = row[3]
+                self.addNode('Switch', nodeNum, float(x), float(y))
+            if row[0] == 'l':
+                srcNode = row[1]
+                src = self.findWidgetByName(srcNode)
+                sx, sy = self.canvas.coords( self.widgetToItem[ src ] )
+                 
+                destNode = row[2]
+                dest = self.findWidgetByName(destNode)
+                dx, dy = self.canvas.coords( self.widgetToItem[ dest]  )
+                 
+                self.link = self.canvas.create_line( sx, sy, dx, dy, width=4,
+                                             fill='blue', tag='link' )
+                bw = ''
+                delay = ''
+                loss = ''
+                max_queue_size = ''
+                linkopts = {}
+                if len(row) > 3:
+                    bw = row[3]
+                    delay = row[4]
+                    if len(bw) > 0:
+                        linkopts['bw'] = int(bw)
+                    if len(delay) > 0:
+                        linkopts['delay'] = delay
+                    if len(row) > 5:
+                        loss = row[5]
+                        max_queue_size = row[6]
+                        if len(loss) > 0:
+                            linkopts['loss'] = int(loss)
+                        if len(max_queue_size) > 0:
+                            linkopts['max_queue_size'] = int(max_queue_size)
+
+                self.addLink( src, dest, linkopts=linkopts )
+                self.createLinkBindings()
+
+
+    def findWidgetByName( self, name ):
+        for widget in self.widgetToItem:
+            if name ==  widget[ 'text' ]:
+                return widget
+
+    def newTopology( self ):
+        "New command."
+        for widget in self.widgetToItem.keys():
+            self.deleteItem( self.widgetToItem[ widget ] )
+        self.hostCount = 0
+        self.switchCount = 0
+        self.minieditIpBase = self.defaultIpBase
+
+    def printInfo( self ):
+        "print nodes and links."
+        for widget in self.widgetToItem:
+            name = widget[ 'text' ]
+            tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+            x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
+            nodeNum = int( name[ 1: ] )
+            if 'Switch' in tags:
+                print "Switch "+name+" at "+str(x1)+"/"+str(y1)+"."
+            elif 'Host' in tags:
+                ipBaseNum, prefixLen = netParse( self.minieditIpBase )
+                print 'ipBaseNum='+str(ipBaseNum)
+                print 'prefixLen='+str(prefixLen)
+                ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
+                print "Host "+name+" with IP "+ip+" at "+str(x1)+"/"+str(y1)+"."
+            else:
+                raise Exception( "Cannot create mystery node: " + name )
+
+        for link in self.links.values():
+            ( src, dst, linkopts ) = link
+            srcName, dstName = src[ 'text' ], dst[ 'text' ]
+            print "Link from "+srcName+" to "+dstName+"."
+
+    def saveTopology( self ):
+        "Save command."
+        myFormats = [
+            ('Mininet Topology','*.mn'),
+            ('All Files','*'),
+        ]
+        
+        fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Save the topology as...")
+        if len(fileName ) > 0:
+            #print "Now saving under %s" % fileName
+            f = open(fileName, 'wb')
+            fout = csv.writer(f)
+
+            fout.writerow(["a",self.minieditIpBase])
+
+            # Save Switches and Hosts
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
+                nodeNum = int( name[ 1: ] )
+                if 'Switch' in tags:
+                    fout.writerow(["s",str(nodeNum),str(x1),str(y1)])
+                    #print "Save Switch "+name+" at "+str(x1)+"/"+str(y1)+"."
+                elif 'Host' in tags:
+                    fout.writerow(["h",str(nodeNum),str(x1),str(y1)])
+                    #print "Save Host "+name+" with IP "+ip+" at "+str(x1)+"/"+str(y1)+"."
+                else:
+                    raise Exception( "Cannot create mystery node: " + name )
+            
+            # Save Links
+            for link in self.links.values():
+                ( src, dst, linkopts ) = link
+                srcName, dstName = src[ 'text' ], dst[ 'text' ]
+                bw = ''
+                delay = ''
+                loss = ''
+                max_queue_size = ''
+                if 'bw' in linkopts:
+                    bw =  linkopts['bw']
+                if 'delay' in linkopts:
+                    delay =  linkopts['delay']
+                if 'loss' in linkopts:
+                    loss =  linkopts['loss']
+                if 'max_queue_size' in linkopts:
+                    max_queue_size =  linkopts['max_queue_size']
+
+                fout.writerow(["l",srcName,dstName, bw, delay, loss, max_queue_size])
+                #print "Save Link from "+srcName+" to "+dstName+"."
+            
+            # Save Controller
+            controllerType = self.controllers['c0']['controllerType']
+            if controllerType == 'remote':
+                controllerIP = self.controllers['c0']['remoteIP']
+                controllerPort = self.controllers['c0']['remotePort']
+                fout.writerow(["c",controllerType, controllerIP, str(controllerPort)])
+            elif controllerType == 'nox':
+                fout.writerow(["c",controllerType])
+            else:
+                fout.writerow(["c",controllerType])
+
+            f.close()
+
+    def exportTopology( self ):
+        "Export command."
+        myFormats = [
+            ('Mininet Custom Topology','*.py'),
+            ('All Files','*'),
+        ]
+
+        fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Export the topology as...")
+        if len(fileName ) > 0:
+            #print "Now saving under %s" % fileName
+            f = open(fileName, 'wb')
+
+            f.write("from mininet.topo import Topo\n")
+            f.write("\n")
+            f.write("class MyTopo(Topo):\n")
+            f.write("\n")
+            f.write("    def __init__( self ):\n")
+            f.write("\n")
+            f.write("        # Initialize topology and default options\n")
+            f.write("        Topo.__init__(self)\n")
+            f.write("\n")
+
+
+            # Save Switches and Hosts
+            f.write("        # Add hosts and switches\n")
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
+                nodeNum = int( name[ 1: ] )
+                if 'Switch' in tags:
+                    f.write("        "+name+" = self.addSwitch('"+name+"')\n")
+                elif 'Host' in tags:
+                    f.write("        "+name+" = self.addHost('"+name+"')\n")
+                else:
+                    raise Exception( "Cannot create mystery node: " + name )
+            f.write("\n")
+
+            # Save Links
+            f.write("        # Add links\n")
+            optsExist = False
+            for link in self.links.values():
+                ( src, dst, linkopts ) = link
+                srcName, dstName = src[ 'text' ], dst[ 'text' ]
+                bw = ''
+                delay = ''
+                loss = ''
+                max_queue_size = ''
+                linkOpts = "{"
+                if 'bw' in linkopts:
+                    bw =  linkopts['bw']
+                    linkOpts = linkOpts + "'bw':"+str(bw)
+                    optsExist = True
+                if 'delay' in linkopts:
+                    delay =  linkopts['delay']
+                    if optsExist:
+                        linkOpts = linkOpts + ","
+                    linkOpts = linkOpts + "'delay':'"+delay+"'"
+                    optsExist = True
+                if 'loss' in linkopts:
+                    loss =  linkopts['loss']
+                    if optsExist:
+                        linkOpts = linkOpts + ","
+                    linkOpts = linkOpts + "'loss':"+str(loss)
+                    optsExist = True
+                if 'max_queue_size' in linkopts:
+                    max_queue_size =  linkopts['max_queue_size']
+                    if optsExist:
+                        linkOpts = linkOpts + ","
+                    linkOpts = linkOpts + "'max_queue_size':"+str(max_queue_size)
+                    optsExist = True
+                linkOpts = linkOpts + "}"
+                if optsExist:
+                    f.write("        "+srcName+dstName+" = "+linkOpts+"\n")
+                #linkopts1 = {'bw':50, 'delay':'5ms'}
+                f.write("        self.addLink("+srcName+", "+dstName)
+                if optsExist:
+                    f.write(", **"+srcName+dstName)
+                f.write(")\n")
+
+            f.write("\n")
+            f.write("topos = { 'mytopo': ( lambda: MyTopo() ) }\n")
+            f.write("\n")
+            f.write("#NOTE:  Below is an example of how you can start mininet with your custom topology.\n")
+            f.write("#   sudo mn --custom "+fileName+" --topo mytopo --mac --switch ovsk")
+            if optsExist:
+                f.write(" --link tc")
+            f.write("\n\n")
+            f.write("# Add any other flags if necessary, such as --controller \n")
+            f.write("\n")
+
+
+            f.close()
+
 
     # Generic canvas handler
     #
@@ -319,8 +794,14 @@ class MiniEdit( Frame ):
         "Add a new node to our canvas."
         c = self.canvas
         x, y = c.canvasx( event.x ), c.canvasy( event.y )
-        self.nodeCount += 1
-        name = self.nodePrefixes[ node ] + str( self.nodeCount )
+        name = self.nodePrefixes[ node ]
+        if 'Switch' == node:
+            self.switchCount += 1
+            name = self.nodePrefixes[ node ] + str( self.switchCount )
+        if 'Host' == node:
+            self.hostCount += 1
+            name = self.nodePrefixes[ node ] + str( self.hostCount )
+
         icon = self.nodeIcon( node, name )
         item = self.canvas.create_window( x, y, anchor='c', window=icon,
                                           tags=node )
@@ -328,6 +809,10 @@ class MiniEdit( Frame ):
         self.itemToWidget[ item ] = icon
         self.selectItem( item )
         icon.links = {}
+        if 'Switch' == node:
+           icon.bind('<Button-3>', self.do_switchPopup )
+        if 'Host' == node:
+           icon.bind('<Button-3>', self.do_hostPopup )
 
     def clickHost( self, event ):
         "Add a new host to our canvas."
@@ -362,8 +847,7 @@ class MiniEdit( Frame ):
             '<B1-Motion>': self.dragNode,
             '<ButtonRelease-1>': self.releaseNode,
             '<Enter>': self.enterNode,
-            '<Leave>': self.leaveNode,
-            '<Double-ButtonPress-1>': self.xterm
+            '<Leave>': self.leaveNode
         }
         l = Label()  # lightweight-ish owner for bindings
         for event, binding in bindings.items():
@@ -428,6 +912,32 @@ class MiniEdit( Frame ):
             x1, y1 = c.coords( item )
             c.coords( link, x, y, x1, y1 )
 
+    def createLinkBindings( self ):
+        "Create a set of bindings for nodes."
+        # Link bindings
+        # Selection still needs a bit of work overall
+        # Callbacks ignore event
+
+        def select( _event, link=self.link ):
+            "Select item on mouse entry."
+            self.selectItem( link )
+
+        def highlight( _event, link=self.link ):
+            "Highlight item on mouse entry."
+            self.selectItem( link )
+            self.canvas.itemconfig( link, fill='green' )
+
+        def unhighlight( _event, link=self.link ):
+            "Unhighlight item on mouse exit."
+            self.canvas.itemconfig( link, fill='blue' )
+            #self.selectItem( None )
+
+        self.canvas.tag_bind( self.link, '<Enter>', highlight )
+        self.canvas.tag_bind( self.link, '<Leave>', unhighlight )
+        self.canvas.tag_bind( self.link, '<ButtonPress-1>', select )
+        self.canvas.tag_bind( self.link, '<Button-3>', self.do_linkPopup )
+
+
     def startLink( self, event ):
         "Start a new link."
         if event.widget not in self.widgetToItem:
@@ -442,27 +952,7 @@ class MiniEdit( Frame ):
         self.linkWidget = w
         self.linkItem = item
 
-        # Link bindings
-        # Selection still needs a bit of work overall
-        # Callbacks ignore event
-
-        def select( _event, link=self.link ):
-            "Select item on mouse entry."
-            self.selectItem( link )
-
-        def highlight( _event, link=self.link ):
-            "Highlight item on mouse entry."
-            # self.selectItem( link )
-            self.canvas.itemconfig( link, fill='green' )
-
-        def unhighlight( _event, link=self.link ):
-            "Unhighlight item on mouse exit."
-            self.canvas.itemconfig( link, fill='blue' )
-            # self.selectItem( None )
-
-        self.canvas.tag_bind( self.link, '<Enter>', highlight )
-        self.canvas.tag_bind( self.link, '<Leave>', unhighlight )
-        self.canvas.tag_bind( self.link, '<ButtonPress-1>', select )
+        self.createLinkBindings()
 
     def finishLink( self, event ):
         "Finish creating a link"
@@ -518,22 +1008,63 @@ class MiniEdit( Frame ):
     def createToolImages( self ):
         "Create toolbar (and icon) images."
 
+    def linkDetails( self, _ignore=None ):
+        if ( self.selection is None ):
+            return
+        link = self.selection
+
+        ( src, dst, linkopts ) =  self.links[link]
+        linkBox = LinkDialog(self, title='Link Details', linkDefaults=linkopts)
+        if linkBox.result:
+            #print 'Link is '
+            #print '  BW=' + linkBox.result[0]
+            #print '  BW length =' + str(len(linkBox.result[0]))
+            newLinkOpts = {}
+            if len(linkBox.result[0]) > 0:
+                newLinkOpts['bw'] = int(linkBox.result[0])
+            #print '  Delay=' + linkBox.result[1]
+            #print '  Delay length =' + str(len(linkBox.result[1]))
+            if len(linkBox.result[1]) > 0:
+                newLinkOpts['delay'] = linkBox.result[1]
+            if len(linkBox.result[2]) > 0:
+                newLinkOpts['loss'] = int(linkBox.result[2])
+            if len(linkBox.result[3]) > 0:
+                newLinkOpts['max_queue_size'] = int(linkBox.result[3])
+            self.links[link] = ( src, dst, newLinkOpts )
+
+    def prefDetails( self ):
+        prefDefaults = {'ipBase':self.minieditIpBase, 'terminalType':self.defaultTerminal}
+        prefBox = PrefsDialog(self, title='Preferences', prefDefaults=prefDefaults)
+        if prefBox.result:
+            self.minieditIpBase = prefBox.result[0]
+            self.defaultTerminal = prefBox.result[1]
+
+    def controllerDetails( self ):
+        ctrlrBox = ControllerDialog(self, title='Controller Details', ctrlrDefaults=self.controllers['c0'])
+        if ctrlrBox.result:
+            #print 'Controller is ' + ctrlrBox.result[0]
+            self.controllers['c0']['controllerType'] = ctrlrBox.result[0]
+            if ctrlrBox.result[0] == 'remote':
+                self.controllers['c0']['remoteIP'] = ctrlrBox.result[1]
+                self.controllers['c0']['remotePort'] = ctrlrBox.result[2]
+
+
     # Model interface
     #
     # Ultimately we will either want to use a topo or
     # mininet object here, probably.
 
-    def addLink( self, source, dest ):
+    def addLink( self, source, dest, linkopts={} ):
         "Add link to model."
         source.links[ dest ] = self.link
         dest.links[ source ] = self.link
-        self.links[ self.link ] = ( source, dest )
+        self.links[ self.link ] = ( source, dest, linkopts)
 
     def deleteLink( self, link ):
         "Delete link from model."
         pair = self.links.get( link, None )
         if pair is not None:
-            source, dest = pair
+            source, dest, linkopts = pair
             del source.links[ dest ]
             del dest.links[ source ]
         if link is not None:
@@ -548,14 +1079,41 @@ class MiniEdit( Frame ):
         del self.itemToWidget[ item ]
         del self.widgetToItem[ widget ]
 
-    def build( self ):
-        "Build network based on our topology."
+    def addControllers( self ):
+        "Add Controllers"
 
-        net = Mininet( topo=None )
+        # Get controller info from panel
+        controllerType = self.controllers['c0']['controllerType']
+
+        c0 = None
 
         # Make controller
-        net.addController( 'c0' )
+        print 'Getting controller selection:'
+        if controllerType == 'remote':
+            print '    Remote controller chosen'
+            print '    Remote IP:'+self.controllers['c0']['remoteIP']
+            print '    Remote Port:'+str(self.controllers['c0']['remotePort'])
+            controllerIP = self.controllers['c0']['remoteIP']
+            controllerPort = self.controllers['c0']['remotePort']
+            c0 = RemoteController('c0', ip=controllerIP, port=controllerPort )
+        elif controllerType == 'nox':
+            print '    NOX controller chosen'
+            c0 = NOX('c0', noxArgs='')
+        else:
+            print '    Reference controller chosen'
+            c0 = Controller('c0')
+
+        return [c0]
+
+    def build( self ):
+        print "Build network based on our topology."
+
+        net = Mininet( topo=None, build=False, link=TCLink, ipBase=self.minieditIpBase )
+ 
+        net.controllers = self.addControllers()
+        
         # Make nodes
+        print "Getting Hosts and Switches."
         for widget in self.widgetToItem:
             name = widget[ 'text' ]
             tags = self.canvas.gettags( self.widgetToItem[ widget ] )
@@ -563,18 +1121,21 @@ class MiniEdit( Frame ):
             if 'Switch' in tags:
                 net.addSwitch( name )
             elif 'Host' in tags:
-                #Generate IP adddress in the 10.0/8 block
-                ipAddr = ( 10 << 24 ) + nodeNum
-                net.addHost( name, ip=ipStr( ipAddr ) )
+                ipBaseNum, prefixLen = netParse( self.minieditIpBase )
+                ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
+                net.addHost( name, ip=ip )
             else:
                 raise Exception( "Cannot create mystery node: " + name )
+
         # Make links
+        print "Getting Links."
         for link in self.links.values():
-            ( src, dst ) = link
+            ( src, dst, linkopts ) = link
             srcName, dstName = src[ 'text' ], dst[ 'text' ]
             src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
-            src.linkTo( dst )
+            net.addLink(src, dst, **linkopts)
 
+        self.printInfo()
         # Build network (we have to do this separately at the moment )
         net.build()
 
@@ -593,6 +1154,46 @@ class MiniEdit( Frame ):
         cleanUpScreens()
         self.net = None
 
+    def listBridge( self, _ignore=None ):
+        if ( self.selection is None or
+             self.net is None or
+             self.selection not in self.itemToWidget ):
+            return
+        name = self.itemToWidget[ self.selection ][ 'text' ]
+        tags = self.canvas.gettags( self.selection )
+
+        if name not in self.net.nameToNode:
+            return
+        if 'Switch' in tags:
+           call(["xterm -T 'Bridge Details' -sb -sl 2000 -e 'ovs-vsctl list bridge " + name + "; read -p \"Press Enter to close\"'"], shell=True)
+
+    def ovsShow( self, _ignore=None ):
+        call(["xterm -T 'OVS Summary' -sb -sl 2000 -e 'ovs-vsctl show; read -p \"Press Enter to close\"'"], shell=True)
+
+    def do_linkPopup(self, event):
+        # display the popup menu
+        try:
+            self.linkPopup.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            # make sure to release the grab (Tk 8.0a1 only)
+            self.linkPopup.grab_release()
+
+    def do_hostPopup(self, event):
+        # display the popup menu
+        try:
+            self.hostPopup.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            # make sure to release the grab (Tk 8.0a1 only)
+            self.hostPopup.grab_release()
+
+    def do_switchPopup(self, event):
+        # display the popup menu
+        try:
+            self.switchPopup.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            # make sure to release the grab (Tk 8.0a1 only)
+            self.switchPopup.grab_release()
+
     def xterm( self, _ignore=None ):
         "Make an xterm when a button is pressed."
         if ( self.selection is None or
@@ -602,8 +1203,19 @@ class MiniEdit( Frame ):
         name = self.itemToWidget[ self.selection ][ 'text' ]
         if name not in self.net.nameToNode:
             return
-        term = makeTerm( self.net.nameToNode[ name ], 'Host' )
-        self.net.terms += term
+        term = makeTerm( self.net.nameToNode[ name ], 'Host', term=self.defaultTerminal )
+        self.net.terms.append( term )
+
+    def iperf( self, _ignore=None ):
+        "Make an xterm when a button is pressed."
+        if ( self.selection is None or
+             self.net is None or
+             self.selection not in self.itemToWidget ):
+            return
+        name = self.itemToWidget[ self.selection ][ 'text' ]
+        if name not in self.net.nameToNode:
+            return
+        self.net.nameToNode[ name ].cmd( 'iperf -s -p 5001 &' )
 
 def miniEditImages():
     "Create and return images for MiniEdit."
@@ -697,6 +1309,24 @@ def miniEditImages():
             lBmxI8mSNknm1Dnx5sCAADs=
         """ )
     }
+
+def addDictOption( opts, choicesDict, default, name, helpStr=None ):
+    """Convenience function to add choices dicts to OptionParser.
+       opts: OptionParser instance
+       choicesDict: dictionary of valid choices, must include default
+       default: default choice key
+       name: long option name
+       help: string"""
+    if default not in choicesDict:
+        raise Exception( 'Invalid  default %s for choices dict: %s' %
+                         ( default, name ) )
+    if not helpStr:
+        helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
+                    '[,param=value...]' )
+    opts.add_option( '--' + name,
+                     type='string',
+                     default = default,
+                     help = helpStr )
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
