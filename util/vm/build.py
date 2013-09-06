@@ -30,7 +30,8 @@ import os
 from os import stat, path
 from stat import ST_MODE
 from os.path import abspath
-from sys import exit, argv
+from sys import exit, stdout
+import re
 from glob import glob
 from subprocess import check_output, call, Popen
 from tempfile import mkdtemp
@@ -41,6 +42,10 @@ pexpect = None  # For code check - imported dynamically
 
 # boot can be slooooow!!!! need to debug/optimize somehow
 TIMEOUT=600
+
+# Some configuration
+LogToConsole = False        # VM output to console rather than log file
+SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -307,22 +312,22 @@ def makeKickstartFloppy():
     return floppy, kickstart, preseed
 
 
-def kvmFor( filepath ):
-    "Guess kvm version for file path"
+def archFor( filepath ):
+    "Guess architecture for file path"
     name = path.basename( filepath )
     if '64' in name:
-        kvm = 'qemu-system-x86_64'
+        arch = 'x86_64'
     elif 'i386' in name or '32' in name:
-        kvm = 'qemu-system-i386'
+        arch = 'i386'
     else:
         log( "Error: can't discern CPU for file name", name )
         exit( 1 )
-    return kvm
+    return arch
 
 
 def installUbuntu( iso, image, logfilename='install.log' ):
     "Install Ubuntu from iso onto image"
-    kvm = kvmFor( iso )
+    kvm = 'qemu-system-' + archFor( iso )
     floppy, kickstart, preseed = makeKickstartFloppy()
     # Mount iso so we can use its kernel
     mnt = mkdtemp()
@@ -349,11 +354,15 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     log( '* INSTALLING UBUNTU FROM', iso, 'ONTO', image )
     log( ' '.join( cmd ) )
     log( '* logging to', abspath( logfilename ) )
-    logfile = open( logfilename, 'w' )
-    vm = Popen( cmd, stdout=logfile, stderr=logfile )
+    params = {}
+    if not LogToConsole:
+        logfile = open( logfilename, 'w' )
+        params = { 'stdout': logfile, 'stderr': logfile }
+    vm = Popen( cmd, **params )
     log( '* Waiting for installation to complete')
     vm.wait()
-    logfile.close()
+    if not LogToConsole:
+        logfile.close()
     elapsed = time() - ubuntuStart
     # Unmount iso and clean up
     srun( 'umount ' + mnt )
@@ -374,8 +383,8 @@ def boot( cow, kernel, initrd, logfile ):
     # pexpect might not be installed until after depend() is called
     global pexpect
     import pexpect
-    kvm = kvmFor( kernel )
-    cmd = [ 'sudo', kvm,
+    arch = archFor( kernel )
+    cmd = [ 'sudo', 'qemu-system-' + arch,
             '-machine accel=kvm',
             '-nographic',
             '-netdev user,id=mnbuild',
@@ -478,7 +487,7 @@ VirtImageXML = """
     <domain>
         <boot type="hvm">
             <guest>
-                <arch>%s/arch>
+                <arch>%s<arch>
             </guest>
             <os>
                 <loader dev="hd"/>
@@ -498,20 +507,30 @@ VirtImageXML = """
 </image>
 """
 
+
 def genVirtImage( name, mem, diskname, disksize ):
     "Generate and return virt-image file name.xml"
     # Our strategy is going to be: create a
     # virt-image file and then use virt-convert to convert
     # it to an .ovf file
     xmlfile = name + '.xml'
-    xmltext = VirtImageXML % ( name, mem, diskname, disksize )
+    arch = archFor( name )
+    xmltext = VirtImageXML % ( name, arch, mem, diskname, disksize )
     with open( xmlfile, 'w+' ) as f:
         f.write( xmltext )
     return xmlfile
 
 
+def qcow2size( qcow2 ):
+    "Return virtual disk size (in bytes) of qcow2 image"
+    output = check_output( [ 'file', qcow2 ] )
+    assert 'QCOW' in output
+    bytes = int( re.findall( '(\d+) bytes', output )[ 0 ] )
+    return bytes
+
+
 def build( flavor='raring32server' ):
-    "Build a Mininet VM"
+    "Build a Mininet VM; return vmdk and vdisk size"
     global LogFile
     start = time()
     date = strftime( '%y%m%d-%H-%M-%S', localtime())
@@ -528,14 +547,21 @@ def build( flavor='raring32server' ):
     volume = flavor + '.qcow2'
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, volume ) )
     log( '* VM image for', flavor, 'created as', volume )
-    logfile = open( flavor + '.log', 'w+' )
+    if LogToConsole:
+        logfile = stdout
+    else:
+        logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
     vm = boot( volume, kernel, initrd, logfile )
     interact( vm )
+    size = qcow2size( volume )
     vmdk = convert( volume, basename=flavor )
-    log( '* Removing qcow2 volume', volume )
-    os.remove( volume )
+    if not SaveQCOW2:
+        log( '* Removing qcow2 volume', volume )
+        os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
+    vimage = genVirtImage( flavor, mem=512, diskname=vmdk, disksize=size )
+    log( '* Generated virtimage file as', vimage )
     end = time()
     elapsed = end - start
     log( '* Results logged to', abspath( logfile.name ) )
@@ -543,44 +569,50 @@ def build( flavor='raring32server' ):
     log( '* %s VM build DONE!!!!! :D' % flavor )
     os.chdir( '..' )
 
-
-def listFlavors():
-    "List valid build flavors"
-    print '\nvalid build flavors:', ' '.join( isoURLs ), '\n'
+def buildFlavorString():
+    "Return string listing valid build flavors"
+    return 'valid build flavors: %s' % ' '.join( sorted( isoURLs ) )
 
 
 def parseArgs():
     "Parse command line arguments and run"
-    parser = argparse.ArgumentParser( description='Mininet VM build script' )
-    parser.add_argument( '--depend', action='store_true',
+    global LogToConsole
+    parser = argparse.ArgumentParser( description='Mininet VM build script',
+                                      epilog=buildFlavorString() )
+    parser.add_argument( '-v', '--verbose', action='store_true',
+                        help='send VM output to console rather than log file' )
+    parser.add_argument( '-d', '--depend', action='store_true',
                          help='install dependencies for this script' )
-    parser.add_argument( '--list', action='store_true',
+    parser.add_argument( '-l', '--list', action='store_true',
                          help='list valid build flavors' )
-    parser.add_argument( '--clean', action='store_true',
+    parser.add_argument( '-c', '--clean', action='store_true',
                          help='clean up leftover build junk (e.g. qemu-nbd)' )
+    parser.add_argument( '-q', '--qcow2', action='store_true',
+                         help='save qcow2 image rather than deleting it' )
     parser.add_argument( 'flavor', nargs='*',
-                         help='VM flavor to build (e.g. raring32server)' )
-    args = parser.parse_args( argv )
+                         help='VM flavor(s) to build (e.g. raring32server)' )
+    args = parser.parse_args()
     if args.depend:
         depend()
     if args.list:
-        listFlavors()
+        print buildFlavorString()
     if args.clean:
         cleanup()
-    flavors = args.flavor[ 1: ]
-    for flavor in flavors:
+    if args.verbose:
+        LogToConsole = True
+    for flavor in args.flavor:
         if flavor not in isoURLs:
-            parser.print_help()
-            listFlavors()
+            print "Unknown build flavor:", flavor
+            print buildFlavorString()
             break
         # try:
         build( flavor )
         # except Exception as e:
         # log( '* BUILD FAILED with exception: ', e )
         # exit( 1 )
-    if not ( args.depend or args.list or args.clean or flavors ):
+    if not ( args.depend or args.list or args.clean or args.flavor ):
         parser.print_help()
-        listFlavors()
+
 
 if __name__ == '__main__':
     parseArgs()
