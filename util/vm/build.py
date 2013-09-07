@@ -28,15 +28,16 @@ Basic idea:
 
 import os
 from os import stat, path
-from stat import ST_MODE
+from stat import ST_MODE, ST_SIZE
 from os.path import abspath
-from sys import exit, stdout
+from sys import exit, stdout, argv
 import re
 from glob import glob
 from subprocess import check_output, call, Popen
 from tempfile import mkdtemp
 from time import time, strftime, localtime
 import argparse
+from distutils.spawn import find_executable
 
 pexpect = None  # For code check - imported dynamically
 
@@ -46,6 +47,7 @@ TIMEOUT=600
 # Some configuration
 LogToConsole = False        # VM output to console rather than log file
 SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
+NoKVM = False               # Don't use kvm and use emulation instead
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -104,6 +106,10 @@ def run( cmd, **kwargs ):
     "Convenient interface to check_output"
     log( '-', cmd )
     cmd = cmd.split()
+    arg0 = cmd[ 0 ]
+    if not find_executable( arg0 ):
+        raise Exception( 'Cannot find executable "%s";' % arg0 +
+                         'you might try %s --depend' % argv[ 0 ] )
     return check_output( cmd, **kwargs )
 
 
@@ -111,6 +117,9 @@ def srun( cmd, **kwargs ):
     "Run + sudo"
     return run( 'sudo ' + cmd, **kwargs )
 
+
+# BL: we should probably have a "checkDepend()" which
+# checks to make sure all dependencies are satisfied!
 
 def depend():
     "Install package dependencies"
@@ -334,8 +343,12 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     srun( 'mount %s %s' % ( iso, mnt ) )
     kernel = path.join( mnt, 'install/vmlinuz' )
     initrd = path.join( mnt, 'install/initrd.gz' )
+    if NoKVM:
+        accel = 'tcg'
+    else:
+        accel = 'kvm'
     cmd = [ 'sudo', kvm,
-           '-machine', 'accel=kvm',
+           '-machine', 'accel=%s' % accel,
            '-nographic',
            '-netdev', 'user,id=mnbuild',
            '-device', 'virtio-net,netdev=mnbuild',
@@ -384,8 +397,12 @@ def boot( cow, kernel, initrd, logfile ):
     global pexpect
     import pexpect
     arch = archFor( kernel )
+    if NoKVM:
+        accel = 'tcg'
+    else:
+        accel = 'kvm'
     cmd = [ 'sudo', 'qemu-system-' + arch,
-            '-machine accel=kvm',
+            '-machine accel=%s' % accel,
             '-nographic',
             '-netdev user,id=mnbuild',
             '-device virtio-net,netdev=mnbuild',
@@ -478,47 +495,109 @@ def convert( cow, basename ):
     return vmdk
 
 
-# Template for virt-image(5) file
+# Template for OVF - a very verbose format!
+# In the best of all possible worlds, we might use an XML
+# library to generate this, but a template is easier and
+# possibly more concise!
 
-VirtImageXML = """
-<?xml version="1.0" encoding="UTF-8"?>
-<image>
-    <name>%s</name>
-    <domain>
-        <boot type="hvm">
-            <guest>
-                <arch>%s<arch>
-            </guest>
-            <os>
-                <loader dev="hd"/>
-            </os>
-            <drive disk="root.raw" target="hda"/>
-        </boot>
-        <devices>
-            <vcpu>1</vcpu>
-            <memory>%s</memory>
-            <interface/>
-            <graphics/>
-        </devices>
-    </domain>
-        <storage>
-            <disk file="%s" size="%s" format="vmdk"/>
-        </storage>
-</image>
+OVFTemplate = """
+<?xml version="1.0"?>
+<Envelope ovf:version="1.0" xml:lang="en-US" 
+    xmlns="http://schemas.dmtf.org/ovf/envelope/1"
+    xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
+    xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
+    xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<References>
+<File ovf:href="%s" ovf:id="file1" ovf:size="%d"/>
+</References>
+<DiskSection>
+<Info>Virtual disk information</Info>
+<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte" 
+    ovf:diskId="vmdisk1" ovf:fileRef="file1" 
+    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
+</DiskSection>
+<NetworkSection>
+<Info>The list of logical networks</Info>
+<Network ovf:name="nat">
+<Description>The nat  network</Description>
+</Network>
+</NetworkSection>
+<VirtualSystem ovf:id="Mininet-VM">
+<Info>A Mininet Virtual Machine (%s)</Info>
+<Name>mininet-vm</Name>
+<VirtualHardwareSection>
+<Info>Virtual hardware requirements</Info>
+<Item>
+<rasd:AllocationUnits>hertz * 10^6</rasd:AllocationUnits>
+<rasd:Description>Number of Virtual CPUs</rasd:Description>
+<rasd:ElementName>1 virtual CPU(s)</rasd:ElementName>
+<rasd:InstanceID>1</rasd:InstanceID>
+<rasd:ResourceType>3</rasd:ResourceType>
+<rasd:VirtualQuantity>1</rasd:VirtualQuantity>
+</Item>
+<Item>
+<rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
+<rasd:Description>Memory Size</rasd:Description>
+<rasd:ElementName>%dMB of memory</rasd:ElementName>
+<rasd:InstanceID>2</rasd:InstanceID>
+<rasd:ResourceType>4</rasd:ResourceType>
+<rasd:VirtualQuantity>%d</rasd:VirtualQuantity>
+</Item>
+<Item>
+<rasd:Address>0</rasd:Address>
+<rasd:Caption>scsiController0</rasd:Caption>
+<rasd:Description>SCSI Controller</rasd:Description>
+<rasd:ElementName>scsiController0</rasd:ElementName>
+<rasd:InstanceID>4</rasd:InstanceID>
+<rasd:ResourceSubType>lsilogic</rasd:ResourceSubType>
+<rasd:ResourceType>6</rasd:ResourceType>
+</Item>
+<Item>
+<rasd:AddressOnParent>0</rasd:AddressOnParent>
+<rasd:ElementName>disk1</rasd:ElementName>
+<rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>
+<rasd:InstanceID>11</rasd:InstanceID>
+<rasd:Parent>4</rasd:Parent>
+<rasd:ResourceType>17</rasd:ResourceType>
+</Item>
+<Item>
+<rasd:AddressOnParent>2</rasd:AddressOnParent>
+<rasd:AutomaticAllocation>true</rasd:AutomaticAllocation>
+<rasd:Connection>nat</rasd:Connection>
+<rasd:Description>E1000 ethernet adapter on nat</rasd:Description>
+<rasd:ElementName>ethernet0</rasd:ElementName>
+<rasd:InstanceID>12</rasd:InstanceID>
+<rasd:ResourceSubType>E1000</rasd:ResourceSubType>
+<rasd:ResourceType>10</rasd:ResourceType>
+</Item>
+<Item>
+<rasd:Address>0</rasd:Address>
+<rasd:Caption>usb</rasd:Caption>
+<rasd:Description>USB Controller</rasd:Description>
+<rasd:ElementName>usb</rasd:ElementName>
+<rasd:InstanceID>9</rasd:InstanceID>
+<rasd:ResourceType>23</rasd:ResourceType>
+</Item>
+</VirtualHardwareSection>
+</VirtualSystem>
+</Envelope>
 """
 
 
-def genVirtImage( name, mem, diskname, disksize ):
-    "Generate and return virt-image file name.xml"
-    # Our strategy is going to be: create a
-    # virt-image file and then use virt-convert to convert
-    # it to an .ovf file
-    xmlfile = name + '.xml'
-    arch = archFor( name )
-    xmltext = VirtImageXML % ( name, arch, mem, diskname, disksize )
-    with open( xmlfile, 'w+' ) as f:
+def generateOVF( name, diskname, disksize, mem=1024 ):
+    """Generate (and return) OVF file "name.ovf"
+       name: root name of OVF file to generate
+       diskname: name of disk file
+       disksize: size of virtual disk in bytes
+       mem: VM memory size in MB"""
+    ovf = name + '.ovf'
+    filesize = stat( diskname )[ ST_SIZE ]
+    # OVFTemplate uses the memory size twice in a row
+    xmltext = OVFTemplate % ( diskname, filesize, disksize, name, mem, mem )
+    with open( ovf, 'w+' ) as f:
         f.write( xmltext )
-    return xmlfile
+    return ovf
 
 
 def qcow2size( qcow2 ):
@@ -560,8 +639,8 @@ def build( flavor='raring32server' ):
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
-    vimage = genVirtImage( flavor, mem=512, diskname=vmdk, disksize=size )
-    log( '* Generated virtimage file as', vimage )
+    ovf = generateOVF( diskname=vmdk, disksize=size, name=flavor, mem=1024 )
+    log( '* Generated OVF descriptor file', ovf )
     end = time()
     elapsed = end - start
     log( '* Results logged to', abspath( logfile.name ) )
@@ -576,7 +655,7 @@ def buildFlavorString():
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole
+    global LogToConsole, NoKVM
     parser = argparse.ArgumentParser( description='Mininet VM build script',
                                       epilog=buildFlavorString() )
     parser.add_argument( '-v', '--verbose', action='store_true',
@@ -589,6 +668,8 @@ def parseArgs():
                          help='clean up leftover build junk (e.g. qemu-nbd)' )
     parser.add_argument( '-q', '--qcow2', action='store_true',
                          help='save qcow2 image rather than deleting it' )
+    parser.add_argument( '-n', '--nokvm', action='store_true',
+                         help="Don't use kvm - use tcg emulation instead" )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     args = parser.parse_args()
@@ -600,6 +681,8 @@ def parseArgs():
         cleanup()
     if args.verbose:
         LogToConsole = True
+    if args.nokvm:
+        NoKVM = True
     for flavor in args.flavor:
         if flavor not in isoURLs:
             print "Unknown build flavor:", flavor
