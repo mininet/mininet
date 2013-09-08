@@ -502,7 +502,7 @@ def convert( cow, basename ):
 # Warning: XML file cannot begin with a newline!
 
 OVFTemplate = """<?xml version="1.0"?>
-<Envelope ovf:version="1.0" xml:lang="en-US" 
+<Envelope ovf:version="1.0" xml:lang="en-US"
     xmlns="http://schemas.dmtf.org/ovf/envelope/1"
     xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
     xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
@@ -623,7 +623,8 @@ def build( flavor='raring32server' ):
     log( '* Logging to', abspath( LogFile.name ) )
     log( '* Created working directory', dir )
     image, kernel, initrd = findBaseImage( flavor )
-    volume = flavor + '.qcow2'
+    basename = 'mininet-' + flavor
+    volume = basename + '.qcow2'
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, volume ) )
     log( '* VM image for', flavor, 'created as', volume )
     if LogToConsole:
@@ -634,12 +635,12 @@ def build( flavor='raring32server' ):
     vm = boot( volume, kernel, initrd, logfile )
     interact( vm )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename=flavor )
+    vmdk = convert( volume, basename=basename )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
-    ovf = generateOVF( diskname=vmdk, disksize=size, name=flavor, mem=1024 )
+    ovf = generateOVF( diskname=vmdk, disksize=size, name=basename )
     log( '* Generated OVF descriptor file', ovf )
     end = time()
     elapsed = end - start
