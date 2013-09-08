@@ -499,9 +499,9 @@ def convert( cow, basename ):
 # In the best of all possible worlds, we might use an XML
 # library to generate this, but a template is easier and
 # possibly more concise!
+# Warning: XML file cannot begin with a newline!
 
-OVFTemplate = """
-<?xml version="1.0"?>
+OVFTemplate = """<?xml version="1.0"?>
 <Envelope ovf:version="1.0" xml:lang="en-US" 
     xmlns="http://schemas.dmtf.org/ovf/envelope/1"
     xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1"
