@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for cpu.py
+"""
 
 import unittest
 import pexpect
-from mininet.log import setLogLevel
 
 class testCPU( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
 
     prompt = 'mininet>'
 
     def testCPU( self ):
-        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', pexpect.EOF ]
+        "Verify that CPU utilization is monotonically decreasing for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.cpu' )
+        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', pexpect.EOF ]
         scheds = []
         while True:
             index = p.expect( opts, timeout=600 )
@@ -32,5 +33,4 @@ class testCPU( unittest.TestCase ):
         self.assertTrue( len( scheds ) > 0 )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
