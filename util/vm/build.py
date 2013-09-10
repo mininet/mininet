@@ -34,7 +34,7 @@ from sys import exit, stdout, argv
 import re
 from glob import glob
 from subprocess import check_output, call, Popen
-from tempfile import mkdtemp
+from tempfile import mkdtemp, NamedTemporaryFile
 from time import time, strftime, localtime
 import argparse
 from distutils.spawn import find_executable
@@ -50,6 +50,8 @@ SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 NoKVM = False               # Don't use kvm and use emulation instead
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
+
+Prompt = '\$ '              # Shell prompt that pexpect will wait for
 
 isoURLs = {
     'precise32server':
@@ -141,8 +143,11 @@ def popen( cmd ):
 
 
 def remove( fname ):
-    "rm -f fname"
-    return run( 'rm -f %s' % fname )
+    "Remove a file, ignoring errors"
+    try:
+        os.remove( fname )
+    except OSError:
+        pass
 
 
 def findiso( flavor ):
@@ -186,10 +191,10 @@ def detachNBD( nbd ):
     srun( 'qemu-nbd -d ' + nbd )
 
 
-def extractKernel( image, flavor ):
+def extractKernel( image, flavor, imageDir=VMImageDir ):
     "Extract kernel and initrd from base image"
-    kernel = path.join( VMImageDir, flavor + '-vmlinuz' )
-    initrd = path.join( VMImageDir, flavor + '-initrd' )
+    kernel = path.join( imageDir, flavor + '-vmlinuz' )
+    initrd = path.join( imageDir, flavor + '-initrd' )
     if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0777 ) == 0444:
         # If kernel is there, then initrd should also be there
         return kernel, initrd
@@ -384,7 +389,7 @@ def installUbuntu( iso, image, logfilename='install.log' ):
         raise Exception( 'Ubuntu installation returned error %d' %
                           vm.returncode )
     log( '* UBUNTU INSTALLATION COMPLETED FOR', image )
-    log( '* Ubuntu installation completed in %.2f seconds ' % elapsed )
+    log( '* Ubuntu installation completed in %.2f seconds' % elapsed )
 
 
 def boot( cow, kernel, initrd, logfile ):
@@ -419,9 +424,8 @@ def boot( cow, kernel, initrd, logfile ):
     return vm
 
 
-def interact( vm ):
-    "Interact with vm, which is a pexpect object"
-    prompt = '\$ '
+def login( vm ):
+    "Log in to vm (pexpect object)"
     log( '* Waiting for login prompt' )
     vm.expect( 'login: ' )
     log( '* Logging in' )
@@ -430,6 +434,41 @@ def interact( vm ):
     vm.expect( 'Password: ' )
     log( '* Sending password' )
     vm.sendline( 'mininet' )
+    log( '* Waiting for login...' )
+
+
+def sanityTest( vm ):
+    "Run Mininet sanity test (pingall) in vm"
+    vm.sendline( 'sudo mn --test pingall' )
+    if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
+        log( '* Sanity check OK' )
+    else:
+        log( '* Sanity check FAILED' )
+
+
+def coreTest( vm, prompt=Prompt ):
+    "Run core tests (make test) in VM"
+    log( '* Making sure cgroups are mounted' )
+    vm.sendline( 'sudo service cgroup-lite restart' )
+    vm.expect( prompt )
+    vm.sendline( 'sudo cgroups-mount' )
+    vm.expect( prompt )
+    log( '* Running make test' )
+    vm.sendline( 'cd ~/mininet; sudo make test' )
+    # We should change "make test" to report the number of
+    # successful and failed tests. For now, we have to
+    # know the time for each test, which means that this
+    # script will have to change as we add more tests.
+    for test in range( 0, 2 ):
+        if vm.expect( [ 'OK', 'FAILED', pexpect.TIMEOUT ], timeout=180 ) == 0:
+            log( '* Test', test, 'OK' )
+        else:
+            log( '* Test', test, 'FAILED' )
+
+
+def interact( vm, prompt=Prompt ):
+    "Interact with vm, which is a pexpect object"
+    login( vm )
     log( '* Waiting for login...' )
     vm.expect( prompt )
     log( '* Sending hostname command' )
@@ -451,28 +490,9 @@ def interact( vm ):
     log( '* Completed successfully' )
     vm.expect( prompt )
     log( '* Testing Mininet' )
-    vm.sendline( 'sudo mn --test pingall' )
-    if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
-        log( '* Sanity check OK' )
-    else:
-        log( '* Sanity check FAILED' )
+    sanityTest( vm )
     vm.expect( prompt )
-    log( '* Making sure cgroups are mounted' )
-    vm.sendline( 'sudo service cgroup-lite restart' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo cgroups-mount' )
-    vm.expect( prompt )
-    log( '* Running make test' )
-    vm.sendline( 'cd ~/mininet; sudo make test' )
-    # We should change "make test" to report the number of
-    # successful and failed tests. For now, we have to
-    # know the time for each test, which means that this
-    # script will have to change as we add more tests.
-    for test in range( 0, 2 ):
-        if vm.expect( [ 'OK', 'FAILED', pexpect.TIMEOUT ], timeout=180 ) == 0:
-            log( '* Test', test, 'OK' )
-        else:
-            log( '* Test', test, 'FAILED' )
+    coreTest( vm )
     vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
@@ -649,6 +669,44 @@ def build( flavor='raring32server' ):
     log( '* %s VM build DONE!!!!! :D' % flavor )
     os.chdir( '..' )
 
+
+def bootAndTest( image, tests=None ):
+    """Boot and test VM
+       tests: list of tests (default: sanityTest, coreTest)"""
+    bootTestStart = time()
+    if tests is None:
+        tests = [ sanityTest, coreTest ]
+    basename = path.basename( image )
+    image = abspath( image )
+    tmpdir = mkdtemp( prefix='test-' + basename )
+    cow = path.join( tmpdir, image + '-cow.qcow2' )
+    log( '* Creating COW disk' )
+    run( 'qemu-img create -f qcow2 -b %s %s' % ( image, cow ) )
+    log( '* Extracting kernel and initrd' )
+    kernel, initrd = extractKernel( image, flavor=basename, imageDir=tmpdir )
+    if LogToConsole:
+        logfile = stdout
+    else:
+        logfile = NamedTemporaryFile( prefix=image, delete=False )
+    log( '* Logging VM output to', logfile.name )
+    vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile )
+    prompt = '\$ '
+    login( vm )
+    log( '* Waiting for VM boot and login' )
+    vm.expect( prompt )
+    for test in tests:
+        test( vm )
+        vm.expect( prompt )
+    log( '* Shutting down' )
+    vm.sendline( 'sudo shutdown -h now ' )
+    log( '* Waiting for shutdown' )
+    vm.wait()
+    log( '* Removing temporary dir', tmpdir )
+    srun( 'rm -rf ' + tmpdir )
+    elapsed = time() - bootTestStart
+    log( '* Boot and test completed in %.2f seconds' % elapsed )
+
+
 def buildFlavorString():
     "Return string listing valid build flavors"
     return 'valid build flavors: %s' % ' '.join( sorted( isoURLs ) )
@@ -671,6 +729,8 @@ def parseArgs():
                          help='save qcow2 image rather than deleting it' )
     parser.add_argument( '-n', '--nokvm', action='store_true',
                          help="Don't use kvm - use tcg emulation instead" )
+    parser.add_argument( '-t', '--test', metavar='image', action='append',
+                         help='Boot and test a VM image' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     args = parser.parse_args()
@@ -694,7 +754,10 @@ def parseArgs():
         # except Exception as e:
         # log( '* BUILD FAILED with exception: ', e )
         # exit( 1 )
-    if not ( args.depend or args.list or args.clean or args.flavor ):
+    for image in args.test:
+        bootAndTest( image )
+    if not ( args.depend or args.list or args.clean or args.flavor
+             or args.test ):
         parser.print_help()
 
 
