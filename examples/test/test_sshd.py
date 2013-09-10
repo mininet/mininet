@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for sshd.py
+"""
 
 import unittest
 import pexpect
 from time import sleep
-from mininet.log import setLogLevel
-from mininet.clean import cleanup, sh
+from mininet.clean import sh
 
-class testBareSSHD( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
+class testSSHD( unittest.TestCase ):
 
-    opts = [ '\(yes/no\)\?', 'refused', 'Welcome', pexpect.EOF, pexpect.TIMEOUT ]
+    opts = [ '\(yes/no\)\?', 'refused', 'Welcome|\$|#', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self, ip ):
-        "check connected"
-        p = pexpect.spawn( 'ssh -i /tmp/ssh/test_rsa %s' % ip )
+        "Log into ssh server, check banner, then exit"
+        # Note: this test will fail if "Welcome" is not in the sshd banner 
+        # and '#'' or '$'' are not in the prompt
+        p = pexpect.spawn( 'ssh -i /tmp/ssh/test_rsa %s' % ip, timeout=10 )
         while True:
             index = p.expect( self.opts )
             if index == 0:
@@ -38,10 +40,12 @@ class testBareSSHD( unittest.TestCase ):
         cmd = ( 'python -m mininet.examples.sshd -D '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no' )
+        # run example with custom sshd args
         self.net = pexpect.spawn( cmd )
         self.net.expect( 'mininet>' )
 
     def testSSH( self ):
+        "Verify that we can ssh into all hosts (h1 to h4)"
         for h in range( 1, 5 ):
             self.assertTrue( self.connected( '10.0.0.%d' % h ) )
 
@@ -52,6 +56,5 @@ class testBareSSHD( unittest.TestCase ):
         sh( 'rm -rf /tmp/ssh' )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
 
