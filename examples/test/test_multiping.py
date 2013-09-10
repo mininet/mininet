@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for multiping.py
+"""
 
 import unittest
 import pexpect
 from collections import defaultdict
-from mininet.log import setLogLevel
 
 class testMultiPing( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
 
     def testMultiPing( self ):
+        """Verify that each target is pinged at least once, and 
+           that pings to 'real' targets are successful and unknown targets fail"""
         p = pexpect.spawn( 'python -m mininet.examples.multiping' )
-        opts = []
-        opts.append( "Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d. ]+)" )
-        opts.append( "(h\d+): ([\d.]+) -> ([\d.]+) \d packets transmitted, (\d) received" )
-        opts.append( pexpect.EOF )
+        opts = [ "Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d\. ]+)",
+                 "(h\d+): ([\d.]+) -> ([\d.]+) \d packets transmitted, (\d) received",
+                 pexpect.EOF ]
         pings = defaultdict( list )
         while True:
             index = p.expect( opts )
@@ -39,10 +40,9 @@ class testMultiPing( unittest.TestCase ):
                     pass
             else:
                 break
-        self.assertTrue( len(pings) > 0 )
+        self.assertTrue( len( pings ) > 0 )
         for t in pings.values():
             self.assertEqual( len( t ), 0 )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
