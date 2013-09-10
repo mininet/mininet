@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Tests for baresshd.py
+"""
 
 import unittest
 import pexpect
@@ -9,13 +11,12 @@ from mininet.log import setLogLevel
 from mininet.clean import cleanup, sh
 
 class testBareSSHD( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
 
     opts = [ '\(yes/no\)\?', 'Welcome to h1', 'refused', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self ):
-        "check connected"
-        p = pexpect.spawn( 'ssh 10.0.0.1 -i /tmp/ssh/test_rsa ' )
+        "Log into ssh server, check banner, then exit"
+        p = pexpect.spawn( 'ssh 10.0.0.1 -i /tmp/ssh/test_rsa exit' )
         while True:
             index = p.expect( self.opts )
             if index == 0:
@@ -26,19 +27,22 @@ class testBareSSHD( unittest.TestCase ):
                 return False
 
     def setUp( self ):
+        # verify that sshd is not running
         self.assertFalse( self.connected() )
         # create public key pair for testing
         sh( 'mkdir /tmp/ssh' )
         sh( "ssh-keygen -t rsa -P '' -f /tmp/ssh/test_rsa" )
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
+        # run example with custom sshd args
         cmd = ( 'python -m mininet.examples.baresshd '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no' )
         sh( cmd )
 
     def testSSH( self ):
+        "Simple test to verify that we can ssh into h1"
         result = False
-        # try to connect up to 3 times
+        # try to connect up to 3 times; sshd can take a while to start
         for _ in range( 3 ):
             result = self.connected()
             if result:
@@ -53,7 +57,6 @@ class testBareSSHD( unittest.TestCase ):
         cleanup()
         # remove public key pair
         sh( 'rm -rf /tmp/ssh' )
-
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )
