@@ -1,22 +1,18 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for controlnet.py
+"""
 
 import unittest
 import pexpect
-from mininet.log import setLogLevel
-#from mininet.net import Mininet
-#from mininet.node import CPULimitedHost
-#from mininet.link import TCLink
-
-#from mininet.examples.simpleperf import SingleSwitchTopo
 
 class testControlNet( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
 
     prompt = 'mininet>'
 
     def testPingall( self ):
+        "Simple pingall test that verifies 0% packet drop in data network"
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
@@ -28,6 +24,7 @@ class testControlNet( unittest.TestCase ):
         p.wait()
 
     def testFailover( self ):
+        "Kill controllers and verity that switch, s1, fails over properly"
         count = 1
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )
@@ -47,5 +44,4 @@ class testControlNet( unittest.TestCase ):
         p.wait()
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
