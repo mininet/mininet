@@ -26,7 +26,7 @@ from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, UserSwitch, OVSKernelSwitch,
-                           OVSLegacyKernelSwitch, IVSSwitch )
+                           OVSLegacyKernelSwitch, IVSSwitch, LincSwitch )
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
@@ -46,7 +46,8 @@ SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
              'ovsk': OVSKernelSwitch,
              'ovsl': OVSLegacyKernelSwitch,
-             'ivs': IVSSwitch }
+             'ivs': IVSSwitch,
+             'linc' : LincSwitch}
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
