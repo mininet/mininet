@@ -1,26 +1,21 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for linearbandwidth.py
+"""
 
 import unittest
 import pexpect
-from mininet.log import setLogLevel
-#from mininet.net import Mininet
-#from mininet.node import CPULimitedHost
-#from mininet.link import TCLink
-
-#from mininet.examples.simpleperf import SingleSwitchTopo
 
 class testLinearBandwidth( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
-
-    prompt = 'mininet>'
 
     def testLinearBandwidth( self ):
-        count = 0
-        tolerance = 0.5
-        opts = [ '\*\*\* Linear network results', '(\d+)\s+([\d\.]+) (.bits)', pexpect.EOF ]
+        "Verify that bandwidth is monotonically decreasing as # of hops increases"
         p = pexpect.spawn( 'python -m mininet.examples.linearbandwidth' )
+        count = 0
+        opts = [ '\*\*\* Linear network results', 
+                 '(\d+)\s+([\d\.]+) (.bits)', 
+                 pexpect.EOF ]
         while True:
             index = p.expect( opts, timeout=600 )
             if index == 0:
@@ -44,5 +39,4 @@ class testLinearBandwidth( unittest.TestCase ):
         self.assertTrue( count > 0 )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
