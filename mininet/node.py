@@ -21,6 +21,9 @@ Switch: superclass for switch nodes.
 UserSwitch: a switch using the user-space switch from the OpenFlow
     reference implementation.
 
+LincSwitch: an OpenFlow user-space switch implemented entirely in Erlang
+    currently supporting OF protocol v. 1.3.1.
+
 KernelSwitch: a switch using the kernel switch from the OpenFlow reference
     implementation.
 
@@ -891,6 +894,61 @@ class UserSwitch( Switch ):
         self.deleteIntfs()
 
 
+class LincSwitch(Switch):
+    "User-space LINC-Switch implemented in Erlang."
+
+    def __init__(self, name, **kwargs):
+        Switch.__init__(self, name, **kwargs)
+        pathCheck('linc', 'linc_config',
+                  moduleName='the user-space OpenFlow LINC-Switch'
+                  + ' (https://github.com/FlowForwarding/LINC-Switch)')
+
+    def start( self, controllers ):
+        hosts_intfs = [str( i ) for i in self.intfList() if not i.IP()]
+        self.linc_intfs = self.setup_interfaces_for_linc(hosts_intfs)
+        self.bridges = self.setup_bridges(zip(hosts_intfs, self.linc_intfs))
+        self.generate_config(self.linc_intfs)
+        self.cmd('linc start')
+
+    def generate_config(self, interfaces):
+        logical_switch_id = 0
+        config_args = "-s " + str(logical_switch_id) + " " + " ".join(interfaces)
+        self.cmd('linc_config ' + config_args)
+
+    def setup_interfaces_for_linc(self, hosts_intfs):
+        linc_intfs = [ "tap-" + intf for intf in hosts_intfs ]
+        for intf in linc_intfs:
+            self.cmd('tunctl -t {0}'.format(intf))
+            self.bring_interface_up(intf)
+        return linc_intfs
+
+    def setup_bridges(self, bridges_intfs):
+        bridges = []
+        for idx, intfs_pair in enumerate(bridges_intfs):
+            bridge_name = 'br{0}'.format(idx)
+            bridges.append(bridge_name)
+            self.cmd('brctl addbr {0}'.format(bridge_name))
+            for intf in intfs_pair:
+                self.add_interface_to_bridge(bridge_name, intf)
+            self.bring_interface_up(bridge_name)
+        return bridges
+
+    def add_interface_to_bridge(self, bridge, interface):
+        self.cmd('brctl addif {0} {1}'.format(bridge, interface))
+
+    def bring_interface_up(self, interface):
+        self.cmd('ip link set dev {0} up'.format(interface))
+
+    def delet_interface(self, interface):
+        self.cmd('ip link delete {0}'.format(interface))
+
+    def stop( self ):
+        for intf in self.linc_intfs + self.bridges:
+            self.delet_interface(intf)
+        self.cmd('linc stop')
+        self.cmd('epmd -kill')
+
+
 class OVSLegacyKernelSwitch( Switch ):
     """Open VSwitch legacy kernel-space switch using ovs-openflowd.
        Currently only works in the root namespace."""
@@ -1242,4 +1300,3 @@ class RemoteController( Controller ):
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
-
