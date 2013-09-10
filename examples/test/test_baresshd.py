@@ -7,7 +7,6 @@ Tests for baresshd.py
 import unittest
 import pexpect
 from time import sleep
-from mininet.log import setLogLevel
 from mininet.clean import cleanup, sh
 
 class testBareSSHD( unittest.TestCase ):
@@ -59,5 +58,4 @@ class testBareSSHD( unittest.TestCase ):
         sh( 'rm -rf /tmp/ssh' )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
