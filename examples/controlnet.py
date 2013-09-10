@@ -14,6 +14,8 @@ We also use a Mininet Facade to talk to both the
 control and data networks from a single CLI.
 """
 
+from functools import partial
+
 from mininet.net import Mininet
 from mininet.node import Controller, UserSwitch
 from mininet.cli import CLI
@@ -124,7 +126,8 @@ def run():
     info( '* Creating Data Network\n' )
     topo = TreeTopo( depth=2, fanout=2 )
     # UserSwitch so we can easily test failover
-    net = Mininet( topo=topo, switch=UserSwitch, controller=None )
+    sw = partial( UserSwitch, opts='--inactivity-probe=1 --max-backoff=1' )
+    net = Mininet( topo=topo, switch=sw, controller=None )
     info( '* Adding Controllers to Data Network\n' )
     for host in cnet.hosts:
         if isinstance(host, Controller):
