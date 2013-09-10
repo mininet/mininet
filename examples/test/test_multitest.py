@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
-"""TEST"""
+"""
+Test for multitest.py
+"""
 
 import unittest
 import pexpect
-from mininet.log import setLogLevel
 
 class testMultiTest( unittest.TestCase ):
-    "Test ping with single switch topology (common code)."
 
     prompt = 'mininet>'
 
     def testMultiTest( self ):
+        "Verify pingall (0% dropped) and hX-eth0 interface for each host (ifconfig)"
         p = pexpect.spawn( 'python -m mininet.examples.multitest' )
         p.expect( '(\d+)% dropped' )
         dropped = int( p.match.group(1) )
@@ -28,5 +29,4 @@ class testMultiTest( unittest.TestCase ):
         self.assertEqual( ifCount, 4 )
 
 if __name__ == '__main__':
-    setLogLevel( 'warning' )
     unittest.main()
