@@ -6,9 +6,11 @@ Test for linearbandwidth.py
 
 import unittest
 import pexpect
+import sys
 
 class testLinearBandwidth( unittest.TestCase ):
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testLinearBandwidth( self ):
         "Verify that bandwidth is monotonically decreasing as # of hops increases"
         p = pexpect.spawn( 'python -m mininet.examples.linearbandwidth' )

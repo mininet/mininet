@@ -6,11 +6,13 @@ Test for cpu.py
 
 import unittest
 import pexpect
+import sys
 
 class testCPU( unittest.TestCase ):
 
     prompt = 'mininet>'
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.cpu' )

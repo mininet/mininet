@@ -7,6 +7,7 @@ Test for simpleperf.py
 import unittest
 import pexpect
 import re
+import sys
 from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
@@ -16,6 +17,7 @@ from mininet.examples.simpleperf import SingleSwitchTopo
 
 class testSimplePerf( unittest.TestCase ):
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testE2E( self ):
         "Run the example and verify ping and iperf results"
         p = pexpect.spawn( 'python -m mininet.examples.simpleperf' )

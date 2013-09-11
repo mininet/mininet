@@ -6,11 +6,13 @@ Test for treeping64.py
 
 import unittest
 import pexpect
+import sys
 
 class testTreePing64( unittest.TestCase ):
 
     prompt = 'mininet>'
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testTreePing64( self ):
         "Run the example and verify ping results"
         p = pexpect.spawn( 'python -m mininet.examples.treeping64' )

@@ -6,11 +6,13 @@ Test for tree1024.py
 
 import unittest
 import pexpect
+import sys
 
 class testTree1024( unittest.TestCase ):
 
     prompt = 'mininet>'
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testTree1024( self ):
         "Run the example and do a simple ping test from h1 to h1024"
         p = pexpect.spawn( 'python -m mininet.examples.tree1024' )

@@ -6,9 +6,11 @@ Test for limit.py
 
 import unittest
 import pexpect
+import sys
 
 class testLimit( unittest.TestCase ):
 
+    @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testLimit( self ):
         "Verify that CPU limits are within a 2% tolerance of limit for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.limit' )
