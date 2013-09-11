@@ -10,14 +10,14 @@ import pexpect
 class testLimit( unittest.TestCase ):
 
     def testLimit( self ):
-        "Verify that CPU limits are within a 1% tolerance of limit for each scheduler"
+        "Verify that CPU limits are within a 2% tolerance of limit for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.limit' )
         opts = [ '\*\*\* Testing network ([\d\.]+) Mbps', 
                  '\*\*\* Results: \[([\d\., ]+)\]', 
                  pexpect.EOF ]
         count = 0
         bw = 0
-        tolerance = 1
+        tolerance = 2
         while True:
             index = p.expect( opts )
             if index == 0:
