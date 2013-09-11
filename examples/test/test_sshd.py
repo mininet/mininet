@@ -34,6 +34,7 @@ class testSSHD( unittest.TestCase ):
 
     def setUp( self ):
         # create public key pair for testing
+        sh( 'rm -rf /tmp/ssh' )
         sh( 'mkdir /tmp/ssh' )
         sh( "ssh-keygen -t rsa -P '' -f /tmp/ssh/test_rsa" )
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
