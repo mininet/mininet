@@ -474,14 +474,14 @@ def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
     vm.sendline( 'sudo apt-get install python-pexpect' )
     vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -quick' )
+    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v -quick' )
 
 
 def examplesfullTest( vm, prompt=Prompt ):
     "Full (slow) test of mininet examples"
     vm.sendline( 'sudo apt-get install python-pexpect' )
     vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py' )
+    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
 
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
