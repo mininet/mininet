@@ -1,4 +1,3 @@
-
 Mininet Examples
 ========================================================
 
@@ -7,114 +6,114 @@ Mininet's Python API.
 
 ========================================================
 
-### baresshd.py:
+#### baresshd.py:
 
 This example uses Mininet's medium-level API to create an sshd
 process running in a namespace. Doesn't use OpenFlow.
 
-### consoles.py:
+#### consoles.py:
 
 This example creates a grid of console windows, one for each node, 
 and allows interaction with and monitoring of each console, including
 graphical monitoring.
 
-### controllers.py:
+#### controllers.py:
 
 This example creates a network with multiple controllers, by
-using a custom Switch() subclass.
+using a custom `Switch()` subclass.
 
-### controllers2.py:
+#### controllers2.py:
 
 This example creates a network with multiple controllers by
 creating an empty network, adding nodes to it, and manually
 starting the switches.
 
-### controlnet.py:
+#### controlnet.py:
 
 This examples shows how you can model the control network as well
 as the data network, by actually creating two Mininet objects.
 
-### cpu.py:
+#### cpu.py:
 
 This example tests iperf bandwidth for varying CPU limits.
 
-### emptynet.py:
+#### emptynet.py:
 
 This example demonstrates creating an empty network (i.e. with no
 topology object) and adding nodes to it.
 
-### hwintf.py:
+#### hwintf.py:
 
 This example shows how to add an interface (for example a real
 hardware interface) to a network after the network is created.
 
-### limit.py:
+#### limit.py:
 
 This example shows how to use link and CPU limits.
 
-### linearbandwidth.py:
+#### linearbandwidth.py:
 
 This example shows how to create a custom topology programatically
 by subclassing Topo, and how to run a series of tests on it.
 
-### miniedit.py:
+#### miniedit.py:
 
 This example demonstrates creating a network via a graphical editor.
 
-### multiping.py:
+#### multiping.py:
 
 This example demonstrates one method for 
 monitoring output from multiple hosts, using `node.monitor()`.
 
-### multipoll.py:
+#### multipoll.py:
 
 This example demonstrates monitoring output files from multiple hosts.
 
-### multitest.py:
+#### multitest.py:
 
 This example creates a network and runs multiple tests on it.
 
-### nat.py:
+#### nat.py:
 
 This example shows how to connect a Mininet network to the Internet
 using NAT. It also answers the eternal question "why can't I ping
 google?"
 
-### popen.py:
+#### popen.py:
 
 This example monitors a number of hosts using `host.popen()` and
 `pmonitor()`.
 
-### popenpoll.py:
+#### popenpoll.py:
 
 This example demonstrates monitoring output from multiple hosts using
 the `node.popen()` interface (which returns Popen objects) and `pmonitor()`.
 
-### scratchnet.py, scratchnetuser.py:
+#### scratchnet.py, scratchnetuser.py:
 
 These two examples demonstrate how to create a network by using the lowest-
 level Mininet functions. Generally the higher-level API is easier to use,
 but scratchnet shows what is going on behind the scenes.
 
-### simpleperf.py:
+#### simpleperf.py:
 
 A simple example of configuring network and CPU bandwidth limits.
 
-### sshd.py:
+#### sshd.py:
 
-This example shows how to run an sshd process in each host, allowing
+This example shows how to run an `sshd` process in each host, allowing
 you to log in via ssh. This requires connecting the Mininet data network
 to an interface in the root namespace (generaly the control network
 already lives in the root namespace, so it does not need to be explicitly
 connected.)
 
-### tree1024.py:
+#### tree1024.py:
 
 This example attempts to create a 1024-host network, and then runs the
 CLI on it. It may run into scalability limits, depending on available
 memory and sysctl configuration (see `INSTALL`.)
 
-### treeping64.py:
+#### treeping64.py:
 
 This example creates a 64-host tree network, and attempts to check full
 connectivity using ping, for different switch/datapath types.
