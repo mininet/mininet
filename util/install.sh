@@ -103,6 +103,7 @@ IVS_TAG=v0.3
 # WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
 WS_DISSECTOR_REV=${WS_DISSECTOR_REV:-""}
 OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
+LINC_SWITCH_REV=${LINC_SWITCH_REV:-""}
 
 
 function kernel {
@@ -236,6 +237,51 @@ function of13 {
     make
     sudo make install
     cd $BUILD_DIR
+}
+
+function linc_switch {
+    echo "Installing LINC-Switch"
+    cd $BUILD_DIR/
+
+    case $DIST in
+        "Ubuntu")
+            sudo add-apt-repository "deb http://packages.erlang-solutions.com/debian $CODENAME contrib"
+            ;;
+        "Debian")
+            sudo add-apt-repository "deb http://packages.erlang-solutions.com/debian $CODENAME contrib"
+            ;;
+        *)
+            echo "Unsupported OS. Installing LINC-Switch cancelled."
+            exit 1
+    esac
+    sudo wget http://packages.erlang-solutions.com/debian/erlang_solutions.asc
+    sudo apt-key add erlang_solutions.asc
+    sudo apt-get update
+    $install git-core esl-erlang make uml-utilities bridge-utils
+
+    LINC_SWITCH_DIR="LINC-Switch"
+
+    if [ ! -d $LINC_SWITCH_DIR ]; then
+        git clone https://github.com/FlowForwarding/LINC-Switch.git
+    fi
+
+    cd $LINC_SWITCH_DIR
+
+    if [[ -n "$LINC_SWITCH_REV" ]]; then
+        git checkout ${LINC_SWITCH_REV}
+    fi
+
+    sudo make rel
+    REL_DIR=$BUILD_DIR/$LINC_SWITCH_DIR/rel
+
+    LINC_START_COMMAND="#!/bin/sh\ncd $REL_DIR && ./linc/bin/linc \$@"
+    install_command "$LINC_START_COMMAND" $REL_DIR/linc.start linc
+
+    CONFIG_GEN_COMMAND="#!/bin/sh\ncd $REL_DIR && ./../scripts/config_gen \$@"\
+" -o $REL_DIR/linc/releases/*/sys.config"
+    install_command "$CONFIG_GEN_COMMAND" $REL_DIR/linc.config_gen linc_config
+
+    cd $BUILD_DIR/
 }
 
 function wireshark_version_check {
@@ -705,6 +751,27 @@ function vm_clean {
 
 }
 
+# Install a command to /usr/bin directory for easy access.
+# The function takes three argument in the following order:
+# 1. Command - the command to be executed
+# 2. CommandPath - the file in which the command should be placed
+# 3. CommandName - the name of the command under which it will be available
+#    in the /usr/bin directory
+function install_command {
+    COMMAND=$1
+    COMMAND_PATH=$2
+    COMMAND_NAME=$3
+
+    echo -e $COMMAND > $COMMAND_PATH
+    chmod u+x $COMMAND_PATH
+
+    if [ `which $COMMAND_NAME` ]; then
+        sudo update-alternatives --remove-all $COMMAND_NAME > /dev/null 2>&1
+    fi
+    sudo update-alternatives --install /usr/bin/$COMMAND_NAME $COMMAND_NAME \
+        $COMMAND_PATH 0 > /dev/null  2>&1
+}
+
 function usage {
     printf '\nUsage: %s [-abcdfhikmnprtvwx03]\n\n' $(basename $0) >&2
 
@@ -735,6 +802,7 @@ function usage {
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
+    printf -- ' -L: install LINC-Switch\n' >&2
     exit 2
 }
 
@@ -744,7 +812,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvwx03' OPTION
+    while getopts 'abcdefhikmnprs:tvwx03L' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -777,6 +845,7 @@ else
             esac;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
+      L)    linc_switch;;
       ?)    usage;;
       esac
     done
