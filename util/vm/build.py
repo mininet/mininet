@@ -30,7 +30,7 @@ import os
 from os import stat, path
 from stat import ST_MODE, ST_SIZE
 from os.path import abspath
-from sys import exit, stdout, argv
+from sys import exit, stdout, argv, modules
 import re
 from glob import glob
 from subprocess import check_output, call, Popen
@@ -38,16 +38,20 @@ from tempfile import mkdtemp, NamedTemporaryFile
 from time import time, strftime, localtime
 import argparse
 from distutils.spawn import find_executable
+import inspect
 
 pexpect = None  # For code check - imported dynamically
 
 # boot can be slooooow!!!! need to debug/optimize somehow
 TIMEOUT=600
 
-# Some configuration
+# Some configuration options
+# Possibly change this to use the parsed arguments instead!
+
 LogToConsole = False        # VM output to console rather than log file
 SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 NoKVM = False               # Don't use kvm and use emulation instead
+Branch = None               # Branch to update and check out before testing
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -466,6 +470,27 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'FAILED' )
 
 
+def examplesquickTest( vm, prompt=Prompt ):
+    "Quick test of mininet examples"
+    vm.sendline( 'sudo apt-get install python-pexpect' )
+    vm.expect( prompt )
+    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -quick' )
+
+
+def examplesfullTest( vm, prompt=Prompt ):
+    "Full (slow) test of mininet examples"
+    vm.sendline( 'sudo apt-get install python-pexpect' )
+    vm.expect( prompt )
+    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py' )
+
+
+def checkOutBranch( vm, branch, prompt=Prompt ):
+    vm.sendline( 'cd ~/mininet; git fetch; git pull --rebase; git checkout '
+                 + branch )
+    vm.expect( prompt )
+    vm.sendline( 'sudo make install' )
+
+
 def interact( vm, prompt=Prompt ):
     "Interact with vm, which is a pexpect object"
     login( vm )
@@ -490,10 +515,7 @@ def interact( vm, prompt=Prompt ):
     log( '* Completed successfully' )
     vm.expect( prompt )
     log( '* Testing Mininet' )
-    sanityTest( vm )
-    vm.expect( prompt )
-    coreTest( vm )
-    vm.expect( prompt )
+    runTests( vm )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
@@ -670,33 +692,50 @@ def build( flavor='raring32server' ):
     os.chdir( '..' )
 
 
-def bootAndTest( image, tests=None ):
+def runTests( vm, tests=None, prompt=Prompt ):
+    "Run tests (list) in vm (pexpect object)"
+    if not tests:
+        tests = [ 'sanity', 'core' ]
+    testfns = testDict()
+    for test in tests:
+        if test not in testfns:
+            raise Exception( 'Unknown test: ' + test )
+        log( '* Running test', test )
+        fn = testfns[ test ]
+        fn( vm )
+        vm.expect( prompt )
+
+
+def bootAndRunTests( image, tests=None ):
     """Boot and test VM
-       tests: list of tests (default: sanityTest, coreTest)"""
+       tests: list of tests (default: sanity, core)"""
     bootTestStart = time()
-    if tests is None:
-        tests = [ sanityTest, coreTest ]
     basename = path.basename( image )
     image = abspath( image )
     tmpdir = mkdtemp( prefix='test-' + basename )
-    cow = path.join( tmpdir, image + '-cow.qcow2' )
-    log( '* Creating COW disk' )
+    log( '* Using tmpdir', tmpdir )
+    cow = path.join( tmpdir, basename + '.qcow2' )
+    log( '* Creating COW disk', cow )
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, cow ) )
     log( '* Extracting kernel and initrd' )
     kernel, initrd = extractKernel( image, flavor=basename, imageDir=tmpdir )
     if LogToConsole:
         logfile = stdout
     else:
-        logfile = NamedTemporaryFile( prefix=image, delete=False )
+        logfile = NamedTemporaryFile( prefix=basename,
+                                      suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile )
     prompt = '\$ '
     login( vm )
     log( '* Waiting for VM boot and login' )
     vm.expect( prompt )
-    for test in tests:
-        test( vm )
+    if Branch:
+        checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
+    log( '* Running tests' )
+    runTests( vm, tests=tests )
+    # runTests eats its last prompt, but maybe it shouldn't...
     log( '* Shutting down' )
     vm.sendline( 'sudo shutdown -h now ' )
     log( '* Waiting for shutdown' )
@@ -709,28 +748,52 @@ def bootAndTest( image, tests=None ):
 
 def buildFlavorString():
     "Return string listing valid build flavors"
-    return 'valid build flavors: %s' % ' '.join( sorted( isoURLs ) )
+    return 'valid build flavors: ( %s )' % ' '.join( sorted( isoURLs ) )
+
+
+def testDict():
+    "Return dict of tests in this module"
+    suffix = 'Test'
+    trim = len( suffix )
+    fdict = dict( [ ( fname[ : -trim ], f ) for fname, f in
+                    inspect.getmembers( modules[ __name__ ],
+                                    inspect.isfunction )
+                  if fname.endswith( suffix ) ] )
+    return fdict
+
+
+def testString():
+    "Return string listing valid tests"
+    return 'valid tests: ( %s )' % ' '.join( testDict().keys() )
 
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM
+    global LogToConsole, NoKVM, Branch
     parser = argparse.ArgumentParser( description='Mininet VM build script',
-                                      epilog=buildFlavorString() )
+                                      epilog=buildFlavorString() + ' ' +
+                                      testString() )
     parser.add_argument( '-v', '--verbose', action='store_true',
                         help='send VM output to console rather than log file' )
     parser.add_argument( '-d', '--depend', action='store_true',
                          help='install dependencies for this script' )
     parser.add_argument( '-l', '--list', action='store_true',
-                         help='list valid build flavors' )
+                         help='list valid build flavors and tests' )
     parser.add_argument( '-c', '--clean', action='store_true',
                          help='clean up leftover build junk (e.g. qemu-nbd)' )
     parser.add_argument( '-q', '--qcow2', action='store_true',
                          help='save qcow2 image rather than deleting it' )
     parser.add_argument( '-n', '--nokvm', action='store_true',
                          help="Don't use kvm - use tcg emulation instead" )
-    parser.add_argument( '-t', '--test', metavar='image', action='append',
-                         help='Boot and test a VM image' )
+    parser.add_argument( '-i', '--image', metavar='image', default=[],
+                         action='append',
+                         help='Boot and test an existing VM image' )
+    parser.add_argument( '-t', '--test', metavar='test', default=[],
+                        action='append',
+                        help='specify a test to run' )
+    parser.add_argument( '-b', '--branch', metavar='branch',
+                         help='For an existing VM image, check out and install'
+                         ' this branch before testing' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     args = parser.parse_args()
@@ -744,6 +807,8 @@ def parseArgs():
         LogToConsole = True
     if args.nokvm:
         NoKVM = True
+    if args.branch:
+        Branch = args.branch
     for flavor in args.flavor:
         if flavor not in isoURLs:
             print "Unknown build flavor:", flavor
@@ -754,10 +819,10 @@ def parseArgs():
         # except Exception as e:
         # log( '* BUILD FAILED with exception: ', e )
         # exit( 1 )
-    for image in args.test:
-        bootAndTest( image )
+    for image in args.image:
+        bootAndRunTests( image, tests=args.test )
     if not ( args.depend or args.list or args.clean or args.flavor
-             or args.test ):
+             or args.image ):
         parser.print_help()
 
 
