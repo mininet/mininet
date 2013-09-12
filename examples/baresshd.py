@@ -2,6 +2,7 @@
 
 "This example doesn't use OpenFlow, but attempts to run sshd in a namespace."
 
+import sys
 from mininet.node import Host
 from mininet.util import ensureRoot
 
@@ -27,6 +28,10 @@ f.write( 'Welcome to %s at %s\n' % ( h1.name, h1.IP() ) )
 f.close()
 
 print "*** Running sshd"
-h1.cmd( '/usr/sbin/sshd -o "Banner /tmp/%s.banner"' % h1.name )
+cmd = '/usr/sbin/sshd -o "Banner /tmp/%s.banner"' % h1.name
+# add arguments from the command line
+if len( sys.argv ) > 1:
+    cmd += ' ' + ' '.join( sys.argv[ 1: ] )
+h1.cmd( cmd )
 
 print "*** You may now ssh into", h1.name, "at", h1.IP()
