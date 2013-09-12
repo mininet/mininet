@@ -16,21 +16,23 @@ from optparse import OptionParser
 from Tkinter import *
 #from Tkinter import Frame, Button, Label, Scrollbar, Canvas, Entry, OptionMenu
 #from Tkinter import Menu, BitmapImage, PhotoImage, Wm, Toplevel
-from tkMessageBox import showinfo
+from tkMessageBox import showinfo, showerror
 from subprocess import call
 import tkFont
 import csv
 import tkFileDialog
 import tkSimpleDialog
+import re
+import json
+
 # someday: from ttk import *
 
 from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.term import makeTerm, cleanUpScreens
-from mininet.node import Controller, RemoteController, NOX, OVSController
-from mininet.link import TCLink
-from mininet.node import CPULimitedHost
+from mininet.node import Controller, RemoteController, NOX, OVSController, CPULimitedHost
+from mininet.link import TCLink, Intf
 
 
 CONTROLLERDEF = 'ref'
@@ -71,9 +73,256 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         def apply(self):
             ipBase = self.e1.get()
             terminalType = self.var.get()
-            print 'Dialog='+ipBase
-            print 'Terminal='+terminalType
+            #print 'Dialog='+ipBase
+            #print 'Terminal='+terminalType
             self.result = ipBase, terminalType
+
+class CustomDialog(object):
+
+        # TODO: Fix button placement and Title and window focus lock
+        def __init__(self, master, title):
+            self.top=Toplevel(master)
+
+            self.bodyFrame = Frame(self.top)
+            self.bodyFrame.grid(row=0, column=0, sticky='nswe')
+            self.body(self.bodyFrame)
+
+            #return self.b # initial focus
+            buttonFrame = Frame(self.top, relief='ridge', bd=3, bg='lightgrey')
+            buttonFrame.grid(row=1 , column=0, sticky='nswe')
+
+            okButton = Button(buttonFrame, width=8, text='OK', relief='groove',
+                       bd=4, command=self.okAction)
+            okButton.grid(row=0, column=0, sticky=E)
+
+            canlceButton = Button(buttonFrame, width=8, text='Cancel', relief='groove',
+                        bd=4, command=self.cancelAction)
+            canlceButton.grid(row=0, column=1, sticky=W)
+
+        def body(self, master):
+            self.rootFrame = master
+
+        def apply(self):
+            self.top.destroy()
+
+        def cancelAction(self):
+            self.top.destroy()
+
+        def okAction(self):
+            self.apply()
+            self.top.destroy()
+
+class HostDialog(CustomDialog):
+
+        def __init__(self, master, title, prefDefaults):
+
+            self.prefValues = prefDefaults
+            self.result = None
+
+            CustomDialog.__init__(self, master, title)
+
+        def body(self, master):
+            self.rootFrame = master
+            self.fieldFrame = Frame(self.rootFrame)
+            self.fieldFrame.grid(row=0, column=0, sticky='nswe')
+            Label(self.fieldFrame, text="Amount CPU:").grid(row=0, sticky=E)
+            Label(self.fieldFrame, text="Cores:").grid(row=1, sticky=E)
+
+            cpu = ''
+            cores = ''
+            sched = ''
+            externalInterfaces = []
+            if 'cpu' in self.prefValues:
+                cpu =  str(self.prefValues['cpu'])
+            if 'cores' in self.prefValues:
+                cores =  self.prefValues['cores']
+            if 'sched' in self.prefValues:
+                sched =  self.prefValues['sched']
+            else:
+                sched = 'host'
+            if 'externalInterfaces' in self.prefValues:
+                externalInterfaces = self.prefValues['externalInterfaces']
+
+            # Field for CPU
+            self.e1 = Entry(self.fieldFrame)
+            self.e1.grid(row=0, column=1)
+            self.e1.insert(0, cpu)
+
+            # Selection of Cores
+            self.e2 = Entry(self.fieldFrame)
+            self.e2.grid(row=1, column=1)
+            self.e2.insert(1, cores)
+
+            # Selection of Scheduler
+            self.var = StringVar(self.fieldFrame)
+            self.o1 = OptionMenu(self.fieldFrame, self.var, "host", "cfs", "rt")
+            self.o1.grid(row=0, column=2, sticky=W)
+            self.var.set(sched)
+
+            # External Interfaces
+            self.externalInterfaces = 0
+            Label(self.fieldFrame, text="External Interface:").grid(row=3, sticky=E)
+            self.b = Button( self.fieldFrame, text='Add', command=self.addInterface)
+            self.b.grid(row=3, column=1)
+
+            self.interfaceFrame = VerticalScrolledTable(self.rootFrame, rows=0, columns=1, title='External Interfaces')
+            self.interfaceFrame.grid(row=1, column=0, sticky='nswe')
+            self.tableFrame = self.interfaceFrame.interior
+
+            # Add defined interfaces
+            for externalInterface in externalInterfaces:
+                self.tableFrame.addRow(externalInterface)
+
+        def addInterface( self ):
+            self.tableFrame.addRow()
+
+        def apply(self):
+            cpu = self.e1.get()
+            cores = self.e2.get()
+            sched = self.var.get()
+            #print 'cpu='+cpu
+            #print 'cores='+cores
+            #print 'sched='+sched
+            externalInterfaces = []
+            for row in range(self.tableFrame.rows):
+                #print 'Interface is ' + self.tableFrame.get(row, 0)
+                if (len(self.tableFrame.get(row, 0)) > 0):
+                    externalInterfaces.append(self.tableFrame.get(row, 0))
+
+            results = {'cpu': cpu,
+                       'cores':cores,
+                       'sched':sched,
+                       'externalInterfaces':externalInterfaces}
+            self.result = results
+
+class SwitchDialog(CustomDialog):
+
+        def __init__(self, master, title, prefDefaults):
+
+            self.prefValues = prefDefaults
+            self.result = None
+            CustomDialog.__init__(self, master, title)
+
+        def body(self, master):
+            self.rootFrame = master
+
+            externalInterfaces = []
+            if 'externalInterfaces' in self.prefValues:
+                externalInterfaces = self.prefValues['externalInterfaces']
+
+            self.fieldFrame = Frame(self.rootFrame)
+            self.fieldFrame.grid(row=0, column=0, sticky='nswe')
+
+            # External Interfaces
+            Label(self.fieldFrame, text="External Interface:").grid(row=0, sticky=E)
+            self.b = Button( self.fieldFrame, text='Add', command=self.addInterface)
+            self.b.grid(row=0, column=1)
+
+            self.interfaceFrame = VerticalScrolledTable(self.rootFrame, rows=0, columns=1, title='External Interfaces')
+            self.interfaceFrame.grid(row=1, column=0, sticky='nswe')
+            self.tableFrame = self.interfaceFrame.interior
+
+            # Add defined interfaces
+            for externalInterface in externalInterfaces:
+                self.tableFrame.addRow(externalInterface)
+
+        def addInterface( self ):
+            self.tableFrame.addRow()
+
+        def apply(self):
+            externalInterfaces = []
+            for row in range(self.tableFrame.rows):
+                #print 'Interface is ' + self.tableFrame.get(row, 0)
+                if (len(self.tableFrame.get(row, 0)) > 0):
+                    externalInterfaces.append(self.tableFrame.get(row, 0))
+
+            results = {'externalInterfaces':externalInterfaces}
+            self.result = results
+
+class VerticalScrolledTable(LabelFrame):
+    """A pure Tkinter scrollable frame that actually works!
+
+    * Use the 'interior' attribute to place widgets inside the scrollable frame
+    * Construct and pack/place/grid normally
+    * This frame only allows vertical scrolling
+    
+    """
+    def __init__(self, parent, rows=2, columns=2, title=None, *args, **kw):
+        LabelFrame.__init__(self, parent, text=title, padx=5, pady=5, *args, **kw)            
+
+        # create a canvas object and a vertical scrollbar for scrolling it
+        vscrollbar = Scrollbar(self, orient=VERTICAL)
+        vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
+        canvas = Canvas(self, bd=0, highlightthickness=0,
+                        yscrollcommand=vscrollbar.set)
+        canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
+        vscrollbar.config(command=canvas.yview)
+
+        # reset the view
+        canvas.xview_moveto(0)
+        canvas.yview_moveto(0)
+
+        # create a frame inside the canvas which will be scrolled with it
+        self.interior = interior = TableFrame(canvas, rows=rows, columns=columns)
+        #canvas.config(background="blue")
+        #interior.config(background="red")
+        interior_id = canvas.create_window(0, 0, window=interior,
+                                           anchor=NW)
+
+        # track changes to the canvas and frame width and sync them,
+        # also updating the scrollbar
+        def _configure_interior(event):
+            # update the scrollbars to match the size of the inner frame
+            size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
+            canvas.config(scrollregion="0 0 %s %s" % size)
+            if interior.winfo_reqwidth() != canvas.winfo_width():
+                # update the canvas's width to fit the inner frame
+                canvas.config(width=interior.winfo_reqwidth())
+        interior.bind('<Configure>', _configure_interior)
+
+        def _configure_canvas(event):
+            if interior.winfo_reqwidth() != canvas.winfo_width():
+                # update the inner frame's width to fill the canvas
+                canvas.itemconfigure(interior_id, width=canvas.winfo_width())
+        canvas.bind('<Configure>', _configure_canvas)
+
+        return
+
+class TableFrame(Frame):
+    def __init__(self, parent, rows=2, columns=2):
+
+        Frame.__init__(self, parent, background="black")
+        self._widgets = []
+        self.rows = rows
+        self.columns = columns
+        for row in range(rows):
+            current_row = []
+            for column in range(columns):
+                label = Entry(self, borderwidth=0)
+                label.grid(row=row, column=column, sticky="wens", padx=1, pady=1)
+                current_row.append(label)
+            self._widgets.append(current_row)
+
+    def set(self, row, column, value):
+        widget = self._widgets[row][column]
+        widget.insert(0, value)
+
+    def get(self, row, column):
+        widget = self._widgets[row][column]
+        return widget.get()
+
+    def addRow( self, value=None ):
+        #print "Adding row " + str(self.rows +1)
+        current_row = []
+        for column in range(self.columns):
+            label = Entry(self, borderwidth=0)
+            label.grid(row=self.rows, column=column, sticky="wens", padx=1, pady=1)
+            if value is not None:
+                label.insert(0, value)
+            current_row.append(label)
+        self._widgets.append(current_row)
+        self.update_idletasks()
+        self.rows += 1
 
 class LinkDialog(tkSimpleDialog.Dialog):
 
@@ -250,11 +499,13 @@ class MiniEdit( Frame ):
         self.hostPopup.add_command(label='Host Options', font=self.font)
         self.hostPopup.add_separator()
         self.hostPopup.add_command(label='Terminal', font=self.font, command=self.xterm )
+        self.hostPopup.add_command(label='Properties', font=self.font, command=self.hostDetails )
 
         self.switchPopup = Menu(self.top, tearoff=0)
         self.switchPopup.add_command(label='Swtich Options', font=self.font)
         self.switchPopup.add_separator()
         self.switchPopup.add_command(label='List bridge details', font=self.font, command=self.listBridge )
+        self.switchPopup.add_command(label='Properties', font=self.font, command=self.switchDetails )
 
         self.linkPopup = Menu(self.top, tearoff=0)
         self.linkPopup.add_command(label='Link Options', font=self.font)
@@ -269,6 +520,8 @@ class MiniEdit( Frame ):
 
         # Model initialization
         self.links = {}
+        self.hostOpts = {}
+        self.switchOpts = {}
         self.hostCount = 0
         self.switchCount = 0
         self.net = None
@@ -309,7 +562,9 @@ class MiniEdit( Frame ):
         mbar.add_cascade( label="Run", font=font, menu=runMenu )
         runMenu.add_command( label="Run", font=font, command=self.doRun )
         runMenu.add_command( label="Stop", font=font, command=self.doStop )
+        fileMenu.add_separator()
         runMenu.add_command( label='Show OVS Summary', font=font, command=self.ovsShow )
+        runMenu.add_command( label='Root Terminal', font=font, command=self.rootTerminal )
 
         # Application menu
         appMenu = Menu( mbar, tearoff=False )
@@ -461,66 +716,52 @@ class MiniEdit( Frame ):
     def loadTopology( self ):
         "Load command."
         self.newTopology()
-        
+
         myFormats = [
             ('Mininet Topology','*.mn'),
             ('All Files','*'),
         ]
-        fin = tkFileDialog.askopenfile(filetypes=myFormats, mode='rb')
-        csvreader = csv.reader(fin)
-        for row in csvreader:
-            if row[0] == 'a':
-                self.minieditIpBase = row[1]
-            if row[0] == 'c':
-                controllerType = row[1]
-                self.controllers['c0']['controllerType'] = controllerType
-                if controllerType == 'remote':
-                    self.controllers['c0']['remoteIP'] = row[2]
-                    self.controllers['c0']['remotePort'] = int(row[3])
-            if row[0] == 'h':
-                nodeNum = row[1]
-                x = row[2]
-                y = row[3]
-                self.addNode('Host', nodeNum, float(x), float(y))
-            if row[0] == 's':
-                nodeNum = row[1]
-                x = row[2]
-                y = row[3]
-                self.addNode('Switch', nodeNum, float(x), float(y))
-            if row[0] == 'l':
-                srcNode = row[1]
-                src = self.findWidgetByName(srcNode)
-                sx, sy = self.canvas.coords( self.widgetToItem[ src ] )
-                 
-                destNode = row[2]
-                dest = self.findWidgetByName(destNode)
-                dx, dy = self.canvas.coords( self.widgetToItem[ dest]  )
-                 
-                self.link = self.canvas.create_line( sx, sy, dx, dy, width=4,
+        f = tkFileDialog.askopenfile(filetypes=myFormats, mode='rb')
+        loadedTopology = eval(f.read())
+
+        self.controllers = loadedTopology['controllers']
+
+        if 'application' in loadedTopology:
+            applicationPrefs = loadedTopology['application']
+            self.minieditIpBase = applicationPrefs['ipBase']
+
+        hosts = loadedTopology['hosts']
+        for host in hosts:
+            nodeNum = host['number']
+            x = host['x']
+            y = host['y']
+            self.addNode('Host', nodeNum, float(x), float(y))
+            self.hostOpts['h'+nodeNum] = host['opts']
+
+        switches = loadedTopology['switches']
+        for switch in switches:
+            nodeNum = switch['number']
+            x = switch['x']
+            y = switch['y']
+            self.addNode('Switch', nodeNum, float(x), float(y))
+            self.switchOpts['s'+nodeNum] = switch['opts']
+
+        links = loadedTopology['links']
+        for link in links:
+            srcNode = link['src']
+            src = self.findWidgetByName(srcNode)
+            sx, sy = self.canvas.coords( self.widgetToItem[ src ] )
+
+            destNode = link['dest']
+            dest = self.findWidgetByName(destNode)
+            dx, dy = self.canvas.coords( self.widgetToItem[ dest]  )
+
+            self.link = self.canvas.create_line( sx, sy, dx, dy, width=4,
                                              fill='blue', tag='link' )
-                bw = ''
-                delay = ''
-                loss = ''
-                max_queue_size = ''
-                linkopts = {}
-                if len(row) > 3:
-                    bw = row[3]
-                    delay = row[4]
-                    if len(bw) > 0:
-                        linkopts['bw'] = int(bw)
-                    if len(delay) > 0:
-                        linkopts['delay'] = delay
-                    if len(row) > 5:
-                        loss = row[5]
-                        max_queue_size = row[6]
-                        if len(loss) > 0:
-                            linkopts['loss'] = int(loss)
-                        if len(max_queue_size) > 0:
-                            linkopts['max_queue_size'] = int(max_queue_size)
+            self.addLink( src, dest, linkopts=link['opts'] )
+            self.createLinkBindings()
 
-                self.addLink( src, dest, linkopts=linkopts )
-                self.createLinkBindings()
-
+        f.close
 
     def findWidgetByName( self, name ):
         for widget in self.widgetToItem:
@@ -533,30 +774,10 @@ class MiniEdit( Frame ):
             self.deleteItem( self.widgetToItem[ widget ] )
         self.hostCount = 0
         self.switchCount = 0
+        self.links = {}
+        self.hostOpts = {}
+        self.switchOpts = {}
         self.minieditIpBase = self.defaultIpBase
-
-    def printInfo( self ):
-        "print nodes and links."
-        for widget in self.widgetToItem:
-            name = widget[ 'text' ]
-            tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-            x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
-            nodeNum = int( name[ 1: ] )
-            if 'Switch' in tags:
-                print "Switch "+name+" at "+str(x1)+"/"+str(y1)+"."
-            elif 'Host' in tags:
-                ipBaseNum, prefixLen = netParse( self.minieditIpBase )
-                print 'ipBaseNum='+str(ipBaseNum)
-                print 'prefixLen='+str(prefixLen)
-                ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
-                print "Host "+name+" with IP "+ip+" at "+str(x1)+"/"+str(y1)+"."
-            else:
-                raise Exception( "Cannot create mystery node: " + name )
-
-        for link in self.links.values():
-            ( src, dst, linkopts ) = link
-            srcName, dstName = src[ 'text' ], dst[ 'text' ]
-            print "Link from "+srcName+" to "+dstName+"."
 
     def saveTopology( self ):
         "Save command."
@@ -564,62 +785,66 @@ class MiniEdit( Frame ):
             ('Mininet Topology','*.mn'),
             ('All Files','*'),
         ]
-        
+
+        savingDictionary = {}
         fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Save the topology as...")
         if len(fileName ) > 0:
-            #print "Now saving under %s" % fileName
-            f = open(fileName, 'wb')
-            fout = csv.writer(f)
-
-            fout.writerow(["a",self.minieditIpBase])
+            # Save Application preferences
+            savingDictionary['version'] = '1'
 
             # Save Switches and Hosts
+            hostsToSave = []
+            switchesToSave = []
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
                 x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
                 nodeNum = int( name[ 1: ] )
                 if 'Switch' in tags:
-                    fout.writerow(["s",str(nodeNum),str(x1),str(y1)])
-                    #print "Save Switch "+name+" at "+str(x1)+"/"+str(y1)+"."
+                    nodeToSave = {'number':str(nodeNum),
+                                  'x':str(x1),
+                                  'y':str(y1),
+                                  'opts':self.switchOpts[name] }
+                    switchesToSave.append(nodeToSave)
                 elif 'Host' in tags:
-                    fout.writerow(["h",str(nodeNum),str(x1),str(y1)])
-                    #print "Save Host "+name+" with IP "+ip+" at "+str(x1)+"/"+str(y1)+"."
+                    nodeToSave = {'number':str(nodeNum),
+                                  'x':str(x1),
+                                  'y':str(y1),
+                                  'opts':self.hostOpts[name] }
+                    hostsToSave.append(nodeToSave)
                 else:
                     raise Exception( "Cannot create mystery node: " + name )
-            
+            savingDictionary['hosts'] = hostsToSave
+            savingDictionary['switches'] = switchesToSave
+
             # Save Links
+            linksToSave = []
             for link in self.links.values():
-                ( src, dst, linkopts ) = link
+                src = link['src']
+                dst = link['dest']
+                linkopts = link['linkOpts']
+
                 srcName, dstName = src[ 'text' ], dst[ 'text' ]
-                bw = ''
-                delay = ''
-                loss = ''
-                max_queue_size = ''
-                if 'bw' in linkopts:
-                    bw =  linkopts['bw']
-                if 'delay' in linkopts:
-                    delay =  linkopts['delay']
-                if 'loss' in linkopts:
-                    loss =  linkopts['loss']
-                if 'max_queue_size' in linkopts:
-                    max_queue_size =  linkopts['max_queue_size']
+                linkToSave = {'src':srcName,
+                              'dest':dstName,
+                              'opts':linkopts}
+                linksToSave.append(linkToSave)
+            savingDictionary['links'] = linksToSave
 
-                fout.writerow(["l",srcName,dstName, bw, delay, loss, max_queue_size])
-                #print "Save Link from "+srcName+" to "+dstName+"."
-            
             # Save Controller
-            controllerType = self.controllers['c0']['controllerType']
-            if controllerType == 'remote':
-                controllerIP = self.controllers['c0']['remoteIP']
-                controllerPort = self.controllers['c0']['remotePort']
-                fout.writerow(["c",controllerType, controllerIP, str(controllerPort)])
-            elif controllerType == 'nox':
-                fout.writerow(["c",controllerType])
-            else:
-                fout.writerow(["c",controllerType])
+            savingDictionary['controllers'] = self.controllers
 
-            f.close()
+            # Save Application preferences
+            savingDictionary['application'] = {'ipBase':self.minieditIpBase}
+
+            try:
+                f = open(fileName, 'wb')
+                #f.write(str(savingDictionary))
+                f.write(json.dumps(savingDictionary, sort_keys=True, indent=4, separators=(',', ': ')))
+            except Exception as er:
+                print er
+            finally:
+                f.close()
 
     def exportTopology( self ):
         "Export command."
@@ -662,8 +887,10 @@ class MiniEdit( Frame ):
             # Save Links
             f.write("        # Add links\n")
             optsExist = False
-            for link in self.links.values():
-                ( src, dst, linkopts ) = link
+            for linkDetail in self.links.values():
+                src = linkDetail['src']
+                dst = linkDetail['dest']
+                linkopts = linkDetail['linkOpts']
                 srcName, dstName = src[ 'text' ], dst[ 'text' ]
                 bw = ''
                 delay = ''
@@ -810,9 +1037,11 @@ class MiniEdit( Frame ):
         self.selectItem( item )
         icon.links = {}
         if 'Switch' == node:
-           icon.bind('<Button-3>', self.do_switchPopup )
+            icon.bind('<Button-3>', self.do_switchPopup )
+            self.switchOpts[name] = {}
         if 'Host' == node:
-           icon.bind('<Button-3>', self.do_hostPopup )
+            icon.bind('<Button-3>', self.do_hostPopup )
+            self.hostOpts[name] = {'sched':'host'}
 
     def clickHost( self, event ):
         "Add a new host to our canvas."
@@ -1008,12 +1237,74 @@ class MiniEdit( Frame ):
     def createToolImages( self ):
         "Create toolbar (and icon) images."
 
+    def checkIntf( self, intf ):
+        "Make sure intf exists and is not configured."
+        if ( ' %s:' % intf ) not in quietRun( 'ip link show' ):
+            showerror(title="Error",
+                      message='External interface ' +intf + ' does not exist! Skipping.')
+            return False
+        ips = re.findall( r'\d+\.\d+\.\d+\.\d+', quietRun( 'ifconfig ' + intf ) )
+        if ips:
+            showerror(title="Error",
+                      message= intf + ' has an IP address and is probably in use! Skipping.' )
+            return False
+        return True
+
+    def hostDetails( self, _ignore=None ):
+        if ( self.selection is None or
+             self.net is not None or
+             self.selection not in self.itemToWidget ):
+            return
+        name = self.itemToWidget[ self.selection ][ 'text' ]
+        tags = self.canvas.gettags( self.selection )
+        if 'Host' not in tags:
+            return
+
+        prefDefaults = self.hostOpts[name]
+        hostBox = HostDialog(self, title='Host Details', prefDefaults=prefDefaults)
+        self.master.wait_window(hostBox.top)
+        if hostBox.result:
+            newHostOpts = {}
+            newHostOpts['sched'] = hostBox.result['sched']
+            if len(hostBox.result['cpu']) > 0:
+                newHostOpts['cpu'] = float(hostBox.result['cpu'])
+            if len(hostBox.result['cores']) > 0:
+                newHostOpts['cores'] = hostBox.result['cores']
+            if len(hostBox.result['externalInterfaces']) > 0:
+                newHostOpts['externalInterfaces'] = hostBox.result['externalInterfaces']
+            self.hostOpts[name] = newHostOpts
+            print 'New host details for ' + name + ' = ' + str(newHostOpts)
+
+    def switchDetails( self, _ignore=None ):
+        if ( self.selection is None or
+             self.net is not None or
+             self.selection not in self.itemToWidget ):
+            return
+        name = self.itemToWidget[ self.selection ][ 'text' ]
+        tags = self.canvas.gettags( self.selection )
+        if 'Switch' not in tags:
+            return
+
+        prefDefaults = self.switchOpts[name]
+        switchBox = SwitchDialog(self, title='Switch Details', prefDefaults=prefDefaults)
+        self.master.wait_window(switchBox.top)
+        if switchBox.result:
+            newSwitchOpts = {}
+            if len(switchBox.result['externalInterfaces']) > 0:
+                newSwitchOpts['externalInterfaces'] = switchBox.result['externalInterfaces']
+            self.switchOpts[name] = newSwitchOpts
+            print 'New switch details for ' + name + ' = ' + str(newSwitchOpts)
+
     def linkDetails( self, _ignore=None ):
-        if ( self.selection is None ):
+        if ( self.selection is None or
+             self.net is not None):
             return
         link = self.selection
 
-        ( src, dst, linkopts ) =  self.links[link]
+        linkDetail =  self.links[link]
+        src = linkDetail['src']
+        dest = linkDetail['dest']
+        linkopts = linkDetail['linkOpts']
         linkBox = LinkDialog(self, title='Link Details', linkDefaults=linkopts)
         if linkBox.result:
             #print 'Link is '
@@ -1030,7 +1321,8 @@ class MiniEdit( Frame ):
                 newLinkOpts['loss'] = int(linkBox.result[2])
             if len(linkBox.result[3]) > 0:
                 newLinkOpts['max_queue_size'] = int(linkBox.result[3])
-            self.links[link] = ( src, dst, newLinkOpts )
+            linkDetail['linkOpts'] = newLinkOpts
+            print 'New link details = ' + str(newLinkOpts)
 
     def prefDetails( self ):
         prefDefaults = {'ipBase':self.minieditIpBase, 'terminalType':self.defaultTerminal}
@@ -1039,15 +1331,36 @@ class MiniEdit( Frame ):
             self.minieditIpBase = prefBox.result[0]
             self.defaultTerminal = prefBox.result[1]
 
+
     def controllerDetails( self ):
         ctrlrBox = ControllerDialog(self, title='Controller Details', ctrlrDefaults=self.controllers['c0'])
         if ctrlrBox.result:
             #print 'Controller is ' + ctrlrBox.result[0]
-            self.controllers['c0']['controllerType'] = ctrlrBox.result[0]
+            selectedController = 'c0'
+            self.controllers[selectedController]['controllerType'] = ctrlrBox.result[0]
             if ctrlrBox.result[0] == 'remote':
-                self.controllers['c0']['remoteIP'] = ctrlrBox.result[1]
-                self.controllers['c0']['remotePort'] = ctrlrBox.result[2]
+                self.controllers[selectedController]['remoteIP'] = ctrlrBox.result[1]
+                self.controllers[selectedController]['remotePort'] = ctrlrBox.result[2]
+            print 'New controller details for ' + selectedController + ' = ' + str(self.controllers[selectedController])
 
+    def listBridge( self, _ignore=None ):
+        if ( self.selection is None or
+             self.net is None or
+             self.selection not in self.itemToWidget ):
+            return
+        name = self.itemToWidget[ self.selection ][ 'text' ]
+        tags = self.canvas.gettags( self.selection )
+
+        if name not in self.net.nameToNode:
+            return
+        if 'Switch' in tags:
+           call(["xterm -T 'Bridge Details' -sb -sl 2000 -e 'ovs-vsctl list bridge " + name + "; read -p \"Press Enter to close\"' &"], shell=True)
+
+    def ovsShow( self, _ignore=None ):
+        call(["xterm -T 'OVS Summary' -sb -sl 2000 -e 'ovs-vsctl show; read -p \"Press Enter to close\"' &"], shell=True)
+
+    def rootTerminal( self, _ignore=None ):
+        call(["xterm -T 'Root Terminal' -sb -sl 2000 &"], shell=True)
 
     # Model interface
     #
@@ -1058,13 +1371,14 @@ class MiniEdit( Frame ):
         "Add link to model."
         source.links[ dest ] = self.link
         dest.links[ source ] = self.link
-        self.links[ self.link ] = ( source, dest, linkopts)
+        self.links[ self.link ] = {'src':source, 'dest':dest, 'linkOpts':linkopts}
 
     def deleteLink( self, link ):
         "Delete link from model."
         pair = self.links.get( link, None )
         if pair is not None:
-            source, dest, linkopts = pair
+            source=pair['src']
+            dest=pair['dest']
             del source.links[ dest ]
             del dest.links[ source ]
         if link is not None:
@@ -1090,17 +1404,17 @@ class MiniEdit( Frame ):
         # Make controller
         print 'Getting controller selection:'
         if controllerType == 'remote':
-            print '    Remote controller chosen'
-            print '    Remote IP:'+self.controllers['c0']['remoteIP']
-            print '    Remote Port:'+str(self.controllers['c0']['remotePort'])
+            #print '    Remote controller chosen'
+            #print '    Remote IP:'+self.controllers['c0']['remoteIP']
+            #print '    Remote Port:'+str(self.controllers['c0']['remotePort'])
             controllerIP = self.controllers['c0']['remoteIP']
             controllerPort = self.controllers['c0']['remotePort']
             c0 = RemoteController('c0', ip=controllerIP, port=controllerPort )
         elif controllerType == 'nox':
-            print '    NOX controller chosen'
+            #print '    NOX controller chosen'
             c0 = NOX('c0', noxArgs='')
         else:
-            print '    Reference controller chosen'
+            #print '    Reference controller chosen'
             c0 = Controller('c0')
 
         return [c0]
@@ -1108,7 +1422,11 @@ class MiniEdit( Frame ):
     def build( self ):
         print "Build network based on our topology."
 
-        net = Mininet( topo=None, build=False, link=TCLink, ipBase=self.minieditIpBase )
+        net = Mininet( topo=None,
+                       build=False,
+                       link=TCLink,
+                       host=CPULimitedHost,
+                       ipBase=self.minieditIpBase )
  
         net.controllers = self.addControllers()
         
@@ -1119,23 +1437,42 @@ class MiniEdit( Frame ):
             tags = self.canvas.gettags( self.widgetToItem[ widget ] )
             nodeNum = int( name[ 1: ] )
             if 'Switch' in tags:
-                net.addSwitch( name )
+                opts = self.switchOpts[name]
+                newSwitch = net.addSwitch( name )
+                if ('externalInterfaces' in opts):
+                    #print 'external interfaces listed'
+                    for extInterface in opts['externalInterfaces']:
+                        #print 'checking ' + extInterface
+                        if self.checkIntf(extInterface):
+                           Intf( extInterface, node=newSwitch )
             elif 'Host' in tags:
                 ipBaseNum, prefixLen = netParse( self.minieditIpBase )
                 ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
-                net.addHost( name, ip=ip )
+                opts = self.hostOpts[name]
+                newHost = net.addHost( name, ip=ip )
+                if 'cores' in opts:
+                    newHost.setCPUs(cores = opts['cores'])
+                if 'cpu' in opts:
+                    newHost.setCPUFrac(f=opts['cpu'], sched=opts['sched'])
+                if ('externalInterfaces' in opts):
+                    #print 'external interfaces listed'
+                    for extInterface in opts['externalInterfaces']:
+                        #print 'checking ' + extInterface
+                        if self.checkIntf(extInterface):
+                           Intf( extInterface, node=newHost )
             else:
                 raise Exception( "Cannot create mystery node: " + name )
 
         # Make links
         print "Getting Links."
         for link in self.links.values():
-            ( src, dst, linkopts ) = link
+            src=link['src']
+            dst=link['dest']
+            linkopts=link['linkOpts']
             srcName, dstName = src[ 'text' ], dst[ 'text' ]
             src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
             net.addLink(src, dst, **linkopts)
 
-        self.printInfo()
         # Build network (we have to do this separately at the moment )
         net.build()
 
@@ -1153,22 +1490,6 @@ class MiniEdit( Frame ):
             self.net.stop()
         cleanUpScreens()
         self.net = None
-
-    def listBridge( self, _ignore=None ):
-        if ( self.selection is None or
-             self.net is None or
-             self.selection not in self.itemToWidget ):
-            return
-        name = self.itemToWidget[ self.selection ][ 'text' ]
-        tags = self.canvas.gettags( self.selection )
-
-        if name not in self.net.nameToNode:
-            return
-        if 'Switch' in tags:
-           call(["xterm -T 'Bridge Details' -sb -sl 2000 -e 'ovs-vsctl list bridge " + name + "; read -p \"Press Enter to close\"'"], shell=True)
-
-    def ovsShow( self, _ignore=None ):
-        call(["xterm -T 'OVS Summary' -sb -sl 2000 -e 'ovs-vsctl show; read -p \"Press Enter to close\"'"], shell=True)
 
     def do_linkPopup(self, event):
         # display the popup menu
