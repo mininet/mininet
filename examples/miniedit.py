@@ -737,6 +737,8 @@ class MiniEdit( Frame ):
             y = host['y']
             self.addNode('Host', nodeNum, float(x), float(y))
             self.hostOpts['h'+nodeNum] = host['opts']
+            icon = self.findWidgetByName('h'+nodeNum)
+            icon.bind('<Button-3>', self.do_hostPopup )
 
         switches = loadedTopology['switches']
         for switch in switches:
@@ -745,6 +747,8 @@ class MiniEdit( Frame ):
             y = switch['y']
             self.addNode('Switch', nodeNum, float(x), float(y))
             self.switchOpts['s'+nodeNum] = switch['opts']
+            icon = self.findWidgetByName('s'+nodeNum)
+            icon.bind('<Button-3>', self.do_switchPopup )
 
         links = loadedTopology['links']
         for link in links:
@@ -858,36 +862,67 @@ class MiniEdit( Frame ):
             #print "Now saving under %s" % fileName
             f = open(fileName, 'wb')
 
-            f.write("from mininet.topo import Topo\n")
+            f.write("#!/usr/bin/python\n")
             f.write("\n")
-            f.write("class MyTopo(Topo):\n")
+            f.write("from mininet.net import Mininet\n")
+            f.write("from mininet.node import Controller, RemoteController\n")
+            f.write("from mininet.cli import CLI\n")
+            f.write("from mininet.log import setLogLevel, info\n")
+            f.write("from mininet.node import CPULimitedHost\n")
+            f.write("from mininet.link import TCLink, Intf\n")
+
             f.write("\n")
-            f.write("    def __init__( self ):\n")
+            f.write("def myNetwork():\n")
             f.write("\n")
-            f.write("        # Initialize topology and default options\n")
-            f.write("        Topo.__init__(self)\n")
+            f.write("    net = Mininet( topo=None,\n")
+            f.write("                   build=False,\n")
+            f.write("                   link=TCLink,\n")
+            f.write("                   host=CPULimitedHost)\n")
+
             f.write("\n")
 
+
+            f.write("    info( '*** Adding controller\\n' )\n")
+            controllerType = self.controllers['c0']['controllerType']
+
+            if controllerType == 'remote':
+                controllerIP = self.controllers['c0']['remoteIP']
+                controllerPort = self.controllers['c0']['remotePort']
+                f.write("    ctrlOpts={'ip':'"+controllerIP+"', 'port':"+str(controllerPort)+" }\n")
+                f.write("    net.addController(name='c0', controller=RemoteController, **ctrlOpts)\n")
+            else:
+                f.write("    net.addController(name='c0', controller=Controller)\n")
+            f.write("\n")
 
             # Save Switches and Hosts
-            f.write("        # Add hosts and switches\n")
+            f.write("    info( '*** Add hosts and switches\\n')\n")
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
                 x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
                 nodeNum = int( name[ 1: ] )
                 if 'Switch' in tags:
-                    f.write("        "+name+" = self.addSwitch('"+name+"')\n")
+                    f.write("    "+name+" = net.addSwitch('"+name+"')\n")
                 elif 'Host' in tags:
-                    f.write("        "+name+" = self.addHost('"+name+"')\n")
+                    f.write("    "+name+" = net.addHost('"+name+"')\n")
+                    opts = self.hostOpts[name]
+                    if 'cores' in opts:
+                        f.write("    "+name+".setCPUs(cores='"+opts['cores']+"')\n")
+                    if 'cpu' in opts:
+                        f.write("    "+name+".setCPUFrac(f="+str(opts['cpu'])+", sched='"+opts['sched']+"')\n")
+                    if ('externalInterfaces' in opts):
+                        #print 'external interfaces listed'
+                        for extInterface in opts['externalInterfaces']:
+                            f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
+
                 else:
                     raise Exception( "Cannot create mystery node: " + name )
             f.write("\n")
 
             # Save Links
-            f.write("        # Add links\n")
-            optsExist = False
+            f.write("    info( '*** Add links\\n')\n")
             for linkDetail in self.links.values():
+                optsExist = False
                 src = linkDetail['src']
                 dst = linkDetail['dest']
                 linkopts = linkDetail['linkOpts']
@@ -921,22 +956,25 @@ class MiniEdit( Frame ):
                     optsExist = True
                 linkOpts = linkOpts + "}"
                 if optsExist:
-                    f.write("        "+srcName+dstName+" = "+linkOpts+"\n")
-                #linkopts1 = {'bw':50, 'delay':'5ms'}
-                f.write("        self.addLink("+srcName+", "+dstName)
+                    f.write("    "+srcName+dstName+" = "+linkOpts+"\n")
+                f.write("    net.addLink("+srcName+", "+dstName)
                 if optsExist:
                     f.write(", **"+srcName+dstName)
                 f.write(")\n")
 
             f.write("\n")
-            f.write("topos = { 'mytopo': ( lambda: MyTopo() ) }\n")
+            f.write("    info( '*** Starting network\\n')\n")
+            f.write("    net.start()\n")
             f.write("\n")
-            f.write("#NOTE:  Below is an example of how you can start mininet with your custom topology.\n")
-            f.write("#   sudo mn --custom "+fileName+" --topo mytopo --mac --switch ovsk")
-            if optsExist:
-                f.write(" --link tc")
-            f.write("\n\n")
-            f.write("# Add any other flags if necessary, such as --controller \n")
+            f.write("    info( '*** Running CLI\\n' )\n")
+            f.write("    CLI( net )\n")
+            f.write("\n")
+            f.write("    info( '*** Stopping network\\n' )\n")
+            f.write("    net.stop()\n")
+            f.write("\n")
+            f.write("if __name__ == '__main__':\n")
+            f.write("    setLogLevel( 'info' )\n")
+            f.write("    myNetwork()\n")
             f.write("\n")
 
 
@@ -1525,7 +1563,7 @@ class MiniEdit( Frame ):
         if name not in self.net.nameToNode:
             return
         term = makeTerm( self.net.nameToNode[ name ], 'Host', term=self.defaultTerminal )
-        self.net.terms.append( term )
+        self.net.terms += term 
 
     def iperf( self, _ignore=None ):
         "Make an xterm when a button is pressed."
