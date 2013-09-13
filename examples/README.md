@@ -77,7 +77,7 @@ This example creates a network and runs multiple tests on it.
 
 This example shows how to connect a Mininet network to the Internet
 using NAT. It also answers the eternal question "why can't I ping
-google?"
+`google.com`?"
 
 #### popen.py:
 
@@ -87,7 +87,7 @@ This example monitors a number of hosts using `host.popen()` and
 #### popenpoll.py:
 
 This example demonstrates monitoring output from multiple hosts using
-the `node.popen()` interface (which returns Popen objects) and `pmonitor()`.
+the `node.popen()` interface (which returns `Popen` objects) and `pmonitor()`.
 
 #### scratchnet.py, scratchnetuser.py:
 
@@ -102,7 +102,7 @@ A simple example of configuring network and CPU bandwidth limits.
 #### sshd.py:
 
 This example shows how to run an `sshd` process in each host, allowing
-you to log in via ssh. This requires connecting the Mininet data network
+you to log in via `ssh`. This requires connecting the Mininet data network
 to an interface in the root namespace (generaly the control network
 already lives in the root namespace, so it does not need to be explicitly
 connected.)
@@ -111,9 +111,9 @@ connected.)
 
 This example attempts to create a 1024-host network, and then runs the
 CLI on it. It may run into scalability limits, depending on available
-memory and sysctl configuration (see `INSTALL`.)
+memory and `sysctl` configuration (see `INSTALL`.)
 
 #### treeping64.py:
 
 This example creates a 64-host tree network, and attempts to check full
-connectivity using ping, for different switch/datapath types.
+connectivity using `ping`, for different switch/datapath types.
