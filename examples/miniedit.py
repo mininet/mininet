@@ -31,7 +31,9 @@ from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.term import makeTerm, cleanUpScreens
-from mininet.node import Controller, RemoteController, NOX, OVSController, CPULimitedHost
+from mininet.node import Controller, RemoteController, NOX, OVSController
+from mininet.node import CPULimitedHost, Host
+from mininet.node import OVSKernelSwitch, OVSSwitch
 from mininet.link import TCLink, Intf
 
 
@@ -408,20 +410,27 @@ class ControllerDialog(tkSimpleDialog.Dialog):
 
             # Field for Controller Type
             controllerType = self.ctrlrValues['controllerType']
-            self.o1 = OptionMenu(master, self.var, "remote", "ref")
+            self.o1 = OptionMenu(master, self.var, "Remote", "OpenFlow Reference", "OVS Controller")
             self.o1.grid(row=0, column=1, sticky=W)
-            self.var.set(controllerType)
+            if controllerType == 'ref':
+                self.var.set("OpenFlow Reference")
+            elif controllerType == 'remote':
+                self.var.set("Remote")
+            else:
+                self.var.set("OVS Controller")
 
             return self.o1 # initial focus
 
         def apply(self):
             controllerType = self.var.get()
-            if controllerType == 'remote':
+            if controllerType == 'Remote':
                 first = self.e1.get()
                 second = int(self.e2.get())
-                self.result = self.var.get(), first, second
+                self.result = 'remote', first, second
+            elif controllerType == 'OpenFlow Reference':
+                self.result = ['ref']
             else:
-                self.result = [self.var.get()]
+                self.result = ['ovsc']
 
 class MiniEdit( Frame ):
 
@@ -647,8 +656,6 @@ class MiniEdit( Frame ):
                 'remoteIP': '127.0.0.1',
                 'remotePort': 6633}
 
-        #     controllerType = remote|default|nox
-
         self.controllers['c0'] = ctrlr
 
         return controllerbar
@@ -865,10 +872,10 @@ class MiniEdit( Frame ):
             f.write("#!/usr/bin/python\n")
             f.write("\n")
             f.write("from mininet.net import Mininet\n")
-            f.write("from mininet.node import Controller, RemoteController\n")
+            f.write("from mininet.node import Controller, RemoteController, OVSController\n")
+            f.write("from mininet.node import CPULimitedHost, Host\n")
             f.write("from mininet.cli import CLI\n")
             f.write("from mininet.log import setLogLevel, info\n")
-            f.write("from mininet.node import CPULimitedHost\n")
             f.write("from mininet.link import TCLink, Intf\n")
 
             f.write("\n")
@@ -876,8 +883,7 @@ class MiniEdit( Frame ):
             f.write("\n")
             f.write("    net = Mininet( topo=None,\n")
             f.write("                   build=False,\n")
-            f.write("                   link=TCLink,\n")
-            f.write("                   host=CPULimitedHost)\n")
+            f.write("                   link=TCLink)\n")
 
             f.write("\n")
 
@@ -892,16 +898,17 @@ class MiniEdit( Frame ):
                 f.write("                      controller=RemoteController,\n")
                 f.write("                      ip='"+controllerIP+"',\n")
                 f.write("                      port="+str(controllerPort)+")\n")
+            elif controllerType == 'ovsc':
+                f.write("    net.addController(name='c0', controller=OVSController)\n")
             else:
                 f.write("    net.addController(name='c0', controller=Controller)\n")
             f.write("\n")
 
             # Save Switches and Hosts
-            f.write("    info( '*** Add hosts and switches\\n')\n")
+            f.write("    info( '*** Add switches\\n')\n")
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-                x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
                 nodeNum = int( name[ 1: ] )
                 if 'Switch' in tags:
                     f.write("    "+name+" = net.addSwitch('"+name+"')\n")
@@ -909,18 +916,29 @@ class MiniEdit( Frame ):
                     if ('externalInterfaces' in opts):
                         for extInterface in opts['externalInterfaces']:
                             f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
-                elif 'Host' in tags:
-                    f.write("    "+name+" = net.addHost('"+name+"')\n")
+                elif not 'Host' in tags:
+                    raise Exception( "Cannot create mystery node: " + name )
+
+            f.write("\n")
+            f.write("    info( '*** Add hosts\\n')\n")
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                nodeNum = int( name[ 1: ] )
+                if 'Host' in tags:
                     opts = self.hostOpts[name]
-                    if 'cores' in opts:
-                        f.write("    "+name+".setCPUs(cores='"+opts['cores']+"')\n")
-                    if 'cpu' in opts:
-                        f.write("    "+name+".setCPUFrac(f="+str(opts['cpu'])+", sched='"+opts['sched']+"')\n")
+                    if 'cores' in opts or 'cpu' in opts:
+                        f.write("    "+name+" = net.addHost('"+name+"', cls=CPULimitedHost)\n")
+                        if 'cores' in opts:
+                            f.write("    "+name+".setCPUs(cores='"+opts['cores']+"')\n")
+                        if 'cpu' in opts:
+                            f.write("    "+name+".setCPUFrac(f="+str(opts['cpu'])+", sched='"+opts['sched']+"')\n")
+                    else:
+                        f.write("    "+name+" = net.addHost('"+name+"', cls=Host)\n")
                     if ('externalInterfaces' in opts):
                         for extInterface in opts['externalInterfaces']:
                             f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
-
-                else:
+                elif not 'Switch' in tags:
                     raise Exception( "Cannot create mystery node: " + name )
             f.write("\n")
 
@@ -969,13 +987,7 @@ class MiniEdit( Frame ):
 
             f.write("\n")
             f.write("    info( '*** Starting network\\n')\n")
-            f.write("    net.start()\n")
-            f.write("\n")
-            f.write("    info( '*** Running CLI\\n' )\n")
-            f.write("    CLI( net )\n")
-            f.write("\n")
-            f.write("    info( '*** Stopping network\\n' )\n")
-            f.write("    net.stop()\n")
+            f.write("    net.interact()\n")
             f.write("\n")
             f.write("if __name__ == '__main__':\n")
             f.write("    setLogLevel( 'info' )\n")
@@ -1436,7 +1448,7 @@ class MiniEdit( Frame ):
         del self.itemToWidget[ item ]
         del self.widgetToItem[ widget ]
 
-    def addControllers( self ):
+    def buildControllers( self, net):
         "Add Controllers"
 
         # Get controller info from panel
@@ -1447,65 +1459,66 @@ class MiniEdit( Frame ):
         # Make controller
         print 'Getting controller selection:'
         if controllerType == 'remote':
-            #print '    Remote controller chosen'
-            #print '    Remote IP:'+self.controllers['c0']['remoteIP']
-            #print '    Remote Port:'+str(self.controllers['c0']['remotePort'])
             controllerIP = self.controllers['c0']['remoteIP']
             controllerPort = self.controllers['c0']['remotePort']
-            c0 = RemoteController('c0', ip=controllerIP, port=controllerPort )
-        elif controllerType == 'nox':
-            #print '    NOX controller chosen'
-            c0 = NOX('c0', noxArgs='')
+            net.addController(name='c0',
+                              controller=RemoteController,
+                              ip=controllerIP,
+                              port=controllerPort)
+        elif controllerType == 'ovsc':
+            net.addController(name='c0',
+                              controller=OVSController)
         else:
-            #print '    Reference controller chosen'
-            c0 = Controller('c0')
+            net.addController(name='c0',
+                              controller=Controller)
 
-        return [c0]
 
-    def build( self ):
-        print "Build network based on our topology."
-
-        net = Mininet( topo=None,
-                       build=False,
-                       link=TCLink,
-                       host=CPULimitedHost,
-                       ipBase=self.minieditIpBase )
- 
-        net.controllers = self.addControllers()
-        
+    def buildNodes( self, net):
         # Make nodes
         print "Getting Hosts and Switches."
         for widget in self.widgetToItem:
             name = widget[ 'text' ]
             tags = self.canvas.gettags( self.widgetToItem[ widget ] )
             nodeNum = int( name[ 1: ] )
+
             if 'Switch' in tags:
                 opts = self.switchOpts[name]
-                newSwitch = net.addSwitch( name )
+
+                # Create the correct switch class
+                newSwitch = net.addSwitch( name , cls=OVSSwitch)
+
+                # Attach external interfaces
                 if ('externalInterfaces' in opts):
-                    #print 'external interfaces listed'
                     for extInterface in opts['externalInterfaces']:
-                        #print 'checking ' + extInterface
                         if self.checkIntf(extInterface):
                            Intf( extInterface, node=newSwitch )
+
             elif 'Host' in tags:
                 ipBaseNum, prefixLen = netParse( self.minieditIpBase )
                 ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
                 opts = self.hostOpts[name]
-                newHost = net.addHost( name, ip=ip )
+
+                # Create the correct host class
+                hostClass=Host
+                if 'cores' in opts or 'cpu' in opts:
+                    hostClass=CPULimitedHost
+                newHost = net.addHost( name, cls=hostClass, ip=ip )
+
+                # Set the CPULimitedHost specific options
                 if 'cores' in opts:
                     newHost.setCPUs(cores = opts['cores'])
                 if 'cpu' in opts:
                     newHost.setCPUFrac(f=opts['cpu'], sched=opts['sched'])
+
+                # Attach external interfaces
                 if ('externalInterfaces' in opts):
-                    #print 'external interfaces listed'
                     for extInterface in opts['externalInterfaces']:
-                        #print 'checking ' + extInterface
                         if self.checkIntf(extInterface):
                            Intf( extInterface, node=newHost )
             else:
                 raise Exception( "Cannot create mystery node: " + name )
 
+    def buildLinks( self, net):
         # Make links
         print "Getting Links."
         for link in self.links.values():
@@ -1516,10 +1529,23 @@ class MiniEdit( Frame ):
             src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
             net.addLink(src, dst, **linkopts)
 
+    def build( self ):
+        print "Build network based on our topology."
+
+        net = Mininet( topo=None,
+                       build=False,
+                       link=TCLink,
+                       ipBase=self.minieditIpBase )
+
+        self.buildControllers(net)
+        self.buildNodes(net)
+        self.buildLinks(net)
+
         # Build network (we have to do this separately at the moment )
         net.build()
 
         return net
+
 
     def start( self ):
         "Start network."
