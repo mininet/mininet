@@ -888,8 +888,10 @@ class MiniEdit( Frame ):
             if controllerType == 'remote':
                 controllerIP = self.controllers['c0']['remoteIP']
                 controllerPort = self.controllers['c0']['remotePort']
-                f.write("    ctrlOpts={'ip':'"+controllerIP+"', 'port':"+str(controllerPort)+" }\n")
-                f.write("    net.addController(name='c0', controller=RemoteController, **ctrlOpts)\n")
+                f.write("    net.addController(name='c0',\n")
+                f.write("                      controller=RemoteController,\n")
+                f.write("                      ip='"+controllerIP+"',\n")
+                f.write("                      port="+str(controllerPort)+")\n")
             else:
                 f.write("    net.addController(name='c0', controller=Controller)\n")
             f.write("\n")
