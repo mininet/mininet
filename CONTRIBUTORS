@@ -1,0 +1,39 @@
+Mininet Contributors
+
+Mininet is an open source project and we gratefully acknowledge
+the many contributions to the project! If you have contributed
+code into the project and are not on this list, please let us know
+or send a pull request.
+
+Contributors include:
+
+Mininet Core Team
+
+Bob Lantz
+Brandon Heller
+Nikhil Handigol
+Vimal Jeyakumar
+Brian O'Connor
+
+Additional Mininet Contributors
+
+Gustavo Pantuza Coelho Pinto
+Ryan Cox
+Shaun Crampton
+David Erickson
+Glen Gibb
+Andrew Ferguson
+Eder Leao Fernandes
+Vitaly Ivanov
+Rich Lane
+Murphy McCauley
+James Page
+Angad Singh
+Piyush Srivastava
+Ed Swierk
+Isaku Yamahata
+
+Thanks also to everyone who has submitted issues and pull
+requests on github, and to our friendly mininet-discuss
+mailing list!
+

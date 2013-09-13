@@ -183,7 +183,8 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
-        os.kill( self.pid, signal.SIGKILL )
+        if self.shell:
+            os.kill( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
@@ -1050,6 +1051,8 @@ class OVSSwitch( Switch ):
     def stop( self ):
         "Terminate OVS switch."
         self.cmd( 'ovs-vsctl del-br', self )
+        if self.datapath == 'user':
+            self.cmd( 'ip link del', self )
         self.deleteIntfs()
 
 OVSKernelSwitch = OVSSwitch
@@ -1140,7 +1143,7 @@ class Controller( Node ):
                              "installed." )
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
-        if 'refused' not in listening:
+        if 'Connected' in listening:
             servers = self.cmd( 'netstat -atp' ).split( '\n' )
             pstr = ':%d ' % self.port
             clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
@@ -1235,6 +1238,7 @@ class RemoteController( Controller ):
         "Warn if remote controller is not accessible"
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
-        if 'refused' in listening:
+        if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
+

@@ -17,10 +17,13 @@ Architecture: any
 Depends:
  openvswitch-switch,
  telnet,
+ socat,
+ iperf,
+ cgroup-bin,
  ${misc:Depends},
  ${python:Depends},
  ${shlibs:Depends}
-Recommends: iperf, openvswitch-controller, socat
+Recommends: openvswitch-controller
 Description: Process-based network emulator
  Mininet is a network emulator which uses lightweight
  virtualization to create virtual networks for rapid

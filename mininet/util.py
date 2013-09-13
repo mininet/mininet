@@ -1,6 +1,6 @@
 "Utility functions for Mininet."
 
-from mininet.log import output, info, error, warn
+from mininet.log import output, info, error, warn, debug
 
 from time import sleep
 from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
@@ -361,16 +361,17 @@ def sysctlTestAndSet( name, limit ):
     if '/' not in name:
         name = '/proc/sys/' + name.replace( '.', '/' )
     #read limit
-    f = open( name, 'r+' )
-    oldLimit = f.readline()
-    if type( limit ) is int:
-        #compare integer limits before overriding
-        if int( oldLimit ) < limit:
-            f.write( "%d" % limit )
-    else:
-        #overwrite non-integer limits
-        f.write( limit )
-    f.close()
+    with open( name, 'r' ) as readFile:
+        oldLimit = readFile.readline()
+        if type( limit ) is int:
+            #compare integer limits before overriding
+            if int( oldLimit ) < limit:
+                with open( name, 'w' ) as writeFile:
+                    writeFile.write( "%d" % limit )
+        else:
+            #overwrite non-integer limits
+            with open( name, 'w' ) as writeFile:
+                writeFile.write( limit )
 
 def rlimitTestAndSet( name, limit ):
     "Helper function to set rlimits"
@@ -381,24 +382,30 @@ def rlimitTestAndSet( name, limit ):
 
 def fixLimits():
     "Fix ridiculously small resource limits."
-    rlimitTestAndSet( RLIMIT_NPROC, 8192 )
-    rlimitTestAndSet( RLIMIT_NOFILE, 16384 )
-    #Increase open file limit
-    sysctlTestAndSet( 'fs.file-max', 10000 )
-    #Increase network buffer space
-    sysctlTestAndSet( 'net.core.wmem_max', 16777216 )
-    sysctlTestAndSet( 'net.core.rmem_max', 16777216 )
-    sysctlTestAndSet( 'net.ipv4.tcp_rmem', '10240 87380 16777216' )
-    sysctlTestAndSet( 'net.ipv4.tcp_wmem', '10240 87380 16777216' )
-    sysctlTestAndSet( 'net.core.netdev_max_backlog', 5000 )
-    #Increase arp cache size
-    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh1', 4096 )
-    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh2', 8192 )
-    sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh3', 16384 )
-    #Increase routing table size
-    sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
-    #Increase number of PTYs for nodes
-    sysctlTestAndSet( 'kernel.pty.max', 20000 )
+    debug( "*** Setting resource limits\n" )
+    try:
+        rlimitTestAndSet( RLIMIT_NPROC, 8192 )
+        rlimitTestAndSet( RLIMIT_NOFILE, 16384 )
+        #Increase open file limit
+        sysctlTestAndSet( 'fs.file-max', 10000 )
+        #Increase network buffer space
+        sysctlTestAndSet( 'net.core.wmem_max', 16777216 )
+        sysctlTestAndSet( 'net.core.rmem_max', 16777216 )
+        sysctlTestAndSet( 'net.ipv4.tcp_rmem', '10240 87380 16777216' )
+        sysctlTestAndSet( 'net.ipv4.tcp_wmem', '10240 87380 16777216' )
+        sysctlTestAndSet( 'net.core.netdev_max_backlog', 5000 )
+        #Increase arp cache size
+        sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh1', 4096 )
+        sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh2', 8192 )
+        sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh3', 16384 )
+        #Increase routing table size
+        sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
+        #Increase number of PTYs for nodes
+        sysctlTestAndSet( 'kernel.pty.max', 20000 )
+        assert False
+    except:
+        warn( "*** Error setting resource limits. "
+              "Mininet's performance may be affected.\n" )
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"

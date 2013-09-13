@@ -102,7 +102,7 @@ from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -209,9 +209,19 @@ class Mininet( object ):
     def addController( self, name='c0', controller=None, **params ):
         """Add controller.
            controller: Controller class"""
+        # Get controller class
         if not controller:
             controller = self.controller
-        controller_new = controller( name, **params )
+        # Construct new controller if one is not given
+        if isinstance(name, Controller):
+            controller_new = name
+            # Pylint thinks controller is a str()
+            # pylint: disable=E1103
+            name = controller_new.name
+            # pylint: enable=E1103
+        else:
+            controller_new = controller( name, **params )
+        # Add new controller to net
         if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
@@ -230,31 +240,31 @@ class Mininet( object ):
         return self.getNodeByName( *args )
 
     # Even more convenient syntax for node lookup and iteration
-    def __getitem__( self, *args ):
+    def __getitem__( self, key ):
         """net [ name ] operator: Return node(s) with given name(s)"""
-        return self.getNodeByName( *args )
+        return self.nameToNode[ key ]
 
     def __iter__( self ):
-        "return iterator over nodes"
-        #or dow we want to iterate of the keys i.e. node.name like a dict
+        "return iterator over node names"
         for node in chain( self.hosts, self.switches, self.controllers ):
             yield node.name
 
     def __len__( self ):
         "returns number of nodes in net"
-        return len( self.hosts ) + len( self.switches ) + len( self.controllers )
+        return ( len( self.hosts ) + len( self.switches ) +
+                 len( self.controllers ) )
 
     def __contains__( self, item ):
         "returns True if net contains named node"
-        return item in self.keys()
+        return item in self.nameToNode
 
     def keys( self ):
         "return a list of all node names or net's keys"
-        return list( self.__iter__() )
+        return list( self )
 
     def values( self ):
         "return a list of all nodes or net's values"
-        return [ self[name] for name in self.__iter__() ]
+        return [ self[name] for name in self ]
 
     def items( self ):
         "return (key,value) tuple list for every node in net"
@@ -307,7 +317,7 @@ class Mininet( object ):
 
         info( '*** Creating network\n' )
 
-        if not self.controllers:
+        if not self.controllers and self.controller:
             # Add a default controller
             info( '*** Adding controller\n' )
             classes = self.controller

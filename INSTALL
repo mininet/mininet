@@ -2,7 +2,7 @@
 Mininet Installation/Configuration Notes
 ----------------------------------------
 
-Mininet 2.0.0
+Mininet 2.1.0
 ---
 
 The supported installation methods for Mininet are 1) using a
@@ -15,7 +15,7 @@ like to contribute an installation script, we would welcome it!)
 1. Easiest "installation" - use our pre-built VM image!
 
    The easiest way to get Mininet running is to start with one of our
-   pre-built virtual machine images from <http://openflow.org/mininet>
+   pre-built virtual machine images from <http://mininet.org/>
 
    Boot up the VM image, log in, and follow the instructions on the
    Mininet web site.
@@ -42,7 +42,7 @@ like to contribute an installation script, we would welcome it!)
         sudo rm /usr/local/bin/ovs*
         sudo rm /usr/local/sbin/ovs*
 
-3. Native installation from source on Ubuntu 11.10+
+3. Native installation from source on Ubuntu 12.04+
 
    If you're reading this, you've probably already done so, but the
    command to download the Mininet source code is:
@@ -56,7 +56,7 @@ like to contribute an installation script, we would welcome it!)
 
    `install.sh` is a bit intrusive and may possibly damage your OS
    and/or home directory, by creating/modifying several directories
-   such as `mininet`, `openflow`, `oftest`, `pox`, or `noxcosre`.
+   such as `mininet`, `openflow`, `oftest`, `pox`, etc..
    Although we hope it won't do anything completely terrible, you may
    want to look at the script before you run it, and you should make
    sure your system and home directory are backed up just in case!
@@ -80,6 +80,11 @@ like to contribute an installation script, we would welcome it!)
         mininet/util/install.sh -a
 
    This takes about 4 minutes on our test system.
+
+   You can change the directory where the dependencies are installed using
+   the -s <directory> flag.
+
+        mininet/util/install.sh -s <directory> -a
 
 4. Creating your own Mininet/OpenFlow tutorial VM
 
@@ -108,7 +113,7 @@ like to contribute an installation script, we would welcome it!)
      modules (e.g. tun and ofdatapath for the reference kernel
      implementation) must be loaded.
 
-   * Python, `bash`, `ping`, `iperf`, etc.`
+   * Python, `bash`, `ping`, `iperf`, etc.
 
    * Root privileges (required for network device access)
 

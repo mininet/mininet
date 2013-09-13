@@ -4,7 +4,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.0.0
+Version 2.1.0
 
 ### What is Mininet?
 
@@ -67,32 +67,32 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.0.0
+### New features in 2.1.0
 
-Mininet 2.0.0 is a major upgrade and provides
-a number of enhancements and new features, including:
+Mininet 2.1.0 provides a number of bug fixes as well as
+several new features, including:
 
-* "Mininet-HiFi" functionality:
+* Convenient access to Mininet() as a dict of nodes
+* X11 tunneling (wireshark in Mininet hosts, finally!)
+* Accurate reflection of the Mininet() object in the CLI
+* Automatically detecting and adjusting resource limits
+* Automatic cleanup on failure of the `mn` command
+* Preliminary support for running OVS in user space mode
+* Preliminary support (`IVSSwitch()`) for the Indigo Virtual Switch
+* support for installing the OpenFlow 1.3 versions of the reference
+  user switch and NOX from CPqD
+* The ability to import modules from mininet.examples
 
-    * Link bandwidth limits using `tc` (`TCIntf` and `TCLink` classes)
+We have provided several new examples (which can easily be
+imported to provide useful functionality) including:
 
-    * CPU isolation and bandwidth limits (`CPULimitedHost` class)
+* Modeling separate control and data networks
+* Connecting Mininet hosts the internet (or a LAN) using NAT
+* Creating per-host custom directories using bind mounts
 
-* Support for Open vSwitch 1.4+ (including Ubuntu OVS packages)
-
-* Debian packaging (and `apt-get install mininet` in Ubuntu 12.10)
-
-* First-class Interface (`Intf`) and Link (`Link`) classes for easier
-  extensibility
-
-* An upgraded Topology (`Topo`) class which supports node and link
-  customization
-
-* Man pages for the `mn` and `mnexec` utilities.
-
-[Since the API (most notably the topology) has changed, existing code
-that runs in Mininet 1.0 will need to be changed to run with Mininet
-2.0. This is the primary reason for the major version number change.]
+Note that examples contain experimental features which might
+"graduate" into mainline Mininet in the future, but they should 
+not be considered a stable part of the Mininet API!
 
 ### Installation
 
@@ -116,19 +116,19 @@ Mininet mailing list, `mininet-discuss` at:
 
 ### Contributing
 
-Mininet is an open-source project and is currently hosted at
-<https://github.com/mininet>. You are encouraged to download the code,
-examine it, modify it, and submit bug reports, bug fixes, feature
-requests, and enhancements!
+Mininet is an open source project and is currently hosted
+at <https://github.com/mininet>.  You are encouraged to download
+the code, examine it, modify it, and submit bug reports, bug fixes,
+feature requests, new features and other issues and pull requests.
+Thanks to everyone who has contributed to the project
+(see CONTRIBUTORS for more info!)
 
 Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
 ### Credits
 
-The Mininet Team:
+The Mininet 2.1.0 Team:
 
 * Bob Lantz
-* Brandon Heller
-* Nikhil Handigol
-* Vimal Jeyakumar
+* Brian O'Connor

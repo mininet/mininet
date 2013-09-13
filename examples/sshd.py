@@ -16,6 +16,8 @@ demonstrates:
 - running server processes (sshd in this case) on hosts
 """
 
+import sys
+
 from mininet.net import Mininet
 from mininet.cli import CLI
 from mininet.log import lg
@@ -68,4 +70,6 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D' ):
 if __name__ == '__main__':
     lg.setLogLevel( 'info')
     net = TreeNet( depth=1, fanout=4, switch=OVSKernelSwitch )
-    sshd( net )
+    # get sshd args from the command line; default: -D
+    opts = ' '.join( sys.argv[ 1: ] ) if len( sys.argv ) > 1 else '-D'
+    sshd( net, opts=opts )

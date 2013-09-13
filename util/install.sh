@@ -10,15 +10,15 @@ set -e
 set -o nounset
 
 # Get directory containing mininet folder
-MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
 # Set up build directory, which by default is the working directory
 #  unless the working directory is a subdirectory of mininet, 
 #  in which case we use the directory containing mininet
-BUILD_DIR=$PWD
-case $PWD in
+BUILD_DIR="$(pwd -P)"
+case $BUILD_DIR in
   $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
-  *) BUILD_DIR=$PWD;;
+  *) BUILD_DIR=$BUILD_DIR;;
 esac
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
@@ -281,7 +281,7 @@ function wireshark {
         export WIRESHARK=/usr/include/wireshark
         scons
         # libwireshark0/ on 11.04; libwireshark1/ on later
-        WSDIR=`ls -d /usr/lib/wireshark/libwireshark* | head -1`
+        WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
         WSPLUGDIR=$WSDIR/plugins/
         sudo cp openflow.so $WSPLUGDIR
         echo "Copied openflow plugin to $WSPLUGDIR"
@@ -645,13 +645,16 @@ function all {
         printf "with Fedora's kernel (3.10) and openvswitch (1.10.0) packages.\n"
         exit 3
     fi
-    echo "Running all commands..."
+    echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
     kernel
     mn_deps
-    mn_dev
+    # Skip mn_dev (doxypy/texlive/fonts/etc.) because it's huge
+    # mn_dev
     of
     wireshark
     ovs
+    # We may add ivs once it's more mature
+    # ivs
     # NOX-classic is deprecated, but you can install it manually if desired.
     # nox
     pox

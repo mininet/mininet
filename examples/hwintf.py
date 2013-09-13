@@ -5,7 +5,7 @@ This example shows how to add an interface (for example a real
 hardware interface) to a network after the network is created.
 """
 
-import re
+import re, sys
 
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info, error
@@ -28,7 +28,10 @@ def checkIntf( intf ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
 
-    intfName = 'eth1'
+    # try to get hw intf from the command line; by default, use eth1
+    intfName = sys.argv[ 1 ] if len( sys.argv ) > 1 else 'eth1'
+    info( '*** Connecting to hw intf: %s' % intfName )
+
     info( '*** Checking', intfName, '\n' )
     checkIntf( intfName )
 

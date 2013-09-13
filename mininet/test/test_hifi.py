@@ -4,13 +4,15 @@
    Test creation and pings for topologies with link and/or CPU options."""
 
 import unittest
+from functools import partial
 
 from mininet.net import Mininet
-from mininet.node import OVSKernelSwitch, UserSwitch, IVSSwitch
+from mininet.node import OVSSwitch, UserSwitch, IVSSwitch
 from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.topo import Topo
 from mininet.log import setLogLevel
+from mininet.util import quietRun
 
 # Number of hosts for each test
 N = 2
@@ -29,9 +31,12 @@ class SingleSwitchOptionsTopo(Topo):
             host = self.addHost('h%s' % (h + 1))
             self.addLink(host, switch)
 
+# Tell pylint not to complain about calls to other class
+# pylint: disable=E1101
 
 class testOptionsTopoCommon( object ):
-    "Verify ability to create networks with host and link options (common code)."
+    """Verify ability to create networks with host and link options
+       (common code)."""
 
     switchClass = None # overridden in subclasses
 
@@ -39,7 +44,8 @@ class testOptionsTopoCommon( object ):
         "Generic topology-with-options test runner."
         mn = Mininet( topo=SingleSwitchOptionsTopo( n=n, hopts=hopts,
                                                     lopts=lopts ),
-                      host=CPULimitedHost, link=TCLink, switch=self.switchClass )
+                      host=CPULimitedHost, link=TCLink,
+                      switch=self.switchClass )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 
@@ -105,7 +111,8 @@ class testOptionsTopoCommon( object ):
         REPS = 1
         lopts = { 'loss': LOSS_PERCENT, 'use_htb': True }
         mn = Mininet( topo=SingleSwitchOptionsTopo( n=N, lopts=lopts ),
-                      host=CPULimitedHost, link=TCLink, switch=self.switchClass )
+                      host=CPULimitedHost, link=TCLink,
+                      switch=self.switchClass )
         # Drops are probabilistic, but the chance of no dropped packets is
         # 1 in 100 million with 4 hops for a link w/99% loss.
         dropped_total = 0
@@ -121,16 +128,28 @@ class testOptionsTopoCommon( object ):
         hopts = { 'cpu': 0.5 / N }
         self.runOptionsTopoTest( N, hopts=hopts, lopts=lopts )
 
-class testOptionsTopoOVSKernel( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (OVS kernel switch)."
-    switchClass = OVSKernelSwitch
+# pylint: enable=E1101
 
+class testOptionsTopoOVSKernel( testOptionsTopoCommon, unittest.TestCase ):
+    """Verify ability to create networks with host and link options
+       (OVS kernel switch)."""
+    switchClass = OVSSwitch
+
+@unittest.skip( 'Skipping OVS user switch test for now' )
+class testOptionsTopoOVSUser( testOptionsTopoCommon, unittest.TestCase ):
+    """Verify ability to create networks with host and link options
+       (OVS user switch)."""
+    switchClass = partial( OVSSwitch, datapath='user' )
+
+@unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (IVS switch)."
+    "Verify ability to create networks with host and link options (IVS)."
     switchClass = IVSSwitch
 
+@unittest.skipUnless( quietRun( 'which ofprotocol' ),
+                     'Reference user switch is not installed' )
 class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (Userspace switch)."
+    "Verify ability to create networks with host and link options (UserSwitch)."
     switchClass = UserSwitch
 
 if __name__ == '__main__':

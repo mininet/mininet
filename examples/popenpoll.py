@@ -23,7 +23,7 @@ def pmonitorTest( N=3, seconds=10 ):
     endTime = time() + seconds
     for h, line in pmonitor( popens, timeoutms=500 ):
         if h:
-            print '%s: %s' % ( h.name, line ),
+            print '<%s>: %s' % ( h.name, line ),
         if time() >= endTime:
             for p in popens.values():
                 p.send_signal( SIGINT )

@@ -323,14 +323,13 @@ class CLI( Cmd ):
         corresponding IP addrs."""
 
         first, args, line = self.parseline( line )
-        if not args:
-            return
-        if args and len(args) > 0 and args[ -1 ] == '\n':
-            args = args[ :-1 ]
-        rest = args.split( ' ' )
 
         if first in self.mn:
+            if not args:
+                print "*** Enter a command for node: %s <cmd>" % first
+                return
             node = self.mn[ first ]
+            rest = args.split( ' ' )
             # Substitute IP addresses for node names in command
             rest = [ self.mn[ arg ].defaultIntf().updateIP()
                      if arg in self.mn else arg
@@ -341,7 +340,7 @@ class CLI( Cmd ):
             node.sendCmd( rest, printPid=( not builtin ) )
             self.waitForNode( node )
         else:
-            error( '*** Unknown command: %s\n' % first )
+            error( '*** Unknown command: %s\n' % line )
 
     # pylint: enable-msg=R0201
 

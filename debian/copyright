@@ -3,7 +3,7 @@ Upstream-Name: mininet
 Source: https://github.com/mininet/mininet
 
 Files: *
-Copyright: 2012 Open Networking Laboratory,
+Copyright: 2012-2013 Open Networking Laboratory,
            2009-2012 Bob Lantz,
            2009-2012 The Board of Trustees of the Leland Stanford Junior
            University
