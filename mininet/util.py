@@ -402,7 +402,6 @@ def fixLimits():
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
         #Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
-        assert False
     except:
         warn( "*** Error setting resource limits. "
               "Mininet's performance may be affected.\n" )
