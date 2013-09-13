@@ -903,6 +903,10 @@ class MiniEdit( Frame ):
                 nodeNum = int( name[ 1: ] )
                 if 'Switch' in tags:
                     f.write("    "+name+" = net.addSwitch('"+name+"')\n")
+                    opts = self.switchOpts[name]
+                    if ('externalInterfaces' in opts):
+                        for extInterface in opts['externalInterfaces']:
+                            f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
                 elif 'Host' in tags:
                     f.write("    "+name+" = net.addHost('"+name+"')\n")
                     opts = self.hostOpts[name]
@@ -911,7 +915,6 @@ class MiniEdit( Frame ):
                     if 'cpu' in opts:
                         f.write("    "+name+".setCPUFrac(f="+str(opts['cpu'])+", sched='"+opts['sched']+"')\n")
                     if ('externalInterfaces' in opts):
-                        #print 'external interfaces listed'
                         for extInterface in opts['externalInterfaces']:
                             f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
 
