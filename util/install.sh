@@ -652,11 +652,12 @@ function modprobe {
 
 function all {
     if [ "$DIST" = "Fedora" ]; then
-        printf "\nFedora 19 support status:\n"
-        printf "the install script options -b, -f, -n, and -p should work.\n\n"
-        printf "Just try:\n"
-        printf "    install.sh -fnp\n"
-        printf "with Fedora's kernel (3.10) and openvswitch (1.10.0) packages.\n"
+        printf "\nFedora 18+ support (still work in progress):\n"
+        printf " * Fedora 18+ has kernel 3.10 RPMS in the updates repositories\n"
+        printf " * Fedora 18+ has openvswitch 1.10 RPMS in the updates repositories\n"
+        printf " * the install.sh script options [-bfnpvw] should work.\n"
+        printf " * for a basic setup just try:\n"
+        printf "       install.sh -fnpv\n\n"
         exit 3
     fi
     echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
