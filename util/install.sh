@@ -261,12 +261,20 @@ function wireshark_version_check {
 function wireshark {
     echo "Installing Wireshark dissector..."
 
-    sudo apt-get install -y wireshark tshark libgtk2.0-dev
+    if [ "$DIST" = "Fedora" ]; then
+        # Just install Fedora's wireshark RPMS
+        # Fedora's wirehark >= 1.10.2-2 includes an OF dissector
+        # (it has been backported from the future Wireshark 1.12 code base)
+        $install wireshark wireshark-gnome
+        return
+    fi
+
+    $install wireshark tshark libgtk2.0-dev
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
         # Install newer version
-        sudo apt-get install -y scons mercurial libglib2.0-dev
-        sudo apt-get install -y libwiretap-dev libwireshark-dev
+        $install scons mercurial libglib2.0-dev
+        $install libwiretap-dev libwireshark-dev
         cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
         if [[ -z "$WS_DISSECTOR_REV" ]]; then
@@ -303,6 +311,12 @@ function wireshark {
 
 function ovs {
     echo "Installing Open vSwitch..."
+
+    if [ "$DIST" = "Fedora" ]; then
+        # Just install Fedora's openvswitch RPMS
+        $install openvswitch openvswitch-controller
+        return
+    fi
 
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
@@ -638,11 +652,12 @@ function modprobe {
 
 function all {
     if [ "$DIST" = "Fedora" ]; then
-        printf "\nFedora 19 support status:\n"
-        printf "the install script options -b, -f, -n, and -p should work.\n\n"
-        printf "Just try:\n"
-        printf "    install.sh -fnp\n"
-        printf "with Fedora's kernel (3.10) and openvswitch (1.10.0) packages.\n"
+        printf "\nFedora 18+ support (still work in progress):\n"
+        printf " * Fedora 18+ has kernel 3.10 RPMS in the updates repositories\n"
+        printf " * Fedora 18+ has openvswitch 1.10 RPMS in the updates repositories\n"
+        printf " * the install.sh script options [-bfnpvw] should work.\n"
+        printf " * for a basic setup just try:\n"
+        printf "       install.sh -fnpv\n\n"
         exit 3
     fi
     echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
