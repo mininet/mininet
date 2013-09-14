@@ -304,6 +304,12 @@ function wireshark {
 function ovs {
     echo "Installing Open vSwitch..."
 
+    if [ "$DIST" = "Fedora" ]; then
+        # Just install Fedora's openvswitch RPMS
+        $install openvswitch openvswitch-controller
+        return
+    fi
+
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
     OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
