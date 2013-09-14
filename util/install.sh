@@ -261,6 +261,14 @@ function wireshark_version_check {
 function wireshark {
     echo "Installing Wireshark dissector..."
 
+    if [ "$DIST" = "Fedora" ]; then
+        # Just install Fedora's wireshark RPMS
+        # Fedora's wirehark >= 1.10.2-2 includes an OF dissector
+        # (it has been backported from the future Wireshark 1.12 code base)
+        $install wireshark wireshark-gnome
+        return
+    fi
+
     sudo apt-get install -y wireshark tshark libgtk2.0-dev
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
