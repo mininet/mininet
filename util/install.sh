@@ -269,12 +269,12 @@ function wireshark {
         return
     fi
 
-    sudo apt-get install -y wireshark tshark libgtk2.0-dev
+    $install wireshark tshark libgtk2.0-dev
 
     if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
         # Install newer version
-        sudo apt-get install -y scons mercurial libglib2.0-dev
-        sudo apt-get install -y libwiretap-dev libwireshark-dev
+        $install scons mercurial libglib2.0-dev
+        $install libwiretap-dev libwireshark-dev
         cd $BUILD_DIR
         hg clone https://bitbucket.org/barnstorm/of-dissector
         if [[ -z "$WS_DISSECTOR_REV" ]]; then
