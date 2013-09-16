@@ -52,6 +52,7 @@ LogToConsole = False        # VM output to console rather than log file
 SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 NoKVM = False               # Don't use kvm and use emulation instead
 Branch = None               # Branch to update and check out before testing
+Zip = False                  # Archive .ovf and .vmdk into a .zip file
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -83,6 +84,12 @@ isoURLs = {
     'http://mirrors.kernel.org/ubuntu-releases/13.10/'
     'ubuntu-13.10-server-amd64.iso',
 }
+
+
+def OSVersion( flavor ):
+    "Return full OS version string for build flavor"
+    urlbase = path.basename( isoURLs.get( flavor, 'unknown' ) )
+    return path.splitext( urlbase )[ 0 ]
 
 
 LogStartTime = time()
@@ -135,7 +142,7 @@ def depend():
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs '
          ' landscape-client'
-         ' python-setuptools mtools' )
+         ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
 
@@ -514,6 +521,9 @@ def interact( vm, prompt=Prompt ):
     vm.expect( 'Done preparing Mininet', timeout=3600 )
     log( '* Completed successfully' )
     vm.expect( prompt )
+    version = getMininetVersion( vm )
+    vm.expect( prompt )
+    log( '* Mininet version: ', version )
     log( '* Testing Mininet' )
     runTests( vm )
     log( '* Shutting down' )
@@ -521,6 +531,7 @@ def interact( vm, prompt=Prompt ):
     log( '* Waiting for EOF/shutdown' )
     vm.read()
     log( '* Interaction complete' )
+    return version
 
 
 def cleanup():
@@ -652,7 +663,7 @@ def qcow2size( qcow2 ):
 
 def build( flavor='raring32server' ):
     "Build a Mininet VM; return vmdk and vdisk size"
-    global LogFile
+    global LogFile, Zip
     start = time()
     date = strftime( '%y%m%d-%H-%M-%S', localtime())
     dir = 'mn-%s-%s' % ( flavor, date )
@@ -675,15 +686,19 @@ def build( flavor='raring32server' ):
         logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
     vm = boot( volume, kernel, initrd, logfile )
-    interact( vm )
+    version = interact( vm )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename=basename )
+    vmdk = convert( volume, basename='mininet-vm' )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
-    ovf = generateOVF( diskname=vmdk, disksize=size, name=basename )
+    ovfname = 'mininet-%s-%s' % ( version, OSVersion( flavor ) )
+    ovf = generateOVF( diskname=vmdk, disksize=size, name=ovfname )
     log( '* Generated OVF descriptor file', ovf )
+    if Zip:
+        log( '* Generating .zip file' )
+        run( 'zip %s-ovf.zip %s %s' % ( ovfname, ovf, vmdk ) )
     end = time()
     elapsed = end - start
     log( '* Results logged to', abspath( logfile.name ) )
@@ -704,6 +719,15 @@ def runTests( vm, tests=None, prompt=Prompt ):
         fn = testfns[ test ]
         fn( vm )
         vm.expect( prompt )
+
+
+def getMininetVersion( vm ):
+    "Run mn to find Mininet version in VM"
+    vm.sendline( '~/mininet/bin/mn --version' )
+    # Eat command line echo, then read output line
+    vm.readline()
+    version = vm.readline().strip()
+    return version
 
 
 def bootAndRunTests( image, tests=None ):
@@ -733,6 +757,7 @@ def bootAndRunTests( image, tests=None ):
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
+    vm.expect( prompt )
     log( '* Running tests' )
     runTests( vm, tests=tests )
     # runTests eats its last prompt, but maybe it shouldn't...
@@ -769,7 +794,7 @@ def testString():
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM, Branch
+    global LogToConsole, NoKVM, Branch, Zip
     parser = argparse.ArgumentParser( description='Mininet VM build script',
                                       epilog=buildFlavorString() + ' ' +
                                       testString() )
@@ -796,6 +821,8 @@ def parseArgs():
                          ' this branch before testing' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
+    parser.add_argument( '-z', '--zip', action='store_true',
+                        help='archive .ovf and .vmdk into .zip file' )
     args = parser.parse_args()
     if args.depend:
         depend()
@@ -809,6 +836,8 @@ def parseArgs():
         NoKVM = True
     if args.branch:
         Branch = args.branch
+    if args.zip:
+        Zip = True
     for flavor in args.flavor:
         if flavor not in isoURLs:
             print "Unknown build flavor:", flavor
