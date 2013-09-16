@@ -1090,6 +1090,7 @@ class IVSSwitch(Switch):
             args.extend( ['-c', '%s:%d' % (c.IP(), c.port)] )
         if self.listenPort:
             args.extend( ['--listen', '127.0.0.1:%i' % self.listenPort] )
+        args.append( self.opts )
 
         logfile = '/tmp/ivs.%s.log' % self.name
 
