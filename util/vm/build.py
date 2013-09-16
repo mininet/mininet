@@ -494,6 +494,13 @@ def examplesfullTest( vm, prompt=Prompt ):
     vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
 
 
+def walkthroughTest( vm, prompt=Prompt ):
+    "Test mininet walkthrough"
+    vm.sendline( 'sudo apt-get install python-pexpect' )
+    vm.expect( prompt )
+    vm.sendline( 'sudo python ~/mininet/test/test_walkthrough.py -v' )
+
+
 def checkOutBranch( vm, branch, prompt=Prompt ):
     vm.sendline( 'cd ~/mininet; git fetch; git pull --rebase; git checkout '
                  + branch )
@@ -846,11 +853,11 @@ def parseArgs():
             print "Unknown build flavor:", flavor
             print buildFlavorString()
             break
-        # try:
-        build( flavor )
-        # except Exception as e:
-        # log( '* BUILD FAILED with exception: ', e )
-        # exit( 1 )
+        try:
+            build( flavor )
+        except Exception as e:
+            log( '* BUILD FAILED with exception: ', e )
+            exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test )
     if not ( args.depend or args.list or args.clean or args.flavor
