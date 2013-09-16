@@ -455,6 +455,8 @@ def sanityTest( vm ):
         log( '* Sanity check OK' )
     else:
         log( '* Sanity check FAILED' )
+        log( '* Sanity check output:' )
+        log( vm.before )
 
 
 def coreTest( vm, prompt=Prompt ):
@@ -475,7 +477,8 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'OK' )
         else:
             log( '* Test', test, 'FAILED' )
-
+            log( '* Test', test, 'output:' )
+            log( vm.before )
 
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
