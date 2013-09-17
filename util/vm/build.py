@@ -340,12 +340,15 @@ def makeKickstartFloppy():
 def archFor( filepath ):
     "Guess architecture for file path"
     name = path.basename( filepath )
-    if '64' in name:
+    if 'amd64' in name or 'x86_64' in name:
         arch = 'x86_64'
-    elif 'i386' in name or '32' in name:
+    # Beware of version 64 of a 32-bit OS
+    elif 'i386' in name or '32' in name or 'x86' in name:
         arch = 'i386'
+    elif '64' in name:
+        arch = 'x86_64'
     else:
-        log( "Error: can't discern CPU for file name", name )
+        log( "Error: can't discern CPU for name", name )
         exit( 1 )
     return arch
 
@@ -412,7 +415,9 @@ def boot( cow, kernel, initrd, logfile ):
     # pexpect might not be installed until after depend() is called
     global pexpect
     import pexpect
-    arch = archFor( kernel )
+    kinfo = run( 'file ' + kernel )
+    # Slightly abusing archFor here
+    arch = archFor( kinfo )
     if NoKVM:
         accel = 'tcg'
     else:
@@ -698,7 +703,7 @@ def build( flavor='raring32server' ):
     vm = boot( volume, kernel, initrd, logfile )
     version = interact( vm )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename='mininet-vm' )
+    vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
