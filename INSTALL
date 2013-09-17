@@ -42,7 +42,9 @@ like to contribute an installation script, we would welcome it!)
         sudo rm /usr/local/bin/ovs*
         sudo rm /usr/local/sbin/ovs*
 
-3. Native installation from source on Ubuntu 12.04+
+3. Native installation from source
+
+3.1. Native installation from source on Ubuntu 12.04+
 
    If you're reading this, you've probably already done so, but the
    command to download the Mininet source code is:
@@ -85,6 +87,44 @@ like to contribute an installation script, we would welcome it!)
    the -s <directory> flag.
 
         mininet/util/install.sh -s <directory> -a
+
+3.2. Native installation from source on Fedora 18+.
+
+   As root execute the following operations:
+
+    * install git
+
+        yum install git
+
+    * create an user account (e.g. mininet) and add it to the wheel group
+
+        useradd [...] mininet
+        usermod -a -G wheel mininet
+
+    * change the SElinux setting to permissive. It can be done
+      temporarily with:
+
+        setenforce 0
+
+   then login with the new account (e.g. mininet) and do the following:
+
+    * clone the Mininet repository
+
+        git clone git://github.com/mininet/mininet.git
+
+    * install Mininet, the OpenFlow reference implementation, and
+      Open vSwitch
+
+        mininet/util/install.sh -fnv
+
+    * enable and start openvswitch
+
+        sudo systemctl enable openvswitch
+        sudo systemctl start openvswitch
+
+    * test the mininet installation
+
+        sudo mn --test pingall
 
 4. Creating your own Mininet/OpenFlow tutorial VM
 
