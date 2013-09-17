@@ -75,9 +75,7 @@ like to contribute an installation script, we would welcome it!)
 
    To install ALL of the software which we use for OpenFlow tutorials,
    including POX, the OpenFlow WireShark dissector, the `oftest`
-   framework, and other potentially useful software (and to add some
-   stuff to `/etc/sysctl.conf` which may or may not be useful) you may
-   use:
+   framework, and other potentially useful software, you may use:
 
         mininet/util/install.sh -a
 
