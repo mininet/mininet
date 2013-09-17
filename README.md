@@ -81,14 +81,14 @@ several new features, including:
 * Preliminary support (`IVSSwitch()`) for the Indigo Virtual Switch
 * support for installing the OpenFlow 1.3 versions of the reference
   user switch and NOX from CPqD
-* The ability to import modules from mininet.examples
+* The ability to import modules from `mininet.examples`
 
 We have provided several new examples (which can easily be
 imported to provide useful functionality) including:
 
-* Modeling separate control and data networks
-* Connecting Mininet hosts the internet (or a LAN) using NAT
-* Creating per-host custom directories using bind mounts
+* Modeling separate control and data networks: `mininet.examples.controlnet`
+* Connecting Mininet hosts the internet (or a LAN) using NAT: `mininet.examples.nat`
+* Creating per-host custom directories using bind mounts: `mininet.examples.bind`
 
 Note that examples contain experimental features which might
 "graduate" into mainline Mininet in the future, but they should 
