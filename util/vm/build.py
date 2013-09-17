@@ -415,9 +415,8 @@ def boot( cow, kernel, initrd, logfile ):
     # pexpect might not be installed until after depend() is called
     global pexpect
     import pexpect
-    kinfo = run( 'file ' + kernel )
-    # Slightly abusing archFor here
-    arch = archFor( kinfo )
+    arch = archFor( kernel )
+    log( '* Detected kernel architecture', arch )
     if NoKVM:
         accel = 'tcg'
     else:
