@@ -313,12 +313,14 @@ class testWalkthrough( unittest.TestCase ):
         p.sendline( 'exit' )
         p.wait()
 
-    @unittest.skipUnless( '1 received' in quietRun( 'ping -c 1 github.com' ), 
+    @unittest.skipUnless( os.path.exists( '/tmp/pox' ) or
+                          '1 received' in quietRun( 'ping -c 1 github.com' ),
                           'Github is not reachable; cannot download Pox' )
     def testRemoteController( self ):
         "Test Mininet using Pox controller"
-        p = pexpect.spawn( 'test ! -d /tmp/pox && git clone https://github.com/noxrepo/pox.git /tmp/pox')
-        p.wait()
+        if not os.path.exists( '/tmp/pox' ):
+            p = pexpect.spawn( 'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
+            p.expect( pexpect.EOF )
         pox = pexpect.spawn( '/tmp/pox/pox.py forwarding.l2_learning' )
         net = pexpect.spawn( 'mn --controller=remote,ip=127.0.0.1,port=6633 --test pingall' )
         net.expect( '0% dropped' )
