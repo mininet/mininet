@@ -766,7 +766,7 @@ def bootAndRunTests( image, tests=None ):
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile )
     prompt = '\$ '
     login( vm )
-    log( '* Waiting for VM boot and login' )
+    log( '* Waiting for prompt after login' )
     vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
