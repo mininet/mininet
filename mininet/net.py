@@ -246,13 +246,11 @@ class Mininet( object ):
 
     def __iter__( self ):
         "return iterator over node names"
-        for node in chain( self.hosts, self.switches, self.controllers ):
-            yield node.name
+        return self.nameToNode.__iter__()
 
     def __len__( self ):
         "returns number of nodes in net"
-        return ( len( self.hosts ) + len( self.switches ) +
-                 len( self.controllers ) )
+        return len( self.nameToNode )
 
     def __contains__( self, item ):
         "returns True if net contains named node"
