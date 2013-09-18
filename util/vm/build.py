@@ -744,7 +744,7 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None ):
+def bootAndRunTests( image, tests=None, prompt=Prompt ):
     """Boot and test VM
        tests: list of tests (default: sanity, core)"""
     bootTestStart = time()
@@ -764,14 +764,12 @@ def bootAndRunTests( image, tests=None ):
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile )
-    prompt = '\$ '
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
-    vm.expect( prompt )
     log( '* Running tests' )
     runTests( vm, tests=tests )
     # runTests eats its last prompt, but maybe it shouldn't...
