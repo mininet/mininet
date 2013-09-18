@@ -512,7 +512,7 @@ def checkOutBranch( vm, branch, prompt=Prompt ):
     vm.sendline( 'sudo make install' )
 
 
-def interact( vm, prompt=Prompt ):
+def interact( vm, tests, pre='', post='', prompt=Prompt ):
     "Interact with vm, which is a pexpect object"
     login( vm )
     log( '* Waiting for login...' )
@@ -539,7 +539,7 @@ def interact( vm, prompt=Prompt ):
     vm.expect( prompt )
     log( '* Mininet version: ', version )
     log( '* Testing Mininet' )
-    runTests( vm )
+    runTests( vm, tests=tests, pre=pre, post=post )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
@@ -675,8 +675,12 @@ def qcow2size( qcow2 ):
     return bytes
 
 
-def build( flavor='raring32server' ):
-    "Build a Mininet VM; return vmdk and vdisk size"
+def build( flavor='raring32server', tests=None, pre='', post='' ):
+    """Build a Mininet VM; return vmdk and vdisk size
+       tests: tests to run
+       pre: command line to run in VM before tests
+       post: command line to run in VM after tests
+       prompt: shell prompt (default '$ ')"""
     global LogFile, Zip
     start = time()
     date = strftime( '%y%m%d-%H-%M-%S', localtime())
@@ -700,7 +704,7 @@ def build( flavor='raring32server' ):
         logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
     vm = boot( volume, kernel, initrd, logfile )
-    version = interact( vm )
+    version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
     vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
     if not SaveQCOW2:
@@ -721,12 +725,17 @@ def build( flavor='raring32server' ):
     os.chdir( '..' )
 
 
-def runTests( vm, tests=None, prompt=Prompt ):
+def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
-    print 'TESTS = ', tests
     if not tests:
-        tests = [ 'sanity', 'core' ]
+        tests = []
+    if pre:
+        log( '* Running command', pre )
+        vm.sendline( pre )
+        vm.expect( prompt )
     testfns = testDict()
+    if tests:
+        log( '* Running tests' )
     for test in tests:
         if test not in testfns:
             raise Exception( 'Unknown test: ' + test )
@@ -734,7 +743,10 @@ def runTests( vm, tests=None, prompt=Prompt ):
         fn = testfns[ test ]
         fn( vm )
         vm.expect( prompt )
-
+    if post:
+        log( '* Running post-test command', post )
+        vm.sendline( post )
+        vm.expect( prompt )
 
 def getMininetVersion( vm ):
     "Run mn to find Mininet version in VM"
@@ -745,9 +757,12 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None, prompt=Prompt ):
+def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt ):
     """Boot and test VM
-       tests: list of tests (default: sanity, core)"""
+       tests: list of tests to run
+       pre: command line to run in VM before tests
+       post: command line to run in VM after tests
+       prompt: shell prompt (default '$ ')"""
     bootTestStart = time()
     basename = path.basename( image )
     image = abspath( image )
@@ -771,8 +786,7 @@ def bootAndRunTests( image, tests=None, prompt=Prompt ):
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
-    log( '* Running tests' )
-    runTests( vm, tests=tests )
+    runTests( vm, tests=tests, pre=pre, post=post )
     # runTests eats its last prompt, but maybe it shouldn't...
     log( '* Shutting down' )
     vm.sendline( 'sudo shutdown -h now ' )
@@ -827,15 +841,19 @@ def parseArgs():
                          action='append',
                          help='Boot and test an existing VM image' )
     parser.add_argument( '-t', '--test', metavar='test', default=[],
-                        action='append',
-                        help='specify a test to run' )
+                         action='append',
+                         help='specify a test to run' )
+    parser.add_argument( '-r', '--run', metavar='cmd', default='',
+                         help='specify a command line to run before tests' )
+    parser.add_argument( '-p', '--post', metavar='cmd', default='',
+                         help='specify a command line to run after tests' )
     parser.add_argument( '-b', '--branch', metavar='branch',
                          help='For an existing VM image, check out and install'
                          ' this branch before testing' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     parser.add_argument( '-z', '--zip', action='store_true',
-                        help='archive .ovf and .vmdk into .zip file' )
+                         help='archive .ovf and .vmdk into .zip file' )
     args = parser.parse_args()
     if args.depend:
         depend()
@@ -851,18 +869,21 @@ def parseArgs():
         Branch = args.branch
     if args.zip:
         Zip = True
+    if not args.test and not args.run and not args.after:
+        args.test = [ 'sanity', 'core' ]
     for flavor in args.flavor:
         if flavor not in isoURLs:
             print "Unknown build flavor:", flavor
             print buildFlavorString()
             break
         try:
-            build( flavor )
+            build( flavor, tests=args.test, pre=args.run, post=args.after )
         except Exception as e:
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
-        bootAndRunTests( image, tests=args.test )
+        bootAndRunTests( image, tests=args.test, pre=args.run,
+                         post=args.after )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
