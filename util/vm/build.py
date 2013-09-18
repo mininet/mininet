@@ -869,7 +869,7 @@ def parseArgs():
         Branch = args.branch
     if args.zip:
         Zip = True
-    if not args.test and not args.run and not args.after:
+    if not args.test and not args.run and not args.post:
         args.test = [ 'sanity', 'core' ]
     for flavor in args.flavor:
         if flavor not in isoURLs:
@@ -877,13 +877,13 @@ def parseArgs():
             print buildFlavorString()
             break
         try:
-            build( flavor, tests=args.test, pre=args.run, post=args.after )
+            build( flavor, tests=args.test, pre=args.run, post=args.post )
         except Exception as e:
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.after )
+                         post=args.post )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
