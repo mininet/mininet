@@ -502,7 +502,7 @@ def walkthroughTest( vm, prompt=Prompt ):
     "Test mininet walkthrough"
     vm.sendline( 'sudo apt-get install python-pexpect' )
     vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/test/test_walkthrough.py -v' )
+    vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
@@ -723,6 +723,7 @@ def build( flavor='raring32server' ):
 
 def runTests( vm, tests=None, prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
+    print 'TESTS = ', tests
     if not tests:
         tests = [ 'sanity', 'core' ]
     testfns = testDict()
