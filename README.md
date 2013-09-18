@@ -1,4 +1,3 @@
-
 Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 
@@ -72,9 +71,9 @@ Mininet includes:
 Mininet 2.1.0 provides a number of bug fixes as well as
 several new features, including:
 
-* Convenient access to Mininet() as a dict of nodes
+* Convenient access to `Mininet()` as a dict of nodes
 * X11 tunneling (wireshark in Mininet hosts, finally!)
-* Accurate reflection of the Mininet() object in the CLI
+* Accurate reflection of the `Mininet()` object in the CLI
 * Automatically detecting and adjusting resource limits
 * Automatic cleanup on failure of the `mn` command
 * Preliminary support for running OVS in user space mode
