@@ -43,9 +43,6 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     if ! which lsb_release &> /dev/null; then
         $install lsb-release
     fi
-    if ! which bc &> /dev/null; then
-        $install bc
-    fi
 fi
 test -e /etc/fedora-release && DIST="Fedora"
 if [ "$DIST" = "Fedora" ]; then
@@ -55,9 +52,6 @@ if [ "$DIST" = "Fedora" ]; then
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install redhat-lsb-core
-    fi
-    if ! which bc &> /dev/null; then
-        $install bc
     fi
 fi
 if which lsb_release &> /dev/null; then
