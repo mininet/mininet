@@ -353,7 +353,7 @@ def archFor( filepath ):
     return arch
 
 
-def installUbuntu( iso, image, logfilename='install.log' ):
+def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
     "Install Ubuntu from iso onto image"
     kvm = 'qemu-system-' + archFor( iso )
     floppy, kickstart, preseed = makeKickstartFloppy()
@@ -371,7 +371,7 @@ def installUbuntu( iso, image, logfilename='install.log' ):
            '-nographic',
            '-netdev', 'user,id=mnbuild',
            '-device', 'virtio-net,netdev=mnbuild',
-           '-m', '1024',
+           '-m', str( memory ),
            '-k', 'en-us',
            '-fda', floppy,
            '-drive', 'file=%s,if=virtio' % image,
@@ -406,11 +406,12 @@ def installUbuntu( iso, image, logfilename='install.log' ):
     log( '* Ubuntu installation completed in %.2f seconds' % elapsed )
 
 
-def boot( cow, kernel, initrd, logfile ):
+def boot( cow, kernel, initrd, logfile, memory=1024 ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
        logfile: log file for pexpect object
+       memory: memory size in MB
        returns: pexpect object to qemu process"""
     # pexpect might not be installed until after depend() is called
     global pexpect
@@ -426,7 +427,7 @@ def boot( cow, kernel, initrd, logfile ):
             '-nographic',
             '-netdev user,id=mnbuild',
             '-device virtio-net,netdev=mnbuild',
-            '-m 1024',
+            '-m %s' % memory,
             '-k en-us',
             '-kernel', kernel,
             '-initrd', initrd,
@@ -675,12 +676,13 @@ def qcow2size( qcow2 ):
     return bytes
 
 
-def build( flavor='raring32server', tests=None, pre='', post='' ):
+def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     """Build a Mininet VM; return vmdk and vdisk size
        tests: tests to run
        pre: command line to run in VM before tests
        post: command line to run in VM after tests
-       prompt: shell prompt (default '$ ')"""
+       prompt: shell prompt (default '$ ')
+       memory: memory size in MB"""
     global LogFile, Zip
     start = time()
     date = strftime( '%y%m%d-%H-%M-%S', localtime())
@@ -703,7 +705,7 @@ def build( flavor='raring32server', tests=None, pre='', post='' ):
     else:
         logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
-    vm = boot( volume, kernel, initrd, logfile )
+    vm = boot( volume, kernel, initrd, logfile, memory=memory )
     version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
     vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
@@ -757,12 +759,14 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt ):
+def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
+                     memory=1024 ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
        post: command line to run in VM after tests
-       prompt: shell prompt (default '$ ')"""
+       prompt: shell prompt (default '$ ')
+       memory: VM memory size in MB"""
     bootTestStart = time()
     basename = path.basename( image )
     image = abspath( image )
@@ -779,7 +783,8 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt ):
         logfile = NamedTemporaryFile( prefix=basename,
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
-    vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile )
+    vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile,
+               memory=memory )
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
@@ -837,6 +842,8 @@ def parseArgs():
                          help='save qcow2 image rather than deleting it' )
     parser.add_argument( '-n', '--nokvm', action='store_true',
                          help="Don't use kvm - use tcg emulation instead" )
+    parser.add_argument( '-m', '--memory', metavar='MB', type=int,
+                        default=1024,  help='VM memory size in MB' )
     parser.add_argument( '-i', '--image', metavar='image', default=[],
                          action='append',
                          help='Boot and test an existing VM image' )
@@ -877,13 +884,14 @@ def parseArgs():
             print buildFlavorString()
             break
         try:
-            build( flavor, tests=args.test, pre=args.run, post=args.post )
+            build( flavor, tests=args.test, pre=args.run, post=args.post,
+                   memory=args.memory )
         except Exception as e:
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post )
+                         post=args.post, memory=args.memory)
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
