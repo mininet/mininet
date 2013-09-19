@@ -828,7 +828,7 @@ def testString():
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM, Branch, Zip
+    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT
     parser = argparse.ArgumentParser( description='Mininet VM build script',
                                       epilog=buildFlavorString() + ' ' +
                                       testString() )
@@ -845,13 +845,15 @@ def parseArgs():
     parser.add_argument( '-n', '--nokvm', action='store_true',
                          help="Don't use kvm - use tcg emulation instead" )
     parser.add_argument( '-m', '--memory', metavar='MB', type=int,
-                        default=1024,  help='VM memory size in MB' )
+                        default=1024, help='VM memory size in MB' )
     parser.add_argument( '-i', '--image', metavar='image', default=[],
                          action='append',
                          help='Boot and test an existing VM image' )
     parser.add_argument( '-t', '--test', metavar='test', default=[],
                          action='append',
                          help='specify a test to run' )
+    parser.add_argument( '-w', '--timeout', metavar='timeout', type=int,
+                            default=0, help='set expect timeout' )
     parser.add_argument( '-r', '--run', metavar='cmd', default='',
                          help='specify a command line to run before tests' )
     parser.add_argument( '-p', '--post', metavar='cmd', default='',
@@ -878,6 +880,8 @@ def parseArgs():
         Branch = args.branch
     if args.zip:
         Zip = True
+    if args.timeout:
+        TIMEOUT = args.timeout
     if not args.test and not args.run and not args.post:
         args.test = [ 'sanity', 'core' ]
     for flavor in args.flavor:
