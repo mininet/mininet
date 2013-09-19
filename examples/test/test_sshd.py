@@ -40,7 +40,7 @@ class testSSHD( unittest.TestCase ):
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
         cmd = ( 'python -m mininet.examples.sshd -D '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
-                '-o StrictModes=no' )
+                '-o StrictModes=no -o UseDNS=no -u0' )
         # run example with custom sshd args
         self.net = pexpect.spawn( cmd )
         self.net.expect( 'mininet>' )
