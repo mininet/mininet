@@ -28,7 +28,7 @@ f.write( 'Welcome to %s at %s\n' % ( h1.name, h1.IP() ) )
 f.close()
 
 print "*** Running sshd"
-cmd = '/usr/sbin/sshd -o "Banner /tmp/%s.banner"' % h1.name
+cmd = '/usr/sbin/sshd -o UseDNS=no -u0 -o "Banner /tmp/%s.banner"' % h1.name
 # add arguments from the command line
 if len( sys.argv ) > 1:
     cmd += ' ' + ' '.join( sys.argv[ 1: ] )
