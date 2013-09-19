@@ -24,7 +24,7 @@ class testControlNet( unittest.TestCase ):
         p.wait()
 
     def testFailover( self ):
-        "Kill controllers and verity that switch, s1, fails over properly"
+        "Kill controllers and verify that switch, s1, fails over properly"
         count = 1
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )
