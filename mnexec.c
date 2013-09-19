@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <sched.h>
+#include <ctype.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
