@@ -1,3 +1,9 @@
+mininet (2.1.0-0ubuntu1) saucy; urgency=low
+
+  * Add 2.1.0 final packaging
+
+ -- Bob Lantz <rlantz@cs.stanford.edu>  Wed, 18 Sep 2013 22:43:47 -0700
+
 mininet (2.1.0~rc1-0ubuntu1) saucy; urgency=low
 
   * New upstream release candidate:
