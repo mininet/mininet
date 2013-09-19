@@ -685,7 +685,9 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
        memory: memory size in MB"""
     global LogFile, Zip
     start = time()
-    date = strftime( '%y%m%d-%H-%M-%S', localtime())
+    lstart = localtime()
+    date = strftime( '%y%m%d-%H-%M-%S', lstart)
+    ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
     try:
         os.mkdir( dir )
@@ -713,7 +715,7 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
-    ovfname = 'mininet-%s-%s' % ( version, OSVersion( flavor ) )
+    ovfname = 'mininet-%s-%s-%s' % ( version, ovfdate, OSVersion( flavor ) )
     ovf = generateOVF( diskname=vmdk, disksize=size, name=ovfname )
     log( '* Generated OVF descriptor file', ovf )
     if Zip:
