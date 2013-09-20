@@ -67,7 +67,7 @@ def fixNetworkManager( root, intf ):
     # hopefully this won't disconnect you
     root.cmd( 'service network-manager restart' )
 
-def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
+def connectToInternet( network, inetIntf='eth0', switch='s1', rootip='10.254', subnet='10.0/8'):
     """Connect the network to the internet
        switch: switch to connect to root namespace
        rootip: address for interface in root namespace
@@ -89,7 +89,7 @@ def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
     network.start()
 
     # Start NAT and establish forwarding
-    startNAT( root )
+    startNAT( root, inetIntf )
 
     # Establish routes from end hosts
     for host in network.hosts:
