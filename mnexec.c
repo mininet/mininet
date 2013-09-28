@@ -13,6 +13,7 @@
  * Partially based on public domain setsid(1)
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <linux/sched.h>
 #include <unistd.h>
