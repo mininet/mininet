@@ -63,7 +63,7 @@ void validate(char *path)
 }
 
 /* Add our pid to cgroup */
-int cgroup(char *gname)
+void cgroup(char *gname)
 {
     static char path[PATH_MAX];
     static char *groups[] = {
