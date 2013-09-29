@@ -24,6 +24,7 @@ import tkFileDialog
 import tkSimpleDialog
 import re
 import json
+from distutils.version import StrictVersion
 
 # someday: from ttk import *
 
@@ -33,8 +34,9 @@ from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
 from mininet.node import CPULimitedHost, Host
-from mininet.node import OVSKernelSwitch, OVSSwitch
+from mininet.node import OVSKernelSwitch, OVSSwitch, IVSSwitch
 from mininet.link import TCLink, Intf
+from mininet.cli import CLI
 
 
 CONTROLLERDEF = 'ref'
@@ -43,6 +45,33 @@ CONTROLLERS = { 'ref': Controller,
                 'nox': NOX,
                 'remote': RemoteController,
                 'none': lambda name: None }
+
+class customOvs(OVSSwitch):
+
+    def setOpenFlowVersion(self):
+        return self.openFlowVersions
+
+    def setOpenFlowVersion(self, versions):
+        self.openFlowVersions = []
+        if versions['ovsOf10'] == '1':
+            self.openFlowVersions.append('OpenFlow10')
+        if versions['ovsOf12'] == '1':
+            self.openFlowVersions.append('OpenFlow12')
+        if versions['ovsOf13'] == '1':
+            self.openFlowVersions.append('OpenFlow13')
+
+    def configureOpenFlowVersion(self):
+        if not ( 'OpenFlow12' in self.openFlowVersions or
+           'OpenFlow13' in self.openFlowVersions ):
+            return
+
+        protoList = ",".join(self.openFlowVersions)
+        print 'Configuring OpenFlow to '+protoList
+        print self.cmd( 'ovs-vsctl -- set bridge', self, 'protocols='+protoList)
+
+    def start( self, controllers ):
+        OVSSwitch.start( self, controllers )
+        self.configureOpenFlowVersion()
 
 class PrefsDialog(tkSimpleDialog.Dialog):
 
@@ -55,7 +84,9 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         def body(self, master):
 
             Label(master, text="IP Base:").grid(row=0, sticky=E)
-            Label(master, text="Defaul Terminal:").grid(row=1, sticky=E)
+            Label(master, text="Default Terminal:").grid(row=1, sticky=E)
+            Label(master, text="Start CLI:").grid(row=2, sticky=E)
+            Label(master, text="Default Switch:").grid(row=3, sticky=E)
 
             # Field for Base IP
             self.e1 = Entry(master)
@@ -70,15 +101,103 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             terminalType = self.prefValues['terminalType']
             self.var.set(terminalType)
 
-            return self.e1 # initial focus
+            # Field for CLI
+            self.cliStart = IntVar()
+            self.c1 = Checkbutton(master, variable=self.cliStart)
+            self.c1.grid(row=2, column=1, sticky=W)
+            if self.prefValues['startCLI'] == '0':
+                self.c1.deselect()
+            else:
+                self.c1.select()
+
+            # Selection of switch type
+            self.switchType = StringVar(master)
+            self.switchTypeMenu = OptionMenu(master, self.switchType, "Open vSwitch", "Indigo Virtual Switch")
+            self.switchTypeMenu.grid(row=3, column=1, sticky=W)
+            switchTypePref = self.prefValues['switchType']
+            if switchTypePref == 'ivs':
+                self.switchType.set("Indigo Virtual Switch")
+            else:
+                self.switchType.set("Open vSwitch")
+
+
+            # Fields for OVS OpenFlow version
+            ovsFrame= LabelFrame(master, text='Open vSwitch', padx=5, pady=5)
+            ovsFrame.grid(row=4, column=0, columnspan=2, sticky=EW)
+            Label(ovsFrame, text="OpenFlow 1.0:").grid(row=0, sticky=E)
+            Label(ovsFrame, text="OpenFlow 1.2:").grid(row=1, sticky=E)
+            Label(ovsFrame, text="OpenFlow 1.3:").grid(row=2, sticky=E)
+
+            self.ovsOf10 = IntVar()
+            self.covsOf10 = Checkbutton(ovsFrame, variable=self.ovsOf10)
+            self.covsOf10.grid(row=0, column=1, sticky=W)
+            if self.prefValues['openFlowVersions']['ovsOf10'] == '0':
+                self.covsOf10.deselect()
+            else:
+                self.covsOf10.select()
+
+            self.ovsOf12 = IntVar()
+            self.covsOf12 = Checkbutton(ovsFrame, variable=self.ovsOf12)
+            self.covsOf12.grid(row=1, column=1, sticky=W)
+            if self.prefValues['openFlowVersions']['ovsOf12'] == '0':
+                self.covsOf12.deselect()
+            else:
+                self.covsOf12.select()
+
+            self.ovsOf13 = IntVar()
+            self.covsOf13 = Checkbutton(ovsFrame, variable=self.ovsOf13)
+            self.covsOf13.grid(row=2, column=1, sticky=W)
+            if self.prefValues['openFlowVersions']['ovsOf13'] == '0':
+                self.covsOf13.deselect()
+            else:
+                self.covsOf13.select()
+
+            # initial focus
+            return self.e1
 
         def apply(self):
             ipBase = self.e1.get()
             terminalType = self.var.get()
-            #print 'Dialog='+ipBase
-            #print 'Terminal='+terminalType
-            self.result = ipBase, terminalType
+            startCLI = str(self.cliStart.get())
 
+            ovsOf10 = str(self.ovsOf10.get())
+            ovsOf12 = str(self.ovsOf12.get())
+            ovsOf13 = str(self.ovsOf13.get())
+
+            self.ovsOk = True
+            if ovsOf12 == "1" or ovsOf13 == "1":
+                ovsVer = self.getOvsVersion()
+                if StrictVersion(ovsVer) < StrictVersion('1.10'):
+                    self.ovsOk = False
+                    showerror(title="Error",
+                              message='Open vSwitch version 1.10+ required. You have '+ovsVer+'.')
+                   
+            if self.ovsOk:
+                self.result = {'ipBase':ipBase,
+                               'terminalType':terminalType,
+                               'startCLI':startCLI,
+                               'openFlowVersions':{'ovsOf10':ovsOf10,
+                                                   'ovsOf12':ovsOf12,
+                                                   'ovsOf13':ovsOf13}
+                              }
+                sw = self.switchType.get()
+                if sw == 'Indigo Virtual Switch':
+                    self.result['switchType'] = 'ivs'
+                else:
+                    self.result['switchType'] = 'ovs'
+            else:
+                self.result = None
+
+        def getOvsVersion(self):
+            outp = quietRun("ovs-vsctl show")
+            r = r'ovs_version: "(.*)"'
+            m = re.search(r, outp)
+            if m is None:
+                print 'Version check failed'
+                return None
+            else:
+                print 'Open vSwitch version is '+m.group(1)
+                return m.group(1)
 class CustomDialog(object):
 
         # TODO: Fix button placement and Title and window focus lock
@@ -241,6 +360,7 @@ class SwitchDialog(CustomDialog):
             results = {'externalInterfaces':externalInterfaces}
             self.result = results
 
+
 class VerticalScrolledTable(LabelFrame):
     """A pure Tkinter scrollable frame that actually works!
 
@@ -395,27 +515,30 @@ class ControllerDialog(tkSimpleDialog.Dialog):
 
             self.var = StringVar(master)
             Label(master, text="Controller Type:").grid(row=0, sticky=E)
-            Label(master, text="Remote IP:").grid(row=1, sticky=E)
-            Label(master, text="Remote Port:").grid(row=2, sticky=E)
-
-            # Field for Remove Controller IP
-            self.e1 = Entry(master)
-            self.e1.grid(row=1, column=1)
-            self.e1.insert(0, self.ctrlrValues['remoteIP'])
+            Label(master, text="Controller Port:").grid(row=1, sticky=E)
 
             # Field for Remove Controller Port
             self.e2 = Entry(master)
-            self.e2.grid(row=2, column=1)
+            self.e2.grid(row=1, column=1)
             self.e2.insert(0, self.ctrlrValues['remotePort'])
+
+            # Field for Remove Controller IP
+            remoteFrame= LabelFrame(master, text='Remote Controller', padx=5, pady=5)
+            remoteFrame.grid(row=2, column=0, columnspan=2, sticky=W)
+
+            Label(remoteFrame, text="IP Address:").grid(row=0, sticky=E)
+            self.e1 = Entry(remoteFrame)
+            self.e1.grid(row=0, column=1)
+            self.e1.insert(0, self.ctrlrValues['remoteIP'])
 
             # Field for Controller Type
             controllerType = self.ctrlrValues['controllerType']
-            self.o1 = OptionMenu(master, self.var, "Remote", "OpenFlow Reference", "OVS Controller")
+            self.o1 = OptionMenu(master, self.var, "Remote Controller", "OpenFlow Reference", "OVS Controller")
             self.o1.grid(row=0, column=1, sticky=W)
             if controllerType == 'ref':
                 self.var.set("OpenFlow Reference")
             elif controllerType == 'remote':
-                self.var.set("Remote")
+                self.var.set("Remote Controller")
             else:
                 self.var.set("OVS Controller")
 
@@ -423,14 +546,14 @@ class ControllerDialog(tkSimpleDialog.Dialog):
 
         def apply(self):
             controllerType = self.var.get()
+            remoteIP = self.e1.get()
+            controllerPort = int(self.e2.get())
             if controllerType == 'Remote':
-                first = self.e1.get()
-                second = int(self.e2.get())
-                self.result = 'remote', first, second
+                self.result = 'remote', remoteIP, controllerPort
             elif controllerType == 'OpenFlow Reference':
-                self.result = ['ref']
+                self.result = 'ref', remoteIP, controllerPort
             else:
-                self.result = ['ovsc']
+                self.result = 'ovsc', remoteIP, controllerPort
 
 class MiniEdit( Frame ):
 
@@ -439,9 +562,19 @@ class MiniEdit( Frame ):
     def __init__( self, parent=None, cheight=400, cwidth=800 ):
 
         self.defaultIpBase='10.0.0.0/8'
-        self.defaultTerminal='xterm'
 
-        self.minieditIpBase=self.defaultIpBase
+        self.appPrefs={
+            "ipBase": self.defaultIpBase,
+            "startCLI": "0",
+            "terminalType": 'xterm',
+            "switchType": 'ovs',
+            'openFlowVersions':{'ovsOf10':'1',
+                                'ovsOf12':'0',
+                                'ovsOf13':'0'}
+
+        }
+
+
         Frame.__init__( self, parent )
         self.action = None
         self.appName = 'MiniEdit'
@@ -734,8 +867,9 @@ class MiniEdit( Frame ):
         self.controllers = loadedTopology['controllers']
 
         if 'application' in loadedTopology:
-            applicationPrefs = loadedTopology['application']
-            self.minieditIpBase = applicationPrefs['ipBase']
+            print 'before appPrefs: '+str(self.appPrefs)
+            self.appPrefs = dict(self.appPrefs.items() + loadedTopology['application'].items())
+            print 'new appPrefs: '+str(self.appPrefs)
 
         hosts = loadedTopology['hosts']
         for host in hosts:
@@ -788,7 +922,7 @@ class MiniEdit( Frame ):
         self.links = {}
         self.hostOpts = {}
         self.switchOpts = {}
-        self.minieditIpBase = self.defaultIpBase
+        self.appPrefs["ipBase"]= self.defaultIpBase
 
     def saveTopology( self ):
         "Save command."
@@ -846,7 +980,7 @@ class MiniEdit( Frame ):
             savingDictionary['controllers'] = self.controllers
 
             # Save Application preferences
-            savingDictionary['application'] = {'ipBase':self.minieditIpBase}
+            savingDictionary['application'] = self.appPrefs
 
             try:
                 f = open(fileName, 'wb')
@@ -877,12 +1011,15 @@ class MiniEdit( Frame ):
             f.write("from mininet.cli import CLI\n")
             f.write("from mininet.log import setLogLevel, info\n")
             f.write("from mininet.link import TCLink, Intf\n")
+            if self.appPrefs['switchType'] == 'ivs':
+                f.write("from mininet.node import IVSSwitch\n")
 
             f.write("\n")
             f.write("def myNetwork():\n")
             f.write("\n")
             f.write("    net = Mininet( topo=None,\n")
             f.write("                   build=False,\n")
+            f.write("                   ipBase='"+self.appPrefs['ipBase']+"',\n")
             f.write("                   link=TCLink)\n")
 
             f.write("\n")
@@ -891,17 +1028,19 @@ class MiniEdit( Frame ):
             f.write("    info( '*** Adding controller\\n' )\n")
             controllerType = self.controllers['c0']['controllerType']
 
+            controllerIP = self.controllers['c0']['remoteIP']
+            controllerPort = self.controllers['c0']['remotePort']
+            f.write("    net.addController(name='c0',\n")
+
             if controllerType == 'remote':
-                controllerIP = self.controllers['c0']['remoteIP']
-                controllerPort = self.controllers['c0']['remotePort']
-                f.write("    net.addController(name='c0',\n")
                 f.write("                      controller=RemoteController,\n")
                 f.write("                      ip='"+controllerIP+"',\n")
-                f.write("                      port="+str(controllerPort)+")\n")
             elif controllerType == 'ovsc':
-                f.write("    net.addController(name='c0', controller=OVSController)\n")
+                f.write("                      controller=OVSController,\n")
             else:
-                f.write("    net.addController(name='c0', controller=Controller)\n")
+                f.write("                      controller=Controller,\n")
+
+            f.write("                      port="+str(controllerPort)+")\n")
             f.write("\n")
 
             # Save Switches and Hosts
@@ -911,7 +1050,10 @@ class MiniEdit( Frame ):
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
                 nodeNum = int( name[ 1: ] )
                 if 'Switch' in tags:
-                    f.write("    "+name+" = net.addSwitch('"+name+"')\n")
+                    if self.appPrefs['switchType'] == 'ivs':
+                        f.write("    "+name+" = net.addSwitch('"+name+"', cls=IVSSwitch)\n")
+                    else:
+                        f.write("    "+name+" = net.addSwitch('"+name+"')\n")
                     opts = self.switchOpts[name]
                     if ('externalInterfaces' in opts):
                         for extInterface in opts['externalInterfaces']:
@@ -1380,11 +1522,11 @@ class MiniEdit( Frame ):
             print 'New link details = ' + str(newLinkOpts)
 
     def prefDetails( self ):
-        prefDefaults = {'ipBase':self.minieditIpBase, 'terminalType':self.defaultTerminal}
+        prefDefaults = self.appPrefs
         prefBox = PrefsDialog(self, title='Preferences', prefDefaults=prefDefaults)
+        print 'New Prefs = ' + str(prefBox.result)
         if prefBox.result:
-            self.minieditIpBase = prefBox.result[0]
-            self.defaultTerminal = prefBox.result[1]
+            self.appPrefs = prefBox.result
 
 
     def controllerDetails( self ):
@@ -1393,9 +1535,8 @@ class MiniEdit( Frame ):
             #print 'Controller is ' + ctrlrBox.result[0]
             selectedController = 'c0'
             self.controllers[selectedController]['controllerType'] = ctrlrBox.result[0]
-            if ctrlrBox.result[0] == 'remote':
-                self.controllers[selectedController]['remoteIP'] = ctrlrBox.result[1]
-                self.controllers[selectedController]['remotePort'] = ctrlrBox.result[2]
+            self.controllers[selectedController]['remoteIP'] = ctrlrBox.result[1]
+            self.controllers[selectedController]['remotePort'] = ctrlrBox.result[2]
             print 'New controller details for ' + selectedController + ' = ' + str(self.controllers[selectedController])
 
     def listBridge( self, _ignore=None ):
@@ -1458,19 +1599,21 @@ class MiniEdit( Frame ):
 
         # Make controller
         print 'Getting controller selection:'
+        controllerIP = self.controllers['c0']['remoteIP']
+        controllerPort = self.controllers['c0']['remotePort']
         if controllerType == 'remote':
-            controllerIP = self.controllers['c0']['remoteIP']
-            controllerPort = self.controllers['c0']['remotePort']
             net.addController(name='c0',
                               controller=RemoteController,
                               ip=controllerIP,
                               port=controllerPort)
         elif controllerType == 'ovsc':
             net.addController(name='c0',
-                              controller=OVSController)
+                              controller=OVSController,
+                              port=controllerPort)
         else:
             net.addController(name='c0',
-                              controller=Controller)
+                              controller=Controller,
+                              port=controllerPort)
 
 
     def buildNodes( self, net):
@@ -1485,7 +1628,12 @@ class MiniEdit( Frame ):
                 opts = self.switchOpts[name]
 
                 # Create the correct switch class
-                newSwitch = net.addSwitch( name , cls=OVSSwitch)
+                switchClass = customOvs
+                if self.appPrefs['switchType'] == 'ivs':
+                    switchClass = IVSSwitch
+                newSwitch = net.addSwitch( name , cls=switchClass)
+                if self.appPrefs['switchType'] == 'ovs':
+                    newSwitch.setOpenFlowVersion(self.appPrefs['openFlowVersions'])
 
                 # Attach external interfaces
                 if ('externalInterfaces' in opts):
@@ -1494,7 +1642,7 @@ class MiniEdit( Frame ):
                            Intf( extInterface, node=newSwitch )
 
             elif 'Host' in tags:
-                ipBaseNum, prefixLen = netParse( self.minieditIpBase )
+                ipBaseNum, prefixLen = netParse( self.appPrefs['ipBase'] )
                 ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
                 opts = self.hostOpts[name]
 
@@ -1535,7 +1683,7 @@ class MiniEdit( Frame ):
         net = Mininet( topo=None,
                        build=False,
                        link=TCLink,
-                       ipBase=self.minieditIpBase )
+                       ipBase=self.appPrefs['ipBase'] )
 
         self.buildControllers(net)
         self.buildNodes(net)
@@ -1552,6 +1700,9 @@ class MiniEdit( Frame ):
         if self.net is None:
             self.net = self.build()
             self.net.start()
+            if self.appPrefs['startCLI'] == '1':
+                print "\n\n NOTE: PLEASE REMEMBER TO EXIT THE CLI BEFORE YOU PRESS THE STOP BUTTON. Not exiting will prevent MiniEdit from quitting and will prevent you from starting the network again during this sessoin.\n\n"
+                CLI(self.net)
 
     def stop( self ):
         "Stop network."
@@ -1593,8 +1744,9 @@ class MiniEdit( Frame ):
         name = self.itemToWidget[ self.selection ][ 'text' ]
         if name not in self.net.nameToNode:
             return
-        term = makeTerm( self.net.nameToNode[ name ], 'Host', term=self.defaultTerminal )
-        self.net.terms += term 
+        term = makeTerm( self.net.nameToNode[ name ], 'Host', term=self.appPrefs['terminalType'] )
+        #self.net.terms.append(term)
+        self.net.terms += term
 
     def iperf( self, _ignore=None ):
         "Make an xterm when a button is pressed."
