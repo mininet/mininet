@@ -181,10 +181,6 @@ class Mininet( object ):
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
         self.nextIP += 1
         defaults.update( params )
-        # TODO: clean this up
-        if params.get( 'isNAT', False ):
-            print "***** &&&&&& !!!! nat nat nat"
-            cls = NAT
         if not cls:
             cls = self.host
         h = cls( name, **defaults )
@@ -319,21 +315,6 @@ class Mininet( object ):
             host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
-    ''' TODO: remove this!
-    def configGateway( self ):
-        """Add gateway routes to all hosts if the networks has a gateway."""
-        if self.gateway:
-            gatewayIP = self.gateway.defaultIntf().IP()
-            for host in self.hosts:
-                if host.inNamespace and self.gateway:
-                    host.cmd( 'ip route flush root 0/0' )
-                    host.cmd( 'route add -net', self.ipBase, 'dev', host.defaultIntf() )
-                    host.cmd( 'route add default gw', gatewayIP )
-                else:
-                    # Don't mess with hosts in the root namespace
-                    pass
-    '''
-
     def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
@@ -392,8 +373,6 @@ class Mininet( object ):
             self.startTerms()
         if self.autoStaticArp:
             self.staticArp()
-        # TODO: remove this
-        #self.configGateway()
         self.built = True
 
     def startTerms( self ):
