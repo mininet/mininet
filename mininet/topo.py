@@ -12,6 +12,7 @@ setup for testing, and can even be emulated with the Mininet package.
 '''
 
 from mininet.util import irange, natural, naturalSeq
+from mininet.node import NAT
 
 class MultiGraph( object ):
     "Utility class to track nodes and edges - replaces networkx.Graph"
@@ -89,11 +90,12 @@ class Topo(object):
         result = self.addNode(name, isSwitch=True, **opts)
         return result
 
-    def addNAT(self, name='nat', connect=True, **opts):
+    def addNAT(self, name='nat', connect=True, inNamespace=False, **opts):
         """Convenience method: Add NAT to graph.
            name: NAT name
            connect: True will automatically connect to the first switch"""
-        nat = self.addNode(name, isNAT=True, inNamespace=False)
+        #nat = self.addNode(name, isNAT=True, inNamespace=False)
+        nat = self.addNode(name, cls=NAT, inNamespace=inNamespace, hosts=self.hosts(), **opts)
         if connect:
             # connect the NAT to the first switch
             self.addLink(name, self.switches()[ 0 ])

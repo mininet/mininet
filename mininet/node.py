@@ -1246,7 +1246,7 @@ class RemoteController( Controller ):
 class NAT( Node ):
     """NAT: Provides connectivity to external network"""
 
-    def __init__( self, name, inetIntf='eth0', subnet='10.0/8', **params):
+    def __init__( self, name, inetIntf='eth0', subnet='10.0/8', localIntf=None, **params):
         super( NAT, self ).__init__( name, **params )
 
         """Start NAT/forwarding between Mininet and external network
@@ -1254,13 +1254,22 @@ class NAT( Node ):
         subnet: Mininet subnet (default 10.0/8)="""
         self.inetIntf = inetIntf
         self.subnet = subnet #TODO: get subnet from Mininet directly
+        self.localIntf = localIntf
 
-    def config( self, inetIntf='eth0', subnet='10.0/8', **params ):
+    def config( self, **params ):
         super( NAT, self).config( **params )
         """Configure the NAT and iptables"""
 
+        if not self.localIntf:
+            self.localIntf =  self.defaultIntf()
+
+        #-------------------------
+        print "inetIntf:", self.inetIntf
+        print "subnet:", self.subnet
         # Identify the interface connecting to the mininet network
-        localIntf =  self.defaultIntf()
+        print "LocalIntf:", self.localIntf
+        #-------------------------
+
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 
         # Flush any currently active rules
@@ -1274,8 +1283,8 @@ class NAT( Node ):
         self.cmd( 'iptables -P FORWARD DROP' )
 
         # Configure NAT
-        self.cmd( 'iptables -I FORWARD -i', localIntf, '-d', self.subnet, '-j DROP' )
-        self.cmd( 'iptables -A FORWARD -i', localIntf, '-s', self.subnet, '-j ACCEPT' )
+        self.cmd( 'iptables -I FORWARD -i', self.localIntf, '-d', self.subnet, '-j DROP' )
+        self.cmd( 'iptables -A FORWARD -i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
         self.cmd( 'iptables -A FORWARD -i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
         self.cmd( 'iptables -t nat -A POSTROUTING -o ', self.inetIntf, '-j MASQUERADE' )
 
@@ -1284,7 +1293,7 @@ class NAT( Node ):
 
         # Prevent network-manager from messing with our interface
         # by specifying manual configuration in /etc/network/interfaces
-        intf = localIntf
+        intf = self.localIntf
         cfile = '/etc/network/interfaces'
         line = '\niface %s inet manual\n' % intf
         config = open( cfile ).read()

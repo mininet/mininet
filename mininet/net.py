@@ -112,8 +112,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None,
-                  gateway=None ):
+                  listenPort=None ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -130,8 +129,7 @@ class Mininet( object ):
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
-               each additional switch in the net if inNamespace=False
-           gateway: node that provides connectivity to the Internet"""
+               each additional switch in the net if inNamespace=False"""
         self.topo = topo
         self.switch = switch
         self.host = host
@@ -150,7 +148,6 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
-        self.gateway = gateway
 
         self.hosts = []
         self.switches = []
@@ -165,9 +162,6 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
-
-    # list of Node subclasses that provide gateway service
-    gateways = [ NAT ]
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
@@ -189,14 +183,13 @@ class Mininet( object ):
         defaults.update( params )
         # TODO: clean this up
         if params.get( 'isNAT', False ):
+            print "***** &&&&&& !!!! nat nat nat"
             cls = NAT
         if not cls:
             cls = self.host
         h = cls( name, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
-        if cls in self.gateways:
-            self.gateway = h
         return h
 
     def addSwitch( self, name, cls=None, **params ):
@@ -242,7 +235,7 @@ class Mininet( object ):
     def addNAT( self, name='nat0', connect=True, **params ):
         nat = self.addHost( name, cls=NAT, **params )
         # find first switch and create link
-        print "net/addNAT"
+        print "******* &&&&&& net/addNAT"
         if connect:
             #connect the nat to the first switch
             self.addLink( nat, self.switches[ 0 ] )
@@ -326,6 +319,7 @@ class Mininet( object ):
             host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
+    ''' TODO: remove this!
     def configGateway( self ):
         """Add gateway routes to all hosts if the networks has a gateway."""
         if self.gateway:
@@ -338,6 +332,7 @@ class Mininet( object ):
                 else:
                     # Don't mess with hosts in the root namespace
                     pass
+    '''
 
     def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
@@ -397,7 +392,8 @@ class Mininet( object ):
             self.startTerms()
         if self.autoStaticArp:
             self.staticArp()
-        self.configGateway()
+        # TODO: remove this
+        #self.configGateway()
         self.built = True
 
     def startTerms( self ):
