@@ -226,8 +226,6 @@ class MininetRunner( object ):
         start = time.time()
 
         topo = buildTopo( TOPOS, self.options.topo )
-        if self.options.nat:
-          topo.addNAT()
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
         controller = customConstructor( CONTROLLERS, self.options.controller )
@@ -254,6 +252,10 @@ class MininetRunner( object ):
                   xterms=xterms, autoSetMacs=mac,
                   autoStaticArp=arp, autoPinCpus=pin,
                   listenPort=listenPort )
+
+        if self.options.nat:
+            nat = mn.addNAT()
+            mn.configHosts()
 
         if self.options.pre:
             CLI( mn, script=self.options.pre )

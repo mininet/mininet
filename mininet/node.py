@@ -1253,7 +1253,7 @@ class NAT( Node ):
         inetIntf: interface for internet access
         subnet: Mininet subnet (default 10.0/8)="""
         self.inetIntf = inetIntf
-        self.subnet = subnet #TODO: get subnet from Mininet directly
+        self.subnet = subnet
         self.localIntf = localIntf
 
     def config( self, **params ):
@@ -1262,13 +1262,6 @@ class NAT( Node ):
 
         if not self.localIntf:
             self.localIntf =  self.defaultIntf()
-
-        #-------------------------
-        print "inetIntf:", self.inetIntf
-        print "subnet:", self.subnet
-        # Identify the interface connecting to the mininet network
-        print "LocalIntf:", self.localIntf
-        #-------------------------
 
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 

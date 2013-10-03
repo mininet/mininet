@@ -56,7 +56,7 @@ class InternetTopo(Topo):
                                 defaultRoute='via %s' % localIP)
             self.addLink(host, switch)
 
-def perfTest():
+def run():
     "Create network and run simple performance test"
     topo = InternetTopo()
     net = Mininet(topo=topo)
@@ -66,4 +66,4 @@ def perfTest():
 
 if __name__ == '__main__':
     setLogLevel('info')
-    perfTest()
+    run()

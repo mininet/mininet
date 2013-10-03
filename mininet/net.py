@@ -227,14 +227,18 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    # TODO: incomplete
-    def addNAT( self, name='nat0', connect=True, **params ):
-        nat = self.addHost( name, cls=NAT, **params )
+    def addNAT( self, name='nat0', connect=True, inNamespace=False, **params ):
+        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace, 
+                            subnet=self.ipBase, **params )
         # find first switch and create link
-        print "******* &&&&&& net/addNAT"
         if connect:
-            #connect the nat to the first switch
+            # connect the nat to the first switch
             self.addLink( nat, self.switches[ 0 ] )
+            # set the default route on hosts
+            natIP = nat.params[ 'ip' ].split('/')[ 0 ]
+            for host in self.hosts:
+                if host.inNamespace:
+                    host.setDefaultRoute( 'via %s' % natIP )
         return nat
 
     # BL: We now have four ways to look up nodes
