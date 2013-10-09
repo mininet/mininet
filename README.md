@@ -81,6 +81,9 @@ several new features, including:
 * support for installing the OpenFlow 1.3 versions of the reference
   user switch and NOX from CPqD
 * The ability to import modules from `mininet.examples`
+* Support for installing the
+  [LINC-Switch](https://github.com/FlowForwarding/LINC-Switch)
+  that supports OpenFlow 1.3.1
 
 We have provided several new examples (which can easily be
 imported to provide useful functionality) including:
