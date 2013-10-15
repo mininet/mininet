@@ -1094,6 +1094,7 @@ class IVSSwitch(Switch):
 
         logfile = '/tmp/ivs.%s.log' % self.name
 
+        self.cmd( 'ifconfig lo up' )
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):
