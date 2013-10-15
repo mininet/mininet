@@ -13,6 +13,7 @@
  * Partially based on public domain setsid(1)
 */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <linux/sched.h>
 #include <unistd.h>
@@ -20,8 +21,8 @@
 #include <syscall.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <limits.h>
 #include <sched.h>
+#include <ctype.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -62,7 +63,7 @@ void validate(char *path)
 }
 
 /* Add our pid to cgroup */
-int cgroup(char *gname)
+void cgroup(char *gname)
 {
     static char path[PATH_MAX];
     static char *groups[] = {
@@ -176,4 +177,6 @@ int main(int argc, char *argv[])
     }
     
     usage(argv[0]);
+
+    return 0;
 }

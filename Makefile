@@ -12,6 +12,8 @@ MANDIR = /usr/share/man/man1
 DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
+CFLAGS += -Wall -Wextra
+
 all: codecheck test
 
 clean:
