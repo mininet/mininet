@@ -96,7 +96,7 @@ class MobilitySwitch( OVSSwitch ):
         "Move one of our interfaces to another switch"
         self.detach( intf )
         self.delIntf( intf )
-        switch.addIntf( intf, port=port, rename=True )
+        switch.addIntf( intf, port=port, rename=rename )
         switch.attach( intf )
 
 
