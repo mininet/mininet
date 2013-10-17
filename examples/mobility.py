@@ -27,6 +27,7 @@ from mininet.log import output, warn
 
 from random import randint
 from re import findall
+from distutils.version import StrictVersion
 
 class MobilitySwitch( OVSSwitch ):
     "Switch that can reattach and rename interfaces"
@@ -36,7 +37,15 @@ class MobilitySwitch( OVSSwitch ):
         "Call our parent method and determine OVS version"
         OVSSwitch.setup()
         info = quietRun( 'ovs-vsctl --version' )
-        cls.OVSVersion =  float( findall( '\d+\.\d+', info )[ 0 ] )
+        cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
+        if cls.isOldOVS():
+            warn( 'WARNING: port selection may not work '
+                  ' with OVS ', cls.OVSVersion )
+
+    @classmethod
+    def isOldOVS( cls ):
+        return ( StrictVersion( cls.OVSVersion ) <
+             StrictVersion( '1.10' ) )
 
     def delIntf( self, intf ):
         "Remove (and detach) an interface"
@@ -56,12 +65,12 @@ class MobilitySwitch( OVSSwitch ):
         "Attach an interface and set its port"
         port = self.ports[ intf ]
         if port:
-            if MobilitySwitch.OVSVersion >= 1.10:
+            if self.isOldOVS():
+                self.cmd( 'ovs-vsctl add-port', self, intf )
+            else:
                 self.cmd( 'ovs-vsctl add-port', self, intf,
                           '-- set Interface', intf,
                           'ofport_request=%s' % port )
-            else:
-                self.cmd( 'ovs-vsctl add-port', self, intf )
             self.validatePort( intf )
 
     def validatePort( self, intf ):
@@ -69,8 +78,8 @@ class MobilitySwitch( OVSSwitch ):
         ofport = int( self.cmd( 'ovs-vsctl get Interface', intf,
                               'ofport' ) )
         if ofport != self.ports[ intf ]:
-            warn( 'WARNING: ofport for', intf, 'is', ofport,
-                   'but we wanted', self.ports[ intf ], '\n' )
+            warn( 'WARNING: ofport for', intf, 'is actually', ofport,
+                  '\n' )
 
     def renameIntf( self, intf, newname='' ):
         "Rename an interface (to its canonical name)"
@@ -118,9 +127,6 @@ def mobilityTest():
     print '* Starting network:'
     net.start()
     printConnections( net.switches )
-    if MobilitySwitch.OVSVersion < 1.10:
-        print '* WARNING: port selection may not work in OVS',
-        print MobilitySwitch.OVSVersion
     print '* Testing network'
     net.pingAll()
     print '* Identifying switch interface for h1'
