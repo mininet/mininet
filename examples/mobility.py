@@ -12,19 +12,31 @@ The reference controller doesn't support mobility, so we need to
 manually flush the switch flow tables!
 
 Good luck!
+
+to-do:
+
+- think about wifi/hub behavior
+- think about clearing last hop - why doesn't that work?
 """
 
 from mininet.net import Mininet
-from mininet.node import OVSSwitch, Controller
+from mininet.node import OVSSwitch
 from mininet.topo import LinearTopo
-from mininet.cli import CLI
-from mininet.util import dumpNetConnections
-from mininet.log import output
-from time import sleep
+from mininet.util import quietRun
+from mininet.log import output, warn
 
+from random import randint
+from re import findall
 
 class MobilitySwitch( OVSSwitch ):
     "Switch that can reattach and rename interfaces"
+
+    @classmethod
+    def setup( cls ):
+        "Call our parent method and determine OVS version"
+        OVSSwitch.setup()
+        info = quietRun( 'ovs-vsctl --version' )
+        cls.OVSVersion =  float( findall( '\d+\.\d+', info )[ 0 ] )
 
     def delIntf( self, intf ):
         "Remove (and detach) an interface"
@@ -33,12 +45,32 @@ class MobilitySwitch( OVSSwitch ):
         del self.intfs[ port ]
         del self.nameToIntf[ intf.name ]
 
-    def addIntf( self, intf, rename=True, **kwargs ):
+    def addIntf( self, intf, rename=False, **kwargs ):
         "Add (and reparent) an interface"
         OVSSwitch.addIntf( self, intf, **kwargs )
         intf.node = self
         if rename:
             self.renameIntf( intf )
+
+    def attach( self, intf ):
+        "Attach an interface and set its port"
+        port = self.ports[ intf ]
+        if port:
+            if MobilitySwitch.OVSVersion >= 1.10:
+                self.cmd( 'ovs-vsctl add-port', self, intf,
+                          '-- set Interface', intf,
+                          'ofport_request=%s' % port )
+            else:
+                self.cmd( 'ovs-vsctl add-port', self, intf )
+            self.validatePort( intf )
+
+    def validatePort( self, intf ):
+        "Validate intf's OF port number"
+        ofport = int( self.cmd( 'ovs-vsctl get Interface', intf,
+                              'ofport' ) )
+        if ofport != self.ports[ intf ]:
+            warn( 'WARNING: ofport for', intf, 'is', ofport,
+                   'but we wanted', self.ports[ intf ], '\n' )
 
     def renameIntf( self, intf, newname='' ):
         "Rename an interface (to its canonical name)"
@@ -51,19 +83,12 @@ class MobilitySwitch( OVSSwitch ):
         self.nameToIntf[ intf.name ] = intf
         intf.ifconfig( 'up' )
 
-    def validatePort( self, intf ):
-        "Validate intf's OF port number"
-        ofport = int( intf.cmd( 'ovs-vsctl get Interface', intf,
-                              'ofport' ) )
-        assert ofport == self.ports[ intf ]
-
-    def moveIntf( self, intf, switch, rename=True ):
+    def moveIntf( self, intf, switch, port=None, rename=True ):
         "Move one of our interfaces to another switch"
         self.detach( intf )
         self.delIntf( intf )
-        switch.addIntf( intf, rename=True )
+        switch.addIntf( intf, port=port, rename=True )
         switch.attach( intf )
-        switch.validatePort( intf )
 
 
 def printConnections( switches ):
@@ -79,10 +104,10 @@ def printConnections( switches ):
         output( '\n' )
 
 
-def moveHost( host, oldSwitch, newSwitch ):
+def moveHost( host, oldSwitch, newSwitch, newPort=None ):
     "Move a host from old switch to new switch"
     hintf, sintf = host.connectionsTo( oldSwitch )[ 0 ]
-    oldSwitch.moveIntf( sintf, newSwitch )
+    oldSwitch.moveIntf( sintf, newSwitch, port=newPort )
     return hintf, sintf
 
 
@@ -90,16 +115,21 @@ def mobilityTest():
     "A simple test of mobility"
     print '* Simple mobility test'
     net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch )
-    net.start()
     print '* Starting network:'
+    net.start()
     printConnections( net.switches )
+    if MobilitySwitch.OVSVersion < 1.10:
+        print '* WARNING: port selection may not work in OVS',
+        print MobilitySwitch.OVSVersion
+    print '* Testing network'
     net.pingAll()
     print '* Identifying switch interface for h1'
-    h1, last = net.get( 'h1', 's1' )
+    h1, old = net.get( 'h1', 's1' )
     for s in 2, 3, 1:
-        next = net[ 's%d' % s ]
-        print '* Moving', h1, 'from', last, 'to', next
-        hintf, sintf = moveHost( h1, last, next )
+        new = net[ 's%d' % s ]
+        port = randint( 10, 20 )
+        print '* Moving', h1, 'from', old, 'to', new, 'port', port
+        hintf, sintf = moveHost( h1, old, new, newPort=port )
         print '*', hintf, 'is now connected to', sintf
         print '* Clearing out old flows'
         for sw in net.switches:
@@ -108,9 +138,8 @@ def mobilityTest():
         printConnections( net.switches )
         print '* Testing connectivity:'
         net.pingAll()
-        last = next
+        old = new
     net.stop()
 
 if __name__ == '__main__':
     mobilityTest()
-
