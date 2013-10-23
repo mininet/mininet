@@ -36,6 +36,8 @@ RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
     created or managed by mininet.
 
+TODO: NAT
+
 Future enhancements:
 
 - Possibly make Node, Switch and Controller more abstract so that
@@ -1309,4 +1311,3 @@ class NAT( Node ):
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 
         super( NAT, self ).terminate()
-

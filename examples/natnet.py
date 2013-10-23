@@ -26,7 +26,7 @@ from mininet.cli import CLI
 from mininet.util import irange
 
 class InternetTopo(Topo):
-    "Single switch connected to n hosts."
+    "TODO: Single switch connected to n hosts."
     def __init__(self, n=2, h=1, **opts):
         Topo.__init__(self, **opts)
 
@@ -57,7 +57,7 @@ class InternetTopo(Topo):
             self.addLink(host, switch)
 
 def run():
-    "Create network and run simple performance test"
+    "TODO: Create network and run simple performance test"
     topo = InternetTopo()
     net = Mininet(topo=topo)
     net.start()
