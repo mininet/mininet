@@ -63,9 +63,9 @@ def fixNetworkManager( root, intf ):
         print '*** Adding', line.strip(), 'to', cfile
         with open( cfile, 'a' ) as f:
             f.write( line )
-    # Probably need to restart network-manager to be safe -
-    # hopefully this won't disconnect you
-    root.cmd( 'service network-manager restart' )
+        # Probably need to restart network-manager to be safe -
+        # hopefully this won't disconnect you
+        root.cmd( 'service network-manager restart' )
 
 def connectToInternet( network, switch='s1', rootip='10.254', subnet='10.0/8'):
     """Connect the network to the internet
