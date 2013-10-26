@@ -248,7 +248,7 @@ def getNodeConnections( nodes ):
     return nodeConnections
 
 def getNetConnections( net ):
-    "Return connections in network as a list of strings"
+    "Return network connections as a list of strings"
     nodes = net.controllers + net.switches + net.hosts
     return getNodeConnections( nodes )
 
