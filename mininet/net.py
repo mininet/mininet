@@ -372,7 +372,7 @@ class Mininet( object ):
             return
         info( "*** Running terms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
-        self.terms += makeTerms( self.controllers, 'controller' )
+        self.terms += makeTerms( [controller for controller in self.controllers if not isinstance(controller, RemoteController)], 'controller' )
         self.terms += makeTerms( self.switches, 'switch' )
         self.terms += makeTerms( self.hosts, 'host' )
 
