@@ -95,7 +95,7 @@ from itertools import chain
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.node import Host, OVSKernelSwitch, Controller, RemoteController
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
