@@ -907,13 +907,21 @@ class LincSwitch(Switch):
         hosts_intfs = [str( i ) for i in self.intfList() if not i.IP()]
         self.linc_intfs = self.setup_interfaces_for_linc(hosts_intfs)
         self.bridges = self.setup_bridges(zip(hosts_intfs, self.linc_intfs))
-        self.generate_config(self.linc_intfs)
+        self.generate_config(self.linc_intfs, controllers)
         self.cmd('linc start')
 
-    def generate_config(self, interfaces):
-        logical_switch_id = 0
-        config_args = "-s " + str(logical_switch_id) + " " + " ".join(interfaces)
+    def generate_config(self, interfaces, controllers):
+        config_args =  self.form_config_gen_logical_switch_id_arg(0) \
+          + " " + " ".join(interfaces) \
+          + " " + self.form_config_gen_controllers_arg(controllers)
         self.cmd('linc_config ' + config_args)
+
+    def form_config_gen_logical_switch_id_arg(self, logical_switch_id):
+        return "-s " + str(logical_switch_id)
+
+    def form_config_gen_controllers_arg(self, controllers):
+        return "-c " +  " ".join(['tcp:{0}:{1}'.format(c.IP(), c.port)
+                                  for c in controllers])
 
     def setup_interfaces_for_linc(self, hosts_intfs):
         linc_intfs = [ "tap-" + intf for intf in hosts_intfs ]
