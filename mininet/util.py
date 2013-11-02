@@ -227,6 +227,31 @@ def dumpNetConnections( net ):
     nodes = net.controllers + net.switches + net.hosts
     dumpNodeConnections( nodes )
 
+def getNodeConnections( nodes ):
+    "Return node connections as a list of strings"
+
+    def getConnections( node ):
+        connectionString = ''
+        for intf in node.intfList():
+            connectionString += ' %s:' % intf
+            if intf.link:
+                intfs = [intf.link.intf1, intf.link.intf2]
+                intfs.remove(intf)
+                connectionString += str(intfs[0])
+            else:
+                connectionString += ' '
+        return connectionString
+
+    nodeConnections = []
+    for node in nodes:                
+        nodeConnections.append(node.name + getConnections(node))
+    return nodeConnections
+
+def getNetConnections( net ):
+    "Return network connections as a list of strings"
+    nodes = net.controllers + net.switches + net.hosts
+    return getNodeConnections( nodes )
+
 # IP and Mac address formatting and parsing
 
 def _colonHex( val, bytecount ):

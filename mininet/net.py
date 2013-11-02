@@ -95,7 +95,7 @@ from itertools import chain
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.node import Host, OVSKernelSwitch, Controller, RemoteController
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -372,7 +372,7 @@ class Mininet( object ):
             return
         info( "*** Running terms on %s\n" % os.environ[ 'DISPLAY' ] )
         cleanUpScreens()
-        self.terms += makeTerms( self.controllers, 'controller' )
+        self.terms += makeTerms( [controller for controller in self.controllers if not isinstance(controller, RemoteController)], 'controller' )
         self.terms += makeTerms( self.switches, 'switch' )
         self.terms += makeTerms( self.hosts, 'host' )
 
