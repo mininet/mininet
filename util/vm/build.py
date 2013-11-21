@@ -140,8 +140,7 @@ def depend():
     run( 'sudo apt-get -y update' )
     run( 'sudo apt-get install -y'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
-         ' e2fsprogs '
-         ' landscape-client'
+         ' e2fsprogs dnsmasq'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
@@ -581,8 +580,8 @@ OVFTemplate = """<?xml version="1.0"?>
 </References>
 <DiskSection>
 <Info>Virtual disk information</Info>
-<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte" 
-    ovf:diskId="vmdisk1" ovf:fileRef="file1" 
+<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
+    ovf:diskId="vmdisk1" ovf:fileRef="file1"
     ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
 </DiskSection>
 <NetworkSection>
