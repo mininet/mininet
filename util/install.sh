@@ -271,8 +271,9 @@ function linc_switch {
         git checkout ${LINC_SWITCH_REV}
     fi
 
-    sudo make rel
     REL_DIR=$BUILD_DIR/$LINC_SWITCH_DIR/rel
+    cp $REL_DIR/files/sys.config.orig $REL_DIR/files/sys.config
+    sudo make rel
 
     LINC_START_COMMAND="#!/bin/sh\ncd $REL_DIR && ./linc/bin/linc \$@"
     install_command "$LINC_START_COMMAND" $REL_DIR/linc.start linc
