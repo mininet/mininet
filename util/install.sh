@@ -259,7 +259,7 @@ function linc_switch {
     sudo apt-get update
     $install git-core esl-erlang make uml-utilities bridge-utils
 
-    LINC_SWITCH_DIR="LINC-Switch"
+    LINC_SWITCH_DIR=$BUILD_DIR/"LINC-Switch"
 
     if [ ! -d $LINC_SWITCH_DIR ]; then
         git clone https://github.com/FlowForwarding/LINC-Switch.git
@@ -271,16 +271,30 @@ function linc_switch {
         git checkout ${LINC_SWITCH_REV}
     fi
 
-    REL_DIR=$BUILD_DIR/$LINC_SWITCH_DIR/rel
+    REL_DIR=$LINC_SWITCH_DIR/rel
     cp $REL_DIR/files/sys.config.orig $REL_DIR/files/sys.config
     sudo make rel
 
-    LINC_START_COMMAND="#!/bin/sh\ncd $REL_DIR && ./linc/bin/linc \$@"
-    install_command "$LINC_START_COMMAND" $REL_DIR/linc.start linc
+    LINC_REL_COMMAND=$(echo "#!/usr/bin/env bash"\
+                            "\n$LINC_SWITCH_DIR/scripts/rel_copy.sh \$@")
+    install_command "$LINC_REL_COMMAND" $REL_DIR/linc_rel.sh linc_rel
 
-    CONFIG_GEN_COMMAND="#!/bin/sh\ncd $REL_DIR && ./../scripts/config_gen \$@"\
-" -o $REL_DIR/linc/releases/*/sys.config"
-    install_command "$CONFIG_GEN_COMMAND" $REL_DIR/linc.config_gen linc_config
+    LINC_RUN_USAGE="Usage: \$0 SWITCH_NAME {start|stop|restart|reboot|ping|console|console_clean|attach}"
+    LINC_RUN_SWITCH_DOWN="Switch \$REL_SUFFIX is not running."
+    LINC_RUN_COMMAND=$(echo "#!/usr/bin/env bash"\
+                            "\ntest \$# -lt 2 && echo \"$LINC_RUN_USAGE\" && exit 1"\
+                            "\nREL_SUFFIX=\$1"\
+                            "\ntest ! -d $REL_DIR/linc_\$REL_SUFFIX"\
+                            "&& echo \"$LINC_RUN_SWITCH_DOWN\" && exit 1"\
+                            "\n$REL_DIR/linc_\$REL_SUFFIX/bin/linc \${@:2}")
+    install_command "$LINC_RUN_COMMAND" $REL_DIR/linc_runner.sh linc
+
+    CONFIG_GEN_COMMAND=$(echo "#!/usr/bin/env bash"\
+                              "\nREL_SUFFIX=\$1"\
+                              "\n$LINC_SWITCH_DIR/scripts/config_gen \${@:2} "\
+                              "-o $REL_DIR/linc_\$REL_SUFFIX/releases/*/sys.config")
+    install_command "$CONFIG_GEN_COMMAND" $REL_DIR/linc_config_gen.sh \
+        linc_config_gen
 
     cd $BUILD_DIR/
 }
