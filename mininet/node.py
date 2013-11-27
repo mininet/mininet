@@ -897,24 +897,48 @@ class UserSwitch( Switch ):
 class LincSwitch(Switch):
     "User-space LINC-Switch implemented in Erlang."
 
+    config_gen_cmd = "linc_config_gen {sw_name} {config_args}"
+    start_cmd = "linc {sw_name} start"
+    stop_cmd = "linc {sw_name} stop"
+    rel_create_cmd = "linc_rel -c {sw_name}"
+    rel_delete_cmd = "linc_rel -d {sw_name}"
+
     def __init__(self, name, **kwargs):
         Switch.__init__(self, name, **kwargs)
-        pathCheck('linc', 'linc_config',
+
+    def start(self, controllers):
+        self.setup_linc_switch(controllers)
+        self.cmd('linc ' + self.name + ' start')
+
+    def stop(self):
+        for intf in self.linc_intfs + self.bridges:
+            self.delet_interface(intf)
+        self.cmd(self.stop_cmd.format(sw_name = self.name))
+        self.cmd(self.rel_delete_cmd.format(sw_name = self.name))
+        # Will stop the epmd daemon only if there are no nodes registered.
+        # So this command takes effect only if the last switch instance is being
+        # stopped.
+        self.cmd('epmd -kill')
+
+    @classmethod
+    def setup(cls):
+        pathCheck('linc', 'linc_config_gen', 'linc_rel',
                   moduleName='the user-space OpenFlow LINC-Switch'
                   + ' (https://github.com/FlowForwarding/LINC-Switch)')
 
-    def start( self, controllers ):
+    def setup_linc_switch(self, controllers):
         hosts_intfs = [str( i ) for i in self.intfList() if not i.IP()]
         self.linc_intfs = self.setup_interfaces_for_linc(hosts_intfs)
         self.bridges = self.setup_bridges(zip(hosts_intfs, self.linc_intfs))
+        self.cmd(self.rel_create_cmd.format(sw_name = self.name))
         self.generate_config(self.linc_intfs, controllers)
-        self.cmd('linc start')
 
     def generate_config(self, interfaces, controllers):
         config_args =  self.form_config_gen_logical_switch_id_arg(0) \
           + " " + " ".join(interfaces) \
           + " " + self.form_config_gen_controllers_arg(controllers)
-        self.cmd('linc_config ' + config_args)
+        self.cmd(self.config_gen_cmd.format(sw_name = self.name,
+                                            config_args = config_args))
 
     def form_config_gen_logical_switch_id_arg(self, logical_switch_id):
         return "-s " + str(logical_switch_id)
@@ -949,12 +973,6 @@ class LincSwitch(Switch):
 
     def delet_interface(self, interface):
         self.cmd('ip link delete {0}'.format(interface))
-
-    def stop( self ):
-        for intf in self.linc_intfs + self.bridges:
-            self.delet_interface(intf)
-        self.cmd('linc stop')
-        self.cmd('epmd -kill')
 
 
 class OVSLegacyKernelSwitch( Switch ):
