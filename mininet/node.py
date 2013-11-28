@@ -957,7 +957,7 @@ class LincSwitch(Switch):
     def setup_bridges(self, bridges_intfs):
         bridges = []
         for idx, intfs_pair in enumerate(bridges_intfs):
-            bridge_name = 'br{0}'.format(idx)
+            bridge_name = 'br-{0}-{1}'.format(self.name, idx)
             bridges.append(bridge_name)
             self.cmd('brctl addbr {0}'.format(bridge_name))
             for intf in intfs_pair:
