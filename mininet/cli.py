@@ -331,7 +331,8 @@ class CLI( Cmd ):
             node = self.mn[ first ]
             rest = args.split( ' ' )
             # Substitute IP addresses for node names in command
-            rest = [ self.mn[ arg ].defaultIntf().updateIP()
+            # If updateIP() returns None, then use node name
+            rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
                      if arg in self.mn else arg
                      for arg in rest ]
             rest = ' '.join( rest )
