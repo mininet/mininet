@@ -297,6 +297,7 @@ class CLI( Cmd ):
                     break
         except IOError:
             error( 'error reading file %s\n' % args[ 0 ] )
+        self.inputFile.close()
         self.inputFile = None
 
     def do_dpctl( self, line ):
