@@ -3,7 +3,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.1.0
+Version 2.1.0+
 
 ### What is Mininet?
 
@@ -66,9 +66,9 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.1.0
+### New features in 2.1.0+
 
-Mininet 2.1.0 provides a number of bug fixes as well as
+Mininet 2.1.0+ provides a number of bug fixes as well as
 several new features, including:
 
 * Convenient access to `Mininet()` as a dict of nodes
@@ -127,7 +127,7 @@ Mininet to change the networking world!
 
 ### Credits
 
-The Mininet 2.1.0 Team:
+The Mininet 2.1.0+ Team:
 
 * Bob Lantz
 * Brian O'Connor
