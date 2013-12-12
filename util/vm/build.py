@@ -484,6 +484,10 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'output:' )
             log( vm.before )
 
+def noneTest( vm ):
+    "This test does nothing"
+    vm.sendline( 'echo' )
+
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
     vm.sendline( 'sudo apt-get install python-pexpect' )
