@@ -9,7 +9,6 @@ TODO: missing xterm test
 import unittest
 import pexpect
 import os
-from time import sleep
 from mininet.util import quietRun
 
 class testWalkthrough( unittest.TestCase ):
