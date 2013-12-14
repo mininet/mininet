@@ -1146,7 +1146,7 @@ class Controller( Node ):
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
         if 'Connected' in listening:
-            servers = self.cmd( 'netstat -atp' ).split( '\n' )
+            servers = self.cmd( 'netstat -natp' ).split( '\n' )
             pstr = ':%d ' % self.port
             clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
             raise Exception( "Please shut down the controller which is"
