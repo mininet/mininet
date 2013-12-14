@@ -386,7 +386,7 @@ class Mininet( object ):
 
         if not self.controllers and self.controller:
             # Add a default controller
-            info( '*** Adding controller\n' )
+            info( '** No controller defined, adding default controller\n' )
             classes = self.controller
             if type( classes ) is not list:
                 classes = [ classes ]
@@ -464,7 +464,9 @@ class Mininet( object ):
             self.build()
         info( '*** Starting controller\n' )
         for controller in self.controllers:
+            info( controller.name + ' ')
             controller.start()
+        info( '\n' )
         info( '*** Starting %s switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ')
