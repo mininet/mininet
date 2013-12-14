@@ -63,6 +63,8 @@ class Intf( object ):
             self.ip, self.prefixLen = ipstr.split( '/' )
             return self.ifconfig( ipstr, 'up' )
         else:
+            if prefixLen is None:
+                raise Exception( 'No prefix length set for IP address %s' % ( ipstr, ) )
             self.ip, self.prefixLen = ipstr, prefixLen
             return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
 
