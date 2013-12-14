@@ -184,7 +184,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         if self.shell:
-            os.kill( self.pid, signal.SIGKILL )
+            os.killpg( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
