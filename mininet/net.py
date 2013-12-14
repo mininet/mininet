@@ -169,17 +169,20 @@ class Mininet( object ):
            cls: custom host class/constructor (optional)
            params: parameters for host
            returns: added host"""
-        # Default IP and MAC addresses
-        defaults = { 'ip': ipAdd( self.nextIP,
-                                  ipBaseNum=self.ipBaseNum,
-                                  prefixLen=self.prefixLen ) +
-                                  '/%s' % self.prefixLen }
-        if self.autoSetMacs:
-            defaults[ 'mac'] = macColonHex( self.nextIP )
+        defaults = {}
+
+        autoSetIp = params.get( 'autoSetIp', True )
+        if autoSetIp:
+            # Default IP and MAC addresses
+            defaults[ 'ip' ] = ipAdd( self.nextIP, ipBaseNum=self.ipBaseNum,
+                                    prefixLen=self.prefixLen) + '/%s' % (self.prefixLen,)
+            if self.autoSetMacs:
+                defaults[ 'mac' ] = macColonHex( self.nextIP )
+
+            self.nextIP += 1
         if self.autoPinCpus:
             defaults[ 'cores' ] = self.nextCore
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
-        self.nextIP += 1
         defaults.update( params )
         if not cls:
             cls = self.host
