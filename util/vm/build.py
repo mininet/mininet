@@ -140,8 +140,7 @@ def depend():
     run( 'sudo apt-get -y update' )
     run( 'sudo apt-get install -y'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
-         ' e2fsprogs '
-         ' landscape-client'
+         ' e2fsprogs dnsmasq'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
@@ -485,6 +484,10 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'output:' )
             log( vm.before )
 
+def noneTest( vm ):
+    "This test does nothing"
+    vm.sendline( 'echo' )
+
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
     vm.sendline( 'sudo apt-get install python-pexpect' )
@@ -581,8 +584,8 @@ OVFTemplate = """<?xml version="1.0"?>
 </References>
 <DiskSection>
 <Info>Virtual disk information</Info>
-<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte" 
-    ovf:diskId="vmdisk1" ovf:fileRef="file1" 
+<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
+    ovf:diskId="vmdisk1" ovf:fileRef="file1"
     ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
 </DiskSection>
 <NetworkSection>
@@ -762,7 +765,7 @@ def getMininetVersion( vm ):
 
 
 def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
-                     memory=1024 ):
+                     memory=1024, outputFile=None ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
@@ -799,6 +802,9 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
     vm.sendline( 'sudo shutdown -h now ' )
     log( '* Waiting for shutdown' )
     vm.wait()
+    if outputFile:
+        log( '* Saving temporary image to %s' % outputFile )
+        convert( cow, outputFile )
     log( '* Removing temporary dir', tmpdir )
     srun( 'rm -rf ' + tmpdir )
     elapsed = time() - bootTestStart
@@ -865,6 +871,8 @@ def parseArgs():
                          help='VM flavor(s) to build (e.g. raring32server)' )
     parser.add_argument( '-z', '--zip', action='store_true',
                          help='archive .ovf and .vmdk into .zip file' )
+    parser.add_argument( '-o', '--out', 
+                         help='output file for test image (vmdk)' )
     args = parser.parse_args()
     if args.depend:
         depend()
@@ -897,7 +905,8 @@ def parseArgs():
             exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory)
+                         post=args.post, memory=args.memory, 
+                         outputFile=args.out )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()

@@ -187,7 +187,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         if self.shell:
-            os.kill( self.pid, signal.SIGKILL )
+            os.killpg( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
@@ -1178,6 +1178,7 @@ class IVSSwitch(Switch):
 
         logfile = '/tmp/ivs.%s.log' % self.name
 
+        self.cmd( 'ifconfig lo up' )
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):

@@ -55,7 +55,7 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     if not switch:
         switch = network[ 's1' ]  # switch to use
     if not routes:
-         routes = [ '10.0.0.0/24' ]
+        routes = [ '10.0.0.0/24' ]
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
