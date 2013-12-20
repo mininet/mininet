@@ -13,7 +13,7 @@ from mininet.log import setLogLevel
 
 
 def testLinkLimit( net, bw ):
-    "Run bandwidth limit test"
+    """Run bandwidth limit test"""
     print '*** Testing network %.2f Mbps bandwidth limit' % bw
     net.iperf( )
 
@@ -34,7 +34,7 @@ def limit( bw=10, cpu=.1 ):
         net.stop()
 
 def verySimpleLimit( bw=150 ):
-    "Absurdly simple limiting test"
+    """Absurdly simple limiting test"""
     intf = custom( TCIntf, bw=bw )
     net = Mininet( intf=intf )
     h1, h2 = net.addHost( 'h1' ), net.addHost( 'h2' )

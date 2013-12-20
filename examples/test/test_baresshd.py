@@ -14,7 +14,7 @@ class testBareSSHD( unittest.TestCase ):
     opts = [ '\(yes/no\)\?', 'Welcome to h1', 'refused', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self ):
-        "Log into ssh server, check banner, then exit"
+        """Log into ssh server, check banner, then exit"""
         p = pexpect.spawn( 'ssh 10.0.0.1 -i /tmp/ssh/test_rsa exit' )
         while True:
             index = p.expect( self.opts )
@@ -40,7 +40,7 @@ class testBareSSHD( unittest.TestCase ):
         sh( cmd )
 
     def testSSH( self ):
-        "Simple test to verify that we can ssh into h1"
+        """Simple test to verify that we can ssh into h1"""
         result = False
         # try to connect up to 3 times; sshd can take a while to start
         for _ in range( 3 ):

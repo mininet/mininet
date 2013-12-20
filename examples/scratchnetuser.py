@@ -16,12 +16,12 @@ from mininet.link import Link
 from mininet.log import setLogLevel, info
 
 def linkIntfs( node1, node2 ):
-    "Create link from node1 to node2 and return intfs"
+    """Create link from node1 to node2 and return intfs"""
     link = Link( node1, node2 )
     return link.intf1, link.intf2
 
 def scratchNetUser( cname='controller', cargs='ptcp:' ):
-    "Create network from scratch using user switch."
+    """Create network from scratch using user switch."""
 
     # It's not strictly necessary for the controller and switches
     # to be in separate namespaces. For performance, they probably

@@ -1,10 +1,10 @@
-"Library of potentially useful topologies for Mininet"
+"""Library of potentially useful topologies for Mininet"""
 
 from mininet.topo import Topo
 from mininet.net import Mininet
 
 class TreeTopo( Topo ):
-    "Topology for a tree network with a given depth and fanout."
+    """Topology for a tree network with a given depth and fanout."""
 
     def __init__( self, depth=1, fanout=2 ):
         super( TreeTopo, self ).__init__()
@@ -31,6 +31,6 @@ class TreeTopo( Topo ):
 
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
-    "Convenience function for creating tree networks."
+    """Convenience function for creating tree networks."""
     topo = TreeTopo( depth, fanout )
     return Mininet( topo, **kwargs )

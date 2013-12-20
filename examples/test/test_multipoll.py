@@ -10,7 +10,7 @@ import pexpect
 class testMultiPoll( unittest.TestCase ):
 
     def testMultiPoll( self ):
-        "Verify that we receive one ping per second per host"
+        """Verify that we receive one ping per second per host"""
         p = pexpect.spawn( 'python -m mininet.examples.multipoll' )
         opts = [ "\*\*\* (h\d) :" ,
                  "(h\d+): \d+ bytes from",

@@ -12,7 +12,7 @@ from mininet.log import setLogLevel, info
 
 def emptyNet():
 
-    "Create an empty network and add nodes to it."
+    """Create an empty network and add nodes to it."""
 
     net = Mininet( controller=Controller )
 

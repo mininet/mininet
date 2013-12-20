@@ -22,7 +22,7 @@ class testBind( unittest.TestCase ):
         self.assertTrue( len( self.directories ) > 0 )
 
     def testCreateFile( self ):
-        "Create a file, a.txt, in the first private directory and verify"
+        """Create a file, a.txt, in the first private directory and verify"""
         fileName = 'a.txt'
         directory = self.directories[ 0 ]
         path = directory + '/' + fileName
@@ -34,7 +34,7 @@ class testBind( unittest.TestCase ):
         self.net.expect( self.prompt )
 
     def testIsolation( self ):
-        "Create a file in two hosts and verify that contents are different"
+        """Create a file in two hosts and verify that contents are different"""
         fileName = 'b.txt'
         directory = self.directories[ 0 ]
         path = directory + '/' + fileName

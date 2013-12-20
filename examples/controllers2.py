@@ -17,7 +17,7 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 
 def multiControllerNet():
-    "Create a network from semi-scratch with multiple controllers."
+    """Create a network from semi-scratch with multiple controllers."""
 
     net = Mininet( controller=Controller, switch=OVSSwitch, build=False )
 

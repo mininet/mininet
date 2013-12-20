@@ -12,7 +12,7 @@ from mininet.node import OVSKernelSwitch
 from mininet.topolib import TreeTopo
 
 def ifconfigTest( net ):
-    "Run ifconfig on all hosts in net."
+    """Run ifconfig on all hosts in net."""
     hosts = net.hosts
     for host in hosts:
         info( host.cmd( 'ifconfig' ) )

@@ -17,7 +17,7 @@ from mininet.util import quietRun
 from time import sleep
 
 def scratchNet( cname='controller', cargs='-v ptcp:' ):
-    "Create network from scratch using Open vSwitch."
+    """Create network from scratch using Open vSwitch."""
 
     info( "*** Creating nodes\n" )
     controller = Node( 'c0', inNamespace=False )

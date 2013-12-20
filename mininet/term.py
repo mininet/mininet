@@ -58,7 +58,7 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
     return [ tunnel, term ] if tunnel else [ term ]
 
 def runX11( node, cmd ):
-    "Run an X11 client on a node"
+    """Run an X11 client on a node"""
     _display, tunnel = tunnelX11( node )
     if _display is None:
         return []
@@ -66,7 +66,7 @@ def runX11( node, cmd ):
     return [ tunnel, popen ]
 
 def cleanUpScreens():
-    "Remove moldy socat X11 tunnels."
+    """Remove moldy socat X11 tunnels."""
     errRun( "pkill -9 -f mnexec.*socat" )
 
 def makeTerms( nodes, title='Node', term='xterm' ):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''@package topo
+"""@package topo
 
 Network topology creation.
 
@@ -9,44 +9,44 @@ This package includes code to represent network topologies.
 
 A Topo object can be a topology database for NOX, can represent a physical
 setup for testing, and can even be emulated with the Mininet package.
-'''
+"""
 
 from mininet.util import irange, natural, naturalSeq
 
 class MultiGraph( object ):
-    "Utility class to track nodes and edges - replaces networkx.Graph"
+    """Utility class to track nodes and edges - replaces networkx.Graph"""
 
     def __init__( self ):
         self.data = {}
 
     def add_node( self, node ):
-        "Add node to graph"
+        """Add node to graph"""
         self.data.setdefault( node, [] )
 
     def add_edge( self, src, dest ):
-        "Add edge to graph"
+        """Add edge to graph"""
         src, dest = sorted( ( src, dest ) )
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
 
     def nodes( self ):
-        "Return list of graph nodes"
+        """Return list of graph nodes"""
         return self.data.keys()
 
     def edges( self ):
-        "Iterator: return graph edges"
+        """Iterator: return graph edges"""
         for src in self.data.keys():
             for dest in self.data[ src ]:
                 yield ( src, dest )
 
     def __getitem__( self, node ):
-        "Return link dict for the given node"
+        """Return link dict for the given node"""
         return self.data[node]
 
 
 class Topo(object):
-    "Data center network representation for structured multi-trees."
+    """Data center network representation for structured multi-trees."""
 
     def __init__(self, hopts=None, sopts=None, lopts=None):
         """Topo object:
@@ -104,10 +104,10 @@ class Topo(object):
         return key
 
     def addPort(self, src, dst, sport=None, dport=None):
-        '''Generate port mapping for new edge.
+        """Generate port mapping for new edge.
         @param src source switch name
         @param dst destination switch name
-        '''
+        """
         self.ports.setdefault(src, {})
         self.ports.setdefault(dst, {})
         # New port: number of outlinks + base
@@ -121,36 +121,36 @@ class Topo(object):
         self.ports[dst][src] = dport
 
     def nodes(self, sort=True):
-        "Return nodes in graph"
+        """Return nodes in graph"""
         if sort:
             return self.sorted( self.g.nodes() )
         else:
             return self.g.nodes()
 
     def isSwitch(self, n):
-        '''Returns true if node is a switch.'''
+        """Returns true if node is a switch."""
         info = self.node_info[n]
         return info and info.get('isSwitch', False)
 
     def switches(self, sort=True):
-        '''Return switches.
+        """Return switches.
         sort: sort switches alphabetically
         @return dpids list of dpids
-        '''
+        """
         return [n for n in self.nodes(sort) if self.isSwitch(n)]
 
     def hosts(self, sort=True):
-        '''Return hosts.
+        """Return hosts.
         sort: sort hosts alphabetically
         @return dpids list of dpids
-        '''
+        """
         return [n for n in self.nodes(sort) if not self.isSwitch(n)]
 
     def links(self, sort=True):
-        '''Return links.
+        """Return links.
         sort: sort links alphabetically
         @return links list of name pairs
-        '''
+        """
         if not sort:
             return self.g.edges()
         else:
@@ -158,51 +158,51 @@ class Topo(object):
             return sorted( links, key=naturalSeq )
 
     def port(self, src, dst):
-        '''Get port number.
+        """Get port number.
 
         @param src source switch name
         @param dst destination switch name
         @return tuple (src_port, dst_port):
             src_port: port on source switch leading to the destination switch
             dst_port: port on destination switch leading to the source switch
-        '''
+        """
         if src in self.ports and dst in self.ports[src]:
             assert dst in self.ports and src in self.ports[dst]
             return (self.ports[src][dst], self.ports[dst][src])
 
     def linkInfo( self, src, dst ):
-        "Return link metadata"
+        """Return link metadata"""
         src, dst = self.sorted([src, dst])
         return self.link_info[(src, dst)]
 
     def setlinkInfo( self, src, dst, info ):
-        "Set link metadata"
+        """Set link metadata"""
         src, dst = self.sorted([src, dst])
         self.link_info[(src, dst)] = info
 
     def nodeInfo( self, name ):
-        "Return metadata (dict) for node"
+        """Return metadata (dict) for node"""
         info = self.node_info[ name ]
         return info if info is not None else {}
 
     def setNodeInfo( self, name, info ):
-        "Set metadata (dict) for node"
+        """Set metadata (dict) for node"""
         self.node_info[ name ] = info
 
     @staticmethod
     def sorted( items ):
-        "Items sorted in natural (i.e. alphabetical) order"
+        """Items sorted in natural (i.e. alphabetical) order"""
         return sorted(items, key=natural)
 
 class SingleSwitchTopo(Topo):
-    '''Single switch connected to k hosts.'''
+    """Single switch connected to k hosts."""
 
     def __init__(self, k=2, **opts):
-        '''Init.
+        """Init.
 
         @param k number of hosts
         @param enable_all enables all nodes and switches?
-        '''
+        """
         super(SingleSwitchTopo, self).__init__(**opts)
 
         self.k = k
@@ -214,18 +214,18 @@ class SingleSwitchTopo(Topo):
 
 
 class SingleSwitchReversedTopo(Topo):
-    '''Single switch connected to k hosts, with reversed ports.
+    """Single switch connected to k hosts, with reversed ports.
 
     The lowest-numbered host is connected to the highest-numbered port.
 
     Useful to verify that Mininet properly handles custom port numberings.
-    '''
+    """
     def __init__(self, k=2, **opts):
-        '''Init.
+        """Init.
 
         @param k number of hosts
         @param enable_all enables all nodes and switches?
-        '''
+        """
         super(SingleSwitchReversedTopo, self).__init__(**opts)
         self.k = k
         switch = self.addSwitch('s1')
@@ -235,7 +235,7 @@ class SingleSwitchReversedTopo(Topo):
                          port1=0, port2=(k - h + 1))
 
 class LinearTopo(Topo):
-    "Linear topology of k switches, with n hosts per switch."
+    """Linear topology of k switches, with n hosts per switch."""
 
     def __init__(self, k=2, n=1, **opts):
         """Init.

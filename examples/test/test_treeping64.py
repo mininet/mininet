@@ -14,7 +14,7 @@ class testTreePing64( unittest.TestCase ):
 
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testTreePing64( self ):
-        "Run the example and verify ping results"
+        """Run the example and verify ping results"""
         p = pexpect.spawn( 'python -m mininet.examples.treeping64' )
         p.expect( 'Tree network ping results:', timeout=6000 )
         count = 0

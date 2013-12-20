@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-"This example doesn't use OpenFlow, but attempts to run sshd in a namespace."
+"""This example doesn't use OpenFlow, but attempts to run sshd in a namespace."""
 
 import sys
 from mininet.node import Host

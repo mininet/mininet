@@ -37,7 +37,7 @@ from mininet.term import makeTerms, runX11
 from mininet.util import quietRun, isShellBuiltin, dumpNodeConnections
 
 class CLI( Cmd ):
-    "Simple command-line interface to talk to nodes."
+    """Simple command-line interface to talk to nodes."""
 
     prompt = 'mininet> '
 
@@ -70,11 +70,11 @@ class CLI( Cmd ):
                 output( '\nInterrupt\n' )
 
     def emptyline( self ):
-        "Don't repeat last command when you hit return."
+        """Don't repeat last command when you hit return."""
         pass
 
     def getLocals( self ):
-        "Local variable bindings for py command"
+        """Local variable bindings for py command"""
         self.locals.update( self.mn )
         return self.locals
 
@@ -103,22 +103,22 @@ class CLI( Cmd ):
     )
 
     def do_help( self, line ):
-        "Describe available CLI commands."
+        """Describe available CLI commands."""
         Cmd.do_help( self, line )
         if line is '':
             output( self.helpStr )
 
     def do_nodes( self, _line ):
-        "List all nodes."
+        """List all nodes."""
         nodes = ' '.join( sorted( self.mn ) )
         output( 'available nodes are: \n%s\n' % nodes )
 
     def do_net( self, _line ):
-        "List network connections."
+        """List network connections."""
         dumpNodeConnections( self.mn.values() )
 
     def do_sh( self, line ):
-        "Run an external shell command"
+        """Run an external shell command"""
         call( line, shell=True )
 
     # do_py() and do_px() need to catch any exception during eval()/exec()
@@ -152,23 +152,23 @@ class CLI( Cmd ):
     # pylint: enable-msg=W0703,W0122
 
     def do_pingall( self, _line ):
-        "Ping between all hosts."
+        """Ping between all hosts."""
         self.mn.pingAll()
 
     def do_pingpair( self, _line ):
-        "Ping between first two hosts, useful for testing."
+        """Ping between first two hosts, useful for testing."""
         self.mn.pingPair()
 
     def do_pingallfull( self, _line ):
-        "Ping between first two hosts, returns all ping results."
+        """Ping between first two hosts, returns all ping results."""
         self.mn.pingAllFull()
 
     def do_pingpairfull( self, _line ):
-        "Ping between first two hosts, returns all ping results."
+        """Ping between first two hosts, returns all ping results."""
         self.mn.pingPairFull()
 
     def do_iperf( self, line ):
-        "Simple iperf TCP test between two (optionally specified) hosts."
+        """Simple iperf TCP test between two (optionally specified) hosts."""
         args = line.split()
         if not args:
             self.mn.iperf()
@@ -187,7 +187,7 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
-        "Simple iperf TCP test between two (optionally specified) hosts."
+        """Simple iperf TCP test between two (optionally specified) hosts."""
         args = line.split()
         if not args:
             self.mn.iperf( l4Type='UDP' )
@@ -208,18 +208,18 @@ class CLI( Cmd ):
                    'bw examples: 10M\n' )
 
     def do_intfs( self, _line ):
-        "List interfaces."
+        """List interfaces."""
         for node in self.mn.values():
             output( '%s: %s\n' %
                     ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
-        "Dump node info."
+        """Dump node info."""
         for node in self.mn.values():
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
-        "Bring link(s) between two nodes up or down."
+        """Bring link(s) between two nodes up or down."""
         args = line.split()
         if len(args) != 3:
             error( 'invalid number of args: link end1 end2 [up down]\n' )
@@ -229,7 +229,7 @@ class CLI( Cmd ):
             self.mn.configLinkStatus( *args )
 
     def do_xterm( self, line, term='xterm' ):
-        "Spawn xterm(s) for the given node(s)."
+        """Spawn xterm(s) for the given node(s)."""
         args = line.split()
         if not args:
             error( 'usage: %s node1 node2 ...\n' % term )
@@ -253,28 +253,28 @@ class CLI( Cmd ):
             self.mn.terms += runX11( node, cmd )
 
     def do_gterm( self, line ):
-        "Spawn gnome-terminal(s) for the given node(s)."
+        """Spawn gnome-terminal(s) for the given node(s)."""
         self.do_xterm( line, term='gterm' )
 
     def do_exit( self, _line ):
-        "Exit"
+        """Exit"""
         return 'exited by user command'
 
     def do_quit( self, line ):
-        "Exit"
+        """Exit"""
         return self.do_exit( line )
 
     def do_EOF( self, line ):
-        "Exit"
+        """Exit"""
         output( '\n' )
         return self.do_exit( line )
 
     def isatty( self ):
-        "Is our standard input a tty?"
+        """Is our standard input a tty?"""
         return isatty( self.stdin.fileno() )
 
     def do_noecho( self, line ):
-        "Run an interactive command with echoing turned off."
+        """Run an interactive command with echoing turned off."""
         if self.isatty():
             quietRun( 'stty -echo' )
         self.default( line )
@@ -282,7 +282,7 @@ class CLI( Cmd ):
             quietRun( 'stty echo' )
 
     def do_source( self, line ):
-        "Read commands from an input file."
+        """Read commands from an input file."""
         args = line.split()
         if len(args) != 1:
             error( 'usage: source <file>\n' )
@@ -300,7 +300,7 @@ class CLI( Cmd ):
         self.inputFile = None
 
     def do_dpctl( self, line ):
-        "Run dpctl (or ovs-ofctl) command on all switches."
+        """Run dpctl (or ovs-ofctl) command on all switches."""
         args = line.split()
         if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
@@ -310,7 +310,7 @@ class CLI( Cmd ):
             output( sw.dpctl( *args ) )
 
     def do_time( self, line ):
-        "Measure time taken for any command in Mininet."
+        """Measure time taken for any command in Mininet."""
         start = time.time()
         self.onecmd(line)
         elapsed = time.time() - start
@@ -346,7 +346,7 @@ class CLI( Cmd ):
     # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
-        "Wait for a node to finish, and  print its output."
+        """Wait for a node to finish, and  print its output."""
         # Pollers
         nodePoller = poll()
         nodePoller.register( node.stdout )
@@ -381,7 +381,7 @@ class CLI( Cmd ):
 # Helper functions
 
 def isReadable( poller ):
-    "Check whether a Poll object has a readable fd."
+    """Check whether a Poll object has a readable fd."""
     for fdmask in poller.poll( 0 ):
         mask = fdmask[ 1 ]
         if mask & POLLIN:

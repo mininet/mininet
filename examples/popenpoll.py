@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-"Monitor multiple hosts using popen()/pmonitor()"
+"""Monitor multiple hosts using popen()/pmonitor()"""
 
 from mininet.net import Mininet
 from mininet.topo import SingleSwitchTopo
@@ -9,7 +9,7 @@ from time import time
 from signal import SIGINT
 
 def pmonitorTest( N=3, seconds=10 ):
-    "Run pings and monitor multiple hosts using pmonitor"
+    """Run pings and monitor multiple hosts using pmonitor"""
     topo = SingleSwitchTopo( N )
     net = Mininet( topo )
     net.start()

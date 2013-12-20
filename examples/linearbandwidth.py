@@ -33,7 +33,7 @@ import sys
 flush = sys.stdout.flush
 
 class LinearTestTopo( Topo ):
-    "Topology for a string of N hosts and N-1 switches."
+    """Topology for a string of N hosts and N-1 switches."""
 
     def __init__( self, N, **params ):
 
@@ -61,7 +61,7 @@ class LinearTestTopo( Topo ):
 
 def linearBandwidthTest( lengths ):
 
-    "Check bandwidth at various lengths along a switch chain."
+    """Check bandwidth at various lengths along a switch chain."""
 
     results = {}
     switchCount = max( lengths )

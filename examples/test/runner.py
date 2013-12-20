@@ -13,7 +13,7 @@ from mininet.util import ensureRoot
 from mininet.clean import cleanup
 
 def runTests( testDir, verbosity=1 ):
-    "discover and run all tests in testDir"
+    """discover and run all tests in testDir"""
     # ensure root and cleanup before starting tests
     ensureRoot()
     cleanup()

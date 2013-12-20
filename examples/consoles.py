@@ -35,7 +35,7 @@ from mininet.term import makeTerms, cleanUpScreens
 from mininet.util import quietRun
 
 class Console( Frame ):
-    "A simple console on a host."
+    """A simple console on a host."""
 
     def __init__( self, parent, net, node, height=10, width=32, title='Node' ):
         Frame.__init__( self, parent )
@@ -68,10 +68,10 @@ class Console( Frame ):
         self.outputHook = None
 
     def makeWidgets( self ):
-        "Make a label, a text area, and a scroll bar."
+        """Make a label, a text area, and a scroll bar."""
 
         def newTerm( net=self.net, node=self.node, title=self.title ):
-            "Pop up a new terminal window for a node."
+            """Pop up a new terminal window for a node."""
             net.terms += makeTerms( [ node ], title )
         label = Button( self, text=self.node.name, command=newTerm,
                         **self.buttonStyle )
@@ -85,7 +85,7 @@ class Console( Frame ):
         return text
 
     def bindEvents( self ):
-        "Bind keyboard and file events."
+        """Bind keyboard and file events."""
         # The text widget handles regular key presses, but we
         # use special handlers for the following:
         self.text.bind( '<Return>', self.handleReturn )
@@ -102,7 +102,7 @@ class Console( Frame ):
     ignoreChars = re.compile( r'[\x00-\x07\x09\x0b\x0c\x0e-\x1f]+' )
 
     def append( self, text ):
-        "Append something to our text frame."
+        """Append something to our text frame."""
         text = self.ignoreChars.sub( '', text )
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
@@ -113,13 +113,13 @@ class Console( Frame ):
         outputHook( self, text )
 
     def handleKey( self, event ):
-        "If it's an interactive command, send it to the node."
+        """If it's an interactive command, send it to the node."""
         char = event.char
         if self.node.waiting:
             self.node.write( char )
 
     def handleReturn( self, event ):
-        "Handle a carriage return."
+        """Handle a carriage return."""
         cmd = self.text.get( 'insert linestart', 'insert lineend' )
         # Send it immediately, if "interactive" command
         if self.node.waiting:
@@ -133,16 +133,16 @@ class Console( Frame ):
 
     # Callback ignores event
     def handleInt( self, _event=None ):
-        "Handle control-c."
+        """Handle control-c."""
         self.node.sendInt()
 
     def sendCmd( self, cmd ):
-        "Send a command to our node."
+        """Send a command to our node."""
         if not self.node.waiting:
             self.node.sendCmd( cmd )
 
     def handleReadable( self, _fds, timeoutms=None ):
-        "Handle file readable event."
+        """Handle file readable event."""
         data = self.node.monitor( timeoutms )
         self.append( data )
         if not self.node.waiting:
@@ -150,24 +150,24 @@ class Console( Frame ):
             self.append( self.prompt )
 
     def waiting( self ):
-        "Are we waiting for output?"
+        """Are we waiting for output?"""
         return self.node.waiting
 
     def waitOutput( self ):
-        "Wait for any remaining output."
+        """Wait for any remaining output."""
         while self.node.waiting:
             # A bit of a trade-off here...
             self.handleReadable( self, timeoutms=1000)
             self.update()
 
     def clear( self ):
-        "Clear all of our text."
+        """Clear all of our text."""
         self.text.delete( '1.0', 'end' )
 
 
 class Graph( Frame ):
 
-    "Graph that we can add bars to over time."
+    """Graph that we can add bars to over time."""
 
     def __init__( self, parent=None, bg = 'white', gheight=200, gwidth=500,
                   barwidth=10, ymax=3.5,):
@@ -187,7 +187,7 @@ class Graph( Frame ):
         self.yview( 'moveto', '1.0' )
 
     def createScale( self ):
-        "Create a and return a new canvas with scale markers."
+        """Create a and return a new canvas with scale markers."""
         height = float( self.gheight )
         width = 25
         ymax = self.ymax
@@ -204,7 +204,7 @@ class Graph( Frame ):
         return scale
 
     def updateScrollRegions( self ):
-        "Update graph and scale scroll regions."
+        """Update graph and scale scroll regions."""
         ofs = 20
         height = self.gheight + ofs
         self.graph.configure( scrollregion=( 0, -ofs,
@@ -212,12 +212,12 @@ class Graph( Frame ):
         self.scale.configure( scrollregion=( 0, -ofs, 0, height ) )
 
     def yview( self, *args ):
-        "Scroll both scale and graph."
+        """Scroll both scale and graph."""
         self.graph.yview( *args )
         self.scale.yview( *args )
 
     def createWidgets( self ):
-        "Create initial widget set."
+        """Create initial widget set."""
 
         # Objects
         title = Label( self, text='Bandwidth (Gb/s)', bg=self.bg )
@@ -242,7 +242,7 @@ class Graph( Frame ):
         return title, scale, graph
 
     def addBar( self, yval ):
-        "Add a new bar to our graph."
+        """Add a new bar to our graph."""
         percent = yval / self.ymax
         c = self.graph
         x0 = self.xpos * self.barwidth
@@ -255,25 +255,25 @@ class Graph( Frame ):
         self.graph.xview( 'moveto', '1.0' )
 
     def clear( self ):
-        "Clear graph contents."
+        """Clear graph contents."""
         self.graph.delete( 'all' )
         self.xpos = 0
 
     def test( self ):
-        "Add a bar for testing purposes."
+        """Add a bar for testing purposes."""
         ms = 1000
         if self.xpos < 10:
             self.addBar( self.xpos / 10 * self.ymax  )
             self.after( ms, self.test )
 
     def setTitle( self, text ):
-        "Set graph title"
+        """Set graph title"""
         self.title.configure( text=text, font='Helvetica 9 bold' )
 
 
 class ConsoleApp( Frame ):
 
-    "Simple Tk consoles for Mininet."
+    """Simple Tk consoles for Mininet."""
 
     menuStyle = { 'font': 'Geneva 7 bold' }
 
@@ -314,7 +314,7 @@ class ConsoleApp( Frame ):
         self.pack( expand=True, fill='both' )
 
     def updateGraph( self, _console, output ):
-        "Update our graph."
+        """Update our graph."""
         m = re.search( r'(\d+.?\d*) ([KMG]?bits)/sec', output )
         if not m:
             return
@@ -334,14 +334,14 @@ class ConsoleApp( Frame ):
             self.updates = 0
 
     def setOutputHook( self, fn=None, consoles=None ):
-        "Register fn as output hook [on specific consoles.]"
+        """Register fn as output hook [on specific consoles.]"""
         if consoles is None:
             consoles = self.consoles[ 'hosts' ].consoles
         for console in consoles:
             console.outputHook = fn
 
     def createConsoles( self, parent, nodes, width, title ):
-        "Create a grid of consoles in a frame."
+        """Create a grid of consoles in a frame."""
         f = Frame( parent )
         # Create consoles
         consoles = []
@@ -358,14 +358,14 @@ class ConsoleApp( Frame ):
         return f, consoles
 
     def select( self, groupName ):
-        "Select a group of consoles to display."
+        """Select a group of consoles to display."""
         if self.selected is not None:
             self.selected.frame.pack_forget()
         self.selected = self.consoles[ groupName ]
         self.selected.frame.pack( expand=True, fill='both' )
 
     def createMenuBar( self ):
-        "Create and return a menu (really button) bar."
+        """Create and return a menu (really button) bar."""
         f = Frame( self )
         buttons = [
             ( 'Hosts', lambda: self.select( 'hosts' ) ),
@@ -385,12 +385,12 @@ class ConsoleApp( Frame ):
         return f
 
     def clear( self ):
-        "Clear selection."
+        """Clear selection."""
         for console in self.selected.consoles:
             console.clear()
 
     def waiting( self, consoles=None ):
-        "Are any of our hosts waiting for output?"
+        """Are any of our hosts waiting for output?"""
         if consoles is None:
             consoles = self.consoles[ 'hosts' ].consoles
         for console in consoles:
@@ -399,7 +399,7 @@ class ConsoleApp( Frame ):
         return False
 
     def ping( self ):
-        "Tell each host to ping the next one."
+        """Tell each host to ping the next one."""
         consoles = self.consoles[ 'hosts' ].consoles
         if self.waiting( consoles ):
             return
@@ -411,7 +411,7 @@ class ConsoleApp( Frame ):
             console.sendCmd( 'ping ' + ip )
 
     def iperf( self ):
-        "Tell each host to iperf to the next one."
+        """Tell each host to iperf to the next one."""
         consoles = self.consoles[ 'hosts' ].consoles
         if self.waiting( consoles ):
             return
@@ -428,7 +428,7 @@ class ConsoleApp( Frame ):
             console.sendCmd( 'iperf -t 99999 -i 1 -c ' + ip )
 
     def stop( self, wait=True ):
-        "Interrupt all hosts."
+        """Interrupt all hosts."""
         consoles = self.consoles[ 'hosts' ].consoles
         for console in consoles:
             console.handleInt()
@@ -440,7 +440,7 @@ class ConsoleApp( Frame ):
         quietRun( 'killall -9 iperf' )
 
     def quit( self ):
-        "Stop everything and quit."
+        """Stop everything and quit."""
         self.stop( wait=False)
         Frame.quit( self )
 
@@ -448,11 +448,11 @@ class ConsoleApp( Frame ):
 # Make it easier to construct and assign objects
 
 def assign( obj, **kwargs ):
-    "Set a bunch of fields in an object."
+    """Set a bunch of fields in an object."""
     obj.__dict__.update( kwargs )
 
 class Object( object ):
-    "Generic object you can stuff junk into."
+    """Generic object you can stuff junk into."""
     def __init__( self, **kwargs ):
         assign( self, **kwargs )
 

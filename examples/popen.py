@@ -12,7 +12,7 @@ from mininet.log import setLogLevel
 from mininet.util import custom, pmonitor
 
 def monitorhosts( hosts=5, sched='cfs' ):
-    "Start a bunch of pings and monitor them using popen"
+    """Start a bunch of pings and monitor them using popen"""
     mytopo = SingleSwitchTopo( hosts )
     cpu = .5 / hosts
     myhost = custom( CPULimitedHost, cpu=cpu, sched=sched )
