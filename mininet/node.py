@@ -433,6 +433,26 @@ class Node( object ):
         self.cmd( 'ip route del default' )
         return self.cmd( 'ip route add default', params )
 
+    def setRoutes( self, *args ):
+        """Set custom routes to go through.
+           args: array of route {net: <dest>, intf: <intfname>, gw: <gw-ip>}"""
+        for route in args:
+            if 'intf' in route:
+                return self.cmd( 'route add -net', route['net'],
+                                 'dev', route['intf'], 'gw', route['gw'] )
+            else:
+                return self.cmd( 'route add -net', route['net'],
+                                 'gw', route['gw'] )
+
+    def setIPForward( self, forward ):
+        """Enable/disable ip forward."""
+        if forward:
+            return self.cmd( 'sysctl -w net.ipv4.conf.all.forwarding=1' ) \
+                and self.cmd( 'sysctl -w net.ipv6.conf.all.forwarding=1' )
+        else:
+            return self.cmd( 'sysctl -w net.ipv4.conf.all.forwarding=0' ) \
+                and self.cmd( 'sysctl -w net.ipv6.conf.all.forwarding=0' )
+
     # Convenience and configuration methods
 
     def setMAC( self, mac, intf=None ):
@@ -488,8 +508,8 @@ class Node( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None,
-                defaultRoute=None, lo='up', **_params ):
+    def config( self, mac=None, ip=None, defaultRoute=None, routes=[],
+                forward=False, lo='up', **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address for default interface
            ip: IP address for default interface
@@ -503,6 +523,8 @@ class Node( object ):
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
         self.setParam( r, 'setDefaultRoute', defaultRoute=defaultRoute )
+        self.setParam( r, 'setRoutes', routes=routes )
+        self.setParam( r, 'setIPForward', forward=forward )
         # This should be examined
         self.cmd( 'ifconfig lo ' + lo )
         return r
