@@ -871,7 +871,7 @@ def parseArgs():
                          help='VM flavor(s) to build (e.g. raring32server)' )
     parser.add_argument( '-z', '--zip', action='store_true',
                          help='archive .ovf and .vmdk into .zip file' )
-    parser.add_argument( '-o', '--out', 
+    parser.add_argument( '-o', '--out',
                          help='output file for test image (vmdk)' )
     args = parser.parse_args()
     if args.depend:
@@ -905,7 +905,7 @@ def parseArgs():
             exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory, 
+                         post=args.post, memory=args.memory,
                          outputFile=args.out )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
