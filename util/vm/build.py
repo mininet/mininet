@@ -586,7 +586,7 @@ OVFTemplate = """<?xml version="1.0"?>
 <Info>Virtual disk information</Info>
 <Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
     ovf:diskId="vmdisk1" ovf:fileRef="file1"
-    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
+    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
 </DiskSection>
 <NetworkSection>
 <Info>The list of logical networks</Info>
