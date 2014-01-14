@@ -692,6 +692,8 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     date = strftime( '%y%m%d-%H-%M-%S', lstart)
     ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
+    if Branch:
+        dir = 'mn-%s-%s-%s' % ( Branch, flavor, date )
     try:
         os.mkdir( dir )
     except:
