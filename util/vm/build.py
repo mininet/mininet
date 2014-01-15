@@ -91,6 +91,18 @@ def OSVersion( flavor ):
     urlbase = path.basename( isoURLs.get( flavor, 'unknown' ) )
     return path.splitext( urlbase )[ 0 ]
 
+def OVFOSNameID( flavor ):
+    "Return OVF-specified ( OS Name, ID ) for flavor"
+    version = OSVersion( flavor )
+    arch = archFor( flavor )
+    if 'ubuntu' in version:
+        map = { 'i386': ( 'Ubuntu', 93 ),
+                'x86_64': ( 'Ubuntu 64-bit', 94 ) }
+    else:
+        map = { 'i386': ( 'Linux', 36 ),
+                'x86_64': ( 'Linux 64-bit', 101 ) }
+    osname, osid = map[ arch ]
+    return osname, osid
 
 LogStartTime = time()
 LogFile = None
@@ -588,11 +600,11 @@ OVFTemplate = """<?xml version="1.0"?>
     xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <References>
-<File ovf:href="%s" ovf:id="file1" ovf:size="%d"/>
+<File ovf:href="%(diskname)s" ovf:id="file1" ovf:size="%(filesize)d"/>
 </References>
 <DiskSection>
 <Info>Virtual disk information</Info>
-<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
+<Disk ovf:capacity="%(disksize)d" ovf:capacityAllocationUnits="byte"
     ovf:diskId="vmdisk1" ovf:fileRef="file1"
     ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
 </DiskSection>
@@ -603,8 +615,12 @@ OVFTemplate = """<?xml version="1.0"?>
 </Network>
 </NetworkSection>
 <VirtualSystem ovf:id="Mininet-VM">
-<Info>A Mininet Virtual Machine (%s)</Info>
+<Info>A Mininet Virtual Machine (%(name)s)</Info>
 <Name>mininet-vm</Name>
+<OperatingSystemSection ovf:id="%(osid)d">
+<Info>The kind of installed guest operating system</Info>
+<Description>%(osname)s</Description>
+</OperatingSystemSection>
 <VirtualHardwareSection>
 <Info>Virtual hardware requirements</Info>
 <Item>
@@ -618,10 +634,10 @@ OVFTemplate = """<?xml version="1.0"?>
 <Item>
 <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
 <rasd:Description>Memory Size</rasd:Description>
-<rasd:ElementName>%dMB of memory</rasd:ElementName>
+<rasd:ElementName>%(mem)dMB of memory</rasd:ElementName>
 <rasd:InstanceID>2</rasd:InstanceID>
 <rasd:ResourceType>4</rasd:ResourceType>
-<rasd:VirtualQuantity>%d</rasd:VirtualQuantity>
+<rasd:VirtualQuantity>%(mem)d</rasd:VirtualQuantity>
 </Item>
 <Item>
 <rasd:Address>0</rasd:Address>
@@ -664,16 +680,20 @@ OVFTemplate = """<?xml version="1.0"?>
 """
 
 
-def generateOVF( name, diskname, disksize, mem=1024 ):
+def generateOVF( name, osname, osid, diskname, disksize, mem=1024 ):
     """Generate (and return) OVF file "name.ovf"
        name: root name of OVF file to generate
+       osname: OS name for OVF (Ubuntu | Ubuntu 64-bit)
+       osid: OS ID for OVF (93 | 94 )
        diskname: name of disk file
        disksize: size of virtual disk in bytes
        mem: VM memory size in MB"""
     ovf = name + '.ovf'
     filesize = stat( diskname )[ ST_SIZE ]
-    # OVFTemplate uses the memory size twice in a row
-    xmltext = OVFTemplate % ( diskname, filesize, disksize, name, mem, mem )
+    params = dict( osname=osname, osid=osid, diskname=diskname,
+                   filesize=filesize, disksize=disksize, name=name,
+                   mem=mem )
+    xmltext = OVFTemplate % params
     with open( ovf, 'w+' ) as f:
         f.write( xmltext )
     return ovf
@@ -723,13 +743,16 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     vm = boot( volume, kernel, initrd, logfile, memory=memory )
     version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
+    arch = archFor( flavor )
+    vmdk = convert( volume, basename='mininet-vm-' + arch )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
     ovfname = 'mininet-%s-%s-%s' % ( version, ovfdate, OSVersion( flavor ) )
-    ovf = generateOVF( diskname=vmdk, disksize=size, name=ovfname )
+    osname, osid = OVFOSNameID( flavor )
+    ovf = generateOVF( name=ovfname, osname=osname, osid=osid,
+                       diskname=vmdk, disksize=size )
     log( '* Generated OVF descriptor file', ovf )
     if Zip:
         log( '* Generating .zip file' )
