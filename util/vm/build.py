@@ -510,8 +510,13 @@ def walkthroughTest( vm, prompt=Prompt ):
 
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
-    vm.sendline( 'cd ~/mininet; git fetch; git pull --rebase; git checkout '
-                 + branch )
+    # This is a bit subtle; it will check out an existing branch (e.g. master)
+    # if it exists; otherwise it will create a detached branch.
+    # The branch will be rebased to its parent on origin.
+    # This probably doesn't matter since we're running on a COW disk
+    # anyway.
+    vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
+                 + branch + '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
     vm.sendline( 'sudo make install' )
 
@@ -531,7 +536,10 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
                  'install-mininet-vm.sh' )
     vm.expect( prompt )
     log( '* Running VM install script' )
-    vm.sendline( 'bash install-mininet-vm.sh' )
+    installcmd = 'bash install-mininet-vm.sh'
+    if Branch:
+        cmd = cmd + ' ' + Branch
+    vm.sendline( installcmd )
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
     log( '* Waiting for script to complete... ' )
@@ -867,8 +875,7 @@ def parseArgs():
     parser.add_argument( '-p', '--post', metavar='cmd', default='',
                          help='specify a command line to run after tests' )
     parser.add_argument( '-b', '--branch', metavar='branch',
-                         help='For an existing VM image, check out and install'
-                         ' this branch before testing' )
+                         help='branch to install and/or check out and test' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     parser.add_argument( '-z', '--zip', action='store_true',
