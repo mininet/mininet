@@ -538,7 +538,7 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Running VM install script' )
     installcmd = 'bash install-mininet-vm.sh'
     if Branch:
-        cmd = cmd + ' ' + Branch
+        installcmd += ' ' + Branch
     vm.sendline( installcmd )
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
