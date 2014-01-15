@@ -14,4 +14,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     "cd mininet && ./util/install.sh -nfv"
   ]
   config.vm.provision :shell, inline: cmd.join(" && ")
+  config.ssh.forward_x11 = true
 end
