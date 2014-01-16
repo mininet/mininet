@@ -26,7 +26,7 @@ def cleanup():
        do fast stuff before slow dp and link removal!"""
 
     info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
-         "\n")
+         "/LINC-Switch\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
     zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs'
     # Note: real zombie processes can't actually be killed, since they
@@ -64,4 +64,14 @@ def cleanup():
         if link != '':
             sh( "ip link del " + link )
 
+    linc_cleanup()
+
     info( "*** Cleanup complete.\n" )
+
+def linc_cleanup():
+    "Clean up stuff related with LINC-Switch"
+
+    get_pids_cmd = "pgrep -f linc"
+    sh('kill `' + get_pids_cmd + '` 2> /dev/null')
+    sh('kill -9`' + get_pids_cmd + '` 2> /dev/null')
+    sh('linc_rel -D')
