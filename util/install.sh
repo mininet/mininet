@@ -13,7 +13,7 @@ set -o nounset
 MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
 # Set up build directory, which by default is the working directory
-#  unless the working directory is a subdirectory of mininet, 
+#  unless the working directory is a subdirectory of mininet,
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
@@ -263,9 +263,12 @@ function linc_switch {
 
     if [ ! -d $LINC_SWITCH_DIR ]; then
         git clone https://github.com/FlowForwarding/LINC-Switch.git
+        cd $LINC_SWITCH_DIR
+    else
+        cd $LINC_SWITCH_DIR
+        linc_rel -D
+        make clean
     fi
-
-    cd $LINC_SWITCH_DIR
 
     if [[ -n "$LINC_SWITCH_REV" ]]; then
         git checkout ${LINC_SWITCH_REV}
