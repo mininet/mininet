@@ -64,14 +64,14 @@ def cleanup():
         if link != '':
             sh( "ip link del " + link )
 
-    linc_cleanup()
+    lincCleanup()
 
     info( "*** Cleanup complete.\n" )
 
-def linc_cleanup():
+def lincCleanup():
     "Clean up stuff related with LINC-Switch"
 
-    get_pids_cmd = "pgrep -f linc"
-    sh('kill `' + get_pids_cmd + '` 2> /dev/null')
-    sh('kill -9`' + get_pids_cmd + '` 2> /dev/null')
+    getPidsCmd = "pgrep -f linc"
+    sh('kill `' + getPidsCmd + '` 2> /dev/null')
+    sh('kill -9`' + getPidsCmd + '` 2> /dev/null')
     sh('linc_rel -D')
