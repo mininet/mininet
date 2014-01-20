@@ -902,6 +902,7 @@ class LincSwitch(Switch):
     stop_cmd = "linc {sw_name} stop"
     rel_create_cmd = "linc_rel -c {sw_name}"
     rel_delete_cmd = "linc_rel -d {sw_name}"
+    listen_address = "127.0.0.1"
 
     def __init__(self, name, **kwargs):
         Switch.__init__(self, name, **kwargs)
@@ -920,6 +921,12 @@ class LincSwitch(Switch):
         # stopped.
         self.cmd('epmd -kill')
 
+    def dpctl(self, *args):
+        if not self.listenPort:
+            return "can't run dpctl without passive listening port"
+        return self.cmd('dpctl tcp:{0}:{1} '.format(
+          self.listen_address, self.listenPort) + ' '.join(args))
+
     @classmethod
     def setup(cls):
         pathCheck('linc', 'linc_config_gen', 'linc_rel',
@@ -936,7 +943,8 @@ class LincSwitch(Switch):
     def generate_config(self, interfaces, controllers):
         config_args =  self.form_config_gen_logical_switch_id_arg(0) \
           + " " + " ".join(interfaces) \
-          + " " + self.form_config_gen_controllers_arg(controllers)
+          + " " + self.form_config_gen_controllers_arg(controllers) \
+          + " " + self.form_config_gen_controllers_listener_arg()
         self.cmd(self.config_gen_cmd.format(sw_name = self.name,
                                             config_args = config_args))
 
@@ -946,6 +954,9 @@ class LincSwitch(Switch):
     def form_config_gen_controllers_arg(self, controllers):
         return "-c " +  " ".join(['tcp:{0}:{1}'.format(c.IP(), c.port)
                                   for c in controllers])
+
+    def form_config_gen_controllers_listener_arg(self):
+        return "-l " + "127.0.0.1:{0}".format(self.listenPort)
 
     def setup_interfaces_for_linc(self, hosts_intfs):
         linc_intfs = [ "tap-" + intf for intf in hosts_intfs ]
