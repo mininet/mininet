@@ -1091,9 +1091,13 @@ class OVSBaseQosSwitch( OVSSwitch ):
                       ' -- --id=@default create Queue other-config:min-rate=1' )
             # Reset Mininet's configuration
             res = intf.config( **intf.params )
-            parent = res['parent']
+
+            if res is None: # link may not have TC parameters
+                return
+
             # Re-add qdisc, root, and default classes OVS created, but with
             # new parent, as setup by Mininet's TCIntf
+            parent = res['parent']
             intf.tc( "%s qdisc add dev %s " + parent +
                      " handle 1: " + self.qosType + " default 1" )
             intf.tc( "%s class add dev %s classid 1:0xfffe parent 1: " +
