@@ -83,7 +83,7 @@ several new features, including:
 * The ability to import modules from `mininet.examples`
 * Support for installing the
   [LINC-Switch](https://github.com/FlowForwarding/LINC-Switch)
-  that supports OpenFlow 1.3.1
+  that supports OpenFlow 1.3.2
 
 We have provided several new examples (which can easily be
 imported to provide useful functionality) including:
