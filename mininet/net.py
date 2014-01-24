@@ -105,7 +105,7 @@ from mininet.term import cleanUpScreens, makeTerms
 VERSION = "2.1.0+"
 
 class Mininet( object ):
-    "Network emulation with hosts spawned in network namespaces."
+    """Network emulation with hosts spawned in network namespaces."""
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                   controller=Controller, link=Link, intf=Intf,
@@ -230,13 +230,13 @@ class Mininet( object ):
     # BL: We now have four ways to look up nodes
     # This may (should?) be cleaned up in the future.
     def getNodeByName( self, *args ):
-        "Return node(s) with given name(s)"
+        """Return node(s) with given name(s)"""
         if len( args ) == 1:
             return self.nameToNode[ args[ 0 ] ]
         return [ self.nameToNode[ n ] for n in args ]
 
     def get( self, *args ):
-        "Convenience alias for getNodeByName"
+        """Convenience alias for getNodeByName"""
         return self.getNodeByName( *args )
 
     # Even more convenient syntax for node lookup and iteration
@@ -245,29 +245,29 @@ class Mininet( object ):
         return self.nameToNode[ key ]
 
     def __iter__( self ):
-        "return iterator over node names"
+        """return iterator over node names"""
         for node in chain( self.hosts, self.switches, self.controllers ):
             yield node.name
 
     def __len__( self ):
-        "returns number of nodes in net"
+        """returns number of nodes in net"""
         return ( len( self.hosts ) + len( self.switches ) +
                  len( self.controllers ) )
 
     def __contains__( self, item ):
-        "returns True if net contains named node"
+        """returns True if net contains named node"""
         return item in self.nameToNode
 
     def keys( self ):
-        "return a list of all node names or net's keys"
+        """return a list of all node names or net's keys"""
         return list( self )
 
     def values( self ):
-        "return a list of all nodes or net's values"
+        """return a list of all nodes or net's values"""
         return [ self[name] for name in self ]
 
     def items( self ):
-        "return (key,value) tuple list for every node in net"
+        """return (key,value) tuple list for every node in net"""
         return zip( self.keys(), self.values() )
 
     def addLink( self, node1, node2, port1=None, port2=None,
@@ -287,7 +287,7 @@ class Mininet( object ):
         return cls( node1, node2, **defaults )
 
     def configHosts( self ):
-        "Configure a set of hosts."
+        """Configure a set of hosts."""
         for host in self.hosts:
             info( host.name + ' ' )
             intf = host.defaultIntf()
@@ -347,12 +347,12 @@ class Mininet( object ):
         info( '\n' )
 
     def configureControlNetwork( self ):
-        "Control net config hook: override in subclass"
+        """Control net config hook: override in subclass"""
         raise Exception( 'configureControlNetwork: '
                          'should be overriden in subclass', self )
 
     def build( self ):
-        "Build mininet."
+        """Build mininet."""
         if self.topo:
             self.buildFromTopo( self.topo )
         if ( self.inNamespace ):
@@ -366,7 +366,7 @@ class Mininet( object ):
         self.built = True
 
     def startTerms( self ):
-        "Start a terminal for each node."
+        """Start a terminal for each node."""
         if 'DISPLAY' not in os.environ:
             error( "Error starting terms: Cannot connect to display\n" )
             return
@@ -377,20 +377,20 @@ class Mininet( object ):
         self.terms += makeTerms( self.hosts, 'host' )
 
     def stopXterms( self ):
-        "Kill each xterm."
+        """Kill each xterm."""
         for term in self.terms:
             os.kill( term.pid, signal.SIGKILL )
         cleanUpScreens()
 
     def staticArp( self ):
-        "Add all-pairs ARP entries to remove the need to handle broadcast."
+        """Add all-pairs ARP entries to remove the need to handle broadcast."""
         for src in self.hosts:
             for dst in self.hosts:
                 if src != dst:
                     src.setARP( ip=dst.IP(), mac=dst.MAC() )
 
     def start( self ):
-        "Start controller and switches."
+        """Start controller and switches."""
         if not self.built:
             self.build()
         info( '*** Starting controller\n' )
@@ -403,7 +403,7 @@ class Mininet( object ):
         info( '\n' )
 
     def stop( self ):
-        "Stop the controller(s), switches and hosts"
+        """Stop the controller(s), switches and hosts"""
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
@@ -424,7 +424,7 @@ class Mininet( object ):
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
-        "Perform a complete start/test/stop cycle."
+        """Perform a complete start/test/stop cycle."""
         self.start()
         info( '*** Running test\n' )
         result = test( *args, **kwargs )
@@ -460,7 +460,7 @@ class Mininet( object ):
 
     @staticmethod
     def _parsePing( pingOutput ):
-        "Parse ping output and return packets sent, received."
+        """Parse ping output and return packets sent, received."""
         # Check for downed link
         if 'connect: Network is unreachable' in pingOutput:
             return (1, 0)
@@ -515,7 +515,7 @@ class Mininet( object ):
 
     @staticmethod
     def _parsePingFull( pingOutput ):
-        "Parse ping output and return all data."
+        """Parse ping output and return all data."""
         errorTuple = (1, 0, 0, 0, 0, 0)
         # Check for downed link
         r = r'[uU]nreachable'
@@ -721,7 +721,7 @@ class Mininet( object ):
                     error( 'link dst status change failed: %s\n' % result )
 
     def interact( self ):
-        "Start network and run our simple CLI."
+        """Start network and run our simple CLI."""
         self.start()
         result = CLI( self )
         self.stop()
@@ -731,7 +731,7 @@ class Mininet( object ):
 
     @classmethod
     def init( cls ):
-        "Initialize Mininet"
+        """Initialize Mininet"""
         if cls.inited:
             return
         ensureRoot()
@@ -768,7 +768,7 @@ class MininetWithControlNet( Mininet ):
           attached to."""
 
     def configureControlNetwork( self ):
-        "Configure control network."
+        """Configure control network."""
         self.configureRoutedControlNetwork()
 
     # We still need to figure out the right way to pass

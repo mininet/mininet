@@ -22,7 +22,7 @@ from functools import partial
 MNRUNDIR = realpath( '/var/run/mn' )
 
 def mountPoints():
-    "Return list of mounted file systems"
+    """Return list of mounted file systems"""
     mtab, _err, _ret = errFail( 'cat /proc/mounts' )
     lines = mtab.split( '\n' )
     mounts = []
@@ -35,7 +35,7 @@ def mountPoints():
     return mounts
 
 def unmountAll( rootdir=MNRUNDIR ):
-    "Unmount all mounts under a directory tree"
+    """Unmount all mounts under a directory tree"""
     rootdir = realpath( rootdir )
     # Find all mounts below rootdir
     # This is subtle because /foo is not
@@ -54,7 +54,7 @@ def unmountAll( rootdir=MNRUNDIR ):
 
 
 class HostWithPrivateDirs( Host ):
-    "Host with private directories"
+    """Host with private directories"""
 
     mnRunDir = MNRUNDIR
 
@@ -88,7 +88,7 @@ class HostWithPrivateDirs( Host ):
         self.cmd( 'mount /sys' )
 
     def mountPrivateDirs( self ):
-        "Create and bind mount private dirs"
+        """Create and bind mount private dirs"""
         for dir_ in self.privateDirs:
             privateDir = self.private + dir_
             errFail( 'mkdir -p ' + privateDir )
@@ -97,7 +97,7 @@ class HostWithPrivateDirs( Host ):
                            ( privateDir, mountPoint) )
 
     def mountDirs( self, dirs ):
-        "Mount a list of directories"
+        """Mount a list of directories"""
         for dir_ in dirs:
             mountpoint = self.root + dir_
             errFail( 'mount -B %s %s' %
@@ -138,11 +138,11 @@ class HostWithPrivateDirs( Host ):
         self.mountPrivateDirs()
 
     def unmountBindMounts( self ):
-        "Unmount all of our bind mounts"
+        """Unmount all of our bind mounts"""
         unmountAll( self.rundir )
 
     def popen( self, *args, **kwargs ):
-        "Popen with chroot support"
+        """Popen with chroot support"""
         chroot = kwargs.pop( 'chroot', True )
         mncmd = kwargs.get( 'mncmd',
                            [ 'mnexec', '-a', str( self.pid ) ] )
@@ -170,7 +170,7 @@ findRemounts = HostWithPrivateDirs.findRemounts
 # Sample usage
 
 def testHostWithPrivateDirs():
-    "Test bind mounts"
+    """Test bind mounts"""
     topo = SingleSwitchTopo( 10 )
     remounts = findRemounts( fstypes=[ 'nfs' ] )
     privateDirs = [ '/var/log', '/var/run' ]

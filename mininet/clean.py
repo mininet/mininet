@@ -17,7 +17,7 @@ from mininet.log import info
 from mininet.term import cleanUpScreens
 
 def sh( cmd ):
-    "Print a command and send it to the shell"
+    """Print a command and send it to the shell"""
     info( cmd + '\n' )
     return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
 

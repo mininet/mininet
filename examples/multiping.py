@@ -17,11 +17,11 @@ from select import poll, POLLIN
 from time import time
 
 def chunks( l, n ):
-    "Divide list l into chunks of size n - thanks Stackoverflow"
+    """Divide list l into chunks of size n - thanks Stackoverflow"""
     return [ l[ i: i + n ] for i in range( 0, len( l ), n ) ]
 
 def startpings( host, targetips ):
-    "Tell host to repeatedly ping targets"
+    """Tell host to repeatedly ping targets"""
 
     targetips = ' '.join( targetips )
 
@@ -40,7 +40,7 @@ def startpings( host, targetips ):
     host.cmd( cmd )
 
 def multiping( netsize, chunksize, seconds):
-    "Ping subsets of size chunksize in net of size netsize"
+    """Ping subsets of size chunksize in net of size netsize"""
 
     # Create network and identify subnets
     topo = SingleSwitchTopo( netsize )

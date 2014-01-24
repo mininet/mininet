@@ -23,7 +23,7 @@ from mininet.term import makeTerm, cleanUpScreens
 
 class MiniEdit( Frame ):
 
-    "A simple network editor for Mininet."
+    """A simple network editor for Mininet."""
 
     def __init__( self, parent=None, cheight=200, cwidth=500 ):
 
@@ -96,12 +96,12 @@ class MiniEdit( Frame ):
         Wm.wm_protocol( self.top, name='WM_DELETE_WINDOW', func=self.quit )
 
     def quit( self ):
-        "Stop our network, if any, then quit."
+        """Stop our network, if any, then quit."""
         self.stop()
         Frame.quit( self )
 
     def createMenubar( self ):
-        "Create our menu bar."
+        """Create our menu bar."""
 
         font = self.font
 
@@ -139,7 +139,7 @@ class MiniEdit( Frame ):
     # Canvas
 
     def createCanvas( self ):
-        "Create and return our scrolling canvas frame."
+        """Create and return our scrolling canvas frame."""
         f = Frame( self )
 
         canvas = Canvas( f, width=self.cwidth, height=self.cheight,
@@ -173,26 +173,26 @@ class MiniEdit( Frame ):
         return f, canvas
 
     def updateScrollRegion( self ):
-        "Update canvas scroll region to hold everything."
+        """Update canvas scroll region to hold everything."""
         bbox = self.canvas.bbox( 'all' )
         if bbox is not None:
             self.canvas.configure( scrollregion=( 0, 0, bbox[ 2 ],
                                    bbox[ 3 ] ) )
 
     def canvasx( self, x_root ):
-        "Convert root x coordinate to canvas coordinate."
+        """Convert root x coordinate to canvas coordinate."""
         c = self.canvas
         return c.canvasx( x_root ) - c.winfo_rootx()
 
     def canvasy( self, y_root ):
-        "Convert root y coordinate to canvas coordinate."
+        """Convert root y coordinate to canvas coordinate."""
         c = self.canvas
         return c.canvasy( y_root ) - c.winfo_rooty()
 
     # Toolbar
 
     def activate( self, toolName ):
-        "Activate a tool and press its button."
+        """Activate a tool and press its button."""
         # Adjust button appearance
         if self.active:
             self.buttons[ self.active ].configure( relief='raised' )
@@ -201,7 +201,7 @@ class MiniEdit( Frame ):
         self.active = toolName
 
     def createToolbar( self ):
-        "Create and return our toolbar frame."
+        """Create and return our toolbar frame."""
 
         toolbar = Frame( self )
 
@@ -229,14 +229,14 @@ class MiniEdit( Frame ):
         return toolbar
 
     def doRun( self ):
-        "Run command."
+        """Run command."""
         self.activate( 'Select' )
         for tool in self.tools:
             self.buttons[ tool ].config( state='disabled' )
         self.start()
 
     def doStop( self ):
-        "Stop command."
+        """Stop command."""
         self.stop()
         for tool in self.tools:
             self.buttons[ tool ].config( state='normal' )
@@ -249,7 +249,7 @@ class MiniEdit( Frame ):
     # interesting introspection-based alternative to bindtags.
 
     def canvasHandle( self, eventName, event ):
-        "Generic canvas event handler"
+        """Generic canvas event handler"""
         if self.active is None:
             return
         toolName = self.active
@@ -258,22 +258,22 @@ class MiniEdit( Frame ):
             handler( event )
 
     def clickCanvas( self, event ):
-        "Canvas click handler."
+        """Canvas click handler."""
         self.canvasHandle( 'click', event )
 
     def dragCanvas( self, event ):
-        "Canvas drag handler."
+        """Canvas drag handler."""
         self.canvasHandle( 'drag', event )
 
     def releaseCanvas( self, event ):
-        "Canvas mouse up handler."
+        """Canvas mouse up handler."""
         self.canvasHandle( 'release', event )
 
     # Currently the only items we can select directly are
     # links. Nodes are handled by bindings in the node icon.
 
     def findItem( self, x, y ):
-        "Find items at a location in our canvas."
+        """Find items at a location in our canvas."""
         items = self.canvas.find_overlapping( x, y, x, y )
         if len( items ) == 0:
             return None
@@ -283,11 +283,11 @@ class MiniEdit( Frame ):
     # Canvas bindings for Select, Host, Switch and Link tools
 
     def clickSelect( self, event ):
-        "Select an item."
+        """Select an item."""
         self.selectItem( self.findItem( event.x, event.y ) )
 
     def deleteItem( self, item ):
-        "Delete an item."
+        """Delete an item."""
         # Don't delete while network is running
         if self.buttons[ 'Select' ][ 'state' ] == 'disabled':
             return
@@ -300,13 +300,13 @@ class MiniEdit( Frame ):
         self.canvas.delete( item )
 
     def deleteSelection( self, _event ):
-        "Delete the selected item."
+        """Delete the selected item."""
         if self.selection is not None:
             self.deleteItem( self.selection )
         self.selectItem( None )
 
     def nodeIcon( self, node, name ):
-        "Create a new node icon."
+        """Create a new node icon."""
         icon = Button( self.canvas, image=self.images[ node ],
                        text=name, compound='top' )
         # Unfortunately bindtags wants a tuple
@@ -316,7 +316,7 @@ class MiniEdit( Frame ):
         return icon
 
     def newNode( self, node, event ):
-        "Add a new node to our canvas."
+        """Add a new node to our canvas."""
         c = self.canvas
         x, y = c.canvasx( event.x ), c.canvasy( event.y )
         self.nodeCount += 1
@@ -330,15 +330,15 @@ class MiniEdit( Frame ):
         icon.links = {}
 
     def clickHost( self, event ):
-        "Add a new host to our canvas."
+        """Add a new host to our canvas."""
         self.newNode( 'Host', event )
 
     def clickSwitch( self, event ):
-        "Add a new switch to our canvas."
+        """Add a new switch to our canvas."""
         self.newNode( 'Switch', event )
 
     def dragLink( self, event ):
-        "Drag a link's endpoint to another node."
+        """Drag a link's endpoint to another node."""
         if self.link is None:
             return
         # Since drag starts in widget, we use root coords
@@ -348,7 +348,7 @@ class MiniEdit( Frame ):
         c.coords( self.link, self.linkx, self.linky, x, y )
 
     def releaseLink( self, _event ):
-        "Give up on the current link."
+        """Give up on the current link."""
         if self.link is not None:
             self.canvas.delete( self.link )
         self.linkWidget = self.linkItem = self.link = None
@@ -356,7 +356,7 @@ class MiniEdit( Frame ):
     # Generic node handlers
 
     def createNodeBindings( self ):
-        "Create a set of bindings for nodes."
+        """Create a set of bindings for nodes."""
         bindings = {
             '<ButtonPress-1>': self.clickNode,
             '<B1-Motion>': self.dragNode,
@@ -371,20 +371,20 @@ class MiniEdit( Frame ):
         return l
 
     def selectItem( self, item ):
-        "Select an item and remember old selection."
+        """Select an item and remember old selection."""
         self.lastSelection = self.selection
         self.selection = item
 
     def enterNode( self, event ):
-        "Select node on entry."
+        """Select node on entry."""
         self.selectNode( event )
 
     def leaveNode( self, _event ):
-        "Restore old selection on exit."
+        """Restore old selection on exit."""
         self.selectItem( self.lastSelection )
 
     def clickNode( self, event ):
-        "Node click handler."
+        """Node click handler."""
         if self.active is 'Link':
             self.startLink( event )
         else:
@@ -392,26 +392,26 @@ class MiniEdit( Frame ):
         return 'break'
 
     def dragNode( self, event ):
-        "Node drag handler."
+        """Node drag handler."""
         if self.active is 'Link':
             self.dragLink( event )
         else:
             self.dragNodeAround( event )
 
     def releaseNode( self, event ):
-        "Node release handler."
+        """Node release handler."""
         if self.active is 'Link':
             self.finishLink( event )
 
     # Specific node handlers
 
     def selectNode( self, event ):
-        "Select the node that was clicked on."
+        """Select the node that was clicked on."""
         item = self.widgetToItem.get( event.widget, None )
         self.selectItem( item )
 
     def dragNodeAround( self, event ):
-        "Drag a node around on the canvas."
+        """Drag a node around on the canvas."""
         c = self.canvas
         # Convert global to local coordinates;
         # Necessary since x, y are widget-relative
@@ -429,7 +429,7 @@ class MiniEdit( Frame ):
             c.coords( link, x, y, x1, y1 )
 
     def startLink( self, event ):
-        "Start a new link."
+        """Start a new link."""
         if event.widget not in self.widgetToItem:
             # Didn't click on a node
             return
@@ -447,16 +447,16 @@ class MiniEdit( Frame ):
         # Callbacks ignore event
 
         def select( _event, link=self.link ):
-            "Select item on mouse entry."
+            """Select item on mouse entry."""
             self.selectItem( link )
 
         def highlight( _event, link=self.link ):
-            "Highlight item on mouse entry."
+            """Highlight item on mouse entry."""
             # self.selectItem( link )
             self.canvas.itemconfig( link, fill='green' )
 
         def unhighlight( _event, link=self.link ):
-            "Unhighlight item on mouse exit."
+            """Unhighlight item on mouse exit."""
             self.canvas.itemconfig( link, fill='blue' )
             # self.selectItem( None )
 
@@ -465,7 +465,7 @@ class MiniEdit( Frame ):
         self.canvas.tag_bind( self.link, '<ButtonPress-1>', select )
 
     def finishLink( self, event ):
-        "Finish creating a link"
+        """Finish creating a link"""
         if self.link is None:
             return
         source = self.linkWidget
@@ -493,7 +493,7 @@ class MiniEdit( Frame ):
     # Menu handlers
 
     def about( self ):
-        "Display about box."
+        """Display about box."""
         about = self.aboutBox
         if about is None:
             bg = 'white'
@@ -516,7 +516,7 @@ class MiniEdit( Frame ):
         about.deiconify()
 
     def createToolImages( self ):
-        "Create toolbar (and icon) images."
+        """Create toolbar (and icon) images."""
 
     # Model interface
     #
@@ -524,13 +524,13 @@ class MiniEdit( Frame ):
     # mininet object here, probably.
 
     def addLink( self, source, dest ):
-        "Add link to model."
+        """Add link to model."""
         source.links[ dest ] = self.link
         dest.links[ source ] = self.link
         self.links[ self.link ] = ( source, dest )
 
     def deleteLink( self, link ):
-        "Delete link from model."
+        """Delete link from model."""
         pair = self.links.get( link, None )
         if pair is not None:
             source, dest = pair
@@ -540,7 +540,7 @@ class MiniEdit( Frame ):
             del self.links[ link ]
 
     def deleteNode( self, item ):
-        "Delete node (and its links) from model."
+        """Delete node (and its links) from model."""
         widget = self.itemToWidget[ item ]
         for link in widget.links.values():
             # Delete from view and model
@@ -549,7 +549,7 @@ class MiniEdit( Frame ):
         del self.widgetToItem[ widget ]
 
     def build( self ):
-        "Build network based on our topology."
+        """Build network based on our topology."""
 
         net = Mininet( topo=None )
 
@@ -581,20 +581,20 @@ class MiniEdit( Frame ):
         return net
 
     def start( self ):
-        "Start network."
+        """Start network."""
         if self.net is None:
             self.net = self.build()
             self.net.start()
 
     def stop( self ):
-        "Stop network."
+        """Stop network."""
         if self.net is not None:
             self.net.stop()
         cleanUpScreens()
         self.net = None
 
     def xterm( self, _ignore=None ):
-        "Make an xterm when a button is pressed."
+        """Make an xterm when a button is pressed."""
         if ( self.selection is None or
              self.net is None or
              self.selection not in self.itemToWidget ):
@@ -606,7 +606,7 @@ class MiniEdit( Frame ):
         self.net.terms += term
 
 def miniEditImages():
-    "Create and return images for MiniEdit."
+    """Create and return images for MiniEdit."""
 
     # Image data. Git will be unhappy. However, the alternative
     # is to keep track of separate binary files, which is also

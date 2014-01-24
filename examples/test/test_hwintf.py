@@ -5,12 +5,14 @@ Test for hwintf.py
 """
 
 import unittest
-import pexpect
 import re
+
+import pexpect
+
 from mininet.log import setLogLevel
-from mininet.net import Mininet
 from mininet.node import Node
-from mininet.link import Link, Intf
+from mininet.link import Link
+
 
 class testHwintf( unittest.TestCase ):
 
@@ -23,7 +25,7 @@ class testHwintf( unittest.TestCase ):
         self.h3.configDefault()
 
     def testLocalPing( self ):
-        "Verify connectivity between virtual hosts using pingall"
+        """Verify connectivity between virtual hosts using pingall"""
         p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
@@ -35,7 +37,7 @@ class testHwintf( unittest.TestCase ):
         p.wait()
 
     def testExternalPing( self ):
-        "Verify connnectivity between virtual host and virtual-physical 'external' host "
+        """Verify connnectivity between virtual host and virtual-physical 'external' host """
         p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
         p.expect( self.prompt )
         # test ping external to internal

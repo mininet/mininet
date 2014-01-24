@@ -17,13 +17,13 @@ class testWalkthrough( unittest.TestCase ):
 
     # PART 1
     def testHelp( self ):
-        "Check the usage message"
+        """Check the usage message"""
         p = pexpect.spawn( 'mn -h' )
         index = p.expect( [ 'Usage: mn', pexpect.EOF ] )
         self.assertEqual( index, 0 )
 
     def testWireshark( self ):
-        "Use tshark to test the of dissector"
+        """Use tshark to test the of dissector"""
         tshark = pexpect.spawn( 'tshark -i lo -R of' )
         tshark.expect( 'Capturing on lo' )
         mn = pexpect.spawn( 'mn --test pingall' )
@@ -32,7 +32,7 @@ class testWalkthrough( unittest.TestCase ):
         tshark.sendintr()
 
     def testBasic( self ):
-        "Test basic CLI commands (help, nodes, net, dump)"
+        """Test basic CLI commands (help, nodes, net, dump)"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         # help command
@@ -70,7 +70,7 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testHostCommands( self ):
-        "Test ifconfig and ps on h1 and s1"
+        """Test ifconfig and ps on h1 and s1"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         interfaces = [ 'h1-eth0', 's1-eth1', '[^-]eth0', 'lo', self.prompt ]
@@ -116,7 +116,7 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testConnectivity( self ):
-        "Test ping and pingall"
+        """Test ping and pingall"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 h2' )
@@ -129,7 +129,7 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testSimpleHTTP( self ):
-        "Start an HTTP server on h1 and wget from h2"
+        """Start an HTTP server on h1 and wget from h2"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'h1 python -m SimpleHTTPServer 80 &' )
@@ -144,7 +144,7 @@ class testWalkthrough( unittest.TestCase ):
 
     # PART 2
     def testRegressionRun( self ):
-        "Test pingpair (0% drop) and iperf (bw > 0) regression tests"
+        """Test pingpair (0% drop) and iperf (bw > 0) regression tests"""
         # test pingpair
         p = pexpect.spawn( 'mn --test pingpair' )
         p.expect( '0% dropped' )
@@ -157,7 +157,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( pexpect.EOF )
 
     def testTopoChange( self ):
-        "Test pingall on single,3 and linear,4 topos"
+        """Test pingall on single,3 and linear,4 topos"""
         # testing single,3
         p = pexpect.spawn( 'mn --test pingall --topo single,3' )
         p.expect( '(\d+)/(\d+) received')
@@ -176,7 +176,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( pexpect.EOF )
 
     def testLinkChange( self ):
-        "Test TCLink bw and delay"
+        """Test TCLink bw and delay"""
         p = pexpect.spawn( 'mn --link tc,bw=10,delay=10ms' )
         # test bw
         p.expect( self.prompt )
@@ -197,7 +197,7 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testVerbosity( self ):
-        "Test debug and output verbosity"
+        """Test debug and output verbosity"""
         # test output
         p = pexpect.spawn( 'mn -v output' )
         p.expect( self.prompt )
@@ -211,7 +211,7 @@ class testWalkthrough( unittest.TestCase ):
         self.assertTrue( len( lines ) > 100, "Debug output is too short" )
 
     def testCustomTopo( self ):
-        "Start Mininet using a custom topo, then run pingall"
+        """Start Mininet using a custom topo, then run pingall"""
         custom = os.path.dirname( os.path.realpath( __file__ ) )
         custom = os.path.join( custom, '../../custom/topo-2sw-2host.py' )
         custom = os.path.normpath( custom )
@@ -220,7 +220,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( pexpect.EOF )
 
     def testStaticMAC( self ):
-        "Verify that MACs are set to easy to read numbers"
+        """Verify that MACs are set to easy to read numbers"""
         p = pexpect.spawn( 'mn --mac' )
         p.expect( self.prompt )
         for i in range( 1, 3 ):
@@ -229,7 +229,7 @@ class testWalkthrough( unittest.TestCase ):
             p.expect( self.prompt )
 
     def testSwitches( self ):
-        "Run iperf test using user and ovsk switches"
+        """Run iperf test using user and ovsk switches"""
         switches = [ 'user', 'ovsk' ]
         for sw in switches:
             p = pexpect.spawn( 'mn --switch %s --test iperf' % sw )
@@ -239,14 +239,14 @@ class testWalkthrough( unittest.TestCase ):
             p.expect( pexpect.EOF )
 
     def testBenchmark( self ):
-        "Run benchmark and verify that it takes less than 2 seconds"
+        """Run benchmark and verify that it takes less than 2 seconds"""
         p = pexpect.spawn( 'mn --test none' )
         p.expect( 'completed in ([\d\.]+) seconds' )
         time = float( p.match.group( 1 ) )
         self.assertTrue( time < 2, 'Benchmark takes more than 2 seconds' )
 
     def testOwnNamespace( self ):
-        "Test running user switch in its own namespace"
+        """Test running user switch in its own namespace"""
         p = pexpect.spawn( 'mn --innamespace --switch user' )
         p.expect( self.prompt )
         interfaces = [ 'h1-eth0', 's1-eth1', '[^-]eth0', 'lo', self.prompt ]
@@ -274,7 +274,7 @@ class testWalkthrough( unittest.TestCase ):
 
     # PART 3
     def testPythonInterpreter( self ):
-        "Test py and px by checking IP for h1 and adding h3"
+        """Test py and px by checking IP for h1 and adding h3"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         # test host IP
@@ -296,7 +296,7 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testLink( self ):
-        "Test link CLI command using ping"
+        """Test link CLI command using ping"""
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'link s1 h1 down' )
@@ -316,7 +316,7 @@ class testWalkthrough( unittest.TestCase ):
                           '1 received' in quietRun( 'ping -c 1 github.com' ),
                           'Github is not reachable; cannot download Pox' )
     def testRemoteController( self ):
-        "Test Mininet using Pox controller"
+        """Test Mininet using Pox controller"""
         if not os.path.exists( '/tmp/pox' ):
             p = pexpect.spawn( 'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
             p.expect( pexpect.EOF )

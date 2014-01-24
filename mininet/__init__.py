@@ -1,1 +1,1 @@
-"Docstring to silence pylint; ignores --ignore option for __init__.py"
+"""Docstring to silence pylint; ignores --ignore option for __init__.py"""

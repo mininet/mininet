@@ -12,7 +12,7 @@ class testScratchNet( unittest.TestCase ):
     opts = [ "1 packets transmitted, 1 received, 0% packet loss", pexpect.EOF ]
 
     def pingTest( self, name ):
-        "Verify that no ping packets were dropped"
+        """Verify that no ping packets were dropped"""
         p = pexpect.spawn( 'python -m %s' % name )
         index = p.expect( self.opts )
         self.assertEqual( index, 0 )

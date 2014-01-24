@@ -30,7 +30,7 @@ import re
 
 class Intf( object ):
 
-    "Basic interface object that can configure itself."
+    """Basic interface object that can configure itself."""
 
     def __init__( self, name, node=None, port=None, link=None, **params ):
         """name: interface name (e.g. h1-eth0)
@@ -48,11 +48,11 @@ class Intf( object ):
         self.config( **params )
 
     def cmd( self, *args, **kwargs ):
-        "Run a command in our owning node"
+        """Run a command in our owning node"""
         return self.node.cmd( *args, **kwargs )
 
     def ifconfig( self, *args ):
-        "Configure ourselves using ifconfig"
+        """Configure ourselves using ifconfig"""
         return self.cmd( 'ifconfig', self.name, *args )
 
     def setIP( self, ipstr, prefixLen=None ):
@@ -78,35 +78,35 @@ class Intf( object ):
     _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
 
     def updateIP( self ):
-        "Return updated IP address based on ifconfig"
+        """Return updated IP address based on ifconfig"""
         ifconfig = self.ifconfig()
         ips = self._ipMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
         return self.ip
 
     def updateMAC( self ):
-        "Return updated MAC address based on ifconfig"
+        """Return updated MAC address based on ifconfig"""
         ifconfig = self.ifconfig()
         macs = self._macMatchRegex.findall( ifconfig )
         self.mac = macs[ 0 ] if macs else None
         return self.mac
 
     def IP( self ):
-        "Return IP address"
+        """Return IP address"""
         return self.ip
 
     def MAC( self ):
-        "Return MAC address"
+        """Return MAC address"""
         return self.mac
 
     def isUp( self, setUp=False ):
-        "Return whether interface is up"
+        """Return whether interface is up"""
         if setUp:
             self.ifconfig( 'up' )
         return "UP" in self.ifconfig()
 
     def rename( self, newname ):
-        "Rename interface"
+        """Rename interface"""
         self.ifconfig( 'down' )
         result = self.cmd( 'ip link set', self.name, 'name', newname )
         self.name = newname
@@ -159,7 +159,7 @@ class Intf( object ):
         return r
 
     def delete( self ):
-        "Delete interface"
+        """Delete interface"""
         self.cmd( 'ip link del ' + self.name )
         if self.node.inNamespace:
             # Link may have been dumped into root NS
@@ -179,7 +179,7 @@ class TCIntf( Intf ):
 
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False ):
-        "Return tc commands to set bandwidth"
+        """Return tc commands to set bandwidth"""
 
         cmds, parent = [], ' root '
 
@@ -231,7 +231,7 @@ class TCIntf( Intf ):
     @staticmethod
     def delayCmds( parent, delay=None, jitter=None,
                    loss=None, max_queue_size=None ):
-        "Internal method: return tc commands for delay and loss"
+        """Internal method: return tc commands for delay and loss"""
         cmds = []
         if delay and delay < 0:
             error( 'Negative delay', delay, '\n' )
@@ -255,7 +255,7 @@ class TCIntf( Intf ):
         return cmds, parent
 
     def tc( self, cmd, tc='tc' ):
-        "Execute tc command for our interface"
+        """Execute tc command for our interface"""
         c = cmd % (tc, self)  # Add in tc command and our name
         debug(" *** executing command: %s\n" % c)
         return self.cmd( c )
@@ -264,7 +264,7 @@ class TCIntf( Intf ):
                 disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
                 max_queue_size=None, **params ):
-        "Configure the port and set its properties."
+        """Configure the port and set its properties."""
 
         result = Intf.config( self, **params)
 
@@ -368,7 +368,7 @@ class Link( object ):
 
     @classmethod
     def intfName( cls, node, n ):
-        "Construct a canonical interface name node-ethN for interface n."
+        """Construct a canonical interface name node-ethN for interface n."""
         return node.name + '-eth' + repr( n )
 
     @classmethod
@@ -381,7 +381,7 @@ class Link( object ):
         makeIntfPair( intf1, intf2  )
 
     def delete( self ):
-        "Delete this link"
+        """Delete this link"""
         self.intf1.delete()
         self.intf2.delete()
 
@@ -389,7 +389,7 @@ class Link( object ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
 
 class TCLink( Link ):
-    "Link with symmetric TC interfaces configured via opts"
+    """Link with symmetric TC interfaces configured via opts"""
     def __init__( self, node1, node2, port1=None, port2=None,
                   intfName1=None, intfName2=None, **params ):
         Link.__init__( self, node1, node2, port1=port1, port2=port2,

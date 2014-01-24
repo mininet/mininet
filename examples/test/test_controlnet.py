@@ -12,7 +12,7 @@ class testControlNet( unittest.TestCase ):
     prompt = 'mininet>'
 
     def testPingall( self ):
-        "Simple pingall test that verifies 0% packet drop in data network"
+        """Simple pingall test that verifies 0% packet drop in data network"""
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
@@ -24,7 +24,7 @@ class testControlNet( unittest.TestCase ):
         p.wait()
 
     def testFailover( self ):
-        "Kill controllers and verify that switch, s1, fails over properly"
+        """Kill controllers and verify that switch, s1, fails over properly"""
         count = 1
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )

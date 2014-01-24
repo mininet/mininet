@@ -12,7 +12,7 @@ class testEmptyNet( unittest.TestCase ):
     prompt = 'mininet>'
 
     def testEmptyNet( self ):
-        "Run simple CLI tests: pingall (verify 0% drop) and iperf (sanity)"
+        """Run simple CLI tests: pingall (verify 0% drop) and iperf (sanity)"""
         p = pexpect.spawn( 'python -m mininet.examples.emptynet' )
         p.expect( self.prompt )
         # pingall test

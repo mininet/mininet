@@ -14,7 +14,7 @@ from select import poll, POLLIN
 from subprocess import Popen, PIPE
 
 def monitorFiles( outfiles, seconds, timeoutms ):
-    "Monitor set of files and return [(host, line)...]"
+    """Monitor set of files and return [(host, line)...]"""
     devnull = open( '/dev/null', 'w' )
     tails, fdToFile, fdToHost = {}, {}, {}
     for h, outfile in outfiles.iteritems():
@@ -48,7 +48,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
 
 
 def monitorTest( N=3, seconds=3 ):
-    "Run pings and monitor multiple hosts"
+    """Run pings and monitor multiple hosts"""
     topo = SingleSwitchTopo( N )
     net = Mininet( topo )
     net.start()

@@ -12,7 +12,7 @@ class testControllers( unittest.TestCase ):
     prompt = 'mininet>'
 
     def connectedTest( self, name, cmap ):
-        "Verify that switches are connected to the controller specified by cmap"
+        """Verify that switches are connected to the controller specified by cmap"""
         p = pexpect.spawn( 'python -m %s' % name )
         p.expect( self.prompt )
         # but first a simple ping test

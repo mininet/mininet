@@ -1,11 +1,11 @@
-"Module dependency utility functions for Mininet."
+"""Module dependency utility functions for Mininet."""
 
 from mininet.util import quietRun
 from mininet.log import info, error, debug
 from os import environ
 
 def lsmod():
-    "Return output of lsmod."
+    """Return output of lsmod."""
     return quietRun( 'lsmod' )
 
 def rmmod( mod ):
@@ -58,7 +58,7 @@ def moduleDeps( subtract=None, add=None ):
 
 
 def pathCheck( *args, **kwargs ):
-    "Make sure each program in *args can be found in $PATH."
+    """Make sure each program in *args can be found in $PATH."""
     moduleName = kwargs.get( 'moduleName', 'it' )
     for arg in args:
         if not quietRun( 'which ' + arg ):

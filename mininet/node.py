@@ -110,7 +110,7 @@ class Node( object ):
     # Command support via shell process in namespace
 
     def startShell( self ):
-        "Start a shell process for running commands"
+        """Start a shell process for running commands"""
         if self.shell:
             error( "%s: shell is already running" )
             return
@@ -141,7 +141,7 @@ class Node( object ):
         self.waiting = False
 
     def cleanup( self ):
-        "Help python collect its garbage."
+        """Help python collect its garbage."""
         # Intfs may end up in root NS
         for intfName in self.intfNames():
             if self.name in intfName:
@@ -182,13 +182,13 @@ class Node( object ):
         os.write( self.stdin.fileno(), data )
 
     def terminate( self ):
-        "Send kill signal to Node and clean up after it."
+        """Send kill signal to Node and clean up after it."""
         if self.shell:
             os.killpg( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
-        "Stop node."
+        """Stop node."""
         self.terminate()
 
     def waitReadable( self, timeoutms=None ):
@@ -231,7 +231,7 @@ class Node( object ):
         self.waiting = True
 
     def sendInt( self, sig=signal.SIGINT ):
-        "Interrupt running command."
+        """Interrupt running command."""
         if self.lastPid:
             try:
                 os.kill( self.lastPid, sig )
@@ -334,7 +334,7 @@ class Node( object ):
     # make a single interface at a time.
 
     def newPort( self ):
-        "Return the next port number to allocate."
+        """Return the next port number to allocate."""
         if len( self.ports ) > 0:
             return max( self.ports.values() ) + 1
         return self.portBase
@@ -355,7 +355,7 @@ class Node( object ):
             moveIntf( intf.name, self )
 
     def defaultIntf( self ):
-        "Return interface for lowest port"
+        """Return interface for lowest port"""
         ports = self.intfs.keys()
         if ports:
             return self.intfs[ min( ports ) ]
@@ -380,7 +380,7 @@ class Node( object ):
             return intf
 
     def connectionsTo( self, node):
-        "Return [ intf1, intf2... ] for all intfs that connect self to node."
+        """Return [ intf1, intf2... ] for all intfs that connect self to node."""
         # We could optimize this if it is important
         connections = []
         for intf in self.intfList():
@@ -452,15 +452,15 @@ class Node( object ):
         return self.intf( intf ).setIP( ip )
 
     def IP( self, intf=None ):
-        "Return IP address of a node or specific interface."
+        """Return IP address of a node or specific interface."""
         return self.intf( intf ).IP()
 
     def MAC( self, intf=None ):
-        "Return MAC address of a node or specific interface."
+        """Return MAC address of a node or specific interface."""
         return self.intf( intf ).MAC()
 
     def intfIsUp( self, intf=None ):
-        "Check if an interface is up."
+        """Check if an interface is up."""
         return self.intf( intf ).isUp()
 
     # The reason why we configure things in this way is so
@@ -508,7 +508,7 @@ class Node( object ):
         return r
 
     def configDefault( self, **moreParams ):
-        "Configure with default parameters"
+        """Configure with default parameters"""
         self.params.update( moreParams )
         self.config( **self.params )
 
@@ -521,22 +521,22 @@ class Node( object ):
     # Other methods
 
     def intfList( self ):
-        "List of our interfaces sorted by port number"
+        """List of our interfaces sorted by port number"""
         return [ self.intfs[ p ] for p in sorted( self.intfs.iterkeys() ) ]
 
     def intfNames( self ):
-        "The names of our interfaces sorted by port number"
+        """The names of our interfaces sorted by port number"""
         return [ str( i ) for i in self.intfList() ]
 
     def __repr__( self ):
-        "More informative string representation"
+        """More informative string representation"""
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
                               for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
             self.__class__.__name__, self.name, intfs, self.pid )
 
     def __str__( self ):
-        "Abbreviated string representation"
+        """Abbreviated string representation"""
         return self.name
 
     # Automatic class setup support
@@ -545,7 +545,7 @@ class Node( object ):
 
     @classmethod
     def checkSetup( cls ):
-        "Make sure our class and superclasses are set up"
+        """Make sure our class and superclasses are set up"""
         while cls and not getattr( cls, 'isSetup', True ):
             cls.setup()
             cls.isSetup = True
@@ -554,18 +554,18 @@ class Node( object ):
 
     @classmethod
     def setup( cls ):
-        "Make sure our class dependencies are available"
+        """Make sure our class dependencies are available"""
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
 
 
 class Host( Node ):
-    "A host is simply a Node"
+    """A host is simply a Node"""
     pass
 
 
 class CPULimitedHost( Host ):
 
-    "CPU limited host"
+    """CPU limited host"""
 
     def __init__( self, name, sched='cfs', **kwargs ):
         Host.__init__( self, name, **kwargs )
@@ -587,7 +587,7 @@ class CPULimitedHost( Host ):
         self.rtprio = 20
 
     def cgroupSet( self, param, value, resource='cpu' ):
-        "Set a cgroup parameter and return its value"
+        """Set a cgroup parameter and return its value"""
         cmd = 'cgset -r %s.%s=%s /%s' % (
             resource, param, value, self.name )
         quietRun( cmd )
@@ -598,13 +598,13 @@ class CPULimitedHost( Host ):
         return nvalue
 
     def cgroupGet( self, param, resource='cpu' ):
-        "Return value of cgroup parameter"
+        """Return value of cgroup parameter"""
         cmd = 'cgget -r %s.%s /%s' % (
             resource, param, self.name )
         return int( quietRun( cmd ).split()[ -1 ] )
 
     def cgroupDel( self ):
-        "Clean up our cgroup"
+        """Clean up our cgroup"""
         # info( '*** deleting cgroup', self.cgroup, '\n' )
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         return exitcode != 0
@@ -621,12 +621,12 @@ class CPULimitedHost( Host ):
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
-        "Clean up Node, then clean up our cgroup"
+        """Clean up Node, then clean up our cgroup"""
         super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     def chrt( self ):
-        "Set RT scheduling priority"
+        """Set RT scheduling priority"""
         quietRun( 'chrt -p %s %s' % ( self.rtprio, self.pid ) )
         result = quietRun( 'chrt -p %s' % self.pid )
         firstline = result.split( '\n' )[ 0 ]
@@ -636,14 +636,14 @@ class CPULimitedHost( Host ):
         return lastword
 
     def rtInfo( self, f ):
-        "Internal method: return parameters for RT bandwidth"
+        """Internal method: return parameters for RT bandwidth"""
         pstr, qstr = 'rt_period_us', 'rt_runtime_us'
         # RT uses wall clock time for period and quota
         quota = int( self.period_us * f * numCores() )
         return pstr, qstr, self.period_us, quota
 
     def cfsInfo( self, f):
-        "Internal method: return parameters for CFS bandwidth"
+        """Internal method: return parameters for CFS bandwidth"""
         pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
         # CFS uses wall clock time for period and CPU time for quota.
         quota = int( self.period_us * f * numCores() )
@@ -690,7 +690,7 @@ class CPULimitedHost( Host ):
         info( '(%s %d/%dus) ' % ( sched, quota, period ) )
 
     def setCPUs( self, cores, mems=0 ):
-        "Specify (real) cores that our cgroup can run on"
+        """Specify (real) cores that our cgroup can run on"""
         if type( cores ) is list:
             cores = ','.join( [ str( c ) for c in cores ] )
         self.cgroupSet( resource='cpuset', param='cpus',
@@ -719,7 +719,7 @@ class CPULimitedHost( Host ):
 
     @classmethod
     def init( cls ):
-        "Initialization for CPULimitedHost class"
+        """Initialization for CPULimitedHost class"""
         mountCgroups()
         cls.inited = True
 
@@ -763,7 +763,7 @@ class Switch( Node ):
             self.controlIntf = Intf( 'lo', self, port=0 )
 
     def defaultDpid( self ):
-        "Derive dpid from switch name, s1 -> 1"
+        """Derive dpid from switch name, s1 -> 1"""
         try:
             dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
@@ -775,7 +775,7 @@ class Switch( Node ):
                              'canonical switch name such as s23.' )
 
     def defaultIntf( self ):
-        "Return control interface"
+        """Return control interface"""
         if self.controlIntf:
             return self.controlIntf
         else:
@@ -792,18 +792,18 @@ class Switch( Node ):
                    self.name )
 
     def connected( self ):
-        "Is the switch connected to a controller? (override this method)"
+        """Is the switch connected to a controller? (override this method)"""
         return False and self  # satisfy pylint
 
     def __repr__( self ):
-        "More informative string representation"
+        """More informative string representation"""
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
                               for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
             self.__class__.__name__, self.name, intfs, self.pid )
 
 class UserSwitch( Switch ):
-    "User-space switch."
+    """User-space switch."""
 
     dpidLen = 12
 
@@ -821,19 +821,19 @@ class UserSwitch( Switch ):
 
     @classmethod
     def setup( cls ):
-        "Ensure any dependencies are loaded; if not, try to load them."
+        """Ensure any dependencies are loaded; if not, try to load them."""
         if not os.path.exists( '/dev/net/tun' ):
             moduleDeps( add=TUN )
 
     def dpctl( self, *args ):
-        "Run dpctl command"
+        """Run dpctl command"""
         if not self.listenPort:
             return "can't run dpctl without passive listening port"
         return self.cmd( 'dpctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
 
     def connected( self ):
-        "Is the switch connected to a controller?"
+        """Is the switch connected to a controller?"""
         return 'remote.is-connected=true' in self.dpctl( 'status' )
 
     @staticmethod
@@ -885,7 +885,7 @@ class UserSwitch( Switch ):
                     self.TCReapply( intf )
 
     def stop( self ):
-        "Stop OpenFlow reference user datapath."
+        """Stop OpenFlow reference user datapath."""
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
@@ -910,13 +910,13 @@ class OVSLegacyKernelSwitch( Switch ):
 
     @classmethod
     def setup( cls ):
-        "Ensure any dependencies are loaded; if not, try to load them."
+        """Ensure any dependencies are loaded; if not, try to load them."""
         pathCheck( 'ovs-dpctl', 'ovs-openflowd',
                    moduleName='Open vSwitch (openvswitch.org)')
         moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
 
     def start( self, controllers ):
-        "Start up kernel datapath."
+        """Start up kernel datapath."""
         ofplog = '/tmp/' + self.name + '-ofp.log'
         quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
@@ -936,14 +936,14 @@ class OVSLegacyKernelSwitch( Switch ):
         self.execed = False
 
     def stop( self ):
-        "Terminate kernel datapath."
+        """Terminate kernel datapath."""
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
         self.deleteIntfs()
 
 
 class OVSSwitch( Switch ):
-    "Open vSwitch switch. Depends on ovs-vsctl."
+    """Open vSwitch switch. Depends on ovs-vsctl."""
 
     def __init__( self, name, failMode='secure', datapath='kernel', **params ):
         """Init.
@@ -956,7 +956,7 @@ class OVSSwitch( Switch ):
 
     @classmethod
     def setup( cls ):
-        "Make sure Open vSwitch is installed and working"
+        """Make sure Open vSwitch is installed and working"""
         pathCheck( 'ovs-vsctl',
                    moduleName='Open vSwitch (openvswitch.org)')
         # This should no longer be needed, and it breaks
@@ -975,7 +975,7 @@ class OVSSwitch( Switch ):
             exit( 1 )
 
     def dpctl( self, *args ):
-        "Run ovs-ofctl command"
+        """Run ovs-ofctl command"""
         return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
 
     @staticmethod
@@ -987,17 +987,17 @@ class OVSSwitch( Switch ):
             intf.config( **intf.params )
 
     def attach( self, intf ):
-        "Connect a data port"
+        """Connect a data port"""
         self.cmd( 'ovs-vsctl add-port', self, intf )
         self.cmd( 'ifconfig', intf, 'up' )
         self.TCReapply( intf )
 
     def detach( self, intf ):
-        "Disconnect a data port"
+        """Disconnect a data port"""
         self.cmd( 'ovs-vsctl del-port', self, intf )
 
     def controllerUUIDs( self ):
-        "Return ovsdb UUIDs for our controllers"
+        """Return ovsdb UUIDs for our controllers"""
         uuids = []
         controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
                                'Controller' ).strip()
@@ -1007,14 +1007,14 @@ class OVSSwitch( Switch ):
         return uuids
 
     def connected( self ):
-        "Are we connected to at least one of our controllers?"
+        """Are we connected to at least one of our controllers?"""
         results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
                                          uuid, 'is_connected' )
                     for uuid in self.controllerUUIDs() ]
         return reduce( or_, results, False )
 
     def start( self, controllers ):
-        "Start up a new OVS OpenFlow switch using ovs-vsctl"
+        """Start up a new OVS OpenFlow switch using ovs-vsctl"""
         if self.inNamespace:
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
@@ -1049,7 +1049,7 @@ class OVSSwitch( Switch ):
                       'max_backoff=1000' )
 
     def stop( self ):
-        "Terminate OVS switch."
+        """Terminate OVS switch."""
         self.cmd( 'ovs-vsctl del-br', self )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
@@ -1066,7 +1066,7 @@ class IVSSwitch(Switch):
 
     @classmethod
     def setup( cls ):
-        "Make sure IVS is installed"
+        """Make sure IVS is installed"""
         pathCheck( 'ivs-ctl', 'ivs',
                    moduleName="Indigo Virtual Switch (projectfloodlight.org)" )
         out, err, exitcode = errRun( 'ivs-ctl show' )
@@ -1078,7 +1078,7 @@ class IVSSwitch(Switch):
             exit( 1 )
 
     def start( self, controllers ):
-        "Start up a new IVS switch"
+        """Start up a new IVS switch"""
         args = ['ivs']
         args.extend( ['--name', self.name] )
         args.extend( ['--dpid', self.dpid] )
@@ -1098,20 +1098,20 @@ class IVSSwitch(Switch):
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):
-        "Terminate IVS switch."
+        """Terminate IVS switch."""
         self.cmd( 'kill %ivs' )
         self.deleteIntfs()
 
     def attach( self, intf ):
-        "Connect a data port"
+        """Connect a data port"""
         self.cmd( 'ivs-ctl', 'add-port', '--datapath', self.name, intf )
 
     def detach( self, intf ):
-        "Disconnect a data port"
+        """Disconnect a data port"""
         self.cmd( 'ivs-ctl', 'del-port', '--datapath', self.name, intf )
 
     def dpctl( self, *args ):
-        "Run dpctl command"
+        """Run dpctl command"""
         if not self.listenPort:
             return "can't run dpctl without passive listening port"
         return self.cmd( 'ovs-ofctl ' + ' '.join( args ) +
@@ -1136,7 +1136,7 @@ class Controller( Node ):
         self.checkListening()
 
     def checkListening( self ):
-        "Make sure no controllers are running on our port"
+        """Make sure no controllers are running on our port"""
         # Verify that Telnet is installed first:
         out, _err, returnCode = errRun( "which telnet" )
         if 'telnet' not in out or returnCode != 0:
@@ -1165,12 +1165,12 @@ class Controller( Node ):
         self.execed = False
 
     def stop( self ):
-        "Stop controller."
+        """Stop controller."""
         self.cmd( 'kill %' + self.command )
         self.terminate()
 
     def IP( self, intf=None ):
-        "Return IP address of the Controller"
+        """Return IP address of the Controller"""
         if self.intfs:
             ip = Node.IP( self, intf )
         else:
@@ -1178,20 +1178,20 @@ class Controller( Node ):
         return ip
 
     def __repr__( self ):
-        "More informative string representation"
+        """More informative string representation"""
         return '<%s %s: %s:%s pid=%s> ' % (
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
 
 
 class OVSController( Controller ):
-    "Open vSwitch controller"
+    """Open vSwitch controller"""
     def __init__( self, name, command='ovs-controller', **kwargs ):
         Controller.__init__( self, name, command=command, **kwargs )
 
 
 class NOX( Controller ):
-    "Controller to run a NOX application."
+    """Controller to run a NOX application."""
 
     def __init__( self, name, *noxArgs, **kwargs ):
         """Init.
@@ -1217,7 +1217,7 @@ class NOX( Controller ):
 
 
 class RemoteController( Controller ):
-    "Controller running outside of Mininet's control."
+    """Controller running outside of Mininet's control."""
 
     def __init__( self, name, ip='127.0.0.1',
                   port=6633, **kwargs):
@@ -1229,15 +1229,15 @@ class RemoteController( Controller ):
         Controller.__init__( self, name, ip=ip, port=port, **kwargs )
 
     def start( self ):
-        "Overridden to do nothing."
+        """Overridden to do nothing."""
         return
 
     def stop( self ):
-        "Overridden to do nothing."
+        """Overridden to do nothing."""
         return
 
     def checkListening( self ):
-        "Warn if remote controller is not accessible"
+        """Warn if remote controller is not accessible"""
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
         if 'Connected' not in listening:

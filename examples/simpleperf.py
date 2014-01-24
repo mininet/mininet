@@ -17,7 +17,7 @@ from mininet.util import dumpNodeConnections
 from mininet.log import setLogLevel
 
 class SingleSwitchTopo(Topo):
-    "Single switch connected to n hosts."
+    """Single switch connected to n hosts."""
     def __init__(self, n=2, **opts):
         Topo.__init__(self, **opts)
         switch = self.addSwitch('s1')
@@ -30,7 +30,7 @@ class SingleSwitchTopo(Topo):
                          bw=10, delay='5ms', loss=10, use_htb=True)
 
 def perfTest():
-    "Create network and run simple performance test"
+    """Create network and run simple performance test"""
     topo = SingleSwitchTopo(n=4)
     net = Mininet(topo=topo,
                   host=CPULimitedHost, link=TCLink)

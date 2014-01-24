@@ -14,7 +14,7 @@ from mininet.clean import cleanup
 from mininet.log import setLogLevel
 
 def runTests( testDir, verbosity=1 ):
-    "discover and run all tests in testDir"
+    """discover and run all tests in testDir"""
     # ensure root and cleanup before starting tests
     ensureRoot()
     cleanup()

@@ -19,7 +19,7 @@ class testSimplePerf( unittest.TestCase ):
 
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testE2E( self ):
-        "Run the example and verify ping and iperf results"
+        """Run the example and verify ping and iperf results"""
         p = pexpect.spawn( 'python -m mininet.examples.simpleperf' )
         # check ping results
         p.expect( "Results: (\d+)% dropped", timeout=120 )

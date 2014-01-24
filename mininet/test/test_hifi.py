@@ -19,7 +19,7 @@ N = 2
 
 
 class SingleSwitchOptionsTopo(Topo):
-    "Single switch connected to n hosts."
+    """Single switch connected to n hosts."""
     def __init__(self, n=2, hopts=None, lopts=None):
         if not hopts:
             hopts = {}
@@ -41,7 +41,7 @@ class testOptionsTopoCommon( object ):
     switchClass = None # overridden in subclasses
 
     def runOptionsTopoTest( self, n, hopts=None, lopts=None ):
-        "Generic topology-with-options test runner."
+        """Generic topology-with-options test runner."""
         mn = Mininet( topo=SingleSwitchOptionsTopo( n=n, hopts=hopts,
                                                     lopts=lopts ),
                       host=CPULimitedHost, link=TCLink,
@@ -57,7 +57,7 @@ class testOptionsTopoCommon( object ):
         self.assertTrue( float(measured) >= float(expected) * tolerance_frac )
 
     def testCPULimits( self ):
-        "Verify topology creation with CPU limits set for both schedulers."
+        """Verify topology creation with CPU limits set for both schedulers."""
         CPU_FRACTION = 0.1
         CPU_TOLERANCE = 0.8  # CPU fraction below which test should fail
         hopts = { 'cpu': CPU_FRACTION }
@@ -72,7 +72,7 @@ class testOptionsTopoCommon( object ):
             self.assertWithinTolerance( cpu, CPU_FRACTION, CPU_TOLERANCE )
 
     def testLinkBandwidth( self ):
-        "Verify that link bandwidths are accurate within a bound."
+        """Verify that link bandwidths are accurate within a bound."""
         BW = 5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
@@ -86,7 +86,7 @@ class testOptionsTopoCommon( object ):
             self.assertWithinTolerance( bw, BW, BW_TOLERANCE )
 
     def testLinkDelay( self ):
-        "Verify that link delays are accurate within a bound."
+        """Verify that link delays are accurate within a bound."""
         DELAY_MS = 15
         DELAY_TOLERANCE = 0.8  # Delay fraction below which test should fail
         lopts = { 'delay': '%sms' % DELAY_MS, 'use_htb': True }
@@ -106,7 +106,7 @@ class testOptionsTopoCommon( object ):
                                         DELAY_TOLERANCE)
 
     def testLinkLoss( self ):
-        "Verify that we see packet drops with a high configured loss rate."
+        """Verify that we see packet drops with a high configured loss rate."""
         LOSS_PERCENT = 99
         REPS = 1
         lopts = { 'loss': LOSS_PERCENT, 'use_htb': True }
@@ -123,7 +123,7 @@ class testOptionsTopoCommon( object ):
         self.assertTrue(dropped_total > 0)
 
     def testMostOptions( self ):
-        "Verify topology creation with most link options and CPU limits."
+        """Verify topology creation with most link options and CPU limits."""
         lopts = { 'bw': 10, 'delay': '5ms', 'use_htb': True }
         hopts = { 'cpu': 0.5 / N }
         self.runOptionsTopoTest( N, hopts=hopts, lopts=lopts )
@@ -143,13 +143,13 @@ class testOptionsTopoOVSUser( testOptionsTopoCommon, unittest.TestCase ):
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ), 'IVS is not installed' )
 class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (IVS)."
+    """Verify ability to create networks with host and link options (IVS)."""
     switchClass = IVSSwitch
 
 @unittest.skipUnless( quietRun( 'which ofprotocol' ),
                      'Reference user switch is not installed' )
 class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (UserSwitch)."
+    """Verify ability to create networks with host and link options (UserSwitch)."""
     switchClass = UserSwitch
 
 if __name__ == '__main__':

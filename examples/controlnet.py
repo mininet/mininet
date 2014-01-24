@@ -29,7 +29,7 @@ class DataController( Controller ):
     """Data Network Controller.
        patched to avoid checkListening error"""
     def checkListening( self ):
-        "Ignore spurious error"
+        """Ignore spurious error"""
         pass
 
 class MininetFacade( object ):
@@ -47,11 +47,11 @@ class MininetFacade( object ):
         self.nameToNet['net'] = net
 
     def __getattr__( self, name ):
-        "returns attribute from Primary Mininet object"
+        """returns attribute from Primary Mininet object"""
         return getattr( self.net, name )
 
     def __getitem__( self, key ):
-        "returns primary/named networks or node from any net"
+        """returns primary/named networks or node from any net"""
         #search kwargs for net named key
         if key in self.nameToNet:
             return self.nameToNet[ key ]
@@ -61,38 +61,38 @@ class MininetFacade( object ):
                 return net[ key ]
 
     def __iter__( self ):
-        "Iterate through all nodes in all Mininet objects"
+        """Iterate through all nodes in all Mininet objects"""
         for net in self.nets:
             for node in net:
                 yield node
 
     def __len__( self ):
-        "returns aggregate number of nodes in all nets"
+        """returns aggregate number of nodes in all nets"""
         count = 0
         for net in self.nets:
             count += len(net)
         return count
 
     def __contains__( self, key ):
-        "returns True if node is a member of any net"
+        """returns True if node is a member of any net"""
         return key in self.keys()
 
     def keys( self ):
-        "returns a list of all node names in all networks"
+        """returns a list of all node names in all networks"""
         return list( self )
 
     def values( self ):
-        "returns a list of all nodes in all networks"
+        """returns a list of all nodes in all networks"""
         return [ self[ key ] for key in self ]
 
     def items( self ):
-        "returns (key,value) tuple list for every node in all networks"
+        """returns (key,value) tuple list for every node in all networks"""
         return zip( self.keys(), self.values() )
 
 # A real control network!
 
 class ControlNetwork( Topo ):
-    "Control Network Topology"
+    """Control Network Topology"""
     def __init__( self, n, dataController=DataController, **kwargs ):
         """n: number of data network controller nodes
            dataController: class for data network controllers"""
@@ -113,7 +113,7 @@ class ControlNetwork( Topo ):
 # Make it Happen!!
 
 def run():
-    "Create control and data networks, and invoke the CLI"
+    """Create control and data networks, and invoke the CLI"""
     
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )

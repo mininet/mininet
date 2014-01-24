@@ -22,7 +22,7 @@ c2 = RemoteController( 'c2', ip='127.0.0.1' )
 cmap = { 's1': c0, 's2': c1, 's3': c2 }
 
 class MultiSwitch( OVSSwitch ):
-    "Custom Switch() subclass that connects to different controllers"
+    """Custom Switch() subclass that connects to different controllers"""
     def start( self, controllers ):
         return OVSSwitch.start( self, [ cmap[ self.name ] ] )
 

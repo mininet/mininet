@@ -15,7 +15,7 @@ from mininet.topolib import TreeTopo
 from mininet.util import quietRun
 
 def checkIntf( intf ):
-    "Make sure intf exists and is not configured."
+    """Make sure intf exists and is not configured."""
     if ( ' %s:' % intf ) not in quietRun( 'ip link show' ):
         error( 'Error:', intf, 'does not exist!\n' )
         exit( 1 )

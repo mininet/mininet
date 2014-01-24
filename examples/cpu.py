@@ -13,7 +13,7 @@ from mininet.log import setLogLevel, output
 from time import sleep
 
 def waitListening(client, server, port):
-    "Wait until server is listening on port"
+    """Wait until server is listening on port"""
     if not client.cmd('which telnet'):
         raise Exception('Could not find telnet')
     cmd = ('sh -c "echo A | telnet -e A %s %s"' %
@@ -58,7 +58,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
 
 
 def dump( results ):
-    "Dump results"
+    """Dump results"""
 
     fmt = '%s\t%s\t%s'
 

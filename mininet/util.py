@@ -1,4 +1,4 @@
-"Utility functions for Mininet."
+"""Utility functions for Mininet."""
 
 from mininet.log import output, info, error, warn, debug
 
@@ -105,7 +105,7 @@ def errRun( *cmd, **kwargs ):
     return out, err, returncode
 
 def errFail( *cmd, **kwargs ):
-    "Run a command using errRun and raise exception on nonzero exit"
+    """Run a command using errRun and raise exception on nonzero exit"""
     out, err, ret = errRun( *cmd, **kwargs )
     if ret:
         raise Exception( "errFail: %s failed with return code %s: %s"
@@ -113,14 +113,14 @@ def errFail( *cmd, **kwargs ):
     return out, err, ret
 
 def quietRun( cmd, **kwargs ):
-    "Run a command and return merged stdout and stderr"
+    """Run a command and return merged stdout and stderr"""
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
 # pylint: enable-msg=E1103
 # pylint: disable-msg=E1101
 
 def isShellBuiltin( cmd ):
-    "Return True if cmd is a bash builtin."
+    """Return True if cmd is a bash builtin."""
     if isShellBuiltin.builtIns is None:
         isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
     space = cmd.find( ' ' )
@@ -204,10 +204,10 @@ def moveIntf( intf, dstNode, srcNode=None, printError=False,
 # Support for dumping network
 
 def dumpNodeConnections( nodes ):
-    "Dump connections to/from nodes."
+    """Dump connections to/from nodes."""
 
     def dumpConnections( node ):
-        "Helper function: dump connections to node"
+        """Helper function: dump connections to node"""
         for intf in node.intfList():
             output( ' %s:' % intf )
             if intf.link:
@@ -223,7 +223,7 @@ def dumpNodeConnections( nodes ):
         output( '\n' )
 
 def dumpNetConnections( net ):
-    "Dump connections in network"
+    """Dump connections in network"""
     nodes = net.controllers + net.switches + net.hosts
     dumpNodeConnections( nodes )
 
@@ -275,7 +275,7 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
     return ipStr( ipnum )
 
 def ipParse( ip ):
-    "Parse an IP address and return an unsigned int."
+    """Parse an IP address and return an unsigned int."""
     args = [ int( arg ) for arg in ip.split( '.' ) ]
     return ipNum( *args )
 
@@ -289,7 +289,7 @@ def netParse( ipstr ):
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):
-    "Check if input string is an int"
+    """Check if input string is an int"""
     try:
         int( s )
         return True
@@ -297,7 +297,7 @@ def checkInt( s ):
         return False
 
 def checkFloat( s ):
-    "Check if input string is a float"
+    """Check if input string is a float"""
     try:
         float( s )
         return True
@@ -305,7 +305,7 @@ def checkFloat( s ):
         return False
 
 def makeNumeric( s ):
-    "Convert string to int or float if numeric."
+    """Convert string to int or float if numeric."""
     if checkInt( s ):
         return int( s )
     elif checkFloat( s ):
@@ -356,7 +356,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
 
 # Other stuff we use
 def sysctlTestAndSet( name, limit ):
-    "Helper function to set sysctl limits"
+    """Helper function to set sysctl limits"""
     #convert non-directory names into directory names
     if '/' not in name:
         name = '/proc/sys/' + name.replace( '.', '/' )
@@ -374,14 +374,14 @@ def sysctlTestAndSet( name, limit ):
                 writeFile.write( limit )
 
 def rlimitTestAndSet( name, limit ):
-    "Helper function to set rlimits"
+    """Helper function to set rlimits"""
     soft, hard = getrlimit( name )
     if soft < limit:
         hardLimit = hard if limit < hard else limit
         setrlimit( name, ( limit, hardLimit ) )
 
 def fixLimits():
-    "Fix ridiculously small resource limits."
+    """Fix ridiculously small resource limits."""
     debug( "*** Setting resource limits\n" )
     try:
         rlimitTestAndSet( RLIMIT_NPROC, 8192 )
@@ -407,7 +407,7 @@ def fixLimits():
               "Mininet's performance may be affected.\n" )
 
 def mountCgroups():
-    "Make sure cgroups file system is mounted"
+    """Make sure cgroups file system is mounted"""
     mounts = quietRun( 'cat /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
@@ -419,18 +419,18 @@ def mountCgroups():
         errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
 
 def natural( text ):
-    "To sort sanely/alphabetically: sorted( l, key=natural )"
+    """To sort sanely/alphabetically: sorted( l, key=natural )"""
     def num( s ):
-        "Convert text segment to int if necessary"
+        """Convert text segment to int if necessary"""
         return int( s ) if s.isdigit() else s
     return [  num( s ) for s in re.split( r'(\d+)', text ) ]
 
 def naturalSeq( t ):
-    "Natural sort key function for sequences"
+    """Natural sort key function for sequences"""
     return [ natural( x ) for x in t ]
 
 def numCores():
-    "Returns number of CPU cores based on /proc/cpuinfo"
+    """Returns number of CPU cores based on /proc/cpuinfo"""
     if hasattr( numCores, 'ncores' ):
         return numCores.ncores
     try:
@@ -445,11 +445,11 @@ def irange(start, end):
     return range( start, end + 1 )
 
 def custom( cls, **params ):
-    "Returns customized constructor for class cls."
+    """Returns customized constructor for class cls."""
     # Note: we may wish to see if we can use functools.partial() here
     # and in customConstructor
     def customized( *args, **kwargs):
-        "Customized constructor"
+        """Customized constructor"""
         kwargs = kwargs.copy()
         kwargs.update( params )
         return cls( *args, **kwargs )
@@ -485,7 +485,7 @@ def customConstructor( constructors, argStr ):
                          ( cname, constructors.keys() ) )
 
     def customized( name, *args, **params ):
-        "Customized constructor, useful for Node, Link, and other classes"
+        """Customized constructor, useful for Node, Link, and other classes"""
         params = params.copy()
         params.update( kwargs )
         if not newargs:
