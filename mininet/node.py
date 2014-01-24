@@ -756,7 +756,7 @@ class Switch( Node ):
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
         Node.__init__( self, name, **params )
-        self.dpid = dpid if dpid else self.defaultDpid()
+        self.dpid = self.checkUserDpid(dpid) if dpid else self.defaultDpid()
         self.opts = opts
         self.listenPort = listenPort
         if not self.inNamespace:
@@ -773,6 +773,17 @@ class Switch( Node ):
             raise Exception( 'Unable to derive default datapath ID - '
                              'please either specify a dpid or use a '
                              'canonical switch name such as s23.' )
+
+    def checkUserDpid( self, dpid ):
+        """Check length of user-supplied DPID. Pad with leading zeros
+           if too short; otherwise, log an error."""
+        if len(dpid) == self.dpidLen:
+            return dpid
+        elif len(dpid) < self.dpidLen:
+            return '0' * ( self.dpidLen - len( dpid ) ) + dpid
+        else:
+            error( 'DPID %s is invalid -- must be %d digits for this switch.\n'
+                   % (dpid, self.dpidLen))
 
     def defaultIntf( self ):
         "Return control interface"
