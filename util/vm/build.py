@@ -543,9 +543,10 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Waiting for output' )
     vm.expect( prompt )
     log( '* Fetching Mininet VM install script' )
+    branch = Branch if Branch else 'master'
     vm.sendline( 'wget '
-                 'https://raw.github.com/mininet/mininet/master/util/vm/'
-                 'install-mininet-vm.sh' )
+                 'https://raw.github.com/mininet/mininet/%s/util/vm/'
+                 'install-mininet-vm.sh' % branch )
     vm.expect( prompt )
     log( '* Running VM install script' )
     installcmd = 'bash install-mininet-vm.sh'
@@ -564,6 +565,13 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Mininet version: ', version )
     log( '* Testing Mininet' )
     runTests( vm, tests=tests, pre=pre, post=post )
+    # Ubuntu adds this because we install via a serial console,
+    # but we want the VM to boot via the VM console. Otherwise
+    # we get the message 'error: terminal "serial" not found'
+    log( '* Disabling serial console' )
+    vm.sendline( "sudo sed -i -e 's/^GRUB_TERMINAL=serial/#GRUB_TERMINAL=serial/' "
+                "/etc/default/grub; sudo update-grub" )
+    vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
