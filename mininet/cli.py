@@ -160,7 +160,7 @@ class CLI( Cmd ):
         self.mn.pingPair()
 
     def do_pingallfull( self, _line ):
-        "Ping between first two hosts, returns all ping results."
+        "Ping between all hosts, returns all ping results."
         self.mn.pingAllFull()
 
     def do_pingpairfull( self, _line ):
@@ -187,7 +187,7 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
-        "Simple iperf TCP test between two (optionally specified) hosts."
+        "Simple iperf UDP test between two (optionally specified) hosts."
         args = line.split()
         if not args:
             self.mn.iperf( l4Type='UDP' )
@@ -297,6 +297,7 @@ class CLI( Cmd ):
                     break
         except IOError:
             error( 'error reading file %s\n' % args[ 0 ] )
+        self.inputFile.close()
         self.inputFile = None
 
     def do_dpctl( self, line ):
