@@ -827,10 +827,13 @@ class UserSwitch( Switch ):
 
     def dpctl( self, *args ):
         "Run dpctl command"
+        listenAddr = None
         if not self.listenPort:
-            return "can't run dpctl without passive listening port"
+            listenAddr = 'unix:/tmp/' + self.name
+        else:
+            listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
-                         ' tcp:127.0.0.1:%i' % self.listenPort )
+                         ' ' + listenAddr )
 
     def connected( self ):
         "Is the switch connected to a controller?"
