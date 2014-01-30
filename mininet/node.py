@@ -756,7 +756,8 @@ class Switch( Node ):
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
         Node.__init__( self, name, **params )
-        self.dpid = dpid if dpid else self.defaultDpid()
+        self.dpid = ( ( '0' * self.dpidLen + dpid.translate( None, ':' ) )
+                      [ -self.dpidLen: ] if dpid else self.defaultDpid() )
         self.opts = opts
         self.listenPort = listenPort
         if not self.inNamespace:
