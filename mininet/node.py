@@ -777,7 +777,7 @@ class Switch( Node ):
                 raise Exception( 'Unable to derive default datapath ID - '
                                  'please either specify a dpid or use a '
                                  'canonical switch name such as s23.' )
-        return ( '0' * self.dpidLen + dpid )[ -self.dpidLen : ]
+        return '0' * ( self.dpidLen - len( dpid ) ) + dpid
 
     def defaultIntf( self ):
         "Return control interface"
