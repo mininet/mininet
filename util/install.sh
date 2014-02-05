@@ -242,33 +242,24 @@ function of13 {
 function linc_switch {
     echo "Installing LINC-Switch"
     cd $BUILD_DIR/
+    set +o nounset
 
-    case $DIST in
-        "Ubuntu")
-            sudo add-apt-repository "deb http://packages.erlang-solutions.com/debian $CODENAME contrib"
-            ;;
-        "Debian")
-            sudo add-apt-repository "deb http://packages.erlang-solutions.com/debian $CODENAME contrib"
-            ;;
-        *)
-            echo "Unsupported OS. Installing LINC-Switch cancelled."
-            exit 1
-    esac
-    sudo wget http://packages.erlang-solutions.com/debian/erlang_solutions.asc
-    sudo apt-key add erlang_solutions.asc
     sudo apt-get update
-    $install git-core esl-erlang make uml-utilities bridge-utils libpcap-dev
+    $install git-core make uml-utilities bridge-utils libpcap-dev libssl-dev libncurses5-dev
+
+    ERL_RELEASE="R15B02"
+    ERL_DESTINATION="/usr/local/lib/$ERL_RELEASE"
+    install_erlang $ERL_RELEASE $ERL_DESTINATION
+    . $ERL_DESTINATION/activate
 
     LINC_SWITCH_DIR=$BUILD_DIR/"LINC-Switch"
 
-    if [ ! -d $LINC_SWITCH_DIR ]; then
-        git clone https://github.com/FlowForwarding/LINC-Switch.git
-        cd $LINC_SWITCH_DIR
-    else
-        cd $LINC_SWITCH_DIR
-        linc_rel -D
-        make clean
+    if [ -d $LINC_SWITCH_DIR ]; then
+        rm -rf $LINC_SWITCH_DIR
     fi
+
+    git clone https://github.com/FlowForwarding/LINC-Switch.git
+    cd $LINC_SWITCH_DIR
 
     if [[ -n "$LINC_SWITCH_REV" ]]; then
         git checkout ${LINC_SWITCH_REV}
@@ -276,7 +267,7 @@ function linc_switch {
 
     REL_DIR=$LINC_SWITCH_DIR/rel
     cp $REL_DIR/files/sys.config.orig $REL_DIR/files/sys.config
-    sudo make rel
+    make rel
 
     LINC_REL_COMMAND=$(echo "#!/usr/bin/env bash"\
                             "\n$LINC_SWITCH_DIR/scripts/rel_copy.sh \$@")
@@ -293,12 +284,20 @@ function linc_switch {
     install_command "$LINC_RUN_COMMAND" $REL_DIR/linc_runner.sh linc
 
     CONFIG_GEN_COMMAND=$(echo "#!/usr/bin/env bash"\
+                              "\n. $ERL_DESTINATION/activate"\
                               "\nREL_SUFFIX=\$1"\
                               "\n$LINC_SWITCH_DIR/scripts/config_gen \${@:2} "\
                               "-o $REL_DIR/linc_\$REL_SUFFIX/releases/*/sys.config")
     install_command "$CONFIG_GEN_COMMAND" $REL_DIR/linc_config_gen.sh \
         linc_config_gen
 
+    LINC_CONTROLLER_COMMAND=$(echo "#!/usr/bin/env bash"\
+                                   "\n. $ERL_DESTINATION/activate"\
+                                   "\ncd $LINC_SWITCH_DIR/scripts/"\
+                                   "\n./of_controller_v4.sh \$@")
+    install_command "$LINC_CONTROLLER_COMMAND" $REL_DIR/linc_controller.sh linc_controller
+
+    set -o nounset
     cd $BUILD_DIR/
 }
 
@@ -767,6 +766,23 @@ function vm_clean {
     time sudo dd if=/dev/zero of=/tmp/zero bs=1M
     sync ; sleep 1 ; sync ; sudo rm -f /tmp/zero
 
+}
+
+function install_erlang {
+    ERL_RELEASE=$1
+    ERL_DESTINATION=$2
+    ERL_RELEASE_NAME=$ERL_RELEASE
+
+    if [ ! `which kerl` ]; then
+        KERL_DESTINATION="/usr/local/bin/kerl"
+        curl -o $KERL_DESTINATION -O https://raw.github.com/spawngrid/kerl/master/kerl
+        chmod a+x $KERL_DESTINATION
+    fi
+
+    if [ ! `kerl list builds | grep $ERL_RELEASE` ]; then
+        kerl build $ERL_RELEASE $ERL_RELEASE_NAME
+        kerl install $ERL_RELEASE_NAME $ERL_DESTINATION
+    fi
 }
 
 # Install a command to /usr/bin directory for easy access.
