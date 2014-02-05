@@ -257,7 +257,7 @@ function linc_switch {
     sudo wget http://packages.erlang-solutions.com/debian/erlang_solutions.asc
     sudo apt-key add erlang_solutions.asc
     sudo apt-get update
-    $install git-core esl-erlang make uml-utilities bridge-utils
+    $install git-core esl-erlang make uml-utilities bridge-utils libpcap-dev
 
     LINC_SWITCH_DIR=$BUILD_DIR/"LINC-Switch"
 
