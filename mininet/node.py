@@ -985,6 +985,13 @@ class OVSSwitch( Switch ):
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
 
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Call ovs-vsctl del-br on all OVSSwitches in a list"
+        quietRun( 'ovs-vsctl ' +
+                  ' -- '.join( '--if-exists del-br %s' % s
+                               for s in switches if type(s) == cls ) )
+
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
         return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
