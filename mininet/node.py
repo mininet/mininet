@@ -568,7 +568,7 @@ class CPULimitedHost( Host ):
     "CPU limited host"
 
     def __init__( self, name, sched='cfs', **kwargs ):
-        Host.__init__( self, name, **kwargs )
+        super( CPULimitedHost, self ).__init__( name, **kwargs )
         # Initialize class if necessary
         if not CPULimitedHost.inited:
             CPULimitedHost.init()
@@ -755,7 +755,7 @@ class Switch( Node ):
         """dpid: dpid hex string (or None to derive from name, e.g. s1 -> 1)
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
-        Node.__init__( self, name, **params )
+        super( Switch, self ).__init__( name, **params )
         self.dpid = self.defaultDpid( dpid )
         self.opts = opts
         self.listenPort = listenPort
@@ -816,7 +816,7 @@ class UserSwitch( Switch ):
         """Init.
            name: name for the switch
            dpopts: additional arguments to ofdatapath (--no-slicing)"""
-        Switch.__init__( self, name, **kwargs )
+        super( UserSwitch, self ).__init__( name, **kwargs )
         pathCheck( 'ofdatapath', 'ofprotocol',
                    moduleName='the OpenFlow reference user switch' +
                               '(openflow.org)' )
@@ -911,7 +911,7 @@ class OVSLegacyKernelSwitch( Switch ):
            name: name for switch
            dp: netlink id (0, 1, 2, ...)
            defaultMAC: default MAC as unsigned int; random value if None"""
-        Switch.__init__( self, name, **kwargs )
+        super( OVSLegacyKernelSwitch, self).__init__( name, **kwargs )
         self.dp = dp if dp else self.name
         self.intf = self.dp
         if self.inNamespace:
@@ -961,7 +961,7 @@ class OVSSwitch( Switch ):
            name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)"""
-        Switch.__init__( self, name, **params )
+        super( OVSSwitch, self ).__init__( name, **params )
         self.failMode = failMode
         self.datapath = datapath
 
@@ -1073,7 +1073,7 @@ class IVSSwitch(Switch):
     """IVS virtual switch"""
 
     def __init__( self, name, **kwargs ):
-        Switch.__init__( self, name, **kwargs )
+        super( IVSSwitch, self ).__init__( name, **kwargs )
 
     @classmethod
     def setup( cls ):
@@ -1141,7 +1141,7 @@ class Controller( Node ):
         self.cdir = cdir
         self.ip = ip
         self.port = port
-        Node.__init__( self, name, inNamespace=inNamespace,
+        super( Controller, self ).__init__( name, inNamespace=inNamespace,
                        ip=ip, **params  )
         self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
         self.checkListening()
@@ -1219,7 +1219,7 @@ class NOX( Controller ):
             exit( 'exiting; please set missing NOX_CORE_DIR env var' )
         noxCoreDir = os.environ[ 'NOX_CORE_DIR' ]
 
-        Controller.__init__( self, name,
+        super( NOX, self ).__init__( name,
                              command=noxCoreDir + '/nox_core',
                              cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' +
                              ' '.join( noxArgs ),
@@ -1237,7 +1237,7 @@ class RemoteController( Controller ):
            ip: the IP address where the remote controller is
            listening
            port: the port where the remote controller is listening"""
-        Controller.__init__( self, name, ip=ip, port=port, **kwargs )
+        super( RemoteController, self ).__init__( name, ip=ip, port=port, **kwargs )
 
     def start( self ):
         "Overridden to do nothing."

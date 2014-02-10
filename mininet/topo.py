@@ -203,7 +203,7 @@ class SingleSwitchTopo(Topo):
         @param k number of hosts
         @param enable_all enables all nodes and switches?
         '''
-        super(SingleSwitchTopo, self).__init__(**opts)
+        super( SingleSwitchTopo, self ).__init__(**opts)
 
         self.k = k
 
@@ -226,7 +226,7 @@ class SingleSwitchReversedTopo(Topo):
         @param k number of hosts
         @param enable_all enables all nodes and switches?
         '''
-        super(SingleSwitchReversedTopo, self).__init__(**opts)
+        super( SingleSwitchReversedTopo, self ).__init__(**opts)
         self.k = k
         switch = self.addSwitch('s1')
         for h in irange(1, k):
@@ -244,7 +244,7 @@ class LinearTopo(Topo):
            hconf: host configuration options
            lconf: link configuration options"""
 
-        super(LinearTopo, self).__init__(**opts)
+        super( LinearTopo, self ).__init__(**opts)
 
         self.k = k
         self.n = n
