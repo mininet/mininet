@@ -67,7 +67,7 @@ class HostWithPrivateDirs( Host ):
         self.privateDirs = kwargs.pop( 'privateDirs', [] )
         self.remounts = kwargs.pop( 'remounts', [] )
         self.unmount = kwargs.pop( 'unmount', True )
-        Host.__init__( self, name, *args, **kwargs )
+        super(HostWithPrivateDirs, self).__init__( name, *args, **kwargs )
         self.rundir = '%s/%s' % ( self.mnRunDir, name )
         self.root, self.private = None, None  # set in createBindMounts
         if self.privateDirs:

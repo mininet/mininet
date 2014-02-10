@@ -97,7 +97,7 @@ class MininetLogger( Logger, object ):
 
     def __init__( self ):
 
-        Logger.__init__( self, "mininet" )
+        super( MininetLogger, self ).__init__( "mininet" )
 
         # create console handler
         ch = StreamHandlerNoNewline()
