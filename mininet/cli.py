@@ -50,7 +50,7 @@ class CLI( Cmd ):
         self.inPoller = poll()
         self.inPoller.register( stdin )
         self.inputFile = script
-        super( CLI, self ).__init__()
+        Cmd.__init__(self)
         info( '*** Starting CLI:\n' )
         if self.inputFile:
             self.do_source( self.inputFile )
