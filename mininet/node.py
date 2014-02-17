@@ -956,14 +956,17 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, failMode='secure', datapath='kernel', **params ):
+    def __init__( self, name, failMode='secure', datapath='kernel',
+                 inband=False, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
-           datapath: userspace or kernel mode (kernel|user)"""
+           datapath: userspace or kernel mode (kernel|user)
+           inband: use in-band control (False)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
+        self.inband = inband
 
     @classmethod
     def setup( cls ):
@@ -1056,6 +1059,9 @@ class OVSSwitch( Switch ):
                             for c in controllers ] )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
+        if not self.inband:
+                self.cmd( 'ovs-vsctl set bridge', self,
+                         'other-config:disable-in-band=true' )
         self.cmd( 'ovs-vsctl set-controller', self, clist )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
