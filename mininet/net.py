@@ -92,6 +92,7 @@ import select
 import signal
 from time import sleep
 from itertools import chain
+from collections import defaultdict
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -389,6 +390,13 @@ class Mininet( object ):
                 if src != dst:
                     src.setARP( ip=dst.IP(), mac=dst.MAC() )
 
+    def group_switches( self ):
+        groups = defaultdict(list)
+        for s in self.switches:
+            swclass = type( s )
+            groups[ swclass ].append( s )
+        return groups
+
     def start( self ):
         "Start controller and switches."
         if not self.built:
@@ -397,9 +405,15 @@ class Mininet( object ):
         for controller in self.controllers:
             controller.start()
         info( '*** Starting %s switches\n' % len( self.switches ) )
-        for switch in self.switches:
-            info( switch.name + ' ')
-            switch.start( self.controllers )
+        for swclass, switches in self.group_switches().iteritems():
+            if hasattr( swclass, 'batchStart' ):
+                name = swclass.__name__.split( '.' )[ -1 ]
+                info( '%s:%d ' % (name, len(switches)) )
+                swclass.batchStart( switches, self.controllers )
+            else:
+                for switch in switches:
+                    info( switch.name + ' ' )
+                    switch.start( self.controllers )
         info( '\n' )
 
     def stop( self ):
@@ -408,12 +422,15 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        swclass = type( self.switches[ 0 ] )
-        if False and self.switches and hasattr( swclass, 'batchShutdown' ):
-            swclass.batchShutdown( self.switches )
-        for switch in self.switches:
-            info( switch.name + ' ' )
-            switch.stop()
+        for swclass, switches in self.group_switches().iteritems():
+            if hasattr( swclass, 'batchShutdown' ):
+                name = swclass.__name__.split( '.' )[ -1 ]
+                info( '%s:%d ' % (name, len(switches)) )
+                swclass.batchShutdown( switches )
+            else:
+                for switch in switches:
+                    info( switch.name + ' ' )
+                    switch.stop()
         info( '\n' )
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
