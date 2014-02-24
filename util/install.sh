@@ -90,7 +90,7 @@ KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
 
 DRIVERS_DIR=/lib/modules/${KERNEL_NAME}/kernel/drivers/net
 
-OVS_RELEASE=1.4.0
+OVS_RELEASE=2.0.0
 OVS_PACKAGE_LOC=https://github.com/downloads/mininet/mininet
 OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
@@ -307,7 +307,7 @@ function ovs {
     echo "Installing Open vSwitch..."
 
     if [ "$DIST" = "Fedora" ]; then
-        # Just install Fedora's openvswitch RPMS
+        # Just install Fedora's openvswitch RPMS. Latest Fedora has at least OVS 2.0
         $install openvswitch openvswitch-controller
         return
     fi
@@ -315,6 +315,7 @@ function ovs {
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
     OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
+    OVS_TARBALL_LOC=http://openvswitch.org/releases
 
     # Required for module build/dkms install
     $install $KERNEL_HEADERS
@@ -340,16 +341,40 @@ function ovs {
     fi
 
     # Otherwise try distribution's OVS packages
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 11.10` = 1 ]; then
-        if ! dpkg --get-selections | grep openvswitch-datapath; then
-            # If you've already installed a datapath, assume you
-            # know what you're doing and don't need dkms datapath.
-            # Otherwise, install it.
-            $install openvswitch-datapath-dkms
+    # Support a minimum of the latest LTS
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+        mkdir -p $OVS_SRC
+        cd $OVS_SRC
+
+        if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
+            tar xzf openvswitch-$OVS_RELEASE.tar.gz
+        else
+            echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
+            cd $BUILD_DIR
+            return
         fi
-	if $install openvswitch-switch openvswitch-controller; then
+
+        # Remove any old packages
+        $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
+                openvswitch-pki openvswitch-switch
+
+        # Get build deps
+        $install build-essential fakeroot debhelper autoconf automake libssl-dev \
+                 pkg-config bzip2 openssl python-all procps python-qt4 \
+                 python-zopeinterface python-twisted-conch dkms
+
+        # Build OVS
+        cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
+		DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+        cd ..
+        $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
+                 openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
+        if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
             echo "Ignoring error installing openvswitch-controller"
         fi
+
+        modinfo openvswitch
+        sudo ovs-vsctl show
         ovspresent=1
     fi
 
