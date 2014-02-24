@@ -10,9 +10,10 @@ Bob Lantz, April 2010
 Gregory Gee, July 2013
 
 Controller icon from http://semlabs.co.uk/
+OpenFlow icon from https://www.opennetworking.org/
 """
 
-MINIEDIT_VERSION = '2.1.0.7.1'
+MINIEDIT_VERSION = '2.1.0.8'
 
 from optparse import OptionParser
 from Tkinter import *
@@ -39,9 +40,9 @@ from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.util import buildTopo
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
-from mininet.node import CPULimitedHost, Host
-from mininet.node import OVSKernelSwitch, OVSSwitch
-from mininet.link import TCLink, Intf
+from mininet.node import CPULimitedHost, Host, Node
+from mininet.node import OVSKernelSwitch, OVSSwitch, UserSwitch
+from mininet.link import TCLink, Intf, Link
 from mininet.cli import CLI
 from mininet.moduledeps import moduleDeps, pathCheck
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
@@ -71,10 +72,49 @@ class InbandController( RemoteController ):
         "Overridden to do nothing."
         return
 
+class CustomUserSwitch(UserSwitch):
+    def __init__( self, name, dpopts='--no-slicing', **kwargs ):
+        UserSwitch.__init__( self, name, **kwargs )
+        self.switchIP = None
+
+    def getSwitchIP(self):
+        return self.switchIP
+
+    def setSwitchIP(self, ip):
+        self.switchIP = ip
+
+    def start( self, controllers ):
+        # Call superclass constructor
+        UserSwitch.start( self, controllers )
+        # Set Switch IP address
+        if (self.switchIP is not None):
+            if not self.inNamespace:
+                self.cmd( 'ifconfig', self, self.switchIP )
+            else:
+                self.cmd( 'ifconfig lo', self.switchIP )
+
+class LegacyRouter( Node ):
+
+    def __init__( self, name, inNamespace=True, **params ):
+        Node.__init__( self, name, inNamespace, **params )
+
+    def config( self, **_params ):
+        if self.intfs:
+            self.setParam( _params, 'setIP', ip='0.0.0.0' )
+        r = Node.config( self, **_params )
+        self.cmd('sysctl -w net.ipv4.ip_forward=1')
+        return r
+
+class LegacySwitch(OVSSwitch):
+
+    def __init__( self, name, **params ):
+        OVSSwitch.__init__( self, name, failMode='standalone', **params )
+        self.switchIP = None
+
 class customOvs(OVSSwitch):
 
     def __init__( self, name, failMode='secure', datapath='kernel', **params ):
-        OVSSwitch.__init__( self, name, **params )
+        OVSSwitch.__init__( self, name, failMode=failMode, datapath=datapath, **params )
         self.switchIP = None
 
     def getSwitchIP(self):
@@ -160,11 +200,15 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             # Selection of switch type
             Label(self.leftfieldFrame, text="Default Switch:").grid(row=3, sticky=E)
             self.switchType = StringVar(self.leftfieldFrame)
-            self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Open vSwitch", "Indigo Virtual Switch")
+            self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Open vSwitch", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
             self.switchTypeMenu.grid(row=3, column=1, sticky=W)
             switchTypePref = self.prefValues['switchType']
             if switchTypePref == 'ivs':
                 self.switchType.set("Indigo Virtual Switch")
+            elif switchTypePref == 'userns':
+                self.switchType.set("Userspace Switch inNamespace")
+            elif switchTypePref == 'user':
+                self.switchType.set("Userspace Switch")
             else:
                 self.switchType.set("Open vSwitch")
 
@@ -299,6 +343,10 @@ class PrefsDialog(tkSimpleDialog.Dialog):
                     self.ovsOk = False
                     showerror(title="Error",
                               message='MiniNet version 2.1+ required. You have '+VERSION+'.')
+            elif sw == 'Userspace Switch':
+                self.result['switchType'] = 'user'
+            elif sw == 'Userspace Switch inNamespace':
+                self.result['switchType'] = 'userns'
             else:
                 self.result['switchType'] = 'ovs'
 
@@ -561,12 +609,16 @@ class SwitchDialog(CustomDialog):
             # Selection of switch type
             Label(self.fieldFrame, text="Switch Type:").grid(row=rowCount, sticky=E)
             self.switchType = StringVar(self.fieldFrame)
-            self.switchTypeMenu = OptionMenu(self.fieldFrame, self.switchType, "Default", "Open vSwitch", "Indigo Virtual Switch")
+            self.switchTypeMenu = OptionMenu(self.fieldFrame, self.switchType, "Default", "Open vSwitch", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
             self.switchTypeMenu.grid(row=rowCount, column=1, sticky=W)
             if 'switchType' in self.prefValues:
                 switchTypePref = self.prefValues['switchType']
                 if switchTypePref == 'ivs':
                     self.switchType.set("Indigo Virtual Switch")
+                elif switchTypePref == 'userns':
+                    self.switchType.set("Userspace Switch inNamespace")
+                elif switchTypePref == 'user':
+                    self.switchType.set("Userspace Switch")
                 elif switchTypePref == 'ovs':
                     self.switchType.set("Open vSwitch")
                 else:
@@ -650,6 +702,10 @@ class SwitchDialog(CustomDialog):
                     self.ovsOk = False
                     showerror(title="Error",
                               message='MiniNet version 2.1+ required. You have '+VERSION+'.')
+            elif sw == 'Userspace Switch inNamespace':
+                results['switchType'] = 'userns'
+            elif sw == 'Userspace Switch':
+                results['switchType'] = 'user'
             elif sw == 'Open vSwitch':
                 results['switchType'] = 'ovs'
             else:
@@ -881,11 +937,48 @@ class ControllerDialog(tkSimpleDialog.Dialog):
             else:
                 self.result['controllerType'] = 'ovsc'
 
+class ToolTip(object):
+
+    def __init__(self, widget):
+        self.widget = widget
+        self.tipwindow = None
+        self.id = None
+        self.x = self.y = 0
+
+    def showtip(self, text):
+        "Display text in tooltip window"
+        self.text = text
+        if self.tipwindow or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 27
+        y = y + cy + self.widget.winfo_rooty() +27
+        self.tipwindow = tw = Toplevel(self.widget)
+        tw.wm_overrideredirect(1)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        try:
+            # For Mac OS
+            tw.tk.call("::tk::unsupported::MacWindowStyle",
+                       "style", tw._w,
+                       "help", "noActivates")
+        except TclError:
+            pass
+        label = Label(tw, text=self.text, justify=LEFT,
+                      background="#ffffe0", relief=SOLID, borderwidth=1,
+                      font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hidetip(self):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
 class MiniEdit( Frame ):
 
     "A simple network editor for Mininet."
 
-    def __init__( self, parent=None, cheight=400, cwidth=800 ):
+    def __init__( self, parent=None, cheight=600, cwidth=1000 ):
 
         self.defaultIpBase='10.0.0.0/8'
 
@@ -941,7 +1034,7 @@ class MiniEdit( Frame ):
         self.images = miniEditImages()
         self.buttons = {}
         self.active = None
-        self.tools = ( 'Select', 'Host', 'Switch', 'Link', 'Controller' )
+        self.tools = ( 'Select', 'Host', 'Switch', 'LegacySwitch', 'LegacyRouter', 'NetLink', 'Controller' )
         self.customColors = { 'Switch': 'darkGreen', 'Host': 'blue' }
         self.toolbar = self.createToolbar()
 
@@ -957,7 +1050,7 @@ class MiniEdit( Frame ):
 
         # Initialize node data
         self.nodeBindings = self.createNodeBindings()
-        self.nodePrefixes = { 'Switch': 's', 'Host': 'h' , 'Controller': 'c'}
+        self.nodePrefixes = { 'LegacyRouter': 'r', 'LegacySwitch': 's', 'Switch': 's', 'Host': 'h' , 'Controller': 'c'}
         self.widgetToItem = {}
         self.itemToWidget = {}
 
@@ -983,13 +1076,18 @@ class MiniEdit( Frame ):
         self.hostRunPopup.add_separator()
         self.hostRunPopup.add_command(label='Terminal', font=self.font, command=self.xterm )
 
+        self.legacyRouterRunPopup = Menu(self.top, tearoff=0)
+        self.legacyRouterRunPopup.add_command(label='Router Options', font=self.font)
+        self.legacyRouterRunPopup.add_separator()
+        self.legacyRouterRunPopup.add_command(label='Terminal', font=self.font, command=self.xterm )
+
         self.switchPopup = Menu(self.top, tearoff=0)
-        self.switchPopup.add_command(label='Swtich Options', font=self.font)
+        self.switchPopup.add_command(label='Switch Options', font=self.font)
         self.switchPopup.add_separator()
         self.switchPopup.add_command(label='Properties', font=self.font, command=self.switchDetails )
 
         self.switchRunPopup = Menu(self.top, tearoff=0)
-        self.switchRunPopup.add_command(label='Swtich Options', font=self.font)
+        self.switchRunPopup.add_command(label='Switch Options', font=self.font)
         self.switchRunPopup.add_separator()
         self.switchRunPopup.add_command(label='List bridge details', font=self.font, command=self.listBridge )
 
@@ -1132,6 +1230,16 @@ class MiniEdit( Frame ):
         # Activate dynamic bindings
         self.active = toolName
 
+
+    def createToolTip(self, widget, text):
+        toolTip = ToolTip(widget)
+        def enter(event):
+            toolTip.showtip(text)
+        def leave(event):
+            toolTip.hidetip()
+        widget.bind('<Enter>', enter)
+        widget.bind('<Leave>', leave)
+
     def createToolbar( self ):
         "Create and return our toolbar frame."
 
@@ -1143,6 +1251,7 @@ class MiniEdit( Frame ):
             b = Button( toolbar, text=tool, font=self.smallFont, command=cmd)
             if tool in self.images:
                 b.config( height=35, image=self.images[ tool ] )
+                self.createToolTip(b, str(tool))
                 # b.config( compound='top' )
             b.pack( fill='x' )
             self.buttons[ tool ] = b
@@ -1283,10 +1392,19 @@ class MiniEdit( Frame ):
                 switch['opts']['nodeNum'] = int(nodeNum)
             x = switch['x']
             y = switch['y']
-            self.addNode('Switch', nodeNum, float(x), float(y), name=hostname)
+            if switch['opts']['switchType'] == "legacyRouter":
+                self.addNode('LegacyRouter', nodeNum, float(x), float(y), name=hostname)
+                icon = self.findWidgetByName(hostname)
+                icon.bind('<Button-3>', self.do_legacyRouterPopup )
+            elif switch['opts']['switchType'] == "legacySwitch":
+                self.addNode('LegacySwitch', nodeNum, float(x), float(y), name=hostname)
+                icon = self.findWidgetByName(hostname)
+                icon.bind('<Button-3>', self.do_legacySwitchPopup )
+            else:
+                self.addNode('Switch', nodeNum, float(x), float(y), name=hostname)
+                icon = self.findWidgetByName(hostname)
+                icon.bind('<Button-3>', self.do_switchPopup )
             self.switchOpts[hostname] = switch['opts']
-            icon = self.findWidgetByName(hostname)
-            icon.bind('<Button-3>', self.do_switchPopup )
 
             # create links to controllers
             if (int(loadedTopology['version']) > 1):
@@ -1381,7 +1499,7 @@ class MiniEdit( Frame ):
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
                 x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
-                if 'Switch' in tags:
+                if 'Switch' in tags or 'LegacySwitch' in tags or 'LegacyRouter' in tags:
                     nodeNum = self.switchOpts[name]['nodeNum']
                     nodeToSave = {'number':str(nodeNum),
                                   'x':str(x1),
@@ -1449,8 +1567,8 @@ class MiniEdit( Frame ):
             f.write("\n")
             f.write("from mininet.net import Mininet\n")
             f.write("from mininet.node import Controller, RemoteController, OVSController\n")
-            f.write("from mininet.node import CPULimitedHost, Host\n")
-            f.write("from mininet.node import OVSKernelSwitch\n")
+            f.write("from mininet.node import CPULimitedHost, Host, Node\n")
+            f.write("from mininet.node import OVSKernelSwitch, UserSwitch\n")
             if StrictVersion(VERSION) > StrictVersion('2.0'):
                 f.write("from mininet.node import IVSSwitch\n")
             f.write("from mininet.cli import CLI\n")
@@ -1458,6 +1576,7 @@ class MiniEdit( Frame ):
             f.write("from mininet.link import TCLink, Intf\n")
 
             inBandCtrl = False
+            hasLegacySwitch = False
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
@@ -1483,8 +1602,7 @@ class MiniEdit( Frame ):
             if len(self.appPrefs['dpctl']) > 0:
                 f.write("                   listenPort="+self.appPrefs['dpctl']+",\n")
             f.write("                   build=False,\n")
-            f.write("                   ipBase='"+self.appPrefs['ipBase']+"',\n")
-            f.write("                   link=TCLink)\n")
+            f.write("                   ipBase='"+self.appPrefs['ipBase']+"')\n")
             f.write("\n")
             f.write("    info( '*** Adding controller\\n' )\n")
             for widget in self.widgetToItem:
@@ -1519,6 +1637,11 @@ class MiniEdit( Frame ):
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                if 'LegacyRouter' in tags:
+                    f.write("    "+name+" = net.addHost('"+name+"', cls=Node, ip='0.0.0.0')\n")
+                    f.write("    "+name+".cmd('sysctl -w net.ipv4.ip_forward=1')\n")
+                if 'LegacySwitch' in tags:
+                    f.write("    "+name+" = net.addSwitch('"+name+"', cls=OVSKernelSwitch, failMode='standalone')\n")
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
                     nodeNum = opts['nodeNum']
@@ -1526,10 +1649,18 @@ class MiniEdit( Frame ):
                     if opts['switchType'] == 'default':
                         if self.appPrefs['switchType'] == 'ivs':
                             f.write(", cls=IVSSwitch")
+                        elif self.appPrefs['switchType'] == 'user':
+                            f.write(", cls=UserSwitch")
+                        elif self.appPrefs['switchType'] == 'userns':
+                            f.write(", cls=UserSwitch, inNamespace=True")
                         else:
                             f.write(", cls=OVSKernelSwitch")
                     elif opts['switchType'] == 'ivs':
                         f.write(", cls=IVSSwitch")
+                    elif opts['switchType'] == 'user':
+                        f.write(", cls=UserSwitch")
+                    elif opts['switchType'] == 'userns':
+                        f.write(", cls=UserSwitch, inNamespace=True")
                     else:
                         f.write(", cls=OVSKernelSwitch")
                     if 'dpctl' in opts:
@@ -1625,7 +1756,7 @@ class MiniEdit( Frame ):
                     f.write("    "+srcName+dstName+" = "+linkOpts+"\n")
                 f.write("    net.addLink("+srcName+", "+dstName)
                 if optsExist:
-                    f.write(", **"+srcName+dstName)
+                    f.write(", link=TCLink , **"+srcName+dstName)
                 f.write(")\n")
 
             f.write("\n")
@@ -1641,7 +1772,7 @@ class MiniEdit( Frame ):
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-                if 'Switch' in tags:
+                if 'Switch' in tags or 'LegacySwitch' in tags:
                     opts = self.switchOpts[name]
                     ctrlList = ",".join(opts['controllers'])
                     f.write("    net.get('"+name+"').start(["+ctrlList+"])\n")
@@ -1654,9 +1785,31 @@ class MiniEdit( Frame ):
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
-                    if ('switchIP' in opts):
-                        if (len(opts['switchIP'])>0):
-                            f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                    if opts['switchType'] == 'default':
+                        if self.appPrefs['switchType'] == 'user':
+                            if ('switchIP' in opts):
+                                if (len(opts['switchIP'])>0):
+                                    f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                        elif self.appPrefs['switchType'] == 'userns':
+                            if ('switchIP' in opts):
+                                if (len(opts['switchIP'])>0):
+                                    f.write("    "+name+".cmd('ifconfig lo "+opts['switchIP']+"')\n")
+                        elif self.appPrefs['switchType'] == 'ovs':
+                            if ('switchIP' in opts):
+                                if (len(opts['switchIP'])>0):
+                                    f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                    elif opts['switchType'] == 'user':
+                        if ('switchIP' in opts):
+                            if (len(opts['switchIP'])>0):
+                                f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                    elif opts['switchType'] == 'userns':
+                        if ('switchIP' in opts):
+                            if (len(opts['switchIP'])>0):
+                                f.write("    "+name+".cmd('ifconfig lo "+opts['switchIP']+"')\n")
+                    elif opts['switchType'] == 'ovs':
+                        if ('switchIP' in opts):
+                            if (len(opts['switchIP'])>0):
+                                f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
@@ -1769,6 +1922,21 @@ class MiniEdit( Frame ):
             self.switchOpts[name]['hostname']=name
             self.switchOpts[name]['switchType']='default'
             self.switchOpts[name]['controllers']=[]
+        if 'LegacyRouter' == node:
+            self.switchCount += 1
+            name = self.nodePrefixes[ node ] + str( self.switchCount )
+            self.switchOpts[name] = {}
+            self.switchOpts[name]['nodeNum']=self.switchCount
+            self.switchOpts[name]['hostname']=name
+            self.switchOpts[name]['switchType']='legacyRouter'
+        if 'LegacySwitch' == node:
+            self.switchCount += 1
+            name = self.nodePrefixes[ node ] + str( self.switchCount )
+            self.switchOpts[name] = {}
+            self.switchOpts[name]['nodeNum']=self.switchCount
+            self.switchOpts[name]['hostname']=name
+            self.switchOpts[name]['switchType']='legacySwitch'
+            self.switchOpts[name]['controllers']=[]
         if 'Host' == node:
             self.hostCount += 1
             name = self.nodePrefixes[ node ] + str( self.hostCount )
@@ -1794,6 +1962,10 @@ class MiniEdit( Frame ):
         icon.links = {}
         if 'Switch' == node:
             icon.bind('<Button-3>', self.do_switchPopup )
+        if 'LegacyRouter' == node:
+            icon.bind('<Button-3>', self.do_legacyRouterPopup )
+        if 'LegacySwitch' == node:
+            icon.bind('<Button-3>', self.do_legacySwitchPopup )
         if 'Host' == node:
             icon.bind('<Button-3>', self.do_hostPopup )
         if 'Controller' == node:
@@ -1807,11 +1979,19 @@ class MiniEdit( Frame ):
         "Add a new host to our canvas."
         self.newNode( 'Host', event )
 
+    def clickLegacyRouter( self, event ):
+        "Add a new switch to our canvas."
+        self.newNode( 'LegacyRouter', event )
+
+    def clickLegacySwitch( self, event ):
+        "Add a new switch to our canvas."
+        self.newNode( 'LegacySwitch', event )
+
     def clickSwitch( self, event ):
         "Add a new switch to our canvas."
         self.newNode( 'Switch', event )
 
-    def dragLink( self, event ):
+    def dragNetLink( self, event ):
         "Drag a link's endpoint to another node."
         if self.link is None:
             return
@@ -1821,7 +2001,7 @@ class MiniEdit( Frame ):
         c = self.canvas
         c.coords( self.link, self.linkx, self.linky, x, y )
 
-    def releaseLink( self, _event ):
+    def releaseNetLink( self, _event ):
         "Give up on the current link."
         if self.link is not None:
             self.canvas.delete( self.link )
@@ -1858,7 +2038,7 @@ class MiniEdit( Frame ):
 
     def clickNode( self, event ):
         "Node click handler."
-        if self.active is 'Link':
+        if self.active is 'NetLink':
             self.startLink( event )
         else:
             self.selectNode( event )
@@ -1866,14 +2046,14 @@ class MiniEdit( Frame ):
 
     def dragNode( self, event ):
         "Node drag handler."
-        if self.active is 'Link':
-            self.dragLink( event )
+        if self.active is 'NetLink':
+            self.dragNetLink( event )
         else:
             self.dragNodeAround( event )
 
     def releaseNode( self, event ):
         "Node release handler."
-        if self.active is 'Link':
+        if self.active is 'NetLink':
             self.finishLink( event )
 
     # Specific node handlers
@@ -1980,16 +2160,20 @@ class MiniEdit( Frame ):
         dest = self.itemToWidget.get( target, None )
         if ( source is None or dest is None or source == dest
                 or dest in source.links or source in dest.links ):
-            self.releaseLink( event )
+            self.releaseNetLink( event )
             return
         # For now, don't allow hosts to be directly linked
         stags = self.canvas.gettags( self.widgetToItem[ source ] )
         dtags = self.canvas.gettags( target )
         if (('Host' in stags and 'Host' in dtags) or
-           ('Controller' in stags and 'Host' in dtags) or
+           ('Controller' in dtags and 'LegacyRouter' in stags) or
+           ('Controller' in stags and 'LegacyRouter' in dtags) or
+           ('Controller' in dtags and 'LegacySwitch' in stags) or
+           ('Controller' in stags and 'LegacySwitch' in dtags) or
            ('Controller' in dtags and 'Host' in stags) or
+           ('Controller' in stags and 'Host' in dtags) or
            ('Controller' in stags and 'Controller' in dtags)):
-            self.releaseLink( event )
+            self.releaseNetLink( event )
             return
 
         # Set link type
@@ -2175,7 +2359,7 @@ class MiniEdit( Frame ):
         dest = linkDetail['dest']
         linkopts = linkDetail['linkOpts']
         linkBox = LinkDialog(self, title='Link Details', linkDefaults=linkopts)
-        if linkBox.result:
+        if linkBox.result is not None:
             linkDetail['linkOpts'] = linkBox.result
             print 'New link details = ' + str(linkBox.result)
 
@@ -2231,7 +2415,7 @@ class MiniEdit( Frame ):
 
         if name not in self.net.nameToNode:
             return
-        if 'Switch' in tags:
+        if 'Switch' in tags or 'LegacySwitch' in tags:
            call(["xterm -T 'Bridge Details' -sb -sl 2000 -e 'ovs-vsctl list bridge " + name + "; read -p \"Press Enter to close\"' &"], shell=True)
 
     def ovsShow( self, _ignore=None ):
@@ -2309,6 +2493,7 @@ class MiniEdit( Frame ):
         for widget in self.widgetToItem:
             name = widget[ 'text' ]
             tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+            #print name+' has '+str(tags)
 
             if 'Switch' in tags:
                 opts = self.switchOpts[name]
@@ -2323,14 +2508,27 @@ class MiniEdit( Frame ):
                 if opts['switchType'] == 'default':
                     if self.appPrefs['switchType'] == 'ivs':
                         switchClass = IVSSwitch
+                    elif self.appPrefs['switchType'] == 'user':
+                        switchClass = CustomUserSwitch
+                    elif self.appPrefs['switchType'] == 'userns':
+                        switchParms['inNamespace'] = True
+                        switchClass = CustomUserSwitch
                     else:
                         switchClass = customOvs
+                elif opts['switchType'] == 'user':
+                    switchClass = CustomUserSwitch
+                elif opts['switchType'] == 'userns':
+                    switchClass = CustomUserSwitch
+                    switchParms['inNamespace'] = True
                 elif opts['switchType'] == 'ivs':
                     switchClass = IVSSwitch
                 else:
                     switchClass = customOvs
                 newSwitch = net.addSwitch( name , cls=switchClass, **switchParms)
-                #if self.appPrefs['switchType'] == 'ovs':
+                if switchClass == CustomUserSwitch:
+                    if ('switchIP' in opts):
+                        if (len(opts['switchIP']) > 0):
+                            newSwitch.setSwitchIP(opts['switchIP'])
                 if switchClass == customOvs:
                     newSwitch.setOpenFlowVersion(self.appPrefs['openFlowVersions'])
                     if ('switchIP' in opts):
@@ -2343,6 +2541,10 @@ class MiniEdit( Frame ):
                         if self.checkIntf(extInterface):
                            Intf( extInterface, node=newSwitch )
 
+            elif 'LegacySwitch' in tags:
+                newSwitch = net.addSwitch( name , cls=LegacySwitch)
+            elif 'LegacyRouter' in tags:
+                newSwitch = net.addHost( name , cls=LegacyRouter)
             elif 'Host' in tags:
                 opts = self.hostOpts[name]
                 ip = None
@@ -2357,8 +2559,11 @@ class MiniEdit( Frame ):
                     ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
 
                 # Create the correct host class
+                hostCls = Host
+                if 'cores' in opts or 'cpu' in opts:
+                    hostCls=CPULimitedHost
                 newHost = net.addHost( name,
-                                       cls=CPULimitedHost,
+                                       cls=hostCls,
                                        ip=ip,
                                        defaultRoute=defaultRoute
                                       )
@@ -2432,7 +2637,10 @@ class MiniEdit( Frame ):
                 linkopts=link['linkOpts']
                 srcName, dstName = src[ 'text' ], dst[ 'text' ]
                 src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
-                net.addLink(src, dst, **linkopts)
+                if linkopts:
+                    net.addLink(src, dst, cls=TCLink, **linkopts)
+                else:
+                    net.addLink(src, dst)
                 self.canvas.itemconfig(key, dash=())
 
 
@@ -2445,7 +2653,6 @@ class MiniEdit( Frame ):
         net = Mininet( topo=None,
                        listenPort=dpctl,
                        build=False,
-                       link=TCLink,
                        ipBase=self.appPrefs['ipBase'] )
 
         self.buildNodes(net)
@@ -2564,6 +2771,9 @@ class MiniEdit( Frame ):
                     info( name + ' ')
                     # Figure out what controllers will manage this switch
                     self.net.get(name).start( switchControllers )
+                if 'LegacySwitch' in tags:
+                    self.net.get(name).start( [] )
+                    info( name + ' ')
             info('\n')
 
             self.postStartSetup()
@@ -2599,6 +2809,15 @@ class MiniEdit( Frame ):
                 # make sure to release the grab (Tk 8.0a1 only)
                 self.controllerPopup.grab_release()
 
+    def do_legacyRouterPopup(self, event):
+        # display the popup menu
+        if ( self.net is not None ):
+            try:
+                self.legacyRouterRunPopup.tk_popup(event.x_root, event.y_root, 0)
+            finally:
+                # make sure to release the grab (Tk 8.0a1 only)
+                self.legacyRouterRunPopup.grab_release()
+
     def do_hostPopup(self, event):
         # display the popup menu
         if ( self.net is None ):
@@ -2613,6 +2832,15 @@ class MiniEdit( Frame ):
             finally:
                 # make sure to release the grab (Tk 8.0a1 only)
                 self.hostRunPopup.grab_release()
+
+    def do_legacySwitchPopup(self, event):
+        # display the popup menu
+        if ( self.net is not None ):
+            try:
+                self.switchRunPopup.tk_popup(event.x_root, event.y_root, 0)
+            finally:
+                # make sure to release the grab (Tk 8.0a1 only)
+                self.switchRunPopup.grab_release()
 
     def do_switchPopup(self, event):
         # display the popup menu
@@ -2837,6 +3065,108 @@ def miniEditImages():
         'Select': BitmapImage(
             file='/usr/include/X11/bitmaps/left_ptr' ),
 
+        'Switch': PhotoImage( data=r"""
+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
+            """),
+
+        'LegacySwitch': PhotoImage( data=r"""
+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
+4BE2eIRYeHAEIBwBP0Y4Qn41YWRSCQgAOw==
+            """),
+
+        'LegacyRouter': PhotoImage( data=r"""
+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
+gGPLHwLwcMIo12Qxu0ABAQA7
+            """),
+
         'Controller': PhotoImage( data=r"""
             R0lGODlhMAAwAPcAAAEBAWfNAYWFhcfHx+3t6/f390lJUaWlpfPz8/Hx72lpaZGRke/v77m5uc0B
             AeHh4e/v7WNjY3t7e5eXlyMjI4mJidPT0+3t7f///09PT7Ozs/X19fHx8ZWTk8HBwX9/fwAAAAAA
@@ -2890,7 +3220,7 @@ def miniEditImages():
             C8cSBBAQADs=
         """ ),
 
-        'Switch': PhotoImage( data=r"""
+        'OldSwitch': PhotoImage( data=r"""
             R0lGODlhIAAYAPcAMf//////zP//mf//Zv//M///AP/M///MzP/M
             mf/MZv/MM//MAP+Z//+ZzP+Zmf+ZZv+ZM/+ZAP9m//9mzP9mmf9m
             Zv9mM/9mAP8z//8zzP8zmf8zZv8zM/8zAP8A//8AzP8Amf8AZv8A
@@ -2917,7 +3247,7 @@ def miniEditImages():
             6saLWLNq3cq1q9evYB0GBAA7
         """ ),
 
-        'Link': PhotoImage( data=r"""
+        'NetLink': PhotoImage( data=r"""
             R0lGODlhFgAWAPcAMf//////zP//mf//Zv//M///AP/M///MzP/M
             mf/MZv/MM//MAP+Z//+ZzP+Zmf+ZZv+ZM/+ZAP9m//9mzP9mmf9m
             Zv9mM/9mAP8z//8zzP8zmf8zZv8zM/8zAP8A//8AzP8Amf8AZv8A
