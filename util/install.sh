@@ -63,22 +63,11 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
 # Kernel params
 
-if [ "$DIST" = "Ubuntu" ]; then
-    if [ "$RELEASE" = "10.04" ]; then
-        KERNEL_NAME='3.0.0-15-generic'
-    else
-        KERNEL_NAME=`uname -r`
-    fi
-    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
-elif [ "$DIST" = "Debian" ] && [ "$ARCH" = "i386" ] && [ "$CODENAME" = "lenny" ]; then
-    KERNEL_NAME=2.6.33.1-mininet
-    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-    KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-elif [ "$DIST" = "Fedora" ]; then
-    KERNEL_NAME=`uname -r`
-    KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
-else
-    echo "Install.sh currently only supports Ubuntu, Debian Lenny i386 and Fedora."
+KERNEL_NAME=`uname -r`
+KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
+
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora'; then
+    echo "Install.sh currently only supports Ubuntu, Debian and Fedora."
     exit 1
 fi
 
@@ -108,31 +97,7 @@ OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
-    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
-        $install linux-image-$KERNEL_NAME
-    elif [ "$DIST" = "Debian" ]; then
-        # The easy approach: download pre-built linux-image and linux-headers packages:
-        wget -c $KERNEL_LOC/$KERNEL_HEADERS
-        wget -c $KERNEL_LOC/$KERNEL_IMAGE
-
-        # Install custom linux headers and image:
-        $pkginst $KERNEL_IMAGE $KERNEL_HEADERS
-
-        # The next two steps are to work around a bug in newer versions of
-        # kernel-package, which fails to add initrd images with the latest kernels.
-        # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=525032
-        # Generate initrd image if the .deb didn't install it:
-        if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
-            sudo update-initramfs -c -k ${KERNEL_NAME}
-        fi
-
-        # Ensure /boot/grub/menu.lst boots with initrd image:
-        sudo update-grub
-
-        # The default should be the new kernel. Otherwise, you may need to modify
-        # /boot/grub/menu.lst to set the default to the entry corresponding to the
-        # kernel you just installed.
-    fi
+    $install linux-image-$KERNEL_NAME
 }
 
 function kernel_clean {
@@ -176,10 +141,9 @@ function mn_dev {
 # -user switch
 # The instructions below are an abbreviated version from
 # http://www.openflowswitch.org/wk/index.php/Debian_Install
-# ... modified to use Debian Lenny rather than unstable.
 function of {
     echo "Installing OpenFlow reference implementation..."
-    cd $BUILD_DIR/
+    cd $BUILD_DIR
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" ]; then
         $install git pkgconfig glibc-devel
@@ -301,110 +265,36 @@ function wireshark {
 
 
 # Install Open vSwitch
-# Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
 
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Fedora" ]; then
-        # Just install Fedora's openvswitch RPMS
+    if [ "$DIST" == "Fedora" ]; then
         $install openvswitch openvswitch-controller
         return
     fi
 
-    OVS_SRC=$BUILD_DIR/openvswitch
-    OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
-    OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
-
-    # Required for module build/dkms install
-    $install $KERNEL_HEADERS
-
-    ovspresent=0
-
-    # First see if we have packages
-    # XXX wget -c seems to fail from github/amazon s3
-    cd /tmp
-    if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME 2> /dev/null; then
-	$install patch dkms fakeroot python-argparse
-        tar xf $OVS_PACKAGE_NAME
-        orig=`tar tf $OVS_PACKAGE_NAME`
-        # Now install packages in reasonable dependency order
-        order='dkms common pki openvswitch-switch brcompat controller'
-        pkgs=""
-        for p in $order; do
-            pkg=`echo "$orig" | grep $p`
-	    # Annoyingly, things seem to be missing without this flag
-            $pkginst --force-confmiss $pkg
-        done
-        ovspresent=1
+    # Manually installing openvswitch-datapath may be necessary
+    # for manually built kernel .debs using Debian's defective kernel
+    # packaging, which doesn't yield usable headers.
+    if ! dpkg --get-selections | grep openvswitch-datapath; then
+        # If you've already installed a datapath, assume you
+        # know what you're doing and don't need dkms datapath.
+        # Otherwise, install it.
+        $install openvswitch-datapath-dkms
     fi
 
-    # Otherwise try distribution's OVS packages
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 11.10` = 1 ]; then
-        if ! dpkg --get-selections | grep openvswitch-datapath; then
-            # If you've already installed a datapath, assume you
-            # know what you're doing and don't need dkms datapath.
-            # Otherwise, install it.
-            $install openvswitch-datapath-dkms
-        fi
-	if $install openvswitch-switch openvswitch-controller; then
-            echo "Ignoring error installing openvswitch-controller"
-        fi
-        ovspresent=1
-    fi
+    $install openvswitch-switch openvswitch-controller
 
     # Switch can run on its own, but
     # Mininet should control the controller
+    # This appears to only be an issue on Ubuntu/Debian
+    if sudo service openvswitch-controller stop; then
+        echo "Stopped running controller"
+    fi
     if [ -e /etc/init.d/openvswitch-controller ]; then
-        if sudo service openvswitch-controller stop; then
-            echo "Stopped running controller"
-        fi
         sudo update-rc.d openvswitch-controller disable
     fi
-
-    if [ $ovspresent = 1 ]; then
-        echo "Done (hopefully) installing packages"
-        cd $BUILD_DIR
-        return
-    fi
-
-    # Otherwise attempt to install from source
-
-    $install pkg-config gcc make python-dev libssl-dev libtool
-
-    if [ "$DIST" = "Debian" ]; then
-        if [ "$CODENAME" = "lenny" ]; then
-            $install git-core
-            # Install Autoconf 2.63+ backport from Debian Backports repo:
-            # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
-            sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
-            sudo apt-get update
-            sudo apt-get -y --force-yes install debian-backports-keyring
-            sudo apt-get -y --force-yes -t lenny-backports install autoconf
-        fi
-    else
-        $install git
-    fi
-
-    # Install OVS from release
-    cd $BUILD_DIR/
-    git clone git://openvswitch.org/openvswitch $OVS_SRC
-    cd $OVS_SRC
-    git checkout $OVS_TAG
-    ./boot.sh
-    BUILDDIR=/lib/modules/${KERNEL_NAME}/build
-    if [ ! -e $BUILDDIR ]; then
-        echo "Creating build sdirectory $BUILDDIR"
-        sudo mkdir -p $BUILDDIR
-    fi
-    opts="--with-linux=$BUILDDIR"
-    mkdir -p $OVS_BUILD
-    cd $OVS_BUILD
-    ../configure $opts
-    make
-    sudo make install
-
-    modprobe
 }
 
 function remove_ovs {
