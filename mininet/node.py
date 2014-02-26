@@ -1044,33 +1044,38 @@ class OVSSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
-        self.cmd( 'ovs-vsctl add-br', self )
-        if self.datapath == 'user':
-            self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
         int( self.dpid, 16 ) # DPID must be a hex string
-        self.cmd( 'ovs-vsctl -- set Bridge', self,
-                  'other_config:datapath-id=' + self.dpid )
-        self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
-        for intf in self.intfList():
-            if not intf.IP():
-                self.attach( intf )
-        # Add controllers
-        clist = ' '.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
+        # Interfaces and controllers
+        intfs = ' '.join( '-- add-port %s %s ' % ( self, intf )
+                         for intf in self.intfList() if not intf.IP() )
+        clist = ' '.join( 'tcp:%s:%d' % ( c.IP(), c.port )
+                         for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
+        # Construct big ovs-vsctl command
+        cmd = ( 'ovs-vsctl add-br %s ' % self +
+                '-- set Bridge %s ' % self +
+                'other_config:datapath-id=%s ' % self.dpid +
+                '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                intfs +
+                '-- set-controller %s %s ' % (self, clist ) )
         if not self.inband:
-                self.cmd( 'ovs-vsctl set bridge', self,
-                         'other-config:disable-in-band=true' )
-        self.cmd( 'ovs-vsctl set-controller', self, clist )
+            cmd += ( '-- set bridge %s '
+                     'other-config:disable-in-band=true ' % self )
+        if self.datapath == 'user':
+            cmd +=  '-- set bridge %s datapath_type=netdev ' % self
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
             if uuid.count( '-' ) != 4:
                 # Doesn't look like a UUID
                 continue
             uuid = uuid.strip()
-            self.cmd( 'ovs-vsctl set Controller', uuid,
-                      'max_backoff=1000' )
+            cmd += '-- set Controller %smax_backoff=1000 ' % uuid
+        # Do it!!
+        self.cmd( cmd )
+        for intf in self.intfList():
+            self.TCReapply( intf )
+
 
     def stop( self ):
         "Terminate OVS switch."
