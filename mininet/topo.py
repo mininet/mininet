@@ -168,7 +168,7 @@ class Topo(object):
         '''
         if src in self.ports and dst in self.ports[src]:
             assert dst in self.ports and src in self.ports[dst]
-            return (self.ports[src][dst], self.ports[dst][src])
+            return self.ports[src][dst], self.ports[dst][src]
 
     def linkInfo( self, src, dst ):
         "Return link metadata"

@@ -91,6 +91,18 @@ def OSVersion( flavor ):
     urlbase = path.basename( isoURLs.get( flavor, 'unknown' ) )
     return path.splitext( urlbase )[ 0 ]
 
+def OVFOSNameID( flavor ):
+    "Return OVF-specified ( OS Name, ID ) for flavor"
+    version = OSVersion( flavor )
+    arch = archFor( flavor )
+    if 'ubuntu' in version:
+        map = { 'i386': ( 'Ubuntu', 93 ),
+                'x86_64': ( 'Ubuntu 64-bit', 94 ) }
+    else:
+        map = { 'i386': ( 'Linux', 36 ),
+                'x86_64': ( 'Linux 64-bit', 101 ) }
+    osname, osid = map[ arch ]
+    return osname, osid
 
 LogStartTime = time()
 LogFile = None
@@ -510,8 +522,13 @@ def walkthroughTest( vm, prompt=Prompt ):
 
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
-    vm.sendline( 'cd ~/mininet; git fetch; git pull --rebase; git checkout '
-                 + branch )
+    # This is a bit subtle; it will check out an existing branch (e.g. master)
+    # if it exists; otherwise it will create a detached branch.
+    # The branch will be rebased to its parent on origin.
+    # This probably doesn't matter since we're running on a COW disk
+    # anyway.
+    vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
+                 + branch + '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
     vm.sendline( 'sudo make install' )
 
@@ -526,12 +543,16 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Waiting for output' )
     vm.expect( prompt )
     log( '* Fetching Mininet VM install script' )
+    branch = Branch if Branch else 'master'
     vm.sendline( 'wget '
-                 'https://raw.github.com/mininet/mininet/master/util/vm/'
-                 'install-mininet-vm.sh' )
+                 'https://raw.github.com/mininet/mininet/%s/util/vm/'
+                 'install-mininet-vm.sh' % branch )
     vm.expect( prompt )
     log( '* Running VM install script' )
-    vm.sendline( 'bash install-mininet-vm.sh' )
+    installcmd = 'bash install-mininet-vm.sh'
+    if Branch:
+        installcmd += ' ' + Branch
+    vm.sendline( installcmd )
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
     log( '* Waiting for script to complete... ' )
@@ -544,6 +565,13 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Mininet version: ', version )
     log( '* Testing Mininet' )
     runTests( vm, tests=tests, pre=pre, post=post )
+    # Ubuntu adds this because we install via a serial console,
+    # but we want the VM to boot via the VM console. Otherwise
+    # we get the message 'error: terminal "serial" not found'
+    log( '* Disabling serial console' )
+    vm.sendline( "sudo sed -i -e 's/^GRUB_TERMINAL=serial/#GRUB_TERMINAL=serial/' "
+                "/etc/default/grub; sudo update-grub" )
+    vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
@@ -580,13 +608,13 @@ OVFTemplate = """<?xml version="1.0"?>
     xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <References>
-<File ovf:href="%s" ovf:id="file1" ovf:size="%d"/>
+<File ovf:href="%(diskname)s" ovf:id="file1" ovf:size="%(filesize)d"/>
 </References>
 <DiskSection>
 <Info>Virtual disk information</Info>
-<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
+<Disk ovf:capacity="%(disksize)d" ovf:capacityAllocationUnits="byte"
     ovf:diskId="vmdisk1" ovf:fileRef="file1"
-    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
+    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
 </DiskSection>
 <NetworkSection>
 <Info>The list of logical networks</Info>
@@ -595,8 +623,12 @@ OVFTemplate = """<?xml version="1.0"?>
 </Network>
 </NetworkSection>
 <VirtualSystem ovf:id="Mininet-VM">
-<Info>A Mininet Virtual Machine (%s)</Info>
+<Info>A Mininet Virtual Machine (%(name)s)</Info>
 <Name>mininet-vm</Name>
+<OperatingSystemSection ovf:id="%(osid)d">
+<Info>The kind of installed guest operating system</Info>
+<Description>%(osname)s</Description>
+</OperatingSystemSection>
 <VirtualHardwareSection>
 <Info>Virtual hardware requirements</Info>
 <Item>
@@ -610,10 +642,10 @@ OVFTemplate = """<?xml version="1.0"?>
 <Item>
 <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
 <rasd:Description>Memory Size</rasd:Description>
-<rasd:ElementName>%dMB of memory</rasd:ElementName>
+<rasd:ElementName>%(mem)dMB of memory</rasd:ElementName>
 <rasd:InstanceID>2</rasd:InstanceID>
 <rasd:ResourceType>4</rasd:ResourceType>
-<rasd:VirtualQuantity>%d</rasd:VirtualQuantity>
+<rasd:VirtualQuantity>%(mem)d</rasd:VirtualQuantity>
 </Item>
 <Item>
 <rasd:Address>0</rasd:Address>
@@ -656,16 +688,20 @@ OVFTemplate = """<?xml version="1.0"?>
 """
 
 
-def generateOVF( name, diskname, disksize, mem=1024 ):
+def generateOVF( name, osname, osid, diskname, disksize, mem=1024 ):
     """Generate (and return) OVF file "name.ovf"
        name: root name of OVF file to generate
+       osname: OS name for OVF (Ubuntu | Ubuntu 64-bit)
+       osid: OS ID for OVF (93 | 94 )
        diskname: name of disk file
        disksize: size of virtual disk in bytes
        mem: VM memory size in MB"""
     ovf = name + '.ovf'
     filesize = stat( diskname )[ ST_SIZE ]
-    # OVFTemplate uses the memory size twice in a row
-    xmltext = OVFTemplate % ( diskname, filesize, disksize, name, mem, mem )
+    params = dict( osname=osname, osid=osid, diskname=diskname,
+                   filesize=filesize, disksize=disksize, name=name,
+                   mem=mem )
+    xmltext = OVFTemplate % params
     with open( ovf, 'w+' ) as f:
         f.write( xmltext )
     return ovf
@@ -692,6 +728,8 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     date = strftime( '%y%m%d-%H-%M-%S', lstart)
     ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
+    if Branch:
+        dir = 'mn-%s-%s-%s' % ( Branch, flavor, date )
     try:
         os.mkdir( dir )
     except:
@@ -713,13 +751,16 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     vm = boot( volume, kernel, initrd, logfile, memory=memory )
     version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
+    arch = archFor( flavor )
+    vmdk = convert( volume, basename='mininet-vm-' + arch )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
     ovfname = 'mininet-%s-%s-%s' % ( version, ovfdate, OSVersion( flavor ) )
-    ovf = generateOVF( diskname=vmdk, disksize=size, name=ovfname )
+    osname, osid = OVFOSNameID( flavor )
+    ovf = generateOVF( name=ovfname, osname=osname, osid=osid,
+                       diskname=vmdk, disksize=size )
     log( '* Generated OVF descriptor file', ovf )
     if Zip:
         log( '* Generating .zip file' )
@@ -865,13 +906,12 @@ def parseArgs():
     parser.add_argument( '-p', '--post', metavar='cmd', default='',
                          help='specify a command line to run after tests' )
     parser.add_argument( '-b', '--branch', metavar='branch',
-                         help='For an existing VM image, check out and install'
-                         ' this branch before testing' )
+                         help='branch to install and/or check out and test' )
     parser.add_argument( 'flavor', nargs='*',
                          help='VM flavor(s) to build (e.g. raring32server)' )
     parser.add_argument( '-z', '--zip', action='store_true',
                          help='archive .ovf and .vmdk into .zip file' )
-    parser.add_argument( '-o', '--out', 
+    parser.add_argument( '-o', '--out',
                          help='output file for test image (vmdk)' )
     args = parser.parse_args()
     if args.depend:
@@ -905,7 +945,7 @@ def parseArgs():
             exit( 1 )
     for image in args.image:
         bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory, 
+                         post=args.post, memory=args.memory,
                          outputFile=args.out )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):

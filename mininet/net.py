@@ -355,7 +355,7 @@ class Mininet( object ):
         "Build mininet."
         if self.topo:
             self.buildFromTopo( self.topo )
-        if ( self.inNamespace ):
+        if self.inNamespace:
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
@@ -408,6 +408,9 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
+        swclass = type( self.switches[ 0 ] )
+        if False and self.switches and hasattr( swclass, 'batchShutdown' ):
+            swclass.batchShutdown( self.switches )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
@@ -463,13 +466,13 @@ class Mininet( object ):
         "Parse ping output and return packets sent, received."
         # Check for downed link
         if 'connect: Network is unreachable' in pingOutput:
-            return (1, 0)
+            return 1, 0
         r = r'(\d+) packets transmitted, (\d+) received'
         m = re.search( r, pingOutput )
         if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
                    pingOutput )
-            return (1, 0)
+            return 1, 0
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received
 

@@ -752,27 +752,32 @@ class Switch( Node ):
     dpidLen = 16  # digits in dpid passed to switch
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
-        """dpid: dpid for switch (or None to derive from name, e.g. s1 -> 1)
+        """dpid: dpid hex string (or None to derive from name, e.g. s1 -> 1)
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
         Node.__init__( self, name, **params )
-        self.dpid = dpid if dpid else self.defaultDpid()
+        self.dpid = self.defaultDpid( dpid )
         self.opts = opts
         self.listenPort = listenPort
         if not self.inNamespace:
             self.controlIntf = Intf( 'lo', self, port=0 )
 
-    def defaultDpid( self ):
-        "Derive dpid from switch name, s1 -> 1"
-        try:
-            dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
-            dpid = hex( dpid )[ 2: ]
-            dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
-            return dpid
-        except IndexError:
-            raise Exception( 'Unable to derive default datapath ID - '
-                             'please either specify a dpid or use a '
-                             'canonical switch name such as s23.' )
+    def defaultDpid( self, dpid=None ):
+        "Return correctly formatted dpid from dpid or switch name (s1 -> 1)"
+        if dpid:
+            # Remove any colons and make sure it's a good hex number
+            dpid = dpid.translate( None, ':' )
+            assert len( dpid ) <= self.dpidLen and int( dpid, 16 ) >= 0
+        else:
+            # Use hex of the first number in the switch name
+            nums = re.findall( r'\d+', self.name )
+            if nums:
+                dpid = hex( int( nums[ 0 ] ) )[ 2: ]
+            else:
+                raise Exception( 'Unable to derive default datapath ID - '
+                                 'please either specify a dpid or use a '
+                                 'canonical switch name such as s23.' )
+        return '0' * ( self.dpidLen - len( dpid ) ) + dpid
 
     def defaultIntf( self ):
         "Return control interface"
@@ -827,10 +832,13 @@ class UserSwitch( Switch ):
 
     def dpctl( self, *args ):
         "Run dpctl command"
+        listenAddr = None
         if not self.listenPort:
-            return "can't run dpctl without passive listening port"
+            listenAddr = 'unix:/tmp/' + self.name
+        else:
+            listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
-                         ' tcp:127.0.0.1:%i' % self.listenPort )
+                         ' ' + listenAddr )
 
     def connected( self ):
         "Is the switch connected to a controller?"
@@ -847,10 +855,13 @@ class UserSwitch( Switch ):
             minspeed = ifspeed * 0.001
 
             res = intf.config( **intf.params )
-            parent = res['parent']
+
+            if res is None: # link may not have TC parameters
+                return
 
             # Re-add qdisc, root, and default classes user switch created, but
             # with new parent, as setup by Mininet's TCIntf
+            parent = res['parent']
             intf.tc( "%s qdisc add dev %s " + parent +
                      " handle 1: htb default 0xfffe" )
             intf.tc( "%s class add dev %s classid 1:0xffff parent 1: htb rate "
@@ -945,14 +956,17 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, failMode='secure', datapath='kernel', **params ):
+    def __init__( self, name, failMode='secure', datapath='kernel',
+                 inband=False, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
-           datapath: userspace or kernel mode (kernel|user)"""
+           datapath: userspace or kernel mode (kernel|user)
+           inband: use in-band control (False)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
+        self.inband = inband
 
     @classmethod
     def setup( cls ):
@@ -973,6 +987,13 @@ class OVSSwitch( Switch ):
                    'You may wish to try '
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
+
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Call ovs-vsctl del-br on all OVSSwitches in a list"
+        quietRun( 'ovs-vsctl ' +
+                  ' -- '.join( '--if-exists del-br %s' % s
+                               for s in switches if type(s) == cls ) )
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
@@ -1038,6 +1059,9 @@ class OVSSwitch( Switch ):
                             for c in controllers ] )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
+        if not self.inband:
+                self.cmd( 'ovs-vsctl set bridge', self,
+                         'other-config:disable-in-band=true' )
         self.cmd( 'ovs-vsctl set-controller', self, clist )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():

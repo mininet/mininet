@@ -155,7 +155,12 @@ def makeIntfPair( intf1, intf2 ):
     quietRun( 'ip link del ' + intf2 )
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    return quietRun( cmd )
+    cmdOutput = quietRun( cmd )
+    if cmdOutput == '':
+        return True
+    else:
+        error( "Error creating interface pair: %s " % cmdOutput )
+        return False
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.

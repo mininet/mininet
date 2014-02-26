@@ -5,12 +5,14 @@ Test for hwintf.py
 """
 
 import unittest
-import pexpect
 import re
+
+import pexpect
+
 from mininet.log import setLogLevel
-from mininet.net import Mininet
 from mininet.node import Node
-from mininet.link import Link, Intf
+from mininet.link import Link
+
 
 class testHwintf( unittest.TestCase ):
 
