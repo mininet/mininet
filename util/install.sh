@@ -85,8 +85,6 @@ OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_TAG=v$OVS_RELEASE
 
-IVS_TAG=v0.3
-
 # Command-line versions overrides that simplify custom VM creation
 # To use, pass in the vars on the cmd line before install.sh, e.g.
 # WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
@@ -328,7 +326,7 @@ function ivs {
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC -b $IVS_TAG --recursive
+    git clone git://github.com/floodlight/ivs $IVS_SRC --recursive
     cd $IVS_SRC
     make
     sudo make install
