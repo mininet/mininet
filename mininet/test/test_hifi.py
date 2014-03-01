@@ -53,8 +53,8 @@ class testOptionsTopoCommon( object ):
         """Check that a given value is within a tolerance of expected
         tolerance_frac: less-than-1.0 value; 0.8 would yield 20% tolerance.
         """
-        self.assertTrue( float(measured) >= float(expected) * tolerance_frac )
-        self.assertTrue( float(measured) >= float(expected) * tolerance_frac )
+        self.assertGreaterEqual( float(measured),
+                                 float(expected) * tolerance_frac )
 
     def testCPULimits( self ):
         "Verify topology creation with CPU limits set for both schedulers."
@@ -120,7 +120,7 @@ class testOptionsTopoCommon( object ):
         for _ in range(REPS):
             dropped_total += mn.ping(timeout='1')
         mn.stop()
-        self.assertTrue(dropped_total > 0)
+        self.assertGreater( dropped_total, 0 )
 
     def testMostOptions( self ):
         "Verify topology creation with most link options and CPU limits."
