@@ -13,7 +13,7 @@ Controller icon from http://semlabs.co.uk/
 OpenFlow icon from https://www.opennetworking.org/
 """
 
-MINIEDIT_VERSION = '2.1.0.8'
+MINIEDIT_VERSION = '2.1.0.8.1'
 
 from optparse import OptionParser
 from Tkinter import *
@@ -49,7 +49,8 @@ from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
 
 print 'MiniEdit running against MiniNet '+VERSION
-if StrictVersion(VERSION) > StrictVersion('2.0'):
+MININET_VERSION = re.sub(r'[^\d\.]', '', VERSION)
+if StrictVersion(MININET_VERSION) > StrictVersion('2.0'):
     from mininet.node import IVSSwitch
 
 TOPODEF = 'none'
@@ -339,7 +340,7 @@ class PrefsDialog(tkSimpleDialog.Dialog):
                            'startCLI':startCLI}
             if sw == 'Indigo Virtual Switch':
                 self.result['switchType'] = 'ivs'
-                if StrictVersion(VERSION) < StrictVersion('2.1'):
+                if StrictVersion(MININET_VERSION) < StrictVersion('2.1'):
                     self.ovsOk = False
                     showerror(title="Error",
                               message='MiniNet version 2.1+ required. You have '+VERSION+'.')
@@ -698,7 +699,7 @@ class SwitchDialog(CustomDialog):
             sw = self.switchType.get()
             if sw == 'Indigo Virtual Switch':
                 results['switchType'] = 'ivs'
-                if StrictVersion(VERSION) < StrictVersion('2.1'):
+                if StrictVersion(MININET_VERSION) < StrictVersion('2.1'):
                     self.ovsOk = False
                     showerror(title="Error",
                               message='MiniNet version 2.1+ required. You have '+VERSION+'.')
@@ -1569,7 +1570,7 @@ class MiniEdit( Frame ):
             f.write("from mininet.node import Controller, RemoteController, OVSController\n")
             f.write("from mininet.node import CPULimitedHost, Host, Node\n")
             f.write("from mininet.node import OVSKernelSwitch, UserSwitch\n")
-            if StrictVersion(VERSION) > StrictVersion('2.0'):
+            if StrictVersion(MININET_VERSION) > StrictVersion('2.0'):
                 f.write("from mininet.node import IVSSwitch\n")
             f.write("from mininet.cli import CLI\n")
             f.write("from mininet.log import setLogLevel, info\n")
@@ -2867,7 +2868,7 @@ class MiniEdit( Frame ):
         if name not in self.net.nameToNode:
             return
         term = makeTerm( self.net.nameToNode[ name ], 'Host', term=self.appPrefs['terminalType'] )
-        if StrictVersion(VERSION) > StrictVersion('2.0'):
+        if StrictVersion(MININET_VERSION) > StrictVersion('2.0'):
             self.net.terms += term
         else:
             self.net.terms.append(term)
