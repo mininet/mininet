@@ -31,6 +31,8 @@ from os import isatty
 from select import poll, POLLIN
 import sys
 import time
+import os
+import atexit
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -52,6 +54,18 @@ class CLI( Cmd ):
         self.inputFile = script
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
+
+        # Setup history if readline is available
+        try:
+            import readline
+        except ImportError:
+            pass
+        else:
+            history_path = os.path.expanduser('~/.mininet_history')
+            if os.path.isfile(history_path):
+                readline.read_history_file(history_path)
+            atexit.register(lambda: readline.write_history_file(history_path))
+
         if self.inputFile:
             self.do_source( self.inputFile )
             return
