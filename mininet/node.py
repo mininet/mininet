@@ -21,6 +21,9 @@ Switch: superclass for switch nodes.
 UserSwitch: a switch using the user-space switch from the OpenFlow
     reference implementation.
 
+LincSwitch: an OpenFlow user-space switch implemented entirely in Erlang
+    currently supporting OF protocol v. 1.3.1.
+
 KernelSwitch: a switch using the kernel switch from the OpenFlow reference
     implementation.
 
@@ -900,6 +903,98 @@ class UserSwitch( Switch ):
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
         self.deleteIntfs()
+
+
+class LincSwitch(Switch):
+    "User-space LINC-Switch implemented in Erlang."
+
+    configGenCmd = "linc_config_gen {swName} {configArgs}"
+    startCmd = "linc {swName} start"
+    stopCmd = "linc {swName} stop"
+    relCreateCmd = "linc_rel -c {swName}"
+    relDeleteCmd = "linc_rel -d {swName}"
+    listenAddress = "127.0.0.1"
+
+    def _init_(self, name, **kwargs):
+        Switch._init_(self, name, **kwargs)
+
+    def start(self, controllers):
+        self.setupLincSwitch(controllers)
+        self.cmd('linc ' + self.name + ' start')
+
+    def stop(self):
+        for intf in self.lincIntfs + self.bridges:
+            self.deletInterface(intf)
+        self.cmd(self.stopCmd.format(swName = self.name))
+        self.cmd(self.relDeleteCmd.format(swName = self.name))
+        # Will stop the epmd daemon only if there are no nodes registered.
+        # So this command takes effect only if the last switch instance is being
+        # stopped.
+        self.cmd('epmd -kill')
+
+    def dpctl(self, *args):
+        if not self.listenPort:
+            return "can't run dpctl without passive listening port"
+        return self.cmd('dpctl tcp:{0}:{1} '.format(
+          self.listenAddress, self.listenPort) + ' '.join(args))
+
+    @classmethod
+    def setup(cls):
+        pathCheck('linc', 'linc_config_gen', 'linc_rel',
+                  moduleName='the user-space OpenFlow LINC-Switch'
+                  + ' (https://github.com/FlowForwarding/LINC-Switch)')
+
+    def setupLincSwitch(self, controllers):
+        hostsIntfs = [str( i ) for i in self.intfList() if not i.IP()]
+        self.lincIntfs = self.setupInterfacesForLinc(hostsIntfs)
+        self.bridges = self.setupBridges(zip(hostsIntfs, self.lincIntfs))
+        self.cmd(self.relCreateCmd.format(swName = self.name))
+        self.generateConfig(self.lincIntfs, controllers)
+
+    def generateConfig(self, interfaces, controllers):
+        configArgs =  self.formConfigGenLogicalSwitchIdArg(0) \
+          + " " + " ".join(interfaces) \
+          + " " + self.formConfigGenControllersArg(controllers) \
+          + " " + self.formConfigGenControllersListenerArg()
+        self.cmd(self.configGenCmd.format(swName = self.name,
+                                            configArgs = configArgs))
+
+    def formConfigGenLogicalSwitchIdArg(self, logicalSwitchId):
+        return "-s " + str(logicalSwitchId)
+
+    def formConfigGenControllersArg(self, controllers):
+        return "-c " +  " ".join(['tcp:{0}:{1}'.format(c.IP(), c.port)
+                                  for c in controllers])
+
+    def formConfigGenControllersListenerArg(self):
+        return "-l " + "127.0.0.1:{0}".format(self.listenPort)
+
+    def setupInterfacesForLinc(self, hostsIntfs):
+        lincIntfs = [ "tap-" + intf for intf in hostsIntfs ]
+        for intf in lincIntfs:
+            self.cmd('tunctl -t {0}'.format(intf))
+            self.bringInterfaceUp(intf)
+        return lincIntfs
+
+    def setupBridges(self, bridgesIntfs):
+        bridges = []
+        for idx, intfsPair in enumerate(bridgesIntfs):
+            bridgeName = 'br-{0}-{1}'.format(self.name, idx)
+            bridges.append(bridgeName)
+            self.cmd('brctl addbr {0}'.format(bridgeName))
+            for intf in intfsPair:
+                self.addInterfaceToBridge(bridgeName, intf)
+            self.bringInterfaceUp(bridgeName)
+        return bridges
+
+    def addInterfaceToBridge(self, bridge, interface):
+        self.cmd('brctl addif {0} {1}'.format(bridge, interface))
+
+    def bringInterfaceUp(self, interface):
+        self.cmd('ip link set dev {0} up'.format(interface))
+
+    def deletInterface(self, interface):
+        self.cmd('ip link delete {0}'.format(interface))
 
 
 class OVSLegacyKernelSwitch( Switch ):
