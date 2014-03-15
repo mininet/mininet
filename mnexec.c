@@ -5,7 +5,7 @@
  *
  *  - closing all file descriptors except stdin/out/error
  *  - detaching from a controlling tty using setsid
- *  - running in a network namespace
+ *  - running in network and mount namespaces
  *  - printing out the pid of a process so we can identify it later
  *  - attaching to a namespace and cgroup
  *  - setting RT scheduling
@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <ctype.h>
+#include <sys/mount.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -35,9 +36,9 @@ void usage(char *name)
            "Options:\n"
            "  -c: close all file descriptors except stdin/out/error\n"
            "  -d: detach from tty by calling setsid()\n"
-           "  -n: run in new network namespace\n"
+           "  -n: run in new network and mount namespaces\n"
            "  -p: print ^A + pid\n"
-           "  -a pid: attach to pid's network namespace\n"
+           "  -a pid: attach to pid's network and mount namespaces\n"
            "  -g group: add to cgroup\n"
            "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
            "  -v: print version\n",
@@ -122,9 +123,14 @@ int main(int argc, char *argv[])
             setsid();
             break;
         case 'n':
-            /* run in network namespace */
-            if (unshare(CLONE_NEWNET) == -1) {
+            /* run in network and mount namespaces */
+            if (unshare(CLONE_NEWNET|CLONE_NEWNS) == -1) {
                 perror("unshare");
+                return 1;
+            }
+            /* mount sysfs to pick up the new network namespace */
+            if (mount("sysfs", "/sys", "sysfs", MS_MGC_VAL, NULL) == -1) {
+                perror("mount");
                 return 1;
             }
             break;
