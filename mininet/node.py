@@ -1124,6 +1124,7 @@ class IVSSwitch(Switch):
     def stop( self ):
         "Terminate IVS switch."
         self.cmd( 'kill %ivs' )
+        self.cmd( 'wait' )
         self.deleteIntfs()
 
     def attach( self, intf ):
