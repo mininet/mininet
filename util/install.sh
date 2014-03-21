@@ -262,6 +262,64 @@ function wireshark {
 }
 
 
+# Install Open vSwitch specific version Ubuntu package
+function ubuntuOvs {
+    echo "Creating and Installing Open vSwitch packages..."
+
+    OVS_SRC=$BUILD_DIR/openvswitch
+    OVS_TARBALL_LOC=http://openvswitch.org/releases
+
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+        rm -rf $OVS_SRC
+        mkdir -p $OVS_SRC
+        cd $OVS_SRC
+
+        if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
+            tar xzf openvswitch-$OVS_RELEASE.tar.gz
+        else
+            echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
+            cd $BUILD_DIR
+            return
+        fi
+
+        # Remove any old packages
+        $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
+                openvswitch-pki openvswitch-switch
+
+        # Get build deps
+        $install build-essential fakeroot debhelper autoconf automake libssl-dev \
+                 pkg-config bzip2 openssl python-all procps python-qt4 \
+                 python-zopeinterface python-twisted-conch dkms
+
+        # Build OVS
+        cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
+                DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+        cd ..
+        $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
+                 openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
+        if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+            echo "Ignoring error installing openvswitch-controller"
+        fi
+
+        modinfo openvswitch
+        sudo ovs-vsctl show
+        # Switch can run on its own, but
+        # Mininet should control the controller
+        # This appears to only be an issue on Ubuntu/Debian
+        if sudo service openvswitch-controller stop; then
+            echo "Stopped running controller"
+        fi
+        if [ -e /etc/init.d/openvswitch-controller ]; then
+            sudo update-rc.d openvswitch-controller disable
+        fi
+    else
+        echo "Failed to install Open vSwitch.  OS must be Ubuntu >= 12.04"
+            cd $BUILD_DIR
+            return
+    fi
+}
+
+
 # Install Open vSwitch
 
 function ovs {
@@ -594,7 +652,7 @@ function vm_clean {
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhikmnprtvwx03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhikmnprtvVwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -619,6 +677,7 @@ function usage {
     printf -- ' -s <dir>: place dependency (S)ource/build trees in <dir>\n' >&2
     printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
     printf -- ' -v: install Open (V)switch\n' >&2
+    printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
@@ -632,7 +691,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvwx03' OPTION
+    while getopts 'abcdefhikmnprs:tvV:wx03' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -657,6 +716,8 @@ else
             echo "Dependency installation directory: $BUILD_DIR";;
       t)    vm_other;;
       v)    ovs;;
+      V)    OVS_RELEASE=$OPTARG;
+            ubuntuOvs;;
       w)    wireshark;;
       x)    case $OF_VERSION in
             1.0) nox;;
