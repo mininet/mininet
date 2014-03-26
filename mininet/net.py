@@ -504,7 +504,7 @@ class Mininet( object ):
                     output( ( '%s ' % dest.name ) if received else 'X ' )
             output( '\n' )
         if packets > 0:
-            ploss = 100 * lost / packets
+            ploss = float(100) * lost / packets
             received = packets - lost
             output( "*** Results: %i%% dropped (%d/%d received)\n" %
                     ( ploss, received, packets ) )
