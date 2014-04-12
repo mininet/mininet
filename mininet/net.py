@@ -92,6 +92,7 @@ import select
 import signal
 from time import sleep
 from itertools import chain
+from multiprocessing import Process
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -397,10 +398,15 @@ class Mininet( object ):
         for controller in self.controllers:
             controller.start()
         info( '*** Starting %s switches\n' % len( self.switches ) )
+        processes = []
         for switch in self.switches:
             info( switch.name + ' ')
-            switch.start( self.controllers )
+            process = Process(target=switch.start, args=(self.controllers,))
+            process.start()
+            processes.append(process)
         info( '\n' )
+        for process in processes:
+            process.join()
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
