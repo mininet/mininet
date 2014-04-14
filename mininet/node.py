@@ -57,6 +57,8 @@ from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
+import socket
+import mininet.ovsdb as ovsdb
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -967,6 +969,7 @@ class OVSSwitch( Switch ):
         self.failMode = failMode
         self.datapath = datapath
         self.inband = inband
+        self.bridge_uuid = None
 
     @classmethod
     def setup( cls ):
@@ -991,9 +994,36 @@ class OVSSwitch( Switch ):
     @classmethod
     def batchShutdown( cls, switches ):
         "Call ovs-vsctl del-br on all OVSSwitches in a list"
-        quietRun( 'ovs-vsctl ' +
-                  ' -- '.join( '--if-exists del-br %s' % s
-                               for s in switches if type(s) == cls ) )
+        ovs_switches = [ s for s in switches if type(s) == cls ]
+        uuid_list = [ s.bridge_uuid for s in ovs_switches if s.bridge_uuid ]
+        other_switches = [ s for s in ovs_switches if not s.bridge_uuid ]
+
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect('/var/run/openvswitch/db.sock')
+        db = ovsdb.DEFAULT_DB
+        ovsd_uuid = ovsdb.get_daemon_uuid(s, db)
+        del_set = [ ["uuid", buuid] for buuid in uuid_list ]
+        op = {"op": "mutate",
+              "table": "Open_vSwitch",
+              "mutations": [["bridges", "delete", ["set", del_set]]],
+              "where": [["_uuid", "==", ["uuid", ovsd_uuid]]],
+              }
+        op_comment = {"op": "comment",
+                      "comment": "mininet: shutdown %d nodes" % len(switches),
+                      }
+        if uuid_list:
+            result = ovsdb.transact(s, db, [op, op_comment])
+            assert( result[ 0 ][ 'count' ] == 1 )
+        s.close()
+
+        if other_switches:
+            quietRun( 'ovs-vsctl ' +
+                      ' -- '.join( '--if-exists del-br %s' % s
+                                   for s in other_switches ) )
+
+        for switch in switches:
+            info( switch.name + ' ' )
+            switch.stop( False )
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
@@ -1007,11 +1037,20 @@ class OVSSwitch( Switch ):
         if type( intf ) is TCIntf:
             intf.config( **intf.params )
 
+    def config_interface( self, intf ):
+        "Configure an attached interface"
+        self.cmd( 'ifconfig', intf, 'up' )
+        self.TCReapply( intf )
+
+    def config_interfaces( self ):
+        for intf in self.intfList():
+            if not intf.IP():
+                self.config_interface( intf )
+
     def attach( self, intf ):
         "Connect a data port"
         self.cmd( 'ovs-vsctl add-port', self, intf )
-        self.cmd( 'ifconfig', intf, 'up' )
-        self.TCReapply( intf )
+        self.config_interface( intf )
 
     def detach( self, intf ):
         "Disconnect a data port"
@@ -1072,9 +1111,149 @@ class OVSSwitch( Switch ):
             self.cmd( 'ovs-vsctl set Controller', uuid,
                       'max_backoff=1000' )
 
-    def stop( self ):
+    def prepare_attach( self, intf, internal=False ):
+        "Return ovsdb opartions for attaching interface `intf'."
+        name = '%s' % intf
+        uname = name.replace( '-', '_' )
+        op_i = {"op": "insert",
+                "table": "Interface",
+                "uuid-name": "int_%s" % uname,
+                "row": { "name": "%s" % name,
+                         },
+                }
+        if internal:
+            op_i['row']["type"] = "internal"
+        op_p = {"op": "insert",
+                "table": "Port",
+                "uuid-name": "port_%s" % uname,
+                "row": { "interfaces": ["named-uuid", "int_%s" % uname],
+                         "name": "%s" % name,
+                         },
+                }
+
+        return [op_i, op_p]
+
+    def prepare_start( self, controllers, operations, 
+                       named_uuids, buuid_list ):
+        """Prepare ovsdb commands for starting up a new OVS OpenFlow switch.
+        
+        Append new operations to `operations',
+               new named uuid for the bridge to `named_uuids', and
+               a (self, n) pair to `buuid_list'. 
+        (the n-th element of the result will contain the uuid of the new bridge.)
+        """
+        if self.inNamespace:
+            raise Exception(
+                'OVS kernel switch does not work in a namespace' )
+        # We should probably call config instead, but this
+        # requires some rethinking...
+        self.cmd( 'ifconfig lo up' )
+        if self.bridge_uuid:
+            # Annoyingly, --if-exists option seems not to work
+            self.cmd( 'ovs-vsctl del-br', self )
+
+        puuid_list = []
+
+        # Attach interfaces
+        operations += self.prepare_attach( self, internal=True )
+        puuid_list.append( ["named-uuid", operations[-1]["uuid-name"]] )
+        for intf in self.intfList():
+            if not intf.IP():
+                operations += self.prepare_attach( intf )
+                puuid_list.append( ["named-uuid", operations[-1]["uuid-name"]] )
+
+        # Add controllers
+        clist = [ 'tcp:%s:%d' % ( c.IP(), c.port ) for c in controllers ]
+        if self.listenPort:
+            clist.append( 'ptcp:%s' % self.listenPort )
+        cuuid_list = []
+        for i, target in enumerate(clist):
+            # Reconnect quickly to controllers (1s vs. 15s max_backoff)
+            max_backoff = 1000
+            op_c = {"op": "insert",
+                    "table": "Controller",
+                    "uuid-name": "cont_%s_%d" % (self, i),
+                    "row": { "target": target,
+                             "max_backoff": max_backoff,
+                     },
+            }
+            operations.append( op_c )
+            cuuid_list.append( ["named-uuid", op_c["uuid-name"]] )
+
+        # Add bridge
+        inband = "true" if not self.inband else "false"
+        op_b = {"op": "insert",
+                "table": "Bridge",
+                "uuid-name": "br_%s" % self,
+                "row": {"name": "%s" % self,
+                        "ports": ["set", puuid_list],
+                        "controller": ["set", cuuid_list],
+                        "datapath_id": self.dpid,
+                        #"datapath_type": "netdev",
+                        "fail_mode": self.failMode, # "secure" or "standalone"
+                        "other_config": ["map", [["datapath-id", self.dpid],
+                                                 ["disable-in-band", inband],
+                                                 ["dp_desc", "%s" % self]]],
+                        },
+                }
+        if self.datapath == 'user':
+            op_b['row']['datapath_type'] = 'netdev'
+        named_uuids.append( op_b["uuid-name"] )
+        operations.append( op_b )
+        buuid_index = len(operations) - 1
+        buuid_list.append( (self, buuid_index) )
+
+    @classmethod
+    def batchStart( cls, switches, controllers ):
+        "Register switches to OVS in one large ovsdb rpc call."
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect('/var/run/openvswitch/db.sock')
+        db = ovsdb.DEFAULT_DB
+
+        ovsd_uuid = ovsdb.get_daemon_uuid(s, db)
+        operations = []
+        buuid_list = []
+        named_uuids = []
+
+        op = {"op": "select",
+              "table": "Bridge",
+              "where": [],
+              "columns": ["_uuid", "name"],
+              }
+        reply = ovsdb.transact(s, db, [op])
+        for row in reply[ 0 ][ 'rows' ]:
+            switch = filter( lambda x: x.name == row['name'], switches )
+            if len(switch) == 1:
+                switch[0].bridge_uuid = row[ '_uuid' ][ -1 ]
+
+        for switch in switches:
+            switch.prepare_start( controllers, operations, 
+                                  named_uuids, buuid_list )
+
+        add_set = [ ["named-uuid", u] for u in named_uuids ]
+        op_o = {"op": "mutate",
+                "table": "Open_vSwitch",
+                "mutations": [["next_cfg", "+=", 1],
+                              ["bridges", "insert", ["set", add_set]]],
+                "where": [["_uuid","==",["uuid", ovsd_uuid]]],
+                }
+        op_comment = {"op": "comment",
+                      "comment": "mininet: start %d nodes" % len(switches),
+                      }
+        operations += [ op_o, op_comment ]
+        result = ovsdb.transact(s, db, operations)
+        for switch, buuid_index in buuid_list:
+            switch.bridge_uuid = result[buuid_index]['uuid'][-1]
+
+        s.close()
+
+        for switch in switches:
+            switch.config_interfaces()
+
+    def stop( self, delete_bridge=True ):
         "Terminate OVS switch."
-        self.cmd( 'ovs-vsctl del-br', self )
+        if delete_bridge:
+            self.cmd( 'ovs-vsctl del-br', self )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
         self.deleteIntfs()
