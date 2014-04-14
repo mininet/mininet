@@ -188,8 +188,7 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
         srcNode.cmd( cmd )
     else:
         quietRun( cmd )
-    links = dstNode.cmd( 'ip link show' )
-    if not ( ' %s:' % intf ) in links:
+    if ( ' %s:' % intf ) not in dstNode.cmd( 'ip link show', intf ):
         if printError:
             error( '*** Error: moveIntf: ' + intf +
                    ' not successfully moved to ' + dstNode.name + '\n' )

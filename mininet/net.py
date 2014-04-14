@@ -408,9 +408,10 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        swclass = type( self.switches[ 0 ] )
-        if False and self.switches and hasattr( swclass, 'batchShutdown' ):
-            swclass.batchShutdown( self.switches )
+        if self.switches:
+            swclass = type( self.switches[ 0 ] )
+            if hasattr( swclass, 'batchShutdown' ):
+                swclass.batchShutdown( self.switches )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
