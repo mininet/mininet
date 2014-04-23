@@ -83,6 +83,12 @@ isoURLs = {
     'saucy64server':
     'http://mirrors.kernel.org/ubuntu-releases/13.10/'
     'ubuntu-13.10-server-amd64.iso',
+    'trusty32server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.04/'
+    'ubuntu-14.04-server-i386.iso',
+    'trusty64server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.04/'
+    'ubuntu-14.04-server-amd64.iso',
 }
 
 
