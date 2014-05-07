@@ -579,10 +579,10 @@ class Mininet( object ):
                     (rttmin, rttavg, rttmax, rttdev) )
         return all_outputs
 
-    def pingAll( self ):
+    def pingAll( self, timeout=None ):
         """Ping between all hosts.
            returns: ploss packet loss percentage"""
-        return self.ping()
+        return self.ping( timeout=timeout )
 
     def pingPair( self ):
         """Ping between first two hosts, useful for testing.
