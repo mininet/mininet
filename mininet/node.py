@@ -1048,7 +1048,7 @@ class OVSSwitch( Switch ):
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf )
                          for intf in self.intfList() if not intf.IP() )
-        clist = ' '.join( 'tcp:%s:%d' % ( c.IP(), c.port )
+        clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
                          for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
@@ -1154,12 +1154,13 @@ class Controller( Node ):
 
     def __init__( self, name, inNamespace=False, command='controller',
                   cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                  port=6633, **params ):
+                  port=6633, protocol='tcp', **params ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
         self.ip = ip
         self.port = port
+        self.protocol = protocol
         Node.__init__( self, name, inNamespace=inNamespace,
                        ip=ip, **params  )
         self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
