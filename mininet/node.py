@@ -1106,6 +1106,13 @@ class IVSSwitch(Switch):
                    'not be loaded. Try modprobe openvswitch.\n' )
             exit( 1 )
 
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Kill each IVS switch, to be waited on later in stop()"
+        for switch in switches:
+            if type(switch) == cls:
+                switch.cmd( 'kill %ivs' )
+
     def start( self, controllers ):
         "Start up a new IVS switch"
         args = ['ivs']
