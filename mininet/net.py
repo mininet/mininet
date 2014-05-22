@@ -91,7 +91,7 @@ import re
 import select
 import signal
 from time import sleep
-from itertools import chain
+from itertools import chain, groupby
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -408,10 +408,9 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        if self.switches:
-            swclass = type( self.switches[ 0 ] )
+        for swclass, switches in groupby( sorted( self.switches, key=type ), type ):
             if hasattr( swclass, 'batchShutdown' ):
-                swclass.batchShutdown( self.switches )
+                swclass.batchShutdown( switches )
         for switch in self.switches:
             info( switch.name + ' ' )
             switch.stop()
