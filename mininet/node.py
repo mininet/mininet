@@ -1090,8 +1090,9 @@ OVSKernelSwitch = OVSSwitch
 class IVSSwitch(Switch):
     """IVS virtual switch"""
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, verbose=True, **kwargs ):
         Switch.__init__( self, name, **kwargs )
+        self.verbose = verbose
 
     @classmethod
     def setup( cls ):
@@ -1117,7 +1118,8 @@ class IVSSwitch(Switch):
         args = ['ivs']
         args.extend( ['--name', self.name] )
         args.extend( ['--dpid', self.dpid] )
-        args.extend( ['--verbose'] )
+        if self.verbose:
+            args.extend( ['--verbose'] )
         for intf in self.intfs.values():
             if not intf.IP():
                 args.extend( ['-i', intf.name] )
