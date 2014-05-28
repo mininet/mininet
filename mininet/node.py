@@ -57,6 +57,8 @@ from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
+from re import findall
+from distutils.version import StrictVersion
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -987,6 +989,15 @@ class OVSSwitch( Switch ):
                    'You may wish to try '
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
+        info = quietRun( 'ovs-vsctl --version' )
+        cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
+        if cls.isOldOVS():
+            print "using old version of ovs so startup will be slower"
+
+    @classmethod
+    def isOldOVS( cls ):
+        return ( StrictVersion( cls.OVSVersion ) <
+             StrictVersion( '1.10' ) )
 
     @classmethod
     def batchShutdown( cls, switches ):
@@ -1044,21 +1055,34 @@ class OVSSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
-        int( self.dpid, 16 ) # DPID must be a hex string
         # Interfaces and controllers
-        intfs = ' '.join( '-- add-port %s %s ' % ( self, intf )
+        intfs = ' '.join( '-- add-port %s %s -- set Interface %s ofport_request=%s ' % ( self, intf, intf, self.ports[intf] )
                          for intf in self.intfList() if not intf.IP() )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
                          for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
-        # Construct big ovs-vsctl command
-        cmd = ( 'ovs-vsctl add-br %s ' % self +
-                '-- set Bridge %s ' % self +
+        # configure old version ov ovs
+        if self.isOldOVS():
+            self.cmd( 'ovs-vsctl add-br', self )
+            for intf in self.intfList():
+                if not intf.IP():
+                    self.cmd('ovs-vsctl add-port', self, intf)
+            cmd = ('ovs-vsctl set Bridge %s ' % self +
                 'other_config:datapath-id=%s ' % self.dpid +
                 '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                intfs +
-                '-- set-controller %s %s ' % (self, clist ) )
+                '-- set-controller %s %s ' % (self, clist ))
+
+        int( self.dpid, 16 ) # DPID must be a hex string
+        # Construct big ovs-vsctl command
+        if not self.isOldOVS():
+            print "using a newer ovs version so startup will be faster"
+            cmd = ( 'ovs-vsctl add-br %s ' % self +
+                    '-- set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    intfs +
+                    '-- set-controller %s %s ' % (self, clist ) )
         if not self.inband:
             cmd += ( '-- set bridge %s '
                      'other-config:disable-in-band=true ' % self )
@@ -1274,4 +1298,3 @@ class RemoteController( Controller ):
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
-
