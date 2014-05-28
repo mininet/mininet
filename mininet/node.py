@@ -993,7 +993,7 @@ class OVSSwitch( Switch ):
         "Call ovs-vsctl del-br on all OVSSwitches in a list"
         quietRun( 'ovs-vsctl ' +
                   ' -- '.join( '--if-exists del-br %s' % s
-                               for s in switches if type(s) == cls ) )
+                               for s in switches ) )
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
@@ -1105,6 +1105,12 @@ class IVSSwitch(Switch):
                    '*** The openvswitch kernel module might '
                    'not be loaded. Try modprobe openvswitch.\n' )
             exit( 1 )
+
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Kill each IVS switch, to be waited on later in stop()"
+        for switch in switches:
+            switch.cmd( 'kill %ivs' )
 
     def start( self, controllers ):
         "Start up a new IVS switch"
