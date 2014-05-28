@@ -1063,7 +1063,6 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         # Construct big ovs-vsctl command for new versions of OVS
         if not self.isOldOVS():
-            print "\nusing a newer ovs version"
             cmd = ( 'ovs-vsctl add-br %s ' % self +
                     '-- set Bridge %s ' % self +
                     'other_config:datapath-id=%s ' % self.dpid +
@@ -1072,7 +1071,6 @@ class OVSSwitch( Switch ):
                     '-- set-controller %s %s ' % (self, clist ) )
         # Construct ovs-vsctl commands for old versions of OVS
         else:
-            print "\nusing an older ovs version"
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
