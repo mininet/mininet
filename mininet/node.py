@@ -991,8 +991,6 @@ class OVSSwitch( Switch ):
             exit( 1 )
         info = quietRun( 'ovs-vsctl --version' )
         cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
-        if cls.isOldOVS():
-            print "using old version of ovs so startup will be slower"
 
     @classmethod
     def isOldOVS( cls ):
@@ -1055,6 +1053,7 @@ class OVSSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
+        int( self.dpid, 16 ) # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s -- set Interface %s ofport_request=%s ' % ( self, intf, intf, self.ports[intf] )
                          for intf in self.intfList() if not intf.IP() )
@@ -1062,8 +1061,18 @@ class OVSSwitch( Switch ):
                          for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
-        # configure old version ov ovs
-        if self.isOldOVS():
+        # Construct big ovs-vsctl command for new versions of OVS
+        if not self.isOldOVS():
+            print "\nusing a newer ovs version"
+            cmd = ( 'ovs-vsctl add-br %s ' % self +
+                    '-- set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    intfs +
+                    '-- set-controller %s %s ' % (self, clist ) )
+        # Construct ovs-vsctl commands for old versions of OVS
+        else:
+            print "\nusing an older ovs version"
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
@@ -1072,17 +1081,6 @@ class OVSSwitch( Switch ):
                 'other_config:datapath-id=%s ' % self.dpid +
                 '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
                 '-- set-controller %s %s ' % (self, clist ))
-
-        int( self.dpid, 16 ) # DPID must be a hex string
-        # Construct big ovs-vsctl command
-        if not self.isOldOVS():
-            print "using a newer ovs version so startup will be faster"
-            cmd = ( 'ovs-vsctl add-br %s ' % self +
-                    '-- set Bridge %s ' % self +
-                    'other_config:datapath-id=%s ' % self.dpid +
-                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                    intfs +
-                    '-- set-controller %s %s ' % (self, clist ) )
         if not self.inband:
             cmd += ( '-- set bridge %s '
                      'other-config:disable-in-band=true ' % self )
