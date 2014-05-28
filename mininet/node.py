@@ -1055,7 +1055,9 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl del-br', self )
         int( self.dpid, 16 ) # DPID must be a hex string
         # Interfaces and controllers
-        intfs = ' '.join( '-- add-port %s %s -- set Interface %s ofport_request=%s ' % ( self, intf, intf, self.ports[intf] )
+        intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
+                          '-- set Interface %s ' % intf +
+                          'ofport_request=%s ' % self.ports[ intf ]
                          for intf in self.intfList() if not intf.IP() )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
                          for c in controllers )
@@ -1068,17 +1070,17 @@ class OVSSwitch( Switch ):
                     'other_config:datapath-id=%s ' % self.dpid +
                     '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
                     intfs +
-                    '-- set-controller %s %s ' % (self, clist ) )
+                    '-- set-controller %s %s ' % ( self, clist ) )
         # Construct ovs-vsctl commands for old versions of OVS
         else:
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
-                    self.cmd('ovs-vsctl add-port', self, intf)
+                    self.cmd('ovs-vsctl add-port', self, intf )
             cmd = ('ovs-vsctl set Bridge %s ' % self +
                 'other_config:datapath-id=%s ' % self.dpid +
                 '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                '-- set-controller %s %s ' % (self, clist ))
+                '-- set-controller %s %s ' % ( self, clist ) )
         if not self.inband:
             cmd += ( '-- set bridge %s '
                      'other-config:disable-in-band=true ' % self )
