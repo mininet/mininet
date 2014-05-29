@@ -781,6 +781,9 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
 
 def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
+    if Branch:
+        checkOutBranch( vm, branch=Branch )
+        vm.expect( prompt )
     if not tests:
         tests = []
     if pre:
@@ -811,8 +814,8 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
-                     memory=1024, outputFile=None ):
+def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None, 
+                runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
@@ -840,11 +843,9 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
-    if Branch:
-        checkOutBranch( vm, branch=Branch )
-        vm.expect( prompt )
-    runTests( vm, tests=tests, pre=pre, post=post )
-    # runTests eats its last prompt, but maybe it shouldn't...
+    # runFunction should begin with sendline and should eat its last prompt
+    if runFunction:
+        runFunction( vm, **runArgs )
     log( '* Shutting down' )
     vm.sendline( 'sudo shutdown -h now ' )
     log( '* Waiting for shutdown' )
@@ -950,9 +951,8 @@ def parseArgs():
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
-        bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory,
-                         outputFile=args.out )
+        bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,
+                    post=args.post, memory=args.memory, outputFile=args.out )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
