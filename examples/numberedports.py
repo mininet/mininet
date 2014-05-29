@@ -8,17 +8,16 @@ and that the ovs ports match the mininet ports.
 
 from mininet.net import Mininet
 from mininet.node import Controller
-from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 from mininet.node import Node
 
-def validatePort( self, intf ):
+def validatePort( switch, intf ):
     "Validate intf's OF port number"
-    ofport = int( self.cmd( 'ovs-vsctl get Interface', intf,
+    ofport = int( switch.cmd( 'ovs-vsctl get Interface', intf,
                           'ofport' ) )
-    if ofport != self.ports[ intf ]:
+    if ofport != switch.ports[ intf ]:
         warn( 'WARNING: ofport for', intf, 'is actually', ofport,
-              '\n' )
+        '\n' )
         return 0
     else:
         return 1
@@ -58,8 +57,9 @@ def net():
     info( '\n*** printing and validating the ports running on each interface\n' )
     for intfs in s1.intfList():
         if not intfs.name == "lo":
-            info( intfs, ': ', root.cmd( 'ovs-vsctl get Interface', intfs, 'ofport' ) )
-            info ( 'Validating ', intfs, '... ' )
+            info( intfs, ': ', s1.ports[intfs], 
+            '\n' )
+            info ( 'Validating that', intfs, 'is actually on port', s1.ports[intfs], '... ' )
             if validatePort( s1, intfs ):
                 info( 'Validated.\n' )
     print '\n'
