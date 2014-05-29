@@ -2,13 +2,14 @@
 
 """
 Create a network with 5 hosts, numbered 1-4 and 9. 
+Validate that the port numbers match to the interface name,
+and that the ovs ports match the mininet ports.
 """
 
 from mininet.net import Mininet
 from mininet.node import Controller
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info
-#from mininet.topo import Topo
 from mininet.node import Node
 
 def validatePort( self, intf ):
@@ -42,17 +43,18 @@ def net():
     s1 = net.addSwitch( 's1' )
 
     info( '*** Creating links\n' )
+    # host 1-4 connect to ports 1-4 on the switch
     net.addLink( h1, s1 )
     net.addLink( h2, s1 )
     net.addLink( h3, s1 )
     net.addLink( h4, s1 )
-    net.addLink( h5, s1, port1 = 1, port2 = 9 )
+    net.addLink( h5, s1, port1 = 1, port2 = 9 ) # specify a different port to connect host 5 to on the switch.
 
     root = Node( 'root', inNamespace=False )
     info( '*** Starting network\n' )
     net.start()
-    #info( s1.intfs, "\n" )
-    # print the interfaces, their port numbers, and the port requests
+
+    # print the interfaces and their port numbers
     info( '\n*** printing and validating the ports running on each interface\n' )
     for intfs in s1.intfList():
         if not intfs.name == "lo":
@@ -62,7 +64,7 @@ def net():
                 info( 'Validated.\n' )
     print '\n'
         
-    #info( root.cmd( 'ovs-vsctl list interface | grep -A 2 s1 ' ) )
+    # test the network with pingall
     net.pingAll()
     print '\n'
 
