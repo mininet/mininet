@@ -117,3 +117,8 @@ memory and `sysctl` configuration (see `INSTALL`.)
 
 This example creates a 64-host tree network, and attempts to check full
 connectivity using `ping`, for different switch/datapath types.
+
+#### numberedports.py
+
+This example verifies the mininet ofport numbers match up to the ovs port numbers.
+It also verifies that the port numbers match up to the interface numbers
