@@ -725,6 +725,23 @@ class CPULimitedHost( Host ):
         mountCgroups()
         cls.inited = True
 
+class HostWithPrivateDirs( Host ):
+    "Host with private directories"
+
+    def __init__(self, *args, **kwargs ):
+        """privateDirs: list of private directories"""
+
+        self.privateDirs = kwargs.pop( 'privateDirs', [] )
+        Host.__init__( self, *args, **kwargs )
+        self.mountPrivateDirs()
+
+    def mountPrivateDirs( self ):
+        "Mount tmpfs for each private directory"
+        for dir_ in self.privateDirs:
+            self.cmd( 'mkdir -p ' + dir_ )
+            self.cmd( 'mount -n -t tmpfs tmpfs %s' % dir_ )
+
+
 
 # Some important things to note:
 #
