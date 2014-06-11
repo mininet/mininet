@@ -8,7 +8,7 @@ and that the ovs ports match the mininet ports.
 
 from mininet.net import Mininet
 from mininet.node import Controller
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel, info, warn
 from mininet.node import Node
 
 def validatePort( switch, intf ):
@@ -16,8 +16,7 @@ def validatePort( switch, intf ):
     ofport = int( switch.cmd( 'ovs-vsctl get Interface', intf,
                           'ofport' ) )
     if ofport != switch.ports[ intf ]:
-        warn( 'WARNING: ofport for', intf, 'is actually', ofport,
-        '\n' )
+        warn( 'WARNING: ofport for', intf, 'is actually', ofport, '\n' )
         return 0
     else:
         return 1
