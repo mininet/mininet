@@ -281,6 +281,8 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
+    while ( len(args) < 4 ):
+        args.append( 0 )
     return ipNum( *args )
 
 def netParse( ipstr ):
@@ -290,6 +292,10 @@ def netParse( ipstr ):
     if '/' in ipstr:
         ip, pf = ipstr.split( '/' )
         prefixLen = int( pf )
+    #if no prefix is specified, set the prefix to 24
+    else:
+        ip = ipstr
+        prefixLen = 24
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):
