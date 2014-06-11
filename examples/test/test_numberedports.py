@@ -7,10 +7,11 @@ Test for numberedports.py
 import unittest
 import pexpect
 from collections import defaultdict
-
+from mininet.node import OVSSwitch
 
 class testNumberedports( unittest.TestCase ):
 
+    @unittest.skipIf( OVSSwitch.setup() or OVSSwitch.isOldOVS(), "old version of OVS" )
     def testConsistency( self ):
         """verify consistency between mininet and ovs ports"""
         p = pexpect.spawn( 'python -m mininet.examples.numberedports' )
@@ -28,7 +29,7 @@ class testNumberedports( unittest.TestCase ):
             elif index == 2:
                 self.assertNotEqual( 0, count )
                 break
-            self.assertTrue( correct_ports )
+        self.assertTrue( correct_ports )
 
     def testNumbering( self ):
         """verify that all of the port numbers are printed correctly and consistent with their interface"""
@@ -44,8 +45,8 @@ class testNumberedports( unittest.TestCase ):
                 ofport = p.match.group( 2 )
                 self.assertEqual( intfport, ofport )
             elif index == 1:
-                self.assertNotEqual( 0, count_intfs )
                 break
+                self.assertNotEqual( 0, count_intfs )
 
 if __name__ == '__main__':
     unittest.main()
