@@ -69,4 +69,18 @@ def cleanup():
         if link:
             sh( "ip link del " + link )
 
+    info( "*** Killing stale mininet node processes\n" )
+    sh( 'pkill -9 -f mininet:' )
+    # Make sure they are gone
+    while True:
+        try:
+            pids = co( 'pgrep -f mininet:'.split() )
+        except:
+            pids = ''
+        if pids:
+            sh( 'pkill -f 9 mininet:' )
+            sleep( .5 )
+        else:
+            break
+
     info( "*** Cleanup complete.\n" )
