@@ -55,6 +55,8 @@ class testOptionsTopoCommon( object ):
         """
         self.assertGreaterEqual( float(measured),
                                  float(expected) * tolerance_frac )
+        self.assertLess( float( measured ),
+                                    float(expected) + (1-tolerance_frac) * float( expected ) )
 
     def testCPULimits( self ):
         "Verify topology creation with CPU limits set for both schedulers."
@@ -69,18 +71,19 @@ class testOptionsTopoCommon( object ):
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
         for cpu in results:
-            self.assertWithinTolerance( cpu, CPU_FRACTION, CPU_TOLERANCE )
+            #divide cpu by 100 to convert from percentage to fraction
+            self.assertWithinTolerance( cpu/100, CPU_FRACTION, CPU_TOLERANCE )
 
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
-        BW = 5  # Mbps
+        BW = .5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
         lopts = { 'bw': BW, 'use_htb': True }
         # Also verify correctness of limit limitng within a bound.
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass )
-        bw_strs = mn.run( mn.iperf )
+        bw_strs = mn.run( mn.iperf, format='m' )
         for bw_str in bw_strs:
             bw = float( bw_str.split(' ')[0] )
             self.assertWithinTolerance( bw, BW, BW_TOLERANCE )
@@ -101,9 +104,10 @@ class testOptionsTopoCommon( object ):
         self.assertEqual( sent, received )
         # pylint: enable-msg=W0612
         for rttval in [rttmin, rttavg, rttmax]:
-            # Multiply delay by 4 to cover there & back on two links
-            self.assertWithinTolerance( rttval, DELAY_MS * 4.0,
+            # Multiply delay by 8 to cover there & back on two links, for both the icmp packets and the arp packets
+            self.assertWithinTolerance( rttval, DELAY_MS * 8.0, 
                                         DELAY_TOLERANCE)
+
 
     def testLinkLoss( self ):
         "Verify that we see packet drops with a high configured loss rate."
