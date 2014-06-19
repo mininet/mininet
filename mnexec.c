@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
                 perror("mount");
                 return 1;
             }
+
             break;
         case 'p':
             /* print pid */
@@ -140,7 +141,7 @@ int main(int argc, char *argv[])
             fflush(stdout);
             break;
         case 'a':
-            /* Attach to pid's network namespace */
+            /* Attach to pid's network namespace and mount namespace*/
             pid = atoi(optarg);
             sprintf(path, "/proc/%d/ns/net", pid );
             nsid = open(path, O_RDONLY);
@@ -152,6 +153,18 @@ int main(int argc, char *argv[])
                 perror("setns");
                 return 1;
             }
+            sprintf(path, "/proc/%d/ns/mnt", pid );
+            nsid = open(path, O_RDONLY);
+            if (nsid < 0) {
+                perror(path);
+                return 1;
+            }
+            if (setns(nsid, 0) != 0) {
+                perror("setns");
+                return 1;
+            }
+
+
             break;
         case 'g':
             /* Attach to cgroup */

@@ -728,14 +728,28 @@ class CPULimitedHost( Host ):
 class HostWithPrivateDirs( Host ):
     "Host with private directories"
 
-    def __init__(self, *args, **kwargs ):
+    def __init__(self, name, *args, **kwargs ):
         """privateDirs: list of private directories"""
-
+        self.name = name
         self.privateDirs = kwargs.pop( 'privateDirs', [] )
-        Host.__init__( self, *args, **kwargs )
+        Host.__init__( self, name, *args, **kwargs )
         self.mountPrivateDirs()
 
     def mountPrivateDirs( self ):
+        "mount the directories that have specified mountpoints"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                privateDir = directory[ 1 ] %self.__dict__ 
+                mountPoint = directory[ 0 ]
+                self.cmd( 'mkdir -p %s' %privateDir )
+                self.cmd( 'mkdir -p %s' %mountPoint )
+                self.cmd( 'mount --bind %s %s' %( privateDir, mountPoint ) )
+            else:
+                self.cmd( 'mkdir -p %s' %directory ) 
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' %directory )
+
+
+    def mountTempDirs( self ):
         "Mount tmpfs for each private directory"
         for dir_ in self.privateDirs:
             self.cmd( 'mkdir -p ' + dir_ )

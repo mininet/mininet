@@ -20,7 +20,9 @@ from functools import partial
 def testHostWithPrivateDirs():
     "Test bind mounts"
     topo = SingleSwitchTopo( 10 )
-    privateDirs = [ '/var/log', '/var/run' ]
+    privateDirs = [ ( '/var/log', '/onos/%(name)s/var/log' ), 
+                    ( '/var/run', '/ovx/%(name)s/var/run' ), 
+                      '/mn' ]
     host = partial( HostWithPrivateDirs,
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
