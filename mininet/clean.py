@@ -10,7 +10,7 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output as co
 import time
 
 from mininet.log import info
