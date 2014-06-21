@@ -27,7 +27,13 @@ def testHostWithPrivateDirs():
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
     net.start()
-    info( 'Private Directories:', privateDirs, '\n' )
+    info( 'private Directories: [ ' )
+    for directory in privateDirs:
+        if isinstance( directory, tuple ):
+            info( '%s, ' %directory[0] )
+        else: 
+            info( '%s, ' %directory )
+    info( ']\n' )
     CLI( net )
     net.stop()
 

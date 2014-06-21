@@ -749,13 +749,6 @@ class HostWithPrivateDirs( Host ):
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' %directory )
 
 
-    def mountTempDirs( self ):
-        "Mount tmpfs for each private directory"
-        for dir_ in self.privateDirs:
-            self.cmd( 'mkdir -p ' + dir_ )
-            self.cmd( 'mount -n -t tmpfs tmpfs %s' % dir_ )
-
-
 
 # Some important things to note:
 #
