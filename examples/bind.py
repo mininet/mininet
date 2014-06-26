@@ -1,9 +1,38 @@
 #!/usr/bin/python
 
 """
-bind.py: Bind mount prototype
+bind.py: Bind mount example
 
-This creates hosts with private directories as desired.
+This creates hosts with private directories that the user specifies.
+These hosts may have persistent directories that will be available
+across multiple mininet session, or temporary directories that will
+only last for one mininet session. To specify a persistent
+directory, add a tuple to a list of private directories:
+
+    [ ( 'directory to be mounted on', 'directory to be mounted' ) ]
+
+String expansion may be used to create a directory template for
+each host. To do this, add a %(name)s in place of the host name
+when creating your list of directories:
+
+    [ ( '/var/run', '/tmp/%(name)s/var/run' ) ]
+
+If no persistent directory is specified, the directories will default
+to temporary private directories. To do this, simply create a list of
+directories to be made private. A tmpfs will then be mounted on them.
+
+You may use both temporary and persistent directories at the same
+time. In the following privateDirs string, each host will have a 
+persistent directory in the root filesystem at
+"/tmp/(hostname)/var/run" mounted on "/var/run". Each host will also
+have a temporary private directory mounted on "/var/log".
+
+    [ ( '/var/run', '/tmp/%(name)s/var/run' ), '/var/log' ]
+
+This example runs TWO mininet instances, one after the other.
+The first mounts persistent private directories on /var/log and
+/var/run. The second mounts temporary private directories on the same
+directories.
 """
 
 from mininet.net import Mininet
@@ -15,33 +44,45 @@ from mininet.log import setLogLevel, info, debug
 from functools import partial
 
 
-# Sample usage
+# Persistent directory sample usage
 
-def testHostWithPrivateDirs():
+def testPersistentPrivateDirs():
     "Test bind mounts"
     topo = SingleSwitchTopo( 10 )
-    privateDirs = [ ( '/var/log', '/onos/%(name)s/var/log' ), 
-                    ( '/var/run', '/ovx/%(name)s/var/run' ), 
-                      '/mn' ]
+    privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ), 
+                    ( '/var/run', '/tmp/%(name)s/var/run' ) ]
     host = partial( HostWithPrivateDirs,
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
     net.start()
-    info( 'private Directories: [ ' )
+    info( 'Private Directories: [ ' )
     for directory in privateDirs:
         if isinstance( directory, tuple ):
-            info( '%s, ' %directory[0] )
+            info( '%s, ' %directory[ 0 ] )
         else: 
             info( '%s, ' %directory )
     info( ']\n' )
     CLI( net )
     net.stop()
 
+# Temporary directory sample usage
+
+def testTempPrivateDirs():
+    "test bind mounts with temporary directories"
+    topo = SingleSwitchTopo( 10 )
+    privateDirs = [ '/var/log', '/var/run' ]
+    host = partial( HostWithPrivateDirs,
+                    privateDirs=privateDirs )
+    net = Mininet( topo=topo, host=host )
+    net.start()
+    info( 'Private Directories: ', privateDirs, '\n' )
+    CLI( net )
+    net.stop()
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    testHostWithPrivateDirs()
-    info( 'Done.\n')
-
+    testPersistentPrivateDirs()
+    testTempPrivateDirs()
+    info( 'Done.\n' )
 
 

@@ -16,6 +16,11 @@ Host: a virtual host. By default, a host is simply a shell; commands
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
 
+HostWithPrivateDirs: a virtual host that has user-specified private
+    directories. These may be temporary directories stored as a tmpfs,
+    or persistent directories that are mounted from another directory in
+    the root filesystem.
+
 Switch: superclass for switch nodes.
 
 UserSwitch: a switch using the user-space switch from the OpenFlow
@@ -728,23 +733,25 @@ class CPULimitedHost( Host ):
 class HostWithPrivateDirs( Host ):
     "Host with private directories"
 
-    def __init__(self, name, *args, **kwargs ):
-        """privateDirs: list of private directories"""
+    def __init__( self, name, *args, **kwargs ):
+        "privateDirs: list of private directory strings or tuples"
         self.name = name
         self.privateDirs = kwargs.pop( 'privateDirs', [] )
         Host.__init__( self, name, *args, **kwargs )
         self.mountPrivateDirs()
 
     def mountPrivateDirs( self ):
-        "mount the directories that have specified mountpoints"
+        "mount private directories"
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
+                # mount given private directory
                 privateDir = directory[ 1 ] %self.__dict__ 
                 mountPoint = directory[ 0 ]
                 self.cmd( 'mkdir -p %s' %privateDir )
                 self.cmd( 'mkdir -p %s' %mountPoint )
                 self.cmd( 'mount --bind %s %s' %( privateDir, mountPoint ) )
             else:
+                # mount temporary filesystem on directory
                 self.cmd( 'mkdir -p %s' %directory ) 
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' %directory )
 
