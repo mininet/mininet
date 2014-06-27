@@ -1076,16 +1076,16 @@ class OVSSwitch( Switch ):
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
-                    self.cmd('ovs-vsctl add-port', self, intf )
-            cmd = ('ovs-vsctl set Bridge %s ' % self +
-                'other_config:datapath-id=%s ' % self.dpid +
-                '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                '-- set-controller %s %s ' % ( self, clist ) )
+                    self.cmd( 'ovs-vsctl add-port', self, intf )
+            cmd = ( 'ovs-vsctl set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    '-- set-controller %s %s ' % ( self, clist ) )
         if not self.inband:
             cmd += ( '-- set bridge %s '
                      'other-config:disable-in-band=true ' % self )
         if self.datapath == 'user':
-            cmd +=  '-- set bridge %s datapath_type=netdev ' % self
+            cmd += '-- set bridge %s datapath_type=netdev ' % self
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
             if uuid.count( '-' ) != 4:
