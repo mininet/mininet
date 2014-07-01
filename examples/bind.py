@@ -29,10 +29,9 @@ have a temporary private directory mounted on "/var/log".
 
     [ ( '/var/run', '/tmp/%(name)s/var/run' ), '/var/log' ]
 
-This example runs TWO mininet instances, one after the other.
-The first mounts persistent private directories on /var/log and
-/var/run. The second mounts temporary private directories on the same
-directories.
+This example has both persistent directories mounted on '/var/log'
+and '/var/run'. It also has a temporary private directory mounted
+on '/var/mn'
 """
 
 from mininet.net import Mininet
@@ -44,45 +43,30 @@ from mininet.log import setLogLevel, info, debug
 from functools import partial
 
 
-# Persistent directory sample usage
+# Sample usage
 
-def testPersistentPrivateDirs():
+def testHostWithPrivateDirs():
     "Test bind mounts"
     topo = SingleSwitchTopo( 10 )
     privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ), 
-                    ( '/var/run', '/tmp/%(name)s/var/run' ) ]
+                    ( '/var/run', '/tmp/%(name)s/var/run' ), 
+                      '/var/mn' ]
     host = partial( HostWithPrivateDirs,
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
     net.start()
-    info( 'Private Directories: [ ' )
+    directories = []
     for directory in privateDirs:
-        if isinstance( directory, tuple ):
-            info( '%s, ' %directory[ 0 ] )
-        else: 
-            info( '%s, ' %directory )
-    info( ']\n' )
-    CLI( net )
-    net.stop()
-
-# Temporary directory sample usage
-
-def testTempPrivateDirs():
-    "test bind mounts with temporary directories"
-    topo = SingleSwitchTopo( 10 )
-    privateDirs = [ '/var/log', '/var/run' ]
-    host = partial( HostWithPrivateDirs,
-                    privateDirs=privateDirs )
-    net = Mininet( topo=topo, host=host )
-    net.start()
-    info( 'Private Directories: ', privateDirs, '\n' )
+        directories.append( directory[ 0 ]
+                            if isinstance( directory, tuple )
+                            else directory )
+    info( 'Private Directories:',  directories, '\n' )
     CLI( net )
     net.stop()
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    testPersistentPrivateDirs()
-    testTempPrivateDirs()
-    info( 'Done.\n' )
+    testHostWithPrivateDirs()
+    info( 'Done.\n')
 
 
