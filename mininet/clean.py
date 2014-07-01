@@ -10,7 +10,7 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output as co
 import time
 
 from mininet.log import info
@@ -68,5 +68,19 @@ def cleanup():
     for link in links:
         if link:
             sh( "ip link del " + link )
+
+    info( "*** Killing stale mininet node processes\n" )
+    sh( 'pkill -9 -f mininet:' )
+    # Make sure they are gone
+    while True:
+        try:
+            pids = co( 'pgrep -f mininet:'.split() )
+        except:
+            pids = ''
+        if pids:
+            sh( 'pkill -f 9 mininet:' )
+            sleep( .5 )
+        else:
+            break
 
     info( "*** Cleanup complete.\n" )
