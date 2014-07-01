@@ -124,8 +124,9 @@ class Node( object ):
             opts += 'n'
         # bash -m: enable job control, i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
-        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ), 'bash',
-                '--norc', '-mis', 'mininet:' + self.name ]
+        # prompt is set to sentinel chr( 127 )
+        os.environ[ 'PS1' ] = chr( 127 )
+        cmd = [ 'mnexec', opts, 'bash', '--norc', '-mis', 'mininet:' + self.name ]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
