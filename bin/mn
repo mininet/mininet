@@ -261,12 +261,14 @@ class MininetRunner( object ):
         if test == 'none':
             pass
         elif test == 'all':
+            mn.waitConnected()
             mn.start()
             mn.ping()
             mn.iperf()
         elif test == 'cli':
             CLI( mn )
         elif test != 'build':
+            mn.waitConnected()
             getattr( mn, test )()
 
         if self.options.post:

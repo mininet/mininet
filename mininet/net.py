@@ -94,7 +94,7 @@ from time import sleep
 from itertools import chain, groupby
 
 from mininet.cli import CLI
-from mininet.log import info, error, debug, output
+from mininet.log import info, error, debug, output, warn
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
@@ -112,7 +112,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None ):
+                  listenPort=None, waitConnected=False ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -162,6 +162,33 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
+
+        if waitConnected:
+            self.waitConnected()
+
+    def waitConnected( self ):
+        """wait for each switch to connect to a controller,
+           up to 5 seconds
+           returns: True if all switches are connected"""
+        info( '***waiting for switches to connect\n' )
+        time = 0
+        while time < 5:
+            connected = True
+            for switch in self.switches:
+                if not switch.connected():
+                    connected = False
+                    sleep( .1 )
+                    time += .1
+                    break
+            if connected:
+                break
+        if time >= 5:
+            warn( 'Timed out after %d seconds\n' % time )
+            for switch in self.switches:
+                if not switch.connected():
+                    warn( 'Warning: %s is not connected to a controller\n'
+                           % switch.name )
+        return connected
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
