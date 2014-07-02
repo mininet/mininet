@@ -147,7 +147,6 @@ class Node( object ):
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
-        self.waiting = False
         # Wait for prompt
         while True:
             data = self.read( 1024 )
