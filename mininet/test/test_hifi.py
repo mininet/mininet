@@ -105,7 +105,7 @@ class testOptionsTopoCommon( object ):
         # pylint: enable-msg=W0612
         for rttval in [rttmin, rttavg, rttmax]:
             # Multiply delay by 4 to cover there & back on two links
-            self.assertWithinTolerance( rttval, DELAY_MS * 4.0, 
+            self.assertWithinTolerance( rttval, DELAY_MS * 4.0,
                                         DELAY_TOLERANCE)
 
 
