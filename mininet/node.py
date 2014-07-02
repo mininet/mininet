@@ -150,7 +150,7 @@ class Node( object ):
         # Wait for prompt
         while True:
             data = self.read( 1024 )
-            if chr( 127 ) in data:
+            if data[ -1 ] == chr( 127 ):
                 break
             self.pollOut.poll()
         self.waiting = False
