@@ -94,7 +94,7 @@ class testOptionsTopoCommon( object ):
         DELAY_TOLERANCE = 0.8  # Delay fraction below which test should fail
         lopts = { 'delay': '%sms' % DELAY_MS, 'use_htb': True }
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
-                      link=TCLink, switch=self.switchClass )
+                      link=TCLink, switch=self.switchClass, autoStaticArp=True )
         ping_delays = mn.run( mn.pingFull )
         test_outputs = ping_delays[0]
         # Ignore unused variables below
@@ -104,8 +104,8 @@ class testOptionsTopoCommon( object ):
         self.assertEqual( sent, received )
         # pylint: enable-msg=W0612
         for rttval in [rttmin, rttavg, rttmax]:
-            # Multiply delay by 8 to cover there & back on two links, for both the icmp packets and the arp packets
-            self.assertWithinTolerance( rttval, DELAY_MS * 8.0, 
+            # Multiply delay by 4 to cover there & back on two links
+            self.assertWithinTolerance( rttval, DELAY_MS * 4.0, 
                                         DELAY_TOLERANCE)
 
 
