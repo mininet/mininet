@@ -745,15 +745,16 @@ class HostWithPrivateDirs( Host ):
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 # mount given private directory
-                privateDir = directory[ 1 ] %self.__dict__ 
+                privateDir = directory[ 1 ] % self.__dict__ 
                 mountPoint = directory[ 0 ]
-                self.cmd( 'mkdir -p %s' %privateDir )
-                self.cmd( 'mkdir -p %s' %mountPoint )
-                self.cmd( 'mount --bind %s %s' %( privateDir, mountPoint ) )
+                self.cmd( 'mkdir -p %s' % privateDir )
+                self.cmd( 'mkdir -p %s' % mountPoint )
+                self.cmd( 'mount --bind %s %s' %
+                               ( privateDir, mountPoint ) )
             else:
                 # mount temporary filesystem on directory
-                self.cmd( 'mkdir -p %s' %directory ) 
-                self.cmd( 'mount -n -t tmpfs tmpfs %s' %directory )
+                self.cmd( 'mkdir -p %s' % directory ) 
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
 
 

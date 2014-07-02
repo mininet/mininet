@@ -133,7 +133,6 @@ int main(int argc, char *argv[])
                 perror("mount");
                 return 1;
             }
-
             break;
         case 'p':
             /* print pid */
@@ -163,8 +162,6 @@ int main(int argc, char *argv[])
                 perror("setns");
                 return 1;
             }
-
-
             break;
         case 'g':
             /* Attach to cgroup */
