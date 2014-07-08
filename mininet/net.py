@@ -170,6 +170,7 @@ class Mininet( object ):
     def waitConnected( self, timeout=None ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
+           timeout: max time to wait for switches to connect.
            returns: True if all switches are connected"""
         info( '***waiting for switches to connect\n' )
         time = 0
