@@ -90,6 +90,7 @@ import os
 import re
 import select
 import signal
+import copy
 from time import sleep
 from itertools import chain, groupby
 
@@ -166,23 +167,25 @@ class Mininet( object ):
         if waitConnected:
             self.waitConnected()
 
-    def waitConnected( self ):
+    def waitConnected( self, timeout=None ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
            returns: True if all switches are connected"""
         info( '***waiting for switches to connect\n' )
         time = 0
-        while time < 5:
+        remaining = copy.copy( self.switches )
+        while time < timeout or timeout == None:
             connected = True
-            for switch in self.switches:
+            for switch in remaining:
                 if not switch.connected():
                     connected = False
-                    sleep( .1 )
-                    time += .1
-                    break
+                    sleep( .5 )
+                    time += .5
+                else:
+                    remaining.remove( switch )
             if connected:
                 break
-        if time >= 5:
+        if time >= timeout and not timeout ==  None:
             warn( 'Timed out after %d seconds\n' % time )
             for switch in self.switches:
                 if not switch.connected():
