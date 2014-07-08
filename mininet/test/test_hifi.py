@@ -55,8 +55,9 @@ class testOptionsTopoCommon( object ):
         """
         self.assertGreaterEqual( float(measured),
                                  float(expected) * tolerance_frac )
-        self.assertLess( float( measured ),
-                                    float(expected) + (1-tolerance_frac) * float( expected ) )
+        self.assertLessEqual( float( measured ),
+                                 float(expected) + (1-tolerance_frac)
+                                 * float( expected ) )
 
     def testCPULimits( self ):
         "Verify topology creation with CPU limits set for both schedulers."
@@ -70,9 +71,9 @@ class testOptionsTopoCommon( object ):
         mn.start()
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
-        for cpu in results:
+        for pct in results:
             #divide cpu by 100 to convert from percentage to fraction
-            self.assertWithinTolerance( cpu/100, CPU_FRACTION, CPU_TOLERANCE )
+            self.assertWithinTolerance( pct/100, CPU_FRACTION, CPU_TOLERANCE )
 
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
