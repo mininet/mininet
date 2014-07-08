@@ -219,7 +219,7 @@ class Node( object ):
            args: command and arguments, or string
            printPid: print command's PID?"""
         assert not self.waiting
-        printPid = kwargs.get( 'printPid', False )
+        printPid = kwargs.get( 'printPid', True )
         # Allow sendCmd( [ list ] )
         if len( args ) == 1 and type( args[ 0 ] ) is list:
             cmd = args[ 0 ]
