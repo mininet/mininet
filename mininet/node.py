@@ -234,7 +234,11 @@ class Node( object ):
             cmd = 'echo -n'
         self.lastCmd = cmd
         if printPid and not isShellBuiltin( cmd ):
-            cmd = 'mnexec -p ' + cmd
+            if len( cmd ) > 0 and cmd[ -1 ] == '&':
+                # print ^A{pid}\n so monitor() can set lastPid
+                cmd += ' printf "\\001%d\n" $! \n'
+            else:
+                cmd = 'mnexec -p ' + cmd
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
