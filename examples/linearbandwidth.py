@@ -76,7 +76,7 @@ def linearBandwidthTest( lengths ):
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        net = Mininet( topo=topo, switch=Switch )
+        net = Mininet( topo=topo, switch=Switch, waitConnected=True )
         net.start()
         print "*** testing basic connectivity"
         for n in lengths:
