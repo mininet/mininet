@@ -149,6 +149,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+        self.waitConn = waitConnected
 
         self.hosts = []
         self.switches = []
@@ -164,8 +165,6 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-        if waitConnected:
-            self.waitConnected()
 
     def waitConnected( self, timeout=None ):
         """wait for each switch to connect to a controller,
@@ -180,12 +179,12 @@ class Mininet( object ):
             for switch in remaining:
                 if not switch.connected():
                     connected = False
-                    sleep( .5 )
-                    time += .5
                 else:
                     remaining.remove( switch )
             if connected:
                 break
+            sleep( .5 )
+            time += .5
         if time >= timeout and timeout is not  None:
             warn( 'Timed out after %d seconds\n' % time )
             for switch in self.switches:
@@ -432,6 +431,8 @@ class Mininet( object ):
             info( switch.name + ' ')
             switch.start( self.controllers )
         info( '\n' )
+        if self.waitConn:
+            self.waitConnected()
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
