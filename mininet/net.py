@@ -404,6 +404,11 @@ class Mininet( object ):
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
+        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
+        for controller in self.controllers:
+            info( controller.name + ' ' )
+            controller.stop()
+        info( '\n' )
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
@@ -419,11 +424,6 @@ class Mininet( object ):
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
-        info( '\n' )
-        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
-        for controller in self.controllers:
-            info( controller.name + ' ' )
-            controller.stop()
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
