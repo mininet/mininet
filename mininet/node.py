@@ -856,6 +856,8 @@ class UserSwitch( Switch ):
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        else:
+            self.opts += ' --listen=punix:/tmp/%s.listen' % self.name
         self.dpopts = dpopts
 
     @classmethod
@@ -868,7 +870,7 @@ class UserSwitch( Switch ):
         "Run dpctl command"
         listenAddr = None
         if not self.listenPort:
-            listenAddr = 'unix:/tmp/' + self.name
+            listenAddr = 'unix:/tmp/%s.listen' % self.name
         else:
             listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
