@@ -48,18 +48,25 @@ class MultiGraph( object ):
 class Topo(object):
     "Data center network representation for structured multi-trees."
 
-    def __init__(self, hopts=None, sopts=None, lopts=None):
-        """Topo object:
+    def __init__(self, *args, **params):
+        """Topo object. 
+           Optional named parameters:
            hinfo: default host options
            sopts: default switch options
-           lopts: default link options"""
+           lopts: default link options
+           calls build()"""
         self.g = MultiGraph()
         self.node_info = {}
         self.link_info = {}  # (src, dst) tuples hash to EdgeInfo objects
-        self.hopts = {} if hopts is None else hopts
-        self.sopts = {} if sopts is None else sopts
-        self.lopts = {} if lopts is None else lopts
+        self.hopts = params.pop( 'hopts', {} )
+        self.sopts = params.pop( 'sopts', {} )
+        self.lopts = params.pop( 'lopts', {} )
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
+        self.build( *args, **params )
+
+    def build( self, *args, **params ):
+        "Override this method to build your topology."
+        pass
 
     def addNode(self, name, **opts):
         """Add Node to graph.
