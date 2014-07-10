@@ -171,7 +171,7 @@ class Mininet( object ):
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely
            returns: True if all switches are connected"""
-        info( '***waiting for switches to connect\n' )
+        info( '*** Waiting for switches to connect\n' )
         time = 0
         remaining = copy.copy( self.switches )
         while time < timeout or timeout == None:
@@ -678,7 +678,7 @@ class Mininet( object ):
         if l4Type == 'TCP':
             while 'Connected' not in client.cmd(
                     'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
-                output('waiting for iperf to start up...')
+                info( 'Waiting for iperf to start up...' )
                 sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                              bwArgs )
