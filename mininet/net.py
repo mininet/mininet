@@ -166,32 +166,35 @@ class Mininet( object ):
             self.build()
 
 
-    def waitConnected( self, timeout=None ):
+    def waitConnected( self, timeout=None, delay=.5 ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely
+           delay: seconds to sleep per iteration
            returns: True if all switches are connected"""
         info( '*** Waiting for switches to connect\n' )
         time = 0
         remaining = copy.copy( self.switches )
-        while time < timeout or timeout == None:
-            connected = True
+        while True:
             for switch in remaining:
-                if not switch.connected():
-                    connected = False
-                else:
+                if switch.connected():
+                    info( '%s ' % switch )
                     remaining.remove( switch )
-            if connected:
+            if not remaining:
+                info( '\n' )
+                return True
+            if time > timeout and timeout is not None:
                 break
-            sleep( .5 )
-            time += .5
-        if time >= timeout and timeout is not  None:
-            warn( 'Timed out after %d seconds\n' % time )
-            for switch in self.switches:
-                if not switch.connected():
-                    warn( 'Warning: %s is not connected to a controller\n'
-                           % switch.name )
-        return connected
+            sleep( delay )
+            time += delay
+        warn( 'Timed out after %d seconds\n' % time )
+        for switch in remaining:
+            if not switch.connected():
+                warn( 'Warning: %s is not connected to a controller\n'
+                      % switch.name )
+            else:
+                remaining.remove( switch )
+        return not remaining
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
