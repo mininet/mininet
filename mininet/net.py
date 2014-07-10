@@ -432,7 +432,7 @@ class Mininet( object ):
             switch.start( self.controllers )
         info( '\n' )
         if self.waitConn:
-            self.waitConnected( )
+            self.waitConnected()
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
