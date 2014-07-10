@@ -1,15 +1,14 @@
 """
-Package: nodelib
-
 Node Library for Mininet
 
-This contains additional node types which you may find to be useful
+This contains additional Node types which you may find to be useful
 """
 
 from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.node import Switch
 from mininet.log import setLogLevel, info
+
 
 class LinuxBridge( Switch ):
     "Linux Bridge (with optional spanning tree)"
