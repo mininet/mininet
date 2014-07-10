@@ -856,6 +856,8 @@ class UserSwitch( Switch ):
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        else:
+            self.opts += ' --listen=punix:/tmp/%s.listen' % self.name
         self.dpopts = dpopts
 
     @classmethod
@@ -868,7 +870,7 @@ class UserSwitch( Switch ):
         "Run dpctl command"
         listenAddr = None
         if not self.listenPort:
-            listenAddr = 'unix:/tmp/' + self.name
+            listenAddr = 'unix:/tmp/%s.listen' % self.name
         else:
             listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
@@ -1034,7 +1036,7 @@ class OVSSwitch( Switch ):
         "Call ovs-vsctl del-br on all OVSSwitches in a list"
         quietRun( 'ovs-vsctl ' +
                   ' -- '.join( '--if-exists del-br %s' % s
-                               for s in switches if type(s) == cls ) )
+                               for s in switches ) )
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
@@ -1108,16 +1110,16 @@ class OVSSwitch( Switch ):
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
-                    self.cmd('ovs-vsctl add-port', self, intf )
-            cmd = ('ovs-vsctl set Bridge %s ' % self +
-                'other_config:datapath-id=%s ' % self.dpid +
-                '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                '-- set-controller %s %s ' % ( self, clist ) )
+                    self.cmd( 'ovs-vsctl add-port', self, intf )
+            cmd = ( 'ovs-vsctl set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    '-- set-controller %s %s ' % ( self, clist ) )
         if not self.inband:
             cmd += ( '-- set bridge %s '
                      'other-config:disable-in-band=true ' % self )
         if self.datapath == 'user':
-            cmd +=  '-- set bridge %s datapath_type=netdev ' % self
+            cmd += '-- set bridge %s datapath_type=netdev ' % self
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
             if uuid.count( '-' ) != 4:
@@ -1144,8 +1146,9 @@ OVSKernelSwitch = OVSSwitch
 class IVSSwitch(Switch):
     """IVS virtual switch"""
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, verbose=True, **kwargs ):
         Switch.__init__( self, name, **kwargs )
+        self.verbose = verbose
 
     @classmethod
     def setup( cls ):
@@ -1160,12 +1163,19 @@ class IVSSwitch(Switch):
                    'not be loaded. Try modprobe openvswitch.\n' )
             exit( 1 )
 
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Kill each IVS switch, to be waited on later in stop()"
+        for switch in switches:
+            switch.cmd( 'kill %ivs' )
+
     def start( self, controllers ):
         "Start up a new IVS switch"
         args = ['ivs']
         args.extend( ['--name', self.name] )
         args.extend( ['--dpid', self.dpid] )
-        args.extend( ['--verbose'] )
+        if self.verbose:
+            args.extend( ['--verbose'] )
         for intf in self.intfs.values():
             if not intf.IP():
                 args.extend( ['-i', intf.name] )

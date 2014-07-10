@@ -158,7 +158,7 @@ def depend():
     run( 'sudo apt-get -y update' )
     run( 'sudo apt-get install -y'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
-         ' e2fsprogs dnsmasq'
+         ' e2fsprogs dnsmasq curl'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
@@ -457,16 +457,16 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
     return vm
 
 
-def login( vm ):
+def login( vm, user='mininet', password='mininet' ):
     "Log in to vm (pexpect object)"
     log( '* Waiting for login prompt' )
     vm.expect( 'login: ' )
     log( '* Logging in' )
-    vm.sendline( 'mininet' )
+    vm.sendline( user )
     log( '* Waiting for password prompt' )
     vm.expect( 'Password: ' )
     log( '* Sending password' )
-    vm.sendline( 'mininet' )
+    vm.sendline( password )
     log( '* Waiting for login...' )
 
 
@@ -628,9 +628,9 @@ OVFTemplate = """<?xml version="1.0"?>
 <Description>The nat  network</Description>
 </Network>
 </NetworkSection>
-<VirtualSystem ovf:id="Mininet-VM">
-<Info>A Mininet Virtual Machine (%(name)s)</Info>
-<Name>mininet-vm</Name>
+<VirtualSystem ovf:id="%(vmname)s">
+<Info>%(vminfo)s (%(name)s)</Info>
+<Name>%(vmname)s</Name>
 <OperatingSystemSection ovf:id="%(osid)d">
 <Info>The kind of installed guest operating system</Info>
 <Description>%(osname)s</Description>
@@ -640,10 +640,10 @@ OVFTemplate = """<?xml version="1.0"?>
 <Item>
 <rasd:AllocationUnits>hertz * 10^6</rasd:AllocationUnits>
 <rasd:Description>Number of Virtual CPUs</rasd:Description>
-<rasd:ElementName>1 virtual CPU(s)</rasd:ElementName>
+<rasd:ElementName>%(cpus)s virtual CPU(s)</rasd:ElementName>
 <rasd:InstanceID>1</rasd:InstanceID>
 <rasd:ResourceType>3</rasd:ResourceType>
-<rasd:VirtualQuantity>1</rasd:VirtualQuantity>
+<rasd:VirtualQuantity>%(cpus)s</rasd:VirtualQuantity>
 </Item>
 <Item>
 <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
@@ -694,19 +694,23 @@ OVFTemplate = """<?xml version="1.0"?>
 """
 
 
-def generateOVF( name, osname, osid, diskname, disksize, mem=1024 ):
+def generateOVF( name, osname, osid, diskname, disksize, mem=1024, cpus=1,
+                 vmname='Mininet-VM', vminfo='A Mininet Virtual Machine' ):
     """Generate (and return) OVF file "name.ovf"
        name: root name of OVF file to generate
        osname: OS name for OVF (Ubuntu | Ubuntu 64-bit)
        osid: OS ID for OVF (93 | 94 )
        diskname: name of disk file
        disksize: size of virtual disk in bytes
-       mem: VM memory size in MB"""
+       mem: VM memory size in MB
+       cpus: # of virtual CPUs
+       vmname: Name for VM (default name when importing)
+       vmimfo: Brief description of VM for OVF"""
     ovf = name + '.ovf'
     filesize = stat( diskname )[ ST_SIZE ]
     params = dict( osname=osname, osid=osid, diskname=diskname,
                    filesize=filesize, disksize=disksize, name=name,
-                   mem=mem )
+                   mem=mem, cpus=cpus, vmname=vmname, vminfo=vminfo )
     xmltext = OVFTemplate % params
     with open( ovf, 'w+' ) as f:
         f.write( xmltext )
@@ -781,6 +785,9 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
 
 def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
+    if Branch:
+        checkOutBranch( vm, branch=Branch )
+        vm.expect( prompt )
     if not tests:
         tests = []
     if pre:
@@ -811,8 +818,8 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
-                     memory=1024, outputFile=None ):
+def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None, 
+                runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
@@ -840,11 +847,9 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
-    if Branch:
-        checkOutBranch( vm, branch=Branch )
-        vm.expect( prompt )
-    runTests( vm, tests=tests, pre=pre, post=post )
-    # runTests eats its last prompt, but maybe it shouldn't...
+    # runFunction should begin with sendline and should eat its last prompt
+    if runFunction:
+        runFunction( vm, **runArgs )
     log( '* Shutting down' )
     vm.sendline( 'sudo shutdown -h now ' )
     log( '* Waiting for shutdown' )
@@ -950,9 +955,8 @@ def parseArgs():
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
-        bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory,
-                         outputFile=args.out )
+        bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,
+                    post=args.post, memory=args.memory, outputFile=args.out )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
