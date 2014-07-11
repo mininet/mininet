@@ -29,7 +29,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
-from mininet.topolib import TreeTopo
+from mininet.topolib import TreeTopo, CsvTopo
 from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
 
@@ -40,7 +40,8 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
-          'tree': TreeTopo }
+          'tree': TreeTopo,
+          'csv': CsvTopo}
 
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
