@@ -95,7 +95,7 @@ from itertools import chain, groupby
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -213,16 +213,17 @@ class Mininet( object ):
         if not controller:
             controller = self.controller
         # Construct new controller if one is not given
-        if isinstance(name, Controller):
+        if isinstance( name, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
             # pylint: disable=E1103
             name = controller_new.name
             # pylint: enable=E1103
         else:
+            # bookmark
             controller_new = controller( name, **params )
         # Add new controller to net
-        if controller_new:  # allow controller-less setups
+        if controller_new: # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new

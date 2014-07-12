@@ -1278,6 +1278,15 @@ class Controller( Node ):
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
 
+class DefaultController( Controller ):
+    "find any controller that is available and run it"
+    def __init__( self, name, **kwargs ):
+        "search for any installed controller"
+        controllers = [ 'controller', 'ovs-controller', 'test-controller' ] # , 'pox', 'ryu' ] # test-controller is the important part
+        for c in controllers:
+            if quietRun( "which " + c ):
+                Controller.__init__( self, name, controller=c, **kwargs )
+                break
 
 class OVSController( Controller ):
     "Open vSwitch controller"
