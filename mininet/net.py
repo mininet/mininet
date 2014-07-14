@@ -108,7 +108,7 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                  controller=Controller, link=Link, intf=Intf,
+                  controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
