@@ -651,7 +651,7 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None ):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
@@ -674,6 +674,8 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
+        if format:
+          iperfArgs += '-f %s ' %format
         server.sendCmd( iperfArgs + '-s', printPid=True )
         servout = ''
         while server.lastPid is None:
