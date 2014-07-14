@@ -1282,10 +1282,11 @@ class DefaultController( Controller ):
     "find any controller that is available and run it"
     def __init__( self, name, **kwargs ):
         "search for any installed controller"
-        controllers = [ 'controller', 'ovs-controller', 'test-controller' ] # , 'pox', 'ryu' ] # test-controller is the important part
+        controllers = [ 'controller', 'ovs-controller',
+                        'test-controller' ]
         for c in controllers:
             if quietRun( "which " + c ):
-                Controller.__init__( self, name, controller=c, **kwargs )
+                Controller.__init__( self, name, command=c, **kwargs )
                 break
 
 class OVSController( Controller ):
