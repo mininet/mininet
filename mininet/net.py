@@ -90,11 +90,12 @@ import os
 import re
 import select
 import signal
+import copy
 from time import sleep
 from itertools import chain, groupby
 
 from mininet.cli import CLI
-from mininet.log import info, error, debug, output
+from mininet.log import info, error, debug, output, warn
 from mininet.node import Host, OVSKernelSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
@@ -112,7 +113,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None ):
+                  listenPort=None, waitConnected=False ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -148,6 +149,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+        self.waitConn = waitConnected
 
         self.hosts = []
         self.switches = []
@@ -162,6 +164,34 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
+
+
+    def waitConnected( self, timeout=None ):
+        """wait for each switch to connect to a controller,
+           up to 5 seconds
+           timeout: time to wait, or None to wait indefinitely
+           returns: True if all switches are connected"""
+        info( '***waiting for switches to connect\n' )
+        time = 0
+        remaining = copy.copy( self.switches )
+        while time < timeout or timeout == None:
+            connected = True
+            for switch in remaining:
+                if not switch.connected():
+                    connected = False
+                else:
+                    remaining.remove( switch )
+            if connected:
+                break
+            sleep( .5 )
+            time += .5
+        if time >= timeout and timeout is not  None:
+            warn( 'Timed out after %d seconds\n' % time )
+            for switch in self.switches:
+                if not switch.connected():
+                    warn( 'Warning: %s is not connected to a controller\n'
+                           % switch.name )
+        return connected
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
@@ -401,6 +431,8 @@ class Mininet( object ):
             info( switch.name + ' ')
             switch.start( self.controllers )
         info( '\n' )
+        if self.waitConn:
+            self.waitConnected()
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
