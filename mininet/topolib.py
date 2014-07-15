@@ -46,7 +46,7 @@ class TorusTopo( Topo ):
         Topo.__init__( self, *args, **kwargs )
         if x < 3 or y < 3:
             raise Exception( 'Please use 3x3 or greater for compatibility '
-                            'with Mininet 2.1.0' )
+                            'with 2.1' )
         hosts, switches, dpid = {}, {}, 0
         # Create and wire interior
         for i in range( 0, x ):
