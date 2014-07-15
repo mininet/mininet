@@ -26,6 +26,13 @@ class LinuxBridge( Switch ):
             LinuxBridge.nextPrio += 1
         Switch.__init__( self, name, **kwargs )
 
+    def connected( self ):
+        "Are we forwarding yet?"
+        if self.stp:
+            return 'forwarding' in self.cmd( 'brctl showstp', self )
+        else:
+            return True
+    
     def start( self, controllers ):
         self.cmd( 'ifconfig', self, 'down' )
         self.cmd( 'brctl delbr', self )
