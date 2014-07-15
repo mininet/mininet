@@ -1277,23 +1277,19 @@ class Controller( Node ):
         return '<%s %s: %s:%s pid=%s> ' % (
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
-
-class DefaultController( Controller ):
-    "find any controller that is available and run it"
-    def __init__( self, name, **kwargs ):
-        "search for any installed controller"
-        controllers = [ 'controller', 'ovs-controller',
-                        'test-controller' ]
-        for c in controllers:
-            if quietRun( "which " + c ):
-                Controller.__init__( self, name, command=c, **kwargs )
-                break
+    @classmethod
+    def isAvailable( self ):
+        return quietRun( 'which controller' )
 
 class OVSController( Controller ):
     "Open vSwitch controller"
     def __init__( self, name, command='ovs-controller', **kwargs ):
+        if quietRun( 'which test-controller' ):
+            command = 'test-controller'
         Controller.__init__( self, name, command=command, **kwargs )
-
+    @classmethod
+    def isAvailable( self ):
+        return quietRun( 'which ovs-controller' ) or quietRun( 'which test-controller' )
 
 class NOX( Controller ):
     "Controller to run a NOX application."
@@ -1348,3 +1344,10 @@ class RemoteController( Controller ):
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
+
+
+def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
+    "find a default controller for mininet"
+    for controller in order:
+        if controller.isAvailable():
+            return controller( name, **kwargs )
