@@ -89,6 +89,12 @@ isoURLs = {
     'trusty64server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
     'ubuntu-14.04-server-amd64.iso',
+    'utopic32server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.10/'
+    'ubuntu-14.10-server-i386.iso',
+    'utopic64server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.10/'
+    'ubuntu-14.10-server-amd64.iso',
 }
 
 
