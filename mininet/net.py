@@ -246,7 +246,7 @@ class Mininet( object ):
         if not controller:
             controller = self.controller
         # Construct new controller if one is not given
-        if isinstance(name, Controller):
+        if issubclass( name.__class__, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
             # pylint: disable=E1103
@@ -357,7 +357,11 @@ class Mininet( object ):
             if type( classes ) is not list:
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
-                self.addController( 'c%d' % i, cls )
+                # Allow Controller objects because nobody understands currying
+                if issubclass( cls.__class__, Controller ):
+                    self.addController( cls )
+                else:
+                    self.addController( 'c%d' % i, cls )
 
         info( '*** Adding hosts:\n' )
         for hostName in topo.hosts():
