@@ -174,9 +174,9 @@ class Mininet( object ):
            returns: True if all switches are connected"""
         info( '*** Waiting for switches to connect\n' )
         time = 0
-        remaining = copy.copy( self.switches )
+        remaining = list( self.switches )
         while True:
-            for switch in remaining:
+            for switch in tuple( remaining ):
                 if switch.connected():
                     info( '%s ' % switch )
                     remaining.remove( switch )
