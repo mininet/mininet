@@ -1347,7 +1347,7 @@ class RemoteController( Controller ):
 
 
 def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
-    "find a default controller for mininet"
+    "find any controller that is available and run it"
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
