@@ -96,7 +96,7 @@ from itertools import chain, groupby
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -109,7 +109,7 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                  controller=Controller, link=Link, intf=Intf,
+                  controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
@@ -255,7 +255,7 @@ class Mininet( object ):
         else:
             controller_new = controller( name, **params )
         # Add new controller to net
-        if controller_new:  # allow controller-less setups
+        if controller_new: # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
