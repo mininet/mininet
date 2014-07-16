@@ -220,7 +220,6 @@ class Mininet( object ):
             name = controller_new.name
             # pylint: enable=E1103
         else:
-            # bookmark
             controller_new = controller( name, **params )
         # Add new controller to net
         if controller_new: # allow controller-less setups
