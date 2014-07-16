@@ -246,7 +246,7 @@ class Mininet( object ):
         if not controller:
             controller = self.controller
         # Construct new controller if one is not given
-        if issubclass( name.__class__, Controller ):
+        if isinstance( name, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
             # pylint: disable=E1103
@@ -358,7 +358,7 @@ class Mininet( object ):
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
                 # Allow Controller objects because nobody understands currying
-                if issubclass( cls.__class__, Controller ):
+                if isinstance( cls, Controller ):
                     self.addController( cls )
                 else:
                     self.addController( 'c%d' % i, cls )
