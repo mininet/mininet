@@ -1079,7 +1079,7 @@ class OVSSwitch( Switch ):
 
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
-        if self.inNamespace:
+        if self.inNamespace and datapath=='kernel':
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
         # We should probably call config instead, but this
