@@ -90,12 +90,13 @@ import os
 import re
 import select
 import signal
+import copy
 from time import sleep
 from itertools import chain, groupby
 
 from mininet.cli import CLI
-from mininet.log import info, error, debug, output
-from mininet.node import Host, OVSKernelSwitch, Controller
+from mininet.log import info, error, debug, output, warn
+from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -109,11 +110,11 @@ class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
-                  controller=Controller, link=Link, intf=Intf,
+                  controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
-                  listenPort=None ):
+                  listenPort=None, waitConnected=False ):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: default Switch class
@@ -149,6 +150,7 @@ class Mininet( object ):
         self.numCores = numCores()
         self.nextCore = 0  # next core for pinning hosts to CPUs
         self.listenPort = listenPort
+        self.waitConn = waitConnected
 
         self.hosts = []
         self.switches = []
@@ -165,6 +167,37 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
+
+
+    def waitConnected( self, timeout=None, delay=.5 ):
+        """wait for each switch to connect to a controller,
+           up to 5 seconds
+           timeout: time to wait, or None to wait indefinitely
+           delay: seconds to sleep per iteration
+           returns: True if all switches are connected"""
+        info( '*** Waiting for switches to connect\n' )
+        time = 0
+        remaining = list( self.switches )
+        while True:
+            for switch in tuple( remaining ):
+                if switch.connected():
+                    info( '%s ' % switch )
+                    remaining.remove( switch )
+            if not remaining:
+                info( '\n' )
+                return True
+            if time > timeout and timeout is not None:
+                break
+            sleep( delay )
+            time += delay
+        warn( 'Timed out after %d seconds\n' % time )
+        for switch in remaining:
+            if not switch.connected():
+                warn( 'Warning: %s is not connected to a controller\n'
+                      % switch.name )
+            else:
+                remaining.remove( switch )
+        return not remaining
 
     def addHost( self, name, cls=None, **params ):
         """Add host.
@@ -216,7 +249,7 @@ class Mininet( object ):
         if not controller:
             controller = self.controller
         # Construct new controller if one is not given
-        if isinstance(name, Controller):
+        if isinstance( name, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
             # pylint: disable=E1103
@@ -225,7 +258,7 @@ class Mininet( object ):
         else:
             controller_new = controller( name, **params )
         # Add new controller to net
-        if controller_new:  # allow controller-less setups
+        if controller_new: # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
@@ -327,7 +360,11 @@ class Mininet( object ):
             if type( classes ) is not list:
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
-                self.addController( 'c%d' % i, cls )
+                # Allow Controller objects because nobody understands currying
+                if isinstance( cls, Controller ):
+                    self.addController( cls )
+                else:
+                    self.addController( 'c%d' % i, cls )
 
         info( '*** Adding hosts:\n' )
         for hostName in topo.hosts():
@@ -408,9 +445,16 @@ class Mininet( object ):
             info( switch.name + ' ')
             switch.start( self.controllers )
         info( '\n' )
+        if self.waitConn:
+            self.waitConnected()
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
+        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
+        for controller in self.controllers:
+            info( controller.name + ' ' )
+            controller.stop()
+        info( '\n' )
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
@@ -426,11 +470,6 @@ class Mininet( object ):
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
-        info( '\n' )
-        info( '*** Stopping %i controllers\n' % len( self.controllers ) )
-        for controller in self.controllers:
-            info( controller.name + ' ' )
-            controller.stop()
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
@@ -623,7 +662,7 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None ):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
@@ -646,6 +685,8 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
+        if format:
+          iperfArgs += '-f %s ' %format
         server.sendCmd( iperfArgs + '-s', printPid=True )
         servout = ''
         while server.lastPid is None:
@@ -653,7 +694,7 @@ class Mininet( object ):
         if l4Type == 'TCP':
             while 'Connected' not in client.cmd(
                     'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
-                output('waiting for iperf to start up...')
+                info( 'Waiting for iperf to start up...' )
                 sleep(.5)
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                              bwArgs )
