@@ -82,6 +82,8 @@ def errRun( *cmd, **kwargs ):
     poller.register( popen.stdout, POLLIN )
     fdtofile = { popen.stdout.fileno(): popen.stdout }
     outDone, errDone = False, True
+    #bookmark: rearrange this for aynch startup. shouldnt have to keep 
+    # maybe we dont rearrange this. we really just need a method to call a command and NOT poll for output
     if popen.stderr:
         fdtofile[ popen.stderr.fileno() ] = popen.stderr
         poller.register( popen.stderr, POLLIN )
@@ -185,10 +187,10 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
     intf = str( intf )
     cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
     if srcNode:
-        srcNode.cmd( cmd )
+        output = srcNode.cmd( cmd )
     else:
-        quietRun( cmd )
-    if ( ' %s:' % intf ) not in dstNode.cmd( 'ip link show', intf ):
+        output = quietRun( cmd )
+    if output:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
                    ' not successfully moved to ' + dstNode.name + '\n' )
