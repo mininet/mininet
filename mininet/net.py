@@ -100,6 +100,7 @@ from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
+from multiprocessing.pool import ThreadPool
 
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.1.0+"
@@ -156,6 +157,8 @@ class Mininet( object ):
         self.nameToNode = {}  # name to Node (Host/Switch) objects
 
         self.terms = []  # list of spawned xterm processes
+
+        self.pool = ThreadPool( 64 )
 
         Mininet.init()  # Initialize Mininet if necessary
 
@@ -337,13 +340,17 @@ class Mininet( object ):
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
+        # need to 'asynchronize' this too
         for srcName, dstName in topo.links(sort=True):
             src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
             params = topo.linkInfo( srcName, dstName )
             srcPort, dstPort = topo.port( srcName, dstName )
             self.addLink( src, dst, srcPort, dstPort, **params )
+            #self.pool.apply( self.addLink,  ( src, dst, srcPort, dstPort, params, ) )
+            #self.pool.apply_async( self.addLink, args = ( src, dst )+ params, kwds = { 'Port1':srcPort, 'Port2':dstPort } )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
-
+        #self.pool.close()
+        #self.pool.join()
         info( '\n' )
 
     def configureControlNetwork( self ):
