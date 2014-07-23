@@ -90,6 +90,7 @@ import os
 import re
 import select
 import signal
+import random
 import copy
 from time import sleep
 from itertools import chain, groupby
@@ -101,7 +102,7 @@ from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
-from multiprocessing.pool import ThreadPool
+from multiprocessing import Process
 
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.1.0+"
@@ -160,7 +161,7 @@ class Mininet( object ):
 
         self.terms = []  # list of spawned xterm processes
 
-        self.pool = ThreadPool( 64 )
+        #self.pool = Pool( 64 )
 
         Mininet.init()  # Initialize Mininet if necessary
 
@@ -306,6 +307,21 @@ class Mininet( object ):
         "return (key,value) tuple list for every node in net"
         return zip( self.keys(), self.values() )
 
+    def generateMac( self ):
+        newMac = True
+        while True:
+            macList = [ 0x00 ]
+            for i in xrange ( 0, 5 ):
+                macList.append( random.randint( 0x00, 0xff ) )
+            mac = ':'.join( map(lambda x: "%02x" % x, macList ) )
+            for node in self.switches + self.hosts:
+                for intf in node.ports:
+                    if intf.mac == mac:
+                        newMac = False
+                        break
+            if newMac:
+                return mac
+
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
         """"Add a link from node1 to node2
@@ -314,8 +330,12 @@ class Mininet( object ):
             port1: source port
             port2: dest port
             returns: link object"""
+        mac1 = self.generateMac()
+        mac2 = self.generateMac()
         defaults = { 'port1': port1,
                      'port2': port2,
+                     'addr1': mac1,
+                     'addr2': mac2,
                      'intf': self.intf }
         defaults.update( params )
         if not cls:
@@ -383,8 +403,7 @@ class Mininet( object ):
             params = topo.linkInfo( srcName, dstName )
             srcPort, dstPort = topo.port( srcName, dstName )
             self.addLink( src, dst, srcPort, dstPort, **params )
-            #self.pool.apply( self.addLink,  ( src, dst, srcPort, dstPort, params, ) )
-            #self.pool.apply_async( self.addLink, args = ( src, dst )+ params, kwds = { 'Port1':srcPort, 'Port2':dstPort } )
+            #self.pool.apply_async( self.addLink,  ( src, dst, srcPort, dstPort, params ) )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
         #self.pool.close()
         #self.pool.join()
