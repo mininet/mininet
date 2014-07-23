@@ -1082,11 +1082,9 @@ class OVSSwitch( Switch ):
         if self.inNamespace:
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
-        # We should probably call config instead, but this
-        # requires some rethinking...
-        self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
-        self.cmd( 'ovs-vsctl del-br', self )
+        self.sendCmd( 'ovs-vsctl del-br', self )
+        self.waiting = False
         int( self.dpid, 16 ) # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
@@ -1107,10 +1105,12 @@ class OVSSwitch( Switch ):
                     '-- set-controller %s %s ' % ( self, clist ) )
         # Construct ovs-vsctl commands for old versions of OVS
         else:
-            self.cmd( 'ovs-vsctl add-br', self )
+            self.sendCmd( 'ovs-vsctl add-br', self )
+            self.waiting = False
             for intf in self.intfList():
                 if not intf.IP():
-                    self.cmd( 'ovs-vsctl add-port', self, intf )
+                    self.sendCmd( 'ovs-vsctl add-port', self, intf )
+                    self.waiting = False
             cmd = ( 'ovs-vsctl set Bridge %s ' % self +
                     'other_config:datapath-id=%s ' % self.dpid +
                     '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
