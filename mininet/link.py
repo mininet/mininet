@@ -89,11 +89,21 @@ class Intf( object ):
 
     def updateMAC( self ):
         "Return updated MAC address based on ifconfig"
-        #heres where we send the unecessary ifconfigs
         ifconfig = self.ifconfig()
         macs = self._macMatchRegex.findall( ifconfig )
         self.mac = macs[ 0 ] if macs else None
         return self.mac
+
+    def updateAddr( self ):
+        """Return IP address and MAC address based on ifconfig.
+        instead of updating ip and mac separately,
+        use one ifconfig call to do it simultaneously""""
+        ifconfig = self.ifconfig()
+        ips = self._ipMatchRegex.findall( ifconfig )
+        macs = self._macMatchRegex.findall( ifconfig )
+        self.ip = ips[ 0 ] if ips else None
+        self.mac = macs[ 0 ] if macs else None
+        return self.ip, self.mac
 
     def IP( self ):
         "Return IP address"
@@ -106,8 +116,9 @@ class Intf( object ):
     def isUp( self, setUp=False ):
         "Return whether interface is up"
         if setUp:
-            r = self.ifconfig( 'up' )
-            if r:
+            cmdOutput = self.ifconfig( 'up' )
+            if cmdOutput:
+                error( "Error setting %s up: %s " % ( self.name, cmdOutput )
                 return False
             else:
                 return True
@@ -147,15 +158,6 @@ class Intf( object ):
         results[ name ] = result
         return result
 
-    def updateAddr( self ):
-        "instead of updating ip and mac separately, use one ifconfig call to do it simultaneously"
-        ifconfig = self.ifconfig()
-        ips = self._ipMatchRegex.findall( ifconfig )
-        macs = self._macMatchRegex.findall( ifconfig )
-        self.ip = ips[ 0 ] if ips else None
-        self.mac = macs[ 0 ] if macs else None
-        return self.ip, self.mac
-
     def config( self, mac=None, ip=None, ifconfig=None,
                 up=True, **_params ):
         """Configure Node according to (optional) parameters:
@@ -172,9 +174,6 @@ class Intf( object ):
         self.setParam( r, 'setIP', ip=ip )
         self.setParam( r, 'isUp', up=up )
         self.setParam( r, 'ifconfig', ifconfig=ifconfig )
-        #self.updateAddr()
-        #self.updateIP()
-        #self.updateMAC()
         return r
 
     def delete( self ):
