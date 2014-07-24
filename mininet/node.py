@@ -50,6 +50,7 @@ Future enhancements:
 """
 
 import os
+import pty
 import re
 import signal
 import select
@@ -123,16 +124,22 @@ class Node( object ):
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
-        opts = '-cdp'
+        opts = '-cd'
         if self.inNamespace:
             opts += 'n'
-        # bash -m: enable job control
+        # bash -m: enable job control, i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
-        cmd = [ 'mnexec', opts, 'bash', '-ms', 'mininet:' + self.name ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-                            close_fds=True )
-        self.stdin = self.shell.stdin
-        self.stdout = self.shell.stdout
+        # prompt is set to sentinel chr( 127 )
+        os.environ[ 'PS1' ] = chr( 127 )
+        cmd = [ 'mnexec', opts, 'bash', '--norc', '-mis', 'mininet:' + self.name ]
+        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+        # in the subprocess and insulate it from signals (e.g. SIGINT)
+        # received by the parent
+        master, slave = pty.openpty()
+        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
+                                  close_fds=False )
+        self.stdin = os.fdopen( master )
+        self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
@@ -145,7 +152,14 @@ class Node( object ):
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
+        # Wait for prompt
+        while True:
+            data = self.read( 1024 )
+            if data[ -1 ] == chr( 127 ):
+                break
+            self.pollOut.poll()
         self.waiting = False
+        self.cmd( 'stty -echo' )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -224,36 +238,29 @@ class Node( object ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
         self.lastCmd = cmd
-        printPid = printPid and not isShellBuiltin( cmd )
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            # print ^A{pid}\n{sentinel}
-            cmd += ' printf "\\001%d\n\\177" $! \n'
-        else:
-            # print sentinel
-            cmd += '; printf "\\177"'
-            if printPid and not isShellBuiltin( cmd ):
+        if printPid and not isShellBuiltin( cmd ):
+            if len( cmd ) > 0 and cmd[ -1 ] == '&':
+                # print ^A{pid}\n so monitor() can set lastPid
+                cmd += ' printf "\\001%d\n" $! \n'
+            else:
                 cmd = 'mnexec -p ' + cmd
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
 
-    def sendInt( self, sig=signal.SIGINT ):
+    def sendInt( self, intr=chr( 3 ) ):
         "Interrupt running command."
-        if self.lastPid:
-            try:
-                os.kill( self.lastPid, sig )
-            except OSError:
-                pass
+        self.write( intr )
 
-    def monitor( self, timeoutms=None ):
+    def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
            timeoutms: timeout in ms or None to wait indefinitely."""
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
-        marker = chr( 1 ) + r'\d+\n'
-        if chr( 1 ) in data:
+        marker = chr( 1 ) + r'\d+\r\n'
+        if findPid and chr( 1 ) in data:
             markers = re.findall( marker, data )
             if markers:
                 self.lastPid = int( markers[ 0 ][ 1: ] )
@@ -322,7 +329,10 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        return Popen( cmd, **defaults )
+        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
+        popen = Popen( cmd, **defaults )
+        signal.signal( signal.SIGINT, old )
+        return popen
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
