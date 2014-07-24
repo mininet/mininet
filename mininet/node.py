@@ -329,7 +329,10 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        return Popen( cmd, **defaults )
+        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
+        popen = Popen( cmd, **defaults )
+        signal.signal( signal.SIGINT, old )
+        return popen
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
