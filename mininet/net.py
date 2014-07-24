@@ -303,21 +303,6 @@ class Mininet( object ):
         "return (key,value) tuple list for every node in net"
         return zip( self.keys(), self.values() )
 
-    def generateMac( self ):
-        newMac = True
-        while True:
-            macList = [ 0x00 ]
-            for i in xrange ( 0, 5 ):
-                macList.append( random.randint( 0x00, 0xff ) )
-            mac = ':'.join( map(lambda x: "%02x" % x, macList ) )
-            for node in self.switches + self.hosts:
-                for intf in node.ports:
-                    if intf.mac == mac:
-                        newMac = False
-                        break
-            if newMac:
-                return mac
-
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
         """"Add a link from node1 to node2
@@ -326,8 +311,8 @@ class Mininet( object ):
             port1: source port
             port2: dest port
             returns: link object"""
-        mac1 = self.generateMac()
-        mac2 = self.generateMac()
+        mac1 = macColonHex( random.randint( 1, (2**24 - 1) ) )
+        mac2 = macColonHex( random.randint( 1, (2**24 - 1) ) )
         defaults = { 'port1': port1,
                      'port2': port2,
                      'addr1': mac1,
