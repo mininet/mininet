@@ -97,7 +97,7 @@ class Intf( object ):
     def updateAddr( self ):
         """Return IP address and MAC address based on ifconfig.
         instead of updating ip and mac separately,
-        use one ifconfig call to do it simultaneously""""
+        use one ifconfig call to do it simultaneously"""
         ifconfig = self.ifconfig()
         ips = self._ipMatchRegex.findall( ifconfig )
         macs = self._macMatchRegex.findall( ifconfig )
@@ -118,7 +118,7 @@ class Intf( object ):
         if setUp:
             cmdOutput = self.ifconfig( 'up' )
             if cmdOutput:
-                error( "Error setting %s up: %s " % ( self.name, cmdOutput )
+                error( "Error setting %s up: %s " % ( self.name, cmdOutput ) )
                 return False
             else:
                 return True

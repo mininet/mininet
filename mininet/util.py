@@ -192,7 +192,7 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
         cmdOutput = srcNode.cmd( cmd )
     else:
         cmdOutput = quietRun( cmd )
-    if output:
+    if cmdOutput:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
                    ' not successfully moved to ' + dstNode.name + '\n' )
@@ -249,11 +249,29 @@ def _colonHex( val, bytecount ):
     chStr = ':'.join( pieces )
     return chStr
 
+def generateMac( self ):
+    newMac = True
+    while True:
+        macList = [ 0x00 ]
+        for i in xrange ( 0, 5 ):
+            macList.append( random.randint( 0x00, 0xff ) )
+        mac = ':'.join( map(lambda x: "%02x" % x, macList ) )
+        for node in self.switches + self.hosts:
+            for intf in node.ports:
+                if intf.mac == mac:
+                    newMac = False
+                    break
+        if newMac:
+            return mac
+
 def macColonHex( mac ):
     """Generate MAC colon-hex string from unsigned int.
        mac: MAC address as unsigned int
        returns: macStr MAC colon-hex string"""
-    return _colonHex( mac, 6 )
+    if mac < 2**24:
+        return 'A4:23:05:' + _colonHex( mac, 3 )
+    else:
+        return _colonHex( mac, 6 )
 
 def ipStr( ip ):
     """Generate IP address string from an unsigned int.
