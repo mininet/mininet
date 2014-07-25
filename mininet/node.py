@@ -261,6 +261,8 @@ class Node( object ):
         # Look for PID
         marker = chr( 1 ) + r'\d+\r\n'
         if findPid and chr( 1 ) in data:
+            while not re.findall( marker, data ):
+                data += self.read( 1024 )
             markers = re.findall( marker, data )
             if markers:
                 self.lastPid = int( markers[ 0 ][ 1: ] )
