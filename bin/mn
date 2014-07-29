@@ -25,6 +25,7 @@ from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
+<<<<<<< Updated upstream
                            NOX, RemoteController, DefaultController,
                            UserSwitch, OVSSwitch,
                            OVSLegacyKernelSwitch, IVSSwitch )
@@ -32,6 +33,14 @@ from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo, TorusTopo
+=======
+                           NOX, RemoteController, UserSwitch, OVSKernelSwitch,
+                           OVSLegacyKernelSwitch, IVSSwitch, RiplPOX )
+from mininet.nodelib import LinuxBridge
+from mininet.link import Link, TCLink
+from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
+from mininet.topolib import TreeTopo, FatTreeTopo1
+>>>>>>> Stashed changes
 from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
 
@@ -43,7 +52,11 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
           'tree': TreeTopo,
+<<<<<<< Updated upstream
           'torus': TorusTopo }
+=======
+         'fattree': FatTreeTopo1 }
+>>>>>>> Stashed changes
 
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
@@ -51,7 +64,11 @@ SWITCHES = { 'user': UserSwitch,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
              'ovsl': OVSLegacyKernelSwitch,
+<<<<<<< Updated upstream
              'ivs': IVSSwitch,
+=======
+             'ivs': IVSSwitch, 
+>>>>>>> Stashed changes
              'lxbr': LinuxBridge }
 
 HOSTDEF = 'proc'
@@ -64,7 +81,11 @@ CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
+<<<<<<< Updated upstream
                 'default': DefaultController,
+=======
+                'riplpox': RiplPOX,
+>>>>>>> Stashed changes
                 'none': lambda name: None }
 
 LINKDEF = 'default'

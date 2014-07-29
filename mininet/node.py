@@ -1255,8 +1255,8 @@ class Controller( Node ):
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
-        self.cmd( self.command + ' ' + self.cargs % self.port +
-                  ' 1>' + cout + ' 2>' + cout + '&' )
+        self.cmd( self.command + ' ' + self.cargs % self.port + 
+                  ' 1>' + cout + ' 2>' + cout + ' &' )
         self.execed = False
 
     def stop( self ):
@@ -1316,7 +1316,6 @@ class NOX( Controller ):
                              cdir=noxCoreDir,
                              **kwargs )
 
-
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
@@ -1345,9 +1344,32 @@ class RemoteController( Controller ):
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
+<<<<<<< Updated upstream
 
 def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
     "find any controller that is available and run it"
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
+=======
+class RiplPOX( Controller ):
+    "Controller to run RiplPOX application."
+
+    POXDIR = os.environ[ 'HOME' ] + '/pox'
+
+    def __init__( self, name='riplpox',
+                  cdir = POXDIR,
+                  command='python pox.py',
+                  cargs='--no-cli openflow.of_01 --port=%s ' +
+                  'riplpox.riplpox --topo=fattree,4,2 --routing=random --mode=reactive',
+                   **kwargs ):
+        """Init.
+           name: name to give controller
+           riplpoxArgs: arguments (strings) to pass to RiplPOX"""
+
+        Controller.__init__( self, name,
+                             command=command,
+                             cargs=cargs,
+                             cdir=cdir,
+                             **kwargs )
+>>>>>>> Stashed changes

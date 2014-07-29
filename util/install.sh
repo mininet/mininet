@@ -491,6 +491,22 @@ function oftest {
     git clone git://github.com/floodlight/oftest
 }
 
+# Install RiplPOX
+function riplpox {
+    echo "Installing RiplPOX"
+    cd $BUILD_DIR/pox
+    git checkout 0a1bbb8
+    cd $BUILD_DIR
+    sudo apt-get install -y python-setuptools
+    git clone git://github.com/brandonheller/ripl.git
+    cd ripl
+    sudo python setup.py develop
+    cd $BUILD_DIR
+    git clone git://github.com/brandonheller/riplpox.git
+    cd riplpox
+    sudo python setup.py develop
+}
+
 # Install cbench
 function cbench {
     echo "Installing cbench..."
@@ -670,6 +686,7 @@ function usage {
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -i: install (I)ndigo Virtual Switch\n' >&2
     printf -- ' -k: install new (K)ernel\n' >&2
+    printf -- ' -l: install Rip(l)POX OpenFlow Controller\n' >&2
     printf -- ' -m: install Open vSwitch kernel (M)odule from source dir\n' >&2
     printf -- ' -n: install Mini(N)et dependencies + core files\n' >&2
     printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
@@ -691,7 +708,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvV:wx03' OPTION
+    while getopts 'abcdefhiklmnprs:tvV:wx03' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -707,6 +724,7 @@ else
       h)    usage;;
       i)    ivs;;
       k)    kernel;;
+      l)    riplpox;;
       m)    modprobe;;
       n)    mn_deps;;
       p)    pox;;
