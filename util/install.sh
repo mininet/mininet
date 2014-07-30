@@ -500,6 +500,7 @@ function riplpox {
     sudo apt-get install -y python-setuptools
     git clone git://github.com/brandonheller/ripl.git
     cd ripl
+    patch -p1 < $MININET_DIR/mininet/util/ripl.patch
     sudo python setup.py develop
     cd $BUILD_DIR
     git clone git://github.com/brandonheller/riplpox.git
