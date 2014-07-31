@@ -212,9 +212,9 @@ class FatTreeTopo1( StructuredTopo ):
 
         Portlist stores list of all available ports. portlist[srcid][dstid] 
         will be the source port number from switch srcid going to switch
-        dstid. All other values in the list are given junk values of 999. 
+        dstid. All other values in the list are given empty values of None. 
         
-        Ex. portlist = [999, 999, 999, [999, 2]]
+        Ex. portlist = [None, None, None, [None, 2]]
             portlist[3][1] = 2 which means source port number is 2 for the link
             from switch 3 to switch 1
 
@@ -232,19 +232,19 @@ class FatTreeTopo1( StructuredTopo ):
 
         if (( src_port and dst_port ) or dst_port == 0 ):
             if len(self.portlist) <= srcid:
-                self.portlist.extend( [999 for i in irange(len(self.portlist), srcid)] )
-            if self.portlist[srcid] == 999:
+                self.portlist.extend( [None for i in irange(len(self.portlist), srcid)] )
+            if self.portlist[srcid] == None:
                 self.portlist[srcid] = []
             if len(self.portlist[srcid]) <= dstid:
-                self.portlist[srcid].extend( [999 for j in irange(len(self.portlist[srcid]), dstid)] )
+                self.portlist[srcid].extend( [None for j in irange(len(self.portlist[srcid]), dstid)] )
             self.portlist[srcid][dstid] = src_port
         
             if len(self.portlist) <= dstid:
-                self.portlist.extend( [999 for i in irange(len(self.portlist), dstid)] )
-            if self.portlist[dstid] == 999:
+                self.portlist.extend( [None for i in irange(len(self.portlist), dstid)] )
+            if self.portlist[dstid] == None:
                 self.portlist[dstid] = []
             if len(self.portlist[dstid]) <= srcid:
-                self.portlist[dstid].extend( [999 for j in irange(len(self.portlist[dstid]), srcid)] )
+                self.portlist[dstid].extend( [None for j in irange(len(self.portlist[dstid]), srcid)] )
             self.portlist[dstid][srcid] = dst_port
         
         src_port = self.portlist[srcid][dstid]
