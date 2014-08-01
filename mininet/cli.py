@@ -55,7 +55,7 @@ class CLI( Cmd ):
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
 
-        # Setup history if readline is available
+        # Set up history if readline is available
         try:
             import readline
         except ImportError:
@@ -77,7 +77,7 @@ class CLI( Cmd ):
                         node.sendInt()
                         node.monitor()
                 if self.isatty():
-                    quietRun( 'stty sane' )
+                    quietRun( 'stty echo sane intr "^C"' )
                 self.cmdloop()
                 break
             except KeyboardInterrupt:
@@ -352,8 +352,7 @@ class CLI( Cmd ):
                      for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
-            builtin = isShellBuiltin( first )
-            node.sendCmd( rest, printPid=( not builtin ) )
+            node.sendCmd( rest )
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % line )
@@ -361,7 +360,7 @@ class CLI( Cmd ):
     # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
-        "Wait for a node to finish, and  print its output."
+        "Wait for a node to finish, and print its output."
         # Pollers
         nodePoller = poll()
         nodePoller.register( node.stdout )
@@ -379,7 +378,7 @@ class CLI( Cmd ):
                 if False and self.inputFile:
                     key = self.inputFile.read( 1 )
                     if key is not '':
-                        node.write(key)
+                        node.write( key )
                     else:
                         self.inputFile = None
                 if isReadable( self.inPoller ):
@@ -391,7 +390,11 @@ class CLI( Cmd ):
                 if not node.waiting:
                     break
             except KeyboardInterrupt:
+                # There is an at least one race condition here, since
+                # it's possible to interrupt ourselves after we've
+                # read data but before it has been printed.
                 node.sendInt()
+
 
 # Helper functions
 
