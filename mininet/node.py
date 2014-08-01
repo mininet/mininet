@@ -331,10 +331,7 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
-        popen = Popen( cmd, **defaults )
-        signal.signal( signal.SIGINT, old )
-        return popen
+        return Popen( cmd, **defaults )
 
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
@@ -1198,6 +1195,7 @@ class IVSSwitch(Switch):
         args.append( self.opts )
 
         logfile = '/tmp/ivs.%s.log' % self.name
+        
         self.cmd( 'ifconfig lo up' )
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 

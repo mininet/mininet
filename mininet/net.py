@@ -166,6 +166,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
+
     def waitConnected( self, timeout=None, delay=.5 ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
@@ -384,6 +385,7 @@ class Mininet( object ):
             srcPort, dstPort = topo.port( srcName, dstName )
             self.addLink( src, dst, srcPort, dstPort, **params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
+        
         info( '\n' )
 
     def configureControlNetwork( self ):

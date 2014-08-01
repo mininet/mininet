@@ -42,6 +42,9 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
+        
+        # if interface is lo, we know the ip is 127.0.0.1.
+        # This saves an ifconfig command per node
         if self.name == 'lo':
             self.ip = '127.0.0.1'
         # Add to node (and move ourselves if necessary )
@@ -94,10 +97,12 @@ class Intf( object ):
         self.mac = macs[ 0 ] if macs else None
         return self.mac
 
+    # Instead of updating ip and mac separately,
+    # use one ifconfig call to do it simultaneously.
+    # This saves an ifconfig command, which improves performance.
+
     def updateAddr( self ):
-        """Return IP address and MAC address based on ifconfig.
-        instead of updating ip and mac separately,
-        use one ifconfig call to do it simultaneously"""
+        "Return IP address and MAC address based on ifconfig."
         ifconfig = self.ifconfig()
         ips = self._ipMatchRegex.findall( ifconfig )
         macs = self._macMatchRegex.findall( ifconfig )
