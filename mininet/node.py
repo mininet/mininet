@@ -923,7 +923,6 @@ class UserSwitch( Switch ):
                             for c in controllers ] )
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        self.cmd( 'ifconfig lo up' )
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
         self.cmd( 'ofdatapath -i ' + ','.join( intfs ) +
                   ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
@@ -974,7 +973,6 @@ class OVSLegacyKernelSwitch( Switch ):
     def start( self, controllers ):
         "Start up kernel datapath."
         ofplog = '/tmp/' + self.name + '-ofp.log'
-        quietRun( 'ifconfig lo up' )
         # Delete local datapath if it exists;
         # then create a new one monitoring the given interfaces
         self.cmd( 'ovs-dpctl del-dp ' + self.dp )
@@ -1193,7 +1191,6 @@ class IVSSwitch(Switch):
 
         logfile = '/tmp/ivs.%s.log' % self.name
         
-        self.cmd( 'ifconfig lo up' )
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):
@@ -1233,7 +1230,6 @@ class Controller( Node ):
         self.protocol = protocol
         Node.__init__( self, name, inNamespace=inNamespace,
                        ip=ip, **params  )
-        self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
         self.checkListening()
 
     def checkListening( self ):

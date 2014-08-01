@@ -340,7 +340,6 @@ class Mininet( object ):
             # quietRun( 'renice +18 -p ' + repr( host.pid ) )
             # This may not be the right place to do this, but
             # it needs to be done somewhere.
-            host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
     def buildFromTopo( self, topo=None ):
