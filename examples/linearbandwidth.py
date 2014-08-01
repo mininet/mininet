@@ -24,7 +24,7 @@ of switches, this example demonstrates:
 """
 
 from mininet.net import Mininet
-from mininet.node import UserSwitch, OVSKernelSwitch
+from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg
 from mininet.util import irange
@@ -76,7 +76,7 @@ def linearBandwidthTest( lengths ):
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        net = Mininet( topo=topo, switch=Switch )
+        net = Mininet( topo=topo, switch=Switch, controller=Controller, waitConnected=True )
         net.start()
         print "*** testing basic connectivity"
         for n in lengths:
