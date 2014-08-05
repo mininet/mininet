@@ -17,7 +17,7 @@ class NodeID(object):
     '''Topo node identifier.'''
     sdpidlist = []
 
-    def __init__(self, dpid = None, nodetype=None, name = None):
+    def __init__(self, dpid=None, nodetype=None, name=None):
         '''Init.
 
         @param dpid dpid
@@ -28,20 +28,20 @@ class NodeID(object):
             self.name = name
             self.nodetype = name[0]
             if self.nodetype == 'h':
-                self.dpid = int(name[1:]) + max(self.sdpidlist)
+                self.dpid = int( name[1:] ) + max( self.sdpidlist )
             else:
-                self.dpid = int(name[1:])
+                self.dpid = int( name[1:] )
         elif nodetype == 's':
-            self.name = self.nodetype + str(dpid)
+            self.name = self.nodetype + str( dpid )
             self.dpid = dpid
-            self.sdpidlist.append(dpid)
+            self.sdpidlist.append( dpid )
         elif dpid not in self.sdpidlist:
             self.nodetype = 'h'
-            self.name = self.nodetype + str(dpid - max(self.sdpidlist))
+            self.name = self.nodetype + str( dpid - max( self.sdpidlist ))
             self.dpid = dpid
         else:
             self.nodetype = 's'
-            self.name = self.nodetype + str(dpid)
+            self.name = self.nodetype + str( dpid )
             self.dpid = dpid
 
     def __str__(self):
@@ -49,63 +49,28 @@ class NodeID(object):
 
         @return str dpid as string
         '''
-        return str(self.dpid)
+        return str( self.dpid )
 
     def name_str(self):
         '''Name conversion.
 
         @return name name as string
         '''
-        if (self.nodetype == 'h'):
-            return self.nodetype + str(self.dpid - max(self.sdpidlist))
+        if self.nodetype == 'h':
+            return self.nodetype + str( self.dpid - max( self.sdpidlist ))
         else:
-            return self.nodetype + str(self.dpid)
+            return self.nodetype + str( self.dpid )
 
     def mac_str(self):
         '''Return MAC string'''
-        return "00:00:00:00:00:%02x" % (self.dpid)
+        return "00:00:00:00:00:%02x" %( self.dpid )
 
     def ip_str(self):
         '''Name conversion.
 
         @return ip ip as string
         '''
-        #hi = (self.dpid & 0xff0000) >> 16
-        #mid = (self.dpid & 0xff00) >> 8
-        #lo = self.dpid & 0xff
-        #return "10.%i.%i.%i" % (hi, mid, lo)
-        return "10.0.0.%i" % self.dpid
-
-#Borrowed from ripl/ripl/dctopo.py
-class StructuredNodeSpec(object):
-    '''Layer-specific vertex metadata for a StructuredTopo graph.'''
-
-    def __init__(self, up_total, down_total, up_speed, down_speed,
-                 type_str = None):
-        '''Init.
-
-        @param up_total number of up links
-        @param down_total number of down links
-        @param up_speed speed in Gbps of up links
-        @param down_speed speed in Gbps of down links
-        @param type_str string; model of switch or server
-        '''
-        self.up_total = up_total
-        self.down_total = down_total
-        self.up_speed = up_speed
-        self.down_speed = down_speed
-        self.type_str = type_str
-
-
-class StructuredEdgeSpec(object):
-    '''Static edge metadata for a StructuredTopo graph.'''
-
-    def __init__(self, speed = 1.0):
-        '''Init.
-
-        @param speed bandwidth in Gbps
-        '''
-        self.speed = speed
+        return "10.0.0.%i" %( self.dpid )
 
 
 class MultiGraph( object ):
@@ -120,7 +85,6 @@ class MultiGraph( object ):
 
     def add_edge( self, src, dest ):
         "Add edge to graph"
-        #src, dest = sorted( ( src, dest ) )
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
@@ -371,93 +335,3 @@ class LinearTopo(Topo):
             if lastSwitch:
                 self.addLink(switch, lastSwitch)
             lastSwitch = switch
-
-class StructuredTopo(Topo):
-    '''Data center network representation for structured multi-trees.'''
-
-    def __init__(self, node_specs, edge_specs):
-        '''Create StructuredTopo object.
-
-        @param node_specs list of StructuredNodeSpec objects, one per layer
-        @param edge_specs list of StructuredEdgeSpec objects for down-links,
-            one per layer
-        '''
-        super(StructuredTopo, self).__init__()
-        self.node_specs = node_specs
-        self.edge_specs = edge_specs
-
-    def def_nopts(self, layer):
-        '''Return default dict for a structured topo.
-
-        @param layer layer of node
-        @return d dict with layer key/val pair, plus anything else (later)
-        '''
-        return {'layer': layer}
-
-    def layer(self, name):
-        '''Return layer of a node
-
-        @param name name of switch
-        @return layer layer of switch
-        '''
-        return self.node_info[name]['layer']
-
-    def isPortUp(self, port):
-        ''' Returns whether port is facing up or down
-
-        @param port port number
-        @return portUp boolean is port facing up?
-        '''
-        return port % 2 == PORT_BASE
-
-    def layer_nodes(self, layer):
-        '''Return nodes at a provided layer.
-
-        @param layer layer
-        @return names list of names
-        '''
-        def is_layer(n):
-            '''Returns true if node is at layer.'''
-            return self.layer(n) == layer
-
-        nodes = [n for n in self.g.nodes() if is_layer(n)]
-        return nodes
-
-    def up_nodes(self, name):
-        '''Return edges one layer higher (closer to core).
-
-        @param name name
-
-        @return names list of names
-        '''
-        layer = self.layer(name) - 1
-        nodes = [n for n in self.g[name] if self.layer(n) == layer]
-        return nodes
-
-    def down_nodes(self, name):
-        '''Return edges one layer higher (closer to hosts).
-
-        @param name name
-        @return names list of names
-        '''
-        layer = self.layer(name) + 1
-        nodes = [n for n in self.g[name] if self.layer(n) == layer]
-        return nodes
-
-    def up_edges(self, name):
-        '''Return edges one layer higher (closer to core).
-
-        @param name name
-        @return up_edges list of name pairs
-        '''
-        edges = [(name, n) for n in self.up_nodes(name)]
-        return edges
-
-    def down_edges(self, name):
-        '''Return edges one layer lower (closer to hosts).
-
-        @param name name
-        @return down_edges list of name pairs
-        '''
-        edges = [(name, n) for n in self.down_nodes(name)]
-        return edges

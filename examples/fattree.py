@@ -3,7 +3,6 @@
 "Create a k = 4 fattree network and run CLI"
 
 from functools import partial
-from mininet.net import Mininet
 from mininet.log import setLogLevel
 from mininet.node import RiplPOX
 from mininet.topolib import FatTreeNet

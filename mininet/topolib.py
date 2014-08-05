@@ -1,7 +1,8 @@
 "Library of potentially useful topologies for Mininet"
 
-from mininet.topo import ( Topo, NodeID, StructuredEdgeSpec, StructuredNodeSpec,
-                         StructuredTopo )
+from mininet.topo import  Topo, NodeID
+from mininet.log import debug
+from ripl.dctopo import StructuredEdgeSpec, StructuredNodeSpec, StructuredTopo
 from mininet.net import Mininet
 from mininet.util import irange
 
@@ -81,7 +82,7 @@ class FatTreeTopo1( StructuredTopo ):
     LAYER_AGG = 1
     LAYER_EDGE = 2
     LAYER_HOST = 3
-    portlist = []
+    portlist = [] 
     
     def def_nopts( self, layer, name=None ):
         '''Return default dict for a FatTree topo.
@@ -130,7 +131,7 @@ class FatTreeTopo1( StructuredTopo ):
             core_opts = self.def_nopts( self.LAYER_CORE, core_switch_id )
             switch1 = self.addSwitch( core_switch_id, **core_opts )
             core_switches.append( core_switch_id )
-            #print "Added cs%s, dpid = %s" %(i, dpid)
+            debug( "Added cs%s, dpid = %s" %( i, dpid ) + "\n" )
             dpid += 1
 
         for j in irange( 0, (k / 2)*k - 1 ):
@@ -138,14 +139,14 @@ class FatTreeTopo1( StructuredTopo ):
             agg_opts = self.def_nopts( self.LAYER_AGG, agg_switch_id )
             switch1 = self.addSwitch( agg_switch_id, **agg_opts )
             agg_switches.append( agg_switch_id )
-            #print "Added as%s, dpid = %s" %(j, dpid)
+            debug( "Added as%s, dpid = %s" %( j, dpid ) + "\n" )
             dpid += 1
             
             edge_switch_id = self.id_gen( dpid, 's' ).name_str()
             edge_opts = self.def_nopts( self.LAYER_EDGE, edge_switch_id )
             switch2 = self.addSwitch( edge_switch_id, **edge_opts )
             edg_switches.append( edge_switch_id )
-            #print "Added es%s, dpid = %s" %(j, dpid)
+            debug( "Added es%s, dpid = %s" %( j, dpid ) + "\n" )
             dpid += 1
 
         for h in irange( 0, fanout*(k / 2)*k - 1 ):
@@ -153,7 +154,7 @@ class FatTreeTopo1( StructuredTopo ):
             host_opts = self.def_nopts( self.LAYER_HOST, host_id )
             host1 = self.addHost( host_id, **host_opts )
             hosts.append( host_id )
-            #print "Added h%s, dpid = %s" %(h, dpid)
+            debug( "Added h%s, dpid = %s" %( h, dpid ) + "\n" )
             dpid += 1
 
         #Creates links between core switches and aggregation switches.
@@ -169,13 +170,13 @@ class FatTreeTopo1( StructuredTopo ):
                 src = core_switches[ core_switch ]
                 dst = agg_switches[ agg_switch_count*pod + counter ]
                 self.addLink( src, dst, srcport, dstport )
-                #print "Link created between %s and %s. srcport=%s dstport=%s" %(self.id_gen(name = src).name_str(),
-                #                                                                self.id_gen(name = dst).name_str(),
-                #                                                                srcport, dstport)
+                debug( "Link created between %s and %s. srcport=%s dstport=%s" %( self.id_gen( name = src ).name_str(),
+                                                                                self.id_gen( name = dst ).name_str(),
+                                                                                srcport, dstport ) + "\n" )
                 self.port( src=src, dst=dst, src_port=srcport, dst_port=dstport )
             dstport += 2
 
-         #Creates links between aggregation switches and edge switches.
+        #Creates links between aggregation switches and edge switches.
         for pod in irange( 0, pod_count - 1 ):
             dstport = 1
             for agg_switch in irange( agg_switch_count*pod, agg_switch_count*pod + ( k / 2 ) - 1 ):
@@ -184,9 +185,9 @@ class FatTreeTopo1( StructuredTopo ):
                     src = agg_switches[ agg_switch ]
                     dst = edg_switches[ edg_switch ]
                     self.addLink( src, dst, srcport, dstport )
-                    #print "Link created between %s and %s. srcport=%s, dstport=%s" %(self.id_gen(name = src).name_str(),
-                    #                                                                 self.id_gen(name = dst).name_str(),
-                    #                                                                 srcport, dstport)
+                    debug( "Link created between %s and %s. srcport=%s, dstport=%s" %( self.id_gen( name = src ).name_str(),
+                                                                                     self.id_gen( name = dst ).name_str(),
+                                                                                     srcport, dstport ) + "\n" )
                     self.port( src=src, dst=dst, src_port=srcport, dst_port=dstport )
                     srcport += 2
                 dstport += 2
@@ -198,9 +199,9 @@ class FatTreeTopo1( StructuredTopo ):
                 src = edg_switches[ edg_switch ]
                 dst = hosts[ edg_switch*fanout + host ]
                 self.addLink( src, dst, srcport )
-                #print "Link created between %s and %s. srcport=%s, dstport=%s" %(self.id_gen(name = src).name_str(),
-                #                                                                 self.id_gen(name = dst).name_str(),
-                #                                                                 srcport, 0)
+                debug( "Link created between %s and %s. srcport=%s, dstport=%s" %( self.id_gen( name = src ).name_str(),
+                                                                                 self.id_gen( name = dst ).name_str(),
+                                                                                 srcport, 0 ) + "\n" )
                 self.port( src=src, dst=dst, src_port=srcport, dst_port=0 )
                 if srcport >= k:
                     srcport += 1
@@ -249,7 +250,7 @@ class FatTreeTopo1( StructuredTopo ):
         
         src_port = self.portlist[srcid][dstid]
         dst_port = self.portlist[dstid][srcid]
-        #print ("for srcid %s and dstid %s srcport = %s dstport = %s" % (srcid, dstid, src_port, dst_port))
+        debug( "for srcid %s and dstid %s srcport = %s dstport = %s" % ( srcid, dstid, src_port, dst_port ) + "\n" )
 
         return ( src_port, dst_port )
 
