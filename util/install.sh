@@ -494,15 +494,10 @@ function oftest {
 # Install RiplPOX
 function riplpox {
     echo "Installing RiplPOX"
-    POX_SRC=$BUILD_DIR/pox
-    cd $POX_SRC
 
-    #Checkout POX at tested version
-    git checkout 0a1bbb8
     cd $BUILD_DIR
 
-    #Install dependencies, build RipL, and apply patch
-    $install python-setuptools
+    #Install from source, build RipL, and apply patch
     git clone git://github.com/brandonheller/ripl.git
     cd ripl
     patch -p1 < $MININET_DIR/mininet/util/ripl-patches/ripl.patch
