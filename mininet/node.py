@@ -1255,7 +1255,7 @@ class Controller( Node ):
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
-        self.cmd( self.command + ' ' + self.cargs % self.port + 
+        self.cmd( self.command + ' ' + self.cargs % self.port +
                   ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
