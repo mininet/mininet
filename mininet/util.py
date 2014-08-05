@@ -157,7 +157,7 @@ def makeIntfPair( intf1, intf2, node=None ):
     run( 'ip link del ' + intf2 )
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    cmdOutput = quietRun( cmd )
+    cmdOutput = run( cmd )
     if cmdOutput == '':
         return True
     else:
