@@ -26,7 +26,6 @@ class testFatTree( unittest.TestCase ):
         p.wait()
         self.assertEqual( percent, 0 )
 
-    #Borrowed from ripl/ripl/test/test_dctopo.py
     def testFatTreeTopo( self ):
         k = 4
         fanout = 2
