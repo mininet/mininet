@@ -35,6 +35,15 @@ from mininet.topolib import TreeTopo, TorusTopo
 from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
 
+from functools import partial
+
+# Experimental! cluster edition prototype
+from mininet.examples.cluster import ( MininetCluster, RemoteHost,
+                                       RemoteOVSSwitch, RemoteLink,
+                                       SwitchBinPlacer, RandomPlacer )
+from mininet.examples.clustercli import DemoCLI as ClusterCLI
+
+PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'
@@ -201,6 +210,14 @@ class MininetRunner( object ):
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
         opts.add_option( '--version', action='callback', callback=version )
+        opts.add_option( '--cluster', type='string', default=None,
+                         metavar='server1,server2...',
+                         help=( 'run on multiple servers (experimental!)' ) )
+        opts.add_option( '--placement', type='choice',
+                         choices=PLACEMENT.keys(), default='block',
+                         metavar='block|random',
+                         help=( 'node placement for --cluster '
+                                '(experimental!) ' ) )
 
         self.options, self.args = opts.parse_args()
 
@@ -228,7 +245,7 @@ class MininetRunner( object ):
             exit()
 
         start = time.time()
-
+        
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
@@ -238,8 +255,6 @@ class MininetRunner( object ):
         if self.validate:
             self.validate( self.options )
 
-        inNamespace = self.options.innamespace
-        Net = MininetWithControlNet if inNamespace else Mininet
         ipBase = self.options.ipbase
         xterms = self.options.xterms
         mac = self.options.mac
@@ -248,6 +263,22 @@ class MininetRunner( object ):
         listenPort = None
         if not self.options.nolistenport:
             listenPort = self.options.listenport
+
+        # Handle inNamespace, cluster options
+        inNamespace = self.options.innamespace
+        cluster = self.options.cluster
+        if inNamespace and cluster:
+            print "Please specify --innamespace OR --cluster"
+            exit()
+        Net = MininetWithControlNet if inNamespace else Mininet
+        if cluster:
+            print '*** WARNING: Experimental cluster mode!'
+            print '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink'
+            host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
+            CLI = ClusterCLI
+            Net = partial( MininetCluster, servers=cluster.split( ',' ),
+                           placement=PLACEMENT[ self.options.placement ] )
+
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller,
                   link=link,
