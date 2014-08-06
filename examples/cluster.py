@@ -97,6 +97,7 @@ from random import randrange
 from sys import exit
 import re
 from itertools import chain
+from distutils.version import StrictVersion
 
 # BL note: so little code is required for remote nodes,
 # we will probably just want to update the main Node()
@@ -254,7 +255,15 @@ class RemoteHost( RemoteNode ):
 
 class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     "Remote instance of Open vSwitch"
-    pass
+    OVSVersions = {}
+    def isOldOVS( self ):
+        "Is remote switch using an old OVS version?"
+        cls = type( self )
+        if self.server not in cls.OVSVersions:
+            info = self.cmdPrint( 'ovs-vsctl --version' )
+            cls.OVSVersions[ self.server ] =  re.findall( '\d+\.\d+', info )[ 0 ]
+        return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
+                StrictVersion( '1.10' ) )
 
 
 # RemoteController should really be renamed ExternalController
