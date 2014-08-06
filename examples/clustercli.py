@@ -5,9 +5,8 @@
 from mininet.cli import CLI
 from mininet.log import output
 
-import networkx as nx
-from networkx import graphviz_layout
-import matplotlib.pyplot as plt
+nx, graphviz_layout, plt = None, None, None  # Will be imported on demand
+
 
 class DemoCLI( CLI ):
     "CLI with additional commands for Cluster Edition demo"
@@ -26,6 +25,17 @@ class DemoCLI( CLI ):
     
     def do_plot( self, line ):
         "Plot topology colored by node placement"
+        # Import networkx if needed
+        if not nx:
+            global nx, graphviz_layout, plt
+            try:
+                import networkx as nx
+                from networkx import graphviz_layout
+                import matplotlib.pyplot as plt
+            except:
+                error( 'plot requires networkx and matplotlib - '
+                       'please install them and try again' )
+                return
         # Make a networkx Graph
         g = nx.Graph()
         mn = self.mn
