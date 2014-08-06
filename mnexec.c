@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
             fflush(stdout);
             break;
         case 'a':
-            /* Attach to pid's network namespace and mount namespace*/
+            /* Attach to pid's network namespace and mount namespace */
             pid = atoi(optarg);
-            sprintf(path, "/proc/%d/ns/net", pid );
+            sprintf(path, "/proc/%d/ns/net", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0) {
                 perror(path);
@@ -152,15 +152,16 @@ int main(int argc, char *argv[])
                 perror("setns");
                 return 1;
             }
-            sprintf(path, "/proc/%d/ns/mnt", pid );
+            /* Plan A: call setns() to attach to mount namespace */
+            sprintf(path, "/proc/%d/ns/mnt", pid);
             nsid = open(path, O_RDONLY);
-            if (nsid < 0) {
-                perror(path);
-                return 1;
-            }
-            if (setns(nsid, 0) != 0) {
-                perror("setns");
-                return 1;
+            if (nsid < 0 || setns(nsid, 0) != 0) {
+                /* Plan B: chroot into pid's root file system */
+                sprintf(path, "/proc/%d/root", pid);
+                if (chroot(path) < 0) {
+                    perror(path);
+                    return 1;
+                }
             }
             break;
         case 'g':
