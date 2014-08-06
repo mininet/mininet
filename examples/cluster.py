@@ -111,6 +111,11 @@ class RemoteMixin( object ):
 
     "A mix-in class to turn local nodes into remote nodes"
 
+    # ssh base command
+    # BatchMode yes: don't ask for password
+    # ForwardAgent yes: forward authentication credentials
+    sshopts = [ 'ssh', '-o', 'BatchMode yes', 'ForwardAgent yes' ]
+
     def __init__( self, name, server=None, user=None, controlPath=None,
                  serverIP=None, splitInit=False, **kwargs):
         """Instantiate a remote node
@@ -193,7 +198,7 @@ class RemoteMixin( object ):
         if not self.server:
             return Popen( cmd, **opts )
         # remote host: use ssh and controlPath
-        ssh = [ 'ssh',  '-n' ]  # do not read from stdin
+        ssh = ['ssh', '-n' ]  # do not read from stdin
         assert self.controlPath
         if self.controlPath:
             ssh += [ '-S', self.controlPath ]
@@ -260,7 +265,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
         if self.server not in cls.OVSVersions:
-            info = self.cmdPrint( 'ovs-vsctl --version' )
+            info = self.cmd( 'ovs-vsctl --version' )
             cls.OVSVersions[ self.server ] =  re.findall( '\d+\.\d+', info )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                 StrictVersion( '1.10' ) )
@@ -569,6 +574,11 @@ class MininetCluster( Mininet ):
 
     "Cluster-enhanced version of Mininet class"
 
+    # Default ssh command
+    # BatchMode yes: don't ask for password
+    # ForwardAgent yes: forward authentication credentials
+    sshcmd = [ 'ssh', '-o', 'BatchMode yes', '-o', 'ForwardAgent yes' ]
+
     def __init__( self, *args, **kwargs ):
         """servers: a list of servers to use (note: include
            localhost or None to use local system as well)
@@ -577,15 +587,19 @@ class MininetCluster( Mininet ):
         params = { 'host': RemoteHost,
                    'switch': RemoteOVSSwitch,
                    'controller': RController,
-                   'link': RemoteLink }
+                   'link': RemoteLink,
+                   'precheck': True }
         params.update( kwargs )
         servers = params.pop( 'servers', [] )
         servers = [ s if s != 'localhost' else None for s in servers ]
         self.servers = servers
-        self.serverIP = {}
+        self.serverIP = { server: RemoteMixin.findServerIP( server )
+                          for server in self.servers }
         self.user = params.pop( 'user', None )
         if self.servers and not self.user:
             self.user = quietRun( 'who am i' ).split()[ 0 ]
+        if params.pop( 'precheck' ):
+            self.precheck()
         self.connections = {}
         self.placement = params.pop( 'placement', SwitchBinPlacer )
         # Make sure control directory exists
@@ -605,6 +619,32 @@ class MininetCluster( Mininet ):
         "break addlink for testing"
         pass
 
+    def precheck( self ):
+        """Pre-check to make sure connection works and that
+           we can call sudo without a password"""
+        result = 0
+        info( '*** Checking servers\n' )
+        for server in self.servers:
+            ip = self.serverIP[ server ]
+            if not server:
+                server = 'localhost'
+            info( server, '' )
+            dest = '%s@%s' % ( self.user, ip )
+            cmd = self.sshcmd + [ '-n', dest, 'sudo true' ]
+            out, err, code = errRun( cmd )
+            if code != 0:
+                error( '\nstartConnection: connection check failed '
+                       'to %s using command:\n%s\n'
+                        % ( server, cmd ) )
+            result |= code
+        if result:
+            error( '*** Precheck failed - please fix the errors reported above.\n'
+                   '*** You may need to run mn -c on all nodes; also make\n'
+                   '*** sure you are using sudo -E and that you can ssh into all\n'
+                   '*** nodes and run sudo without entering a password.\n' )
+            exit( 1 )
+        info( '\n' )
+
     def startConnection( self, server1=None, server2=None ):
         """Start a master ssh connection between node1 and node2,
            on one of their servers (lowest alphabetically)
@@ -617,14 +657,10 @@ class MininetCluster( Mininet ):
         # Use a canonical order
         # Note that None will end up as server1
         server1, server2 = sorted( ( server1, server2 ) )
-        if server2 in self.serverIP:
-            ip2 = self.serverIP[ server2 ]
-        else:
-            ip2 = RemoteMixin.findServerIP( server2 )
-            self.serverIP[ server2 ] = ip2
-        dest2 = '%s@%s' % ( self.user, ip2 )
+        dest2 = '%s@%s' % ( self.user, self.serverIP[ server2 ] )
         cfile2 = '%s/%s-%s' % ( self.cdir, server1, server2 )
-        cmd = [ 'ssh', '-n', '-o', 'ControlPersist=yes',
+        # Create new master ssh connection
+        cmd = self.sshcmd + [ '-n', '-o', 'ControlPersist=yes',
                '-M', '-S', cfile2,
                dest2, 'echo OK' ]
         if server1:
@@ -847,7 +883,7 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ 'localhost', 'ubuntu12' ]
+    servers = [ 'localhost', 'ubuntu2' ]
     topo = TreeTopo( depth=3, fanout=3 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
