@@ -179,7 +179,7 @@ class RemoteMixin( object ):
     # network connections
 
     def rpopen( self, *args, **opts):
-        """"Create a popen object runing in server's root namespace
+        """Create a popen object runing in server's root namespace
             args: strings, or single list of strings"""
         sudo = opts.pop( 'sudo', True )
         opts.setdefault( 'stdout', PIPE )
@@ -236,7 +236,7 @@ class RemoteMixin( object ):
         if self.user and self.server:
             if self.controlPath:
                 cmd = [ 'ssh', '-tt', '-S', self.controlPath,
-                        '%s@%s' % ( self.user, self.serverIP) ] + cmd
+                        '%s@%s' % ( self.user, self.serverIP ) ] + cmd
             else:
                 raise Exception( 'NO CONTROL PATH TO %s:%s' % (
                  self.name, self.serverIP ) )
@@ -593,8 +593,10 @@ class MininetCluster( Mininet ):
         servers = params.pop( 'servers', [] )
         servers = [ s if s != 'localhost' else None for s in servers ]
         self.servers = servers
-        self.serverIP = { server: RemoteMixin.findServerIP( server )
-                          for server in self.servers }
+        self.serverIP = params.pop( 'serverIP', {} )
+        if not self.serverIP:
+            self.serverIP = { server: RemoteMixin.findServerIP( server )
+                              for server in self.servers }
         self.user = params.pop( 'user', None )
         if self.servers and not self.user:
             self.user = quietRun( 'who am i' ).split()[ 0 ]
@@ -614,7 +616,6 @@ class MininetCluster( Mininet ):
         signal( SIGINT, old )
         return conn
 
-
     def baddLink( self, *args, **kwargs ):
         "break addlink for testing"
         pass
@@ -633,7 +634,7 @@ class MininetCluster( Mininet ):
             cmd = self.sshcmd + [ '-n', dest, 'sudo true' ]
             out, err, code = errRun( cmd )
             if code != 0:
-                error( '\nstartConnection: connection check failed '
+                error( '\nstartConnection: server connection check failed '
                        'to %s using command:\n%s\n'
                         % ( server, cmd ) )
             result |= code
