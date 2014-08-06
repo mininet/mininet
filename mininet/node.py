@@ -1316,6 +1316,7 @@ class NOX( Controller ):
                              cdir=noxCoreDir,
                              **kwargs )
 
+
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
