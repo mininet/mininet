@@ -85,7 +85,8 @@ from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun, makeIntfPair, errRun, retry
 from mininet.cli import CLI as CLIbase
-from mininet.log import setLogLevel, debug, info, error
+from mininet.examples.clustercli import CLI
+from mininet.log import setLogLevel, debug, info, warn, error
 
 from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
@@ -199,13 +200,11 @@ class RemoteMixin( object ):
             return Popen( cmd, **opts )
         # remote host: use ssh and controlPath
         ssh = ['ssh', '-n' ]  # do not read from stdin
-        assert self.controlPath
         if self.controlPath:
             ssh += [ '-S', self.controlPath ]
         if sudo:
             cmd = [ 'sudo', '-E' ] + cmd
         cmd = ssh + [ self.dest ] + cmd
-        # print 'rpopen', cmd
         popen = Popen( cmd, **opts )
         return popen
 
@@ -238,7 +237,7 @@ class RemoteMixin( object ):
                 cmd = [ 'ssh', '-tt', '-S', self.controlPath,
                         '%s@%s' % ( self.user, self.serverIP ) ] + cmd
             else:
-                raise Exception( 'NO CONTROL PATH TO %s:%s' % (
+                warn( 'No control path to %s:%s\n' % (
                  self.name, self.serverIP ) )
                 cmd = [ 'ssh', '-tt', '%s@%s'
                        % ( self.user, self.serverIP ) ] + cmd
@@ -269,15 +268,6 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
             cls.OVSVersions[ self.server ] =  re.findall( '\d+\.\d+', info )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                 StrictVersion( '1.10' ) )
-
-
-# RemoteController should really be renamed ExternalController
-class RController( RemoteMixin, Controller ):
-    "Remote instance of Controller()"
-    def start( self, *args, **kwargs ):
-        "Start and update IP address"
-        Intf( 'eth0', node=self ).updateIP()
-        super( RController, self ).start( *args, **kwargs )
 
 
 
@@ -577,7 +567,7 @@ class MininetCluster( Mininet ):
     # Default ssh command
     # BatchMode yes: don't ask for password
     # ForwardAgent yes: forward authentication credentials
-    sshcmd = [ 'ssh', '-o', 'BatchMode yes', '-o', 'ForwardAgent yes' ]
+    sshcmd = [ 'ssh', '-o', 'BatchMode=yes', '-o', 'ForwardAgent=yes' ]
 
     def __init__( self, *args, **kwargs ):
         """servers: a list of servers to use (note: include
@@ -586,7 +576,6 @@ class MininetCluster( Mininet ):
            placement: Placer() subclass"""
         params = { 'host': RemoteHost,
                    'switch': RemoteOVSSwitch,
-                   'controller': RController,
                    'link': RemoteLink,
                    'precheck': True }
         params.update( kwargs )
@@ -752,6 +741,17 @@ class MininetCluster( Mininet ):
             if cfile:
                 config.setdefault( 'controlPath', cfile )
 
+    def addController( self, *args, **kwargs ):
+        "Patch to update IP address to global IP address"
+        controller = Mininet.addController( self, *args, **kwargs )
+        # Update IP address for controller that may not be local
+        if ( isinstance( controller, Controller)
+             and controller.IP() == '127.0.0.1'
+             and ' eth0:' in controller.cmd( 'ip link show' ) ):
+             Intf( 'eth0', node=controller ).updateIP()
+        return controller
+
+
     def buildFromTopo( self, *args, **kwargs ):
         "Start network"
         info( '*** Starting server connections\n' )
@@ -787,23 +787,22 @@ def testNsTunnels():
 # This shows how node options may be used to manage
 # cluster placement using the net.add*() API
 
-def testRemoteNet():
+def testRemoteNet( remote='ubuntu2' ):
     "Test remote Node classes"
     print '*** Remote Node Test'
-    rhost = dict( cls=RemoteHost, server='ubuntu12' )
-    rswitch = dict( cls=RemoteOVSSwitch, server='ubuntu12' )
-    net = Mininet( link=RemoteLink )
+    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch,
+                   link=RemoteLink )
     c0 = net.addController( 'c0' )
     # Make sure controller knows its non-loopback address
     Intf( 'eth0', node=c0 ).updateIP()
     print "*** Creating local h1"
     h1 = net.addHost( 'h1' )
     print "*** Creating remote h2"
-    h2 = net.addHost( 'h2', **rhost )
+    h2 = net.addHost( 'h2', server=remote )
     print "*** Creating local s1"
     s1 = net.addSwitch( 's1' )
     print "*** Creating remote s2"
-    s2 = net.addSwitch( 's2', **rswitch )
+    s2 = net.addSwitch( 's2', server=remote )
     print "*** Adding links"
     net.addLink( h1, s1 )
     net.addLink( s1, s2 )
@@ -826,7 +825,7 @@ def testRemoteNet():
 
 remoteHosts = [ 'h2' ]
 remoteSwitches = [ 's2' ]
-remoteServer = 'ubuntu12'
+remoteServer = 'ubuntu2'
 
 def HostPlacer( name, *args, **params ):
     "Custom Host() constructor which places hosts on servers"
@@ -840,7 +839,7 @@ def SwitchPlacer( name, *args, **params ):
     if name in remoteSwitches:
         return RemoteOVSSwitch( name, *args, server=remoteServer, **params )
     else:
-        return OVSSwitch( name, *args, **params )
+        return RemoteOVSSwitch( name, *args, **params )
 
 def ClusterController( *args, **kwargs):
     "Custom Controller() constructor which updates its eth0 IP address"
