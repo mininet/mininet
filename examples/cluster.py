@@ -663,7 +663,7 @@ class MininetCluster( Mininet ):
         conn2 = self.popen( cmd )
         return dest2, cfile2, conn2
     
-    def waitConnected( _self, conns ):
+    def waitForConnections( _self, conns ):
         "Wait for a specific ssh connection to start up"
         for _dest, _cfile, conn in conns:
             assert conn.stdout.read( 2 ) == 'OK'
@@ -687,7 +687,7 @@ class MininetCluster( Mininet ):
                 conn = self.startConnection( *key )
                 self.connections[ key ] = conn
                 conns.append( conn )
-        self.waitConnected( conns )
+        self.waitForConnections( conns )
         info( '\n' )
 
     def startLinkConnections( self ):
@@ -707,7 +707,7 @@ class MininetCluster( Mininet ):
                 conn = self.startConnection( *key )
                 self.connections[ key ] = conn
                 conns.append( conn )
-        self.waitConnected( conns )
+        self.waitForConnections( conns )
 
     def stopConnections( self ):
         for dest, cfile, conn in self.connections.values():
