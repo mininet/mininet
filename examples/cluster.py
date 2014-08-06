@@ -776,7 +776,7 @@ def testNsTunnels():
     "Test tunnels between nodes in namespaces"
     net = Mininet( host=RemoteHost, link=RemoteLink )
     h1 = net.addHost( 'h1' )
-    h2 = net.addHost( 'h2', server='ubuntu12' )
+    h2 = net.addHost( 'h2', server='ubuntu2' )
     net.addLink( h1, h2 )
     net.start()
     net.pingAll()
@@ -864,7 +864,7 @@ def testRemoteTopo():
 
 def testRemoteSwitches():
     "Test with local hosts and remote switches"
-    servers = [ 'localhost', 'ubuntu12']
+    servers = [ 'localhost', 'ubuntu2']
     topo = TreeTopo( depth=4, fanout=2 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=RoundRobinPlacer )
