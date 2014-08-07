@@ -164,7 +164,8 @@ class Node( object ):
                 break
             self.pollOut.poll()
         self.waiting = False
-        self.pid = int( self.cmd( 'stty -echo; echo $$' ) )
+        self.cmd( 'stty -echo' )
+        self.pid = int( self.cmd( 'echo $$' ) )
 
     def cleanup( self ):
         "Help python collect its garbage."
