@@ -68,6 +68,21 @@ class DemoCLI( CLI ):
         plt.title( 'Node Placement', fontweight='bold' )
         plt.show()
 
+    def do_status( self, line ):
+        "Report on node shell status"
+        nodes = self.mn.hosts + self.mn.switches
+        for node in nodes:
+            node.shell.poll()
+        exited = [ node for node in nodes
+                   if node.shell.returncode is not None ]
+        if exited:
+            for node in exited:
+                output( '%s has exited with code %d\n'
+                        % ( node, node.shell.returncode ) )
+        else:
+            output( 'All nodes are still running.\n' )
+
+
     def do_placement( self, line ):
         "Describe node placement"
         mn = self.mn
