@@ -31,6 +31,8 @@ from os import isatty
 from select import poll, POLLIN
 import sys
 import time
+import os
+import atexit
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -52,6 +54,18 @@ class CLI( Cmd ):
         self.inputFile = script
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
+
+        # Set up history if readline is available
+        try:
+            import readline
+        except ImportError:
+            pass
+        else:
+            history_path = os.path.expanduser('~/.mininet_history')
+            if os.path.isfile(history_path):
+                readline.read_history_file(history_path)
+            atexit.register(lambda: readline.write_history_file(history_path))
+
         if self.inputFile:
             self.do_source( self.inputFile )
             return
@@ -63,7 +77,7 @@ class CLI( Cmd ):
                         node.sendInt()
                         node.monitor()
                 if self.isatty():
-                    quietRun( 'stty sane' )
+                    quietRun( 'stty echo sane intr "^C"' )
                 self.cmdloop()
                 break
             except KeyboardInterrupt:
@@ -151,16 +165,16 @@ class CLI( Cmd ):
 
     # pylint: enable-msg=W0703,W0122
 
-    def do_pingall( self, _line ):
+    def do_pingall( self, line ):
         "Ping between all hosts."
-        self.mn.pingAll()
+        self.mn.pingAll( line )
 
     def do_pingpair( self, _line ):
         "Ping between first two hosts, useful for testing."
         self.mn.pingPair()
 
     def do_pingallfull( self, _line ):
-        "Ping between first two hosts, returns all ping results."
+        "Ping between all hosts, returns all ping results."
         self.mn.pingAllFull()
 
     def do_pingpairfull( self, _line ):
@@ -187,7 +201,7 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
-        "Simple iperf TCP test between two (optionally specified) hosts."
+        "Simple iperf UDP test between two (optionally specified) hosts."
         args = line.split()
         if not args:
             self.mn.iperf( l4Type='UDP' )
@@ -297,6 +311,7 @@ class CLI( Cmd ):
                     break
         except IOError:
             error( 'error reading file %s\n' % args[ 0 ] )
+        self.inputFile.close()
         self.inputFile = None
 
     def do_dpctl( self, line ):
@@ -331,13 +346,13 @@ class CLI( Cmd ):
             node = self.mn[ first ]
             rest = args.split( ' ' )
             # Substitute IP addresses for node names in command
-            rest = [ self.mn[ arg ].defaultIntf().updateIP()
+            # If updateIP() returns None, then use node name
+            rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
                      if arg in self.mn else arg
                      for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
-            builtin = isShellBuiltin( first )
-            node.sendCmd( rest, printPid=( not builtin ) )
+            node.sendCmd( rest )
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % line )
@@ -345,7 +360,7 @@ class CLI( Cmd ):
     # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
-        "Wait for a node to finish, and  print its output."
+        "Wait for a node to finish, and print its output."
         # Pollers
         nodePoller = poll()
         nodePoller.register( node.stdout )
@@ -363,7 +378,7 @@ class CLI( Cmd ):
                 if False and self.inputFile:
                     key = self.inputFile.read( 1 )
                     if key is not '':
-                        node.write(key)
+                        node.write( key )
                     else:
                         self.inputFile = None
                 if isReadable( self.inPoller ):
@@ -375,7 +390,11 @@ class CLI( Cmd ):
                 if not node.waiting:
                     break
             except KeyboardInterrupt:
+                # There is an at least one race condition here, since
+                # it's possible to interrupt ourselves after we've
+                # read data but before it has been printed.
                 node.sendInt()
+
 
 # Helper functions
 

@@ -24,7 +24,7 @@ class testSimplePerf( unittest.TestCase ):
         # check ping results
         p.expect( "Results: (\d+)% dropped", timeout=120 )
         loss = int( p.match.group( 1 ) )
-        self.assertTrue( loss > 0 and loss < 100 )
+        self.assertTrue( 0 < loss < 100 )
         # check iperf results
         p.expect( "Results: \['([\d\.]+) .bits/sec", timeout=480 )
         bw = float( p.match.group( 1 ) )
@@ -46,7 +46,7 @@ class testSimplePerf( unittest.TestCase ):
         m = re.search( expectStr, output )
         loss = int( m.group( 3 ) )
         net.stop()
-        self.assertTrue( loss > 0 and loss < 100 )
+        self.assertTrue( 0 < loss < 100 )
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )

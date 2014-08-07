@@ -16,6 +16,11 @@ Host: a virtual host. By default, a host is simply a shell; commands
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
 
+HostWithPrivateDirs: a virtual host that has user-specified private
+    directories. These may be temporary directories stored as a tmpfs,
+    or persistent directories that are mounted from another directory in
+    the root filesystem.
+
 Switch: superclass for switch nodes.
 
 UserSwitch: a switch using the user-space switch from the OpenFlow
@@ -47,6 +52,7 @@ Future enhancements:
 """
 
 import os
+import pty
 import re
 import signal
 import select
@@ -59,6 +65,8 @@ from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.link import Link, Intf, TCIntf
+from re import findall
+from distutils.version import StrictVersion
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -118,16 +126,22 @@ class Node( object ):
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
-        opts = '-cdp'
+        opts = '-cd'
         if self.inNamespace:
             opts += 'n'
-        # bash -m: enable job control
+        # bash -m: enable job control, i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
-        cmd = [ 'mnexec', opts, 'bash', '-ms', 'mininet:' + self.name ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-                            close_fds=True )
-        self.stdin = self.shell.stdin
-        self.stdout = self.shell.stdout
+        # prompt is set to sentinel chr( 127 )
+        os.environ[ 'PS1' ] = chr( 127 )
+        cmd = [ 'mnexec', opts, 'bash', '--norc', '-mis', 'mininet:' + self.name ]
+        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+        # in the subprocess and insulate it from signals (e.g. SIGINT)
+        # received by the parent
+        master, slave = pty.openpty()
+        self.shell = Popen( cmd, stdin=slave, stdout=slave, stderr=slave,
+                                  close_fds=False )
+        self.stdin = os.fdopen( master )
+        self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
@@ -140,7 +154,14 @@ class Node( object ):
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
+        # Wait for prompt
+        while True:
+            data = self.read( 1024 )
+            if data[ -1 ] == chr( 127 ):
+                break
+            self.pollOut.poll()
         self.waiting = False
+        self.cmd( 'stty -echo' )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -186,7 +207,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         if self.shell:
-            os.kill( self.pid, signal.SIGKILL )
+            os.killpg( self.pid, signal.SIGKILL )
         self.cleanup()
 
     def stop( self ):
@@ -219,36 +240,29 @@ class Node( object ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
         self.lastCmd = cmd
-        printPid = printPid and not isShellBuiltin( cmd )
-        if len( cmd ) > 0 and cmd[ -1 ] == '&':
-            # print ^A{pid}\n{sentinel}
-            cmd += ' printf "\\001%d\n\\177" $! \n'
-        else:
-            # print sentinel
-            cmd += '; printf "\\177"'
-            if printPid and not isShellBuiltin( cmd ):
+        if printPid and not isShellBuiltin( cmd ):
+            if len( cmd ) > 0 and cmd[ -1 ] == '&':
+                # print ^A{pid}\n so monitor() can set lastPid
+                cmd += ' printf "\\001%d\n" $! \n'
+            else:
                 cmd = 'mnexec -p ' + cmd
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
 
-    def sendInt( self, sig=signal.SIGINT ):
+    def sendInt( self, intr=chr( 3 ) ):
         "Interrupt running command."
-        if self.lastPid:
-            try:
-                os.kill( self.lastPid, sig )
-            except OSError:
-                pass
+        self.write( intr )
 
-    def monitor( self, timeoutms=None ):
+    def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
            timeoutms: timeout in ms or None to wait indefinitely."""
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
         # Look for PID
-        marker = chr( 1 ) + r'\d+\n'
-        if chr( 1 ) in data:
+        marker = chr( 1 ) + r'\d+\r\n'
+        if findPid and chr( 1 ) in data:
             markers = re.findall( marker, data )
             if markers:
                 self.lastPid = int( markers[ 0 ][ 1: ] )
@@ -725,6 +739,33 @@ class CPULimitedHost( Host ):
         mountCgroups()
         cls.inited = True
 
+class HostWithPrivateDirs( Host ):
+    "Host with private directories"
+
+    def __init__( self, name, *args, **kwargs ):
+        "privateDirs: list of private directory strings or tuples"
+        self.name = name
+        self.privateDirs = kwargs.pop( 'privateDirs', [] )
+        Host.__init__( self, name, *args, **kwargs )
+        self.mountPrivateDirs()
+
+    def mountPrivateDirs( self ):
+        "mount private directories"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                # mount given private directory
+                privateDir = directory[ 1 ] % self.__dict__ 
+                mountPoint = directory[ 0 ]
+                self.cmd( 'mkdir -p %s' % privateDir )
+                self.cmd( 'mkdir -p %s' % mountPoint )
+                self.cmd( 'mount --bind %s %s' %
+                               ( privateDir, mountPoint ) )
+            else:
+                # mount temporary filesystem on directory
+                self.cmd( 'mkdir -p %s' % directory ) 
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
+
+
 
 # Some important things to note:
 #
@@ -754,27 +795,32 @@ class Switch( Node ):
     dpidLen = 16  # digits in dpid passed to switch
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
-        """dpid: dpid for switch (or None to derive from name, e.g. s1 -> 1)
+        """dpid: dpid hex string (or None to derive from name, e.g. s1 -> 1)
            opts: additional switch options
            listenPort: port to listen on for dpctl connections"""
         Node.__init__( self, name, **params )
-        self.dpid = dpid if dpid else self.defaultDpid()
+        self.dpid = self.defaultDpid( dpid )
         self.opts = opts
         self.listenPort = listenPort
         if not self.inNamespace:
             self.controlIntf = Intf( 'lo', self, port=0 )
 
-    def defaultDpid( self ):
-        "Derive dpid from switch name, s1 -> 1"
-        try:
-            dpid = int( re.findall( r'\d+', self.name )[ 0 ] )
-            dpid = hex( dpid )[ 2: ]
-            dpid = '0' * ( self.dpidLen - len( dpid ) ) + dpid
-            return dpid
-        except IndexError:
-            raise Exception( 'Unable to derive default datapath ID - '
-                             'please either specify a dpid or use a '
-                             'canonical switch name such as s23.' )
+    def defaultDpid( self, dpid=None ):
+        "Return correctly formatted dpid from dpid or switch name (s1 -> 1)"
+        if dpid:
+            # Remove any colons and make sure it's a good hex number
+            dpid = dpid.translate( None, ':' )
+            assert len( dpid ) <= self.dpidLen and int( dpid, 16 ) >= 0
+        else:
+            # Use hex of the first number in the switch name
+            nums = re.findall( r'\d+', self.name )
+            if nums:
+                dpid = hex( int( nums[ 0 ] ) )[ 2: ]
+            else:
+                raise Exception( 'Unable to derive default datapath ID - '
+                                 'please either specify a dpid or use a '
+                                 'canonical switch name such as s23.' )
+        return '0' * ( self.dpidLen - len( dpid ) ) + dpid
 
     def defaultIntf( self ):
         "Return control interface"
@@ -819,6 +865,8 @@ class UserSwitch( Switch ):
                               '(openflow.org)' )
         if self.listenPort:
             self.opts += ' --listen=ptcp:%i ' % self.listenPort
+        else:
+            self.opts += ' --listen=punix:/tmp/%s.listen' % self.name
         self.dpopts = dpopts
 
     @classmethod
@@ -829,10 +877,13 @@ class UserSwitch( Switch ):
 
     def dpctl( self, *args ):
         "Run dpctl command"
+        listenAddr = None
         if not self.listenPort:
-            return "can't run dpctl without passive listening port"
+            listenAddr = 'unix:/tmp/%s.listen' % self.name
+        else:
+            listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
-                         ' tcp:127.0.0.1:%i' % self.listenPort )
+                         ' ' + listenAddr )
 
     def connected( self ):
         "Is the switch connected to a controller?"
@@ -849,10 +900,13 @@ class UserSwitch( Switch ):
             minspeed = ifspeed * 0.001
 
             res = intf.config( **intf.params )
-            parent = res['parent']
+
+            if res is None: # link may not have TC parameters
+                return
 
             # Re-add qdisc, root, and default classes user switch created, but
             # with new parent, as setup by Mininet's TCIntf
+            parent = res['parent']
             intf.tc( "%s qdisc add dev %s " + parent +
                      " handle 1: htb default 0xfffe" )
             intf.tc( "%s class add dev %s classid 1:0xffff parent 1: htb rate "
@@ -947,14 +1001,17 @@ class OVSLegacyKernelSwitch( Switch ):
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
-    def __init__( self, name, failMode='secure', datapath='kernel', **params ):
+    def __init__( self, name, failMode='secure', datapath='kernel',
+                 inband=False, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
-           datapath: userspace or kernel mode (kernel|user)"""
+           datapath: userspace or kernel mode (kernel|user)
+           inband: use in-band control (False)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
+        self.inband = inband
 
     @classmethod
     def setup( cls ):
@@ -975,6 +1032,20 @@ class OVSSwitch( Switch ):
                    'You may wish to try '
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
+        info = quietRun( 'ovs-vsctl --version' )
+        cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
+
+    @classmethod
+    def isOldOVS( cls ):
+        return ( StrictVersion( cls.OVSVersion ) <
+             StrictVersion( '1.10' ) )
+
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Call ovs-vsctl del-br on all OVSSwitches in a list"
+        quietRun( 'ovs-vsctl ' +
+                  ' -- '.join( '--if-exists del-br %s' % s
+                               for s in switches ) )
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
@@ -1025,30 +1096,51 @@ class OVSSwitch( Switch ):
         self.cmd( 'ifconfig lo up' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
-        self.cmd( 'ovs-vsctl add-br', self )
-        if self.datapath == 'user':
-            self.cmd( 'ovs-vsctl set bridge', self,'datapath_type=netdev' )
         int( self.dpid, 16 ) # DPID must be a hex string
-        self.cmd( 'ovs-vsctl -- set Bridge', self,
-                  'other_config:datapath-id=' + self.dpid )
-        self.cmd( 'ovs-vsctl set-fail-mode', self, self.failMode )
-        for intf in self.intfList():
-            if not intf.IP():
-                self.attach( intf )
-        # Add controllers
-        clist = ' '.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
+        # Interfaces and controllers
+        intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
+                          '-- set Interface %s ' % intf +
+                          'ofport_request=%s ' % self.ports[ intf ]
+                         for intf in self.intfList() if not intf.IP() )
+        clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
+                         for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
-        self.cmd( 'ovs-vsctl set-controller', self, clist )
+        # Construct big ovs-vsctl command for new versions of OVS
+        if not self.isOldOVS():
+            cmd = ( 'ovs-vsctl add-br %s ' % self +
+                    '-- set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    intfs +
+                    '-- set-controller %s %s ' % ( self, clist ) )
+        # Construct ovs-vsctl commands for old versions of OVS
+        else:
+            self.cmd( 'ovs-vsctl add-br', self )
+            for intf in self.intfList():
+                if not intf.IP():
+                    self.cmd( 'ovs-vsctl add-port', self, intf )
+            cmd = ( 'ovs-vsctl set Bridge %s ' % self +
+                    'other_config:datapath-id=%s ' % self.dpid +
+                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    '-- set-controller %s %s ' % ( self, clist ) )
+        if not self.inband:
+            cmd += ( '-- set bridge %s '
+                     'other-config:disable-in-band=true ' % self )
+        if self.datapath == 'user':
+            cmd += '-- set bridge %s datapath_type=netdev ' % self
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
             if uuid.count( '-' ) != 4:
                 # Doesn't look like a UUID
                 continue
             uuid = uuid.strip()
-            self.cmd( 'ovs-vsctl set Controller', uuid,
-                      'max_backoff=1000' )
+            cmd += '-- set Controller %smax_backoff=1000 ' % uuid
+        # Do it!!
+        self.cmd( cmd )
+        for intf in self.intfList():
+            self.TCReapply( intf )
+
 
     def stop( self ):
         "Terminate OVS switch."
@@ -1063,8 +1155,9 @@ OVSKernelSwitch = OVSSwitch
 class IVSSwitch(Switch):
     """IVS virtual switch"""
 
-    def __init__( self, name, **kwargs ):
+    def __init__( self, name, verbose=True, **kwargs ):
         Switch.__init__( self, name, **kwargs )
+        self.verbose = verbose
 
     @classmethod
     def setup( cls ):
@@ -1079,12 +1172,19 @@ class IVSSwitch(Switch):
                    'not be loaded. Try modprobe openvswitch.\n' )
             exit( 1 )
 
+    @classmethod
+    def batchShutdown( cls, switches ):
+        "Kill each IVS switch, to be waited on later in stop()"
+        for switch in switches:
+            switch.cmd( 'kill %ivs' )
+
     def start( self, controllers ):
         "Start up a new IVS switch"
         args = ['ivs']
         args.extend( ['--name', self.name] )
         args.extend( ['--dpid', self.dpid] )
-        args.extend( ['--verbose'] )
+        if self.verbose:
+            args.extend( ['--verbose'] )
         for intf in self.intfs.values():
             if not intf.IP():
                 args.extend( ['-i', intf.name] )
@@ -1096,11 +1196,13 @@ class IVSSwitch(Switch):
 
         logfile = '/tmp/ivs.%s.log' % self.name
 
+        self.cmd( 'ifconfig lo up' )
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):
         "Terminate IVS switch."
         self.cmd( 'kill %ivs' )
+        self.cmd( 'wait' )
         self.deleteIntfs()
 
     def attach( self, intf ):
@@ -1125,12 +1227,13 @@ class Controller( Node ):
 
     def __init__( self, name, inNamespace=False, command='controller',
                   cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                  port=6633, **params ):
+                  port=6633, protocol='tcp', **params ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
         self.ip = ip
         self.port = port
+        self.protocol = protocol
         Node.__init__( self, name, inNamespace=inNamespace,
                        ip=ip, **params  )
         self.cmd( 'ifconfig lo up' )  # Shouldn't be necessary
@@ -1147,7 +1250,7 @@ class Controller( Node ):
         listening = self.cmd( "echo A | telnet -e A %s %d" %
                               ( self.ip, self.port ) )
         if 'Connected' in listening:
-            servers = self.cmd( 'netstat -atp' ).split( '\n' )
+            servers = self.cmd( 'netstat -natp' ).split( '\n' )
             pstr = ':%d ' % self.port
             clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
             raise Exception( "Please shut down the controller which is"
@@ -1183,13 +1286,19 @@ class Controller( Node ):
         return '<%s %s: %s:%s pid=%s> ' % (
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
-
+    @classmethod
+    def isAvailable( self ):
+        return quietRun( 'which controller' )
 
 class OVSController( Controller ):
     "Open vSwitch controller"
     def __init__( self, name, command='ovs-controller', **kwargs ):
+        if quietRun( 'which test-controller' ):
+            command = 'test-controller'
         Controller.__init__( self, name, command=command, **kwargs )
-
+    @classmethod
+    def isAvailable( self ):
+        return quietRun( 'which ovs-controller' ) or quietRun( 'which test-controller' )
 
 class NOX( Controller ):
     "Controller to run a NOX application."
@@ -1244,6 +1353,12 @@ class RemoteController( Controller ):
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
+
+def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
+    "find any controller that is available and run it"
+    for controller in order:
+        if controller.isAvailable():
+            return controller( name, **kwargs )
 
 class NAT( Node ):
     """NAT: Provides connectivity to external network"""
@@ -1311,3 +1426,4 @@ class NAT( Node ):
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 
         super( NAT, self ).terminate()
+

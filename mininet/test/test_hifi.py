@@ -53,8 +53,11 @@ class testOptionsTopoCommon( object ):
         """Check that a given value is within a tolerance of expected
         tolerance_frac: less-than-1.0 value; 0.8 would yield 20% tolerance.
         """
-        self.assertTrue( float(measured) >= float(expected) * tolerance_frac )
-        self.assertTrue( float(measured) >= float(expected) * tolerance_frac )
+        self.assertGreaterEqual( float(measured),
+                                 float(expected) * tolerance_frac )
+        self.assertLessEqual( float( measured ),
+                                 float(expected) + (1-tolerance_frac)
+                                 * float( expected ) )
 
     def testCPULimits( self ):
         "Verify topology creation with CPU limits set for both schedulers."
@@ -68,19 +71,20 @@ class testOptionsTopoCommon( object ):
         mn.start()
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
-        for cpu in results:
-            self.assertWithinTolerance( cpu, CPU_FRACTION, CPU_TOLERANCE )
+        for pct in results:
+            #divide cpu by 100 to convert from percentage to fraction
+            self.assertWithinTolerance( pct/100, CPU_FRACTION, CPU_TOLERANCE )
 
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
-        BW = 5  # Mbps
+        BW = .5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
         lopts = { 'bw': BW, 'use_htb': True }
         # Also verify correctness of limit limitng within a bound.
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass )
-        bw_strs = mn.run( mn.iperf )
+        bw_strs = mn.run( mn.iperf, format='m' )
         for bw_str in bw_strs:
             bw = float( bw_str.split(' ')[0] )
             self.assertWithinTolerance( bw, BW, BW_TOLERANCE )
@@ -91,7 +95,7 @@ class testOptionsTopoCommon( object ):
         DELAY_TOLERANCE = 0.8  # Delay fraction below which test should fail
         lopts = { 'delay': '%sms' % DELAY_MS, 'use_htb': True }
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
-                      link=TCLink, switch=self.switchClass )
+                      link=TCLink, switch=self.switchClass, autoStaticArp=True )
         ping_delays = mn.run( mn.pingFull )
         test_outputs = ping_delays[0]
         # Ignore unused variables below
@@ -102,8 +106,9 @@ class testOptionsTopoCommon( object ):
         # pylint: enable-msg=W0612
         for rttval in [rttmin, rttavg, rttmax]:
             # Multiply delay by 4 to cover there & back on two links
-            self.assertWithinTolerance( rttval, DELAY_MS * 4.0,
+            self.assertWithinTolerance( rttval, DELAY_MS * 4.0, 
                                         DELAY_TOLERANCE)
+
 
     def testLinkLoss( self ):
         "Verify that we see packet drops with a high configured loss rate."
@@ -120,7 +125,7 @@ class testOptionsTopoCommon( object ):
         for _ in range(REPS):
             dropped_total += mn.ping(timeout='1')
         mn.stop()
-        self.assertTrue(dropped_total > 0)
+        self.assertGreater( dropped_total, 0 )
 
     def testMostOptions( self ):
         "Verify topology creation with most link options and CPU limits."

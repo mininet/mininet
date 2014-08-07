@@ -63,22 +63,11 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
 # Kernel params
 
-if [ "$DIST" = "Ubuntu" ]; then
-    if [ "$RELEASE" = "10.04" ]; then
-        KERNEL_NAME='3.0.0-15-generic'
-    else
-        KERNEL_NAME=`uname -r`
-    fi
-    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}
-elif [ "$DIST" = "Debian" ] && [ "$ARCH" = "i386" ] && [ "$CODENAME" = "lenny" ]; then
-    KERNEL_NAME=2.6.33.1-mininet
-    KERNEL_HEADERS=linux-headers-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-    KERNEL_IMAGE=linux-image-${KERNEL_NAME}_${KERNEL_NAME}-10.00.Custom_i386.deb
-elif [ "$DIST" = "Fedora" ]; then
-    KERNEL_NAME=`uname -r`
-    KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
-else
-    echo "Install.sh currently only supports Ubuntu, Debian Lenny i386 and Fedora."
+KERNEL_NAME=`uname -r`
+KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
+
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora'; then
+    echo "Install.sh currently only supports Ubuntu, Debian and Fedora."
     exit 1
 fi
 
@@ -96,8 +85,6 @@ OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_TAG=v$OVS_RELEASE
 
-IVS_TAG=v0.3
-
 # Command-line versions overrides that simplify custom VM creation
 # To use, pass in the vars on the cmd line before install.sh, e.g.
 # WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
@@ -108,31 +95,7 @@ OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
     sudo apt-get update
-    if [ "$DIST" = "Ubuntu" ] &&  [ "$RELEASE" = "10.04" ]; then
-        $install linux-image-$KERNEL_NAME
-    elif [ "$DIST" = "Debian" ]; then
-        # The easy approach: download pre-built linux-image and linux-headers packages:
-        wget -c $KERNEL_LOC/$KERNEL_HEADERS
-        wget -c $KERNEL_LOC/$KERNEL_IMAGE
-
-        # Install custom linux headers and image:
-        $pkginst $KERNEL_IMAGE $KERNEL_HEADERS
-
-        # The next two steps are to work around a bug in newer versions of
-        # kernel-package, which fails to add initrd images with the latest kernels.
-        # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=525032
-        # Generate initrd image if the .deb didn't install it:
-        if ! test -e /boot/initrd.img-${KERNEL_NAME}; then
-            sudo update-initramfs -c -k ${KERNEL_NAME}
-        fi
-
-        # Ensure /boot/grub/menu.lst boots with initrd image:
-        sudo update-grub
-
-        # The default should be the new kernel. Otherwise, you may need to modify
-        # /boot/grub/menu.lst to set the default to the entry corresponding to the
-        # kernel you just installed.
-    fi
+    $install linux-image-$KERNEL_NAME
 }
 
 function kernel_clean {
@@ -176,10 +139,9 @@ function mn_dev {
 # -user switch
 # The instructions below are an abbreviated version from
 # http://www.openflowswitch.org/wk/index.php/Debian_Install
-# ... modified to use Debian Lenny rather than unstable.
 function of {
     echo "Installing OpenFlow reference implementation..."
-    cd $BUILD_DIR/
+    cd $BUILD_DIR
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" ]; then
         $install git pkgconfig glibc-devel
@@ -300,111 +262,95 @@ function wireshark {
 }
 
 
+# Install Open vSwitch specific version Ubuntu package
+function ubuntuOvs {
+    echo "Creating and Installing Open vSwitch packages..."
+
+    OVS_SRC=$BUILD_DIR/openvswitch
+    OVS_TARBALL_LOC=http://openvswitch.org/releases
+
+    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+        rm -rf $OVS_SRC
+        mkdir -p $OVS_SRC
+        cd $OVS_SRC
+
+        if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
+            tar xzf openvswitch-$OVS_RELEASE.tar.gz
+        else
+            echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
+            cd $BUILD_DIR
+            return
+        fi
+
+        # Remove any old packages
+        $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
+                openvswitch-pki openvswitch-switch
+
+        # Get build deps
+        $install build-essential fakeroot debhelper autoconf automake libssl-dev \
+                 pkg-config bzip2 openssl python-all procps python-qt4 \
+                 python-zopeinterface python-twisted-conch dkms
+
+        # Build OVS
+        cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
+                DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+        cd ..
+        $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
+                 openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
+        if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+            echo "Ignoring error installing openvswitch-controller"
+        fi
+
+        modinfo openvswitch
+        sudo ovs-vsctl show
+        # Switch can run on its own, but
+        # Mininet should control the controller
+        # This appears to only be an issue on Ubuntu/Debian
+        if sudo service openvswitch-controller stop; then
+            echo "Stopped running controller"
+        fi
+        if [ -e /etc/init.d/openvswitch-controller ]; then
+            sudo update-rc.d openvswitch-controller disable
+        fi
+    else
+        echo "Failed to install Open vSwitch.  OS must be Ubuntu >= 12.04"
+            cd $BUILD_DIR
+            return
+    fi
+}
+
+
 # Install Open vSwitch
-# Instructions derived from OVS INSTALL, INSTALL.OpenFlow and README files.
 
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Fedora" ]; then
-        # Just install Fedora's openvswitch RPMS
+    if [ "$DIST" == "Fedora" ]; then
         $install openvswitch openvswitch-controller
         return
     fi
 
-    OVS_SRC=$BUILD_DIR/openvswitch
-    OVS_BUILD=$OVS_SRC/build-$KERNEL_NAME
-    OVS_KMODS=($OVS_BUILD/datapath/linux/{openvswitch_mod.ko,brcompat_mod.ko})
-
-    # Required for module build/dkms install
-    $install $KERNEL_HEADERS
-
-    ovspresent=0
-
-    # First see if we have packages
-    # XXX wget -c seems to fail from github/amazon s3
-    cd /tmp
-    if wget $OVS_PACKAGE_LOC/$OVS_PACKAGE_NAME 2> /dev/null; then
-	$install patch dkms fakeroot python-argparse
-        tar xf $OVS_PACKAGE_NAME
-        orig=`tar tf $OVS_PACKAGE_NAME`
-        # Now install packages in reasonable dependency order
-        order='dkms common pki openvswitch-switch brcompat controller'
-        pkgs=""
-        for p in $order; do
-            pkg=`echo "$orig" | grep $p`
-	    # Annoyingly, things seem to be missing without this flag
-            $pkginst --force-confmiss $pkg
-        done
-        ovspresent=1
+    # Manually installing openvswitch-datapath may be necessary
+    # for manually built kernel .debs using Debian's defective kernel
+    # packaging, which doesn't yield usable headers.
+    if ! dpkg --get-selections | grep openvswitch-datapath; then
+        # If you've already installed a datapath, assume you
+        # know what you're doing and don't need dkms datapath.
+        # Otherwise, install it.
+        $install openvswitch-datapath-dkms
     fi
 
-    # Otherwise try distribution's OVS packages
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 11.10` = 1 ]; then
-        if ! dpkg --get-selections | grep openvswitch-datapath; then
-            # If you've already installed a datapath, assume you
-            # know what you're doing and don't need dkms datapath.
-            # Otherwise, install it.
-            $install openvswitch-datapath-dkms
-        fi
-	if $install openvswitch-switch openvswitch-controller; then
-            echo "Ignoring error installing openvswitch-controller"
-        fi
-        ovspresent=1
-    fi
+    $install openvswitch-switch openvswitch-controller
 
     # Switch can run on its own, but
     # Mininet should control the controller
+    # This appears to only be an issue on Ubuntu/Debian
+    if sudo service openvswitch-controller stop; then
+        echo "Stopped running controller"
+    fi
     if [ -e /etc/init.d/openvswitch-controller ]; then
-        if sudo service openvswitch-controller stop; then
-            echo "Stopped running controller"
-        fi
         sudo update-rc.d openvswitch-controller disable
     fi
-
-    if [ $ovspresent = 1 ]; then
-        echo "Done (hopefully) installing packages"
-        cd $BUILD_DIR
-        return
-    fi
-
-    # Otherwise attempt to install from source
-
-    $install pkg-config gcc make python-dev libssl-dev libtool
-
-    if [ "$DIST" = "Debian" ]; then
-        if [ "$CODENAME" = "lenny" ]; then
-            $install git-core
-            # Install Autoconf 2.63+ backport from Debian Backports repo:
-            # Instructions from http://backports.org/dokuwiki/doku.php?id=instructions
-            sudo su -c "echo 'deb http://www.backports.org/debian lenny-backports main contrib non-free' >> /etc/apt/sources.list"
-            sudo apt-get update
-            sudo apt-get -y --force-yes install debian-backports-keyring
-            sudo apt-get -y --force-yes -t lenny-backports install autoconf
-        fi
-    else
-        $install git
-    fi
-
-    # Install OVS from release
-    cd $BUILD_DIR/
-    git clone git://openvswitch.org/openvswitch $OVS_SRC
-    cd $OVS_SRC
-    git checkout $OVS_TAG
-    ./boot.sh
-    BUILDDIR=/lib/modules/${KERNEL_NAME}/build
-    if [ ! -e $BUILDDIR ]; then
-        echo "Creating build sdirectory $BUILDDIR"
-        sudo mkdir -p $BUILDDIR
-    fi
-    opts="--with-linux=$BUILDDIR"
-    mkdir -p $OVS_BUILD
-    cd $OVS_BUILD
-    ../configure $opts
-    make
-    sudo make install
-
-    modprobe
 }
 
 function remove_ovs {
@@ -438,7 +384,7 @@ function ivs {
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC -b $IVS_TAG --recursive
+    git clone git://github.com/floodlight/ivs $IVS_SRC --recursive
     cd $IVS_SRC
     make
     sudo make install
@@ -555,7 +501,7 @@ function cbench {
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
     cd $BUILD_DIR/
-    git clone git://openflow.org/oflops.git
+    git clone git://gitosis.stanford.edu/oflops.git
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
@@ -706,7 +652,7 @@ function vm_clean {
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhikmnprtvwx03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhikmnprtvVwx03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -731,6 +677,7 @@ function usage {
     printf -- ' -s <dir>: place dependency (S)ource/build trees in <dir>\n' >&2
     printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
     printf -- ' -v: install Open (V)switch\n' >&2
+    printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
@@ -744,7 +691,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvwx03' OPTION
+    while getopts 'abcdefhikmnprs:tvV:wx03' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -769,6 +716,8 @@ else
             echo "Dependency installation directory: $BUILD_DIR";;
       t)    vm_other;;
       v)    ovs;;
+      V)    OVS_RELEASE=$OPTARG;
+            ubuntuOvs;;
       w)    wireshark;;
       x)    case $OF_VERSION in
             1.0) nox;;

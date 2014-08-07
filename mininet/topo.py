@@ -48,18 +48,25 @@ class MultiGraph( object ):
 class Topo(object):
     "Data center network representation for structured multi-trees."
 
-    def __init__(self, hopts=None, sopts=None, lopts=None):
-        """Topo object:
+    def __init__(self, *args, **params):
+        """Topo object. 
+           Optional named parameters:
            hinfo: default host options
            sopts: default switch options
-           lopts: default link options"""
+           lopts: default link options
+           calls build()"""
         self.g = MultiGraph()
         self.node_info = {}
         self.link_info = {}  # (src, dst) tuples hash to EdgeInfo objects
-        self.hopts = {} if hopts is None else hopts
-        self.sopts = {} if sopts is None else sopts
-        self.lopts = {} if lopts is None else lopts
+        self.hopts = params.pop( 'hopts', {} )
+        self.sopts = params.pop( 'sopts', {} )
+        self.lopts = params.pop( 'lopts', {} )
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
+        self.build( *args, **params )
+
+    def build( self, *args, **params ):
+        "Override this method to build your topology."
+        pass
 
     def addNode(self, name, **opts):
         """Add Node to graph.
@@ -168,7 +175,7 @@ class Topo(object):
         '''
         if src in self.ports and dst in self.ports[src]:
             assert dst in self.ports and src in self.ports[dst]
-            return (self.ports[src][dst], self.ports[dst][src])
+            return self.ports[src][dst], self.ports[dst][src]
 
     def linkInfo( self, src, dst ):
         "Return link metadata"
@@ -194,76 +201,56 @@ class Topo(object):
         "Items sorted in natural (i.e. alphabetical) order"
         return sorted(items, key=natural)
 
-class SingleSwitchTopo(Topo):
-    '''Single switch connected to k hosts.'''
 
-    def __init__(self, k=2, **opts):
-        '''Init.
+class SingleSwitchTopo( Topo ):
+    "Single switch connected to k hosts."
 
-        @param k number of hosts
-        @param enable_all enables all nodes and switches?
-        '''
-        super(SingleSwitchTopo, self).__init__(**opts)
-
+    def build( self, k=2, **opts ):
+        "k: number of hosts"
         self.k = k
+        switch = self.addSwitch( 's1' )
+        for h in irange( 1, k ):
+            host = self.addHost( 'h%s' % h )
+            self.addLink( host, switch )
 
-        switch = self.addSwitch('s1')
-        for h in irange(1, k):
-            host = self.addHost('h%s' % h)
-            self.addLink(host, switch)
 
+class SingleSwitchReversedTopo( Topo ):
+    """Single switch connected to k hosts, with reversed ports.
+       The lowest-numbered host is connected to the highest-numbered port.
+       Useful to verify that Mininet properly handles custom port numberings."""
 
-class SingleSwitchReversedTopo(Topo):
-    '''Single switch connected to k hosts, with reversed ports.
-
-    The lowest-numbered host is connected to the highest-numbered port.
-
-    Useful to verify that Mininet properly handles custom port numberings.
-    '''
-    def __init__(self, k=2, **opts):
-        '''Init.
-
-        @param k number of hosts
-        @param enable_all enables all nodes and switches?
-        '''
-        super(SingleSwitchReversedTopo, self).__init__(**opts)
+    def build( self, k=2 ):
+        "k: number of hosts"
         self.k = k
-        switch = self.addSwitch('s1')
-        for h in irange(1, k):
-            host = self.addHost('h%s' % h)
-            self.addLink(host, switch,
-                         port1=0, port2=(k - h + 1))
+        switch = self.addSwitch( 's1' )
+        for h in irange( 1, k ):
+            host = self.addHost( 'h%s' % h )
+            self.addLink( host, switch,
+                          port1=0, port2=( k - h + 1 ) )
 
-class LinearTopo(Topo):
+class LinearTopo( Topo ):
     "Linear topology of k switches, with n hosts per switch."
 
-    def __init__(self, k=2, n=1, **opts):
-        """Init.
-           k: number of switches
-           n: number of hosts per switch
-           hconf: host configuration options
-           lconf: link configuration options"""
-
-        super(LinearTopo, self).__init__(**opts)
-
+    def build( self, k=2, n=1, **opts):
+        """k: number of switches
+           n: number of hosts per switch"""
         self.k = k
         self.n = n
 
         if n == 1:
             genHostName = lambda i, j: 'h%s' % i
         else:
-            genHostName = lambda i, j: 'h%ss%d' % (j, i)
-
+            genHostName = lambda i, j: 'h%ss%d' % ( j, i )
 
         lastSwitch = None
-        for i in irange(1, k):
+        for i in irange( 1, k ):
             # Add switch
-            switch = self.addSwitch('s%s' % i)
+            switch = self.addSwitch( 's%s' % i )
             # Add hosts to switch
-            for j in irange(1, n):
-                host = self.addHost(genHostName(i, j))
-                self.addLink(host, switch)
+            for j in irange( 1, n ):
+                host = self.addHost( genHostName( i, j ) )
+                self.addLink( host, switch )
             # Connect switch to previous
             if lastSwitch:
-                self.addLink(switch, lastSwitch)
+                self.addLink( switch, lastSwitch )
             lastSwitch = switch

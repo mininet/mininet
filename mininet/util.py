@@ -155,7 +155,12 @@ def makeIntfPair( intf1, intf2 ):
     quietRun( 'ip link del ' + intf2 )
     # Create new pair
     cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    return quietRun( cmd )
+    cmdOutput = quietRun( cmd )
+    if cmdOutput == '':
+        return True
+    else:
+        error( "Error creating interface pair: %s " % cmdOutput )
+        return False
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.
@@ -183,8 +188,7 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
         srcNode.cmd( cmd )
     else:
         quietRun( cmd )
-    links = dstNode.cmd( 'ip link show' )
-    if not ( ' %s:' % intf ) in links:
+    if ( ' %s:' % intf ) not in dstNode.cmd( 'ip link show', intf ):
         if printError:
             error( '*** Error: moveIntf: ' + intf +
                    ' not successfully moved to ' + dstNode.name + '\n' )
@@ -269,7 +273,7 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
        ipBaseNum: option base IP address as int
        returns IP address as string"""
     imax = 0xffffffff >> prefixLen
-    assert i <= imax
+    assert i <= imax, 'Not enough IP addresses in the subnet'
     mask = 0xffffffff ^ imax
     ipnum = ( ipBaseNum & mask ) + i
     return ipStr( ipnum )
@@ -277,6 +281,8 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
+    while ( len(args) < 4 ):
+        args.append( 0 )
     return ipNum( *args )
 
 def netParse( ipstr ):
@@ -286,6 +292,10 @@ def netParse( ipstr ):
     if '/' in ipstr:
         ip, pf = ipstr.split( '/' )
         prefixLen = int( pf )
+    #if no prefix is specified, set the prefix to 24
+    else:
+        ip = ipstr
+        prefixLen = 24
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):

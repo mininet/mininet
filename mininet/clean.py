@@ -10,7 +10,7 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output as co
 import time
 
 from mininet.log import info
@@ -47,21 +47,40 @@ def cleanup():
     cleanUpScreens()
 
     info( "*** Removing excess kernel datapaths\n" )
-    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).split( '\n' )
+    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).splitlines()
     for dp in dps:
-        if dp != '':
+        if dp:
             sh( 'dpctl deldp ' + dp )
 
     info( "***  Removing OVS datapaths" )
-    dps = sh("ovs-vsctl --timeout=1 list-br").split( '\n' )
+    dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
+    if dps:
+        sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
+                                       for dp in dps if dp ) )
+    # And in case the above didn't work...
+    dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
     for dp in dps:
-        if dp:
-            sh( 'ovs-vsctl del-br ' + dp )
+        sh( 'ovs-vsctl del-br ' + dp )
 
     info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( r"ip link show | egrep -o '(\w+-eth\w+)'" ).split( '\n' )
+    links = sh( "ip link show | "
+                "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'" ).splitlines()
     for link in links:
-        if link != '':
+        if link:
             sh( "ip link del " + link )
+
+    info( "*** Killing stale mininet node processes\n" )
+    sh( 'pkill -9 -f mininet:' )
+    # Make sure they are gone
+    while True:
+        try:
+            pids = co( 'pgrep -f mininet:'.split() )
+        except:
+            pids = ''
+        if pids:
+            sh( 'pkill -f 9 mininet:' )
+            sleep( .5 )
+        else:
+            break
 
     info( "*** Cleanup complete.\n" )
