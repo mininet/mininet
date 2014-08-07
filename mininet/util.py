@@ -253,7 +253,7 @@ def macColonHex( mac ):
     """Generate MAC colon-hex string from unsigned int.
        mac: MAC address as unsigned int
        returns: macStr MAC colon-hex string"""
-       return _colonHex( mac, 6 )
+    return _colonHex( mac, 6 )
 
 def ipStr( ip ):
     """Generate IP address string from an unsigned int.
