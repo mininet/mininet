@@ -115,18 +115,18 @@ class RemoteMixin( object ):
     # ssh base command
     # BatchMode yes: don't ask for password
     # ForwardAgent yes: forward authentication credentials
-    sshopts = [ 'ssh', '-o', 'BatchMode yes', 'ForwardAgent yes' ]
+    sshbase = [ 'ssh', '-o', 'BatchMode=yes', '-o', 'ForwardAgent=yes' ]
 
-    def __init__( self, name, server=None, user=None, controlPath=None,
-                 serverIP=None, splitInit=False, **kwargs):
+    def __init__( self, name, server=None, user=None, serverIP=None,
+                  controlPath='/tmp/mn-%r@%h:%p', splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
            server: remote server (optional)
            user: user on remote server (optional)
-           controlPath: ssh control path to server (optional)
-           delayShell: delay calling startShell()
+           controlPath: ssh control path template (optional)
+           splitInit: split initialization?
            **kwargs: see Node()"""
-        # We connect to servers via IP address
+        # We connect to servers by IP address
         if server == 'localhost':
             server = None
         self.server = server
@@ -136,10 +136,17 @@ class RemoteMixin( object ):
         if not user:
             user = quietRun( 'who am i' ).split()[ 0 ]
         self.user = user
-        self.dest = '%s@%s' % ( self.user, self.serverIP )
+        self.dest = '%s@%s' % ( self.user, self.serverIP ) if user else None
         self.controlPath = controlPath
+        self.sshcmd = []
+        if self.dest:
+            self.sshcmd = self.sshbase
+            if self.controlPath:
+                self.sshcmd = self.sshbase + [ '-o', 'ControlPath=' + self.controlPath,
+                                               '-o', 'ControlMaster=auto' ]
+            self.sshcmd = self.sshcmd + [ '-tt', self.dest ]
         self.splitInit = splitInit
-        super( RemoteMixin, self).__init__( name, **kwargs )
+        super( RemoteMixin, self ).__init__( name, **kwargs )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
@@ -175,46 +182,22 @@ class RemoteMixin( object ):
     def finishInit( self ):
         self.pid = int( self.waitOutput() )
 
-    # Run command on node's server's root namespace
-    # This is important for things like ssh control
-    # network connections
-
-    def rpopen( self, *args, **opts):
-        """Create a popen object runing in server's root namespace
-            args: strings, or single list of strings"""
-        sudo = opts.pop( 'sudo', True )
-        opts.setdefault( 'stdout', PIPE )
-        opts.setdefault( 'close_fds', True )
-        # single list of strings
-        if len( args ) == 1:
-            if type( args[ 0 ] ) is list:
-                cmd = args[ 0 ]
-            elif type( args[ 0 ] ) is str:
-                cmd = args[ 0 ].split()
-            else:
-                raise Exception( 'rpopen: bad arg type %s' %
-                                type( args[ 0 ] ) )
-        result = ''
-        # local host: use local Popen
-        if not self.server:
-            return Popen( cmd, **opts )
-        # remote host: use ssh and controlPath
-        ssh = ['ssh', '-n' ]  # do not read from stdin
-        if self.controlPath:
-            ssh += [ '-S', self.controlPath ]
-        if sudo:
-            cmd = [ 'sudo', '-E' ] + cmd
-        cmd = ssh + [ self.dest ] + cmd
-        popen = Popen( cmd, **opts )
-        return popen
+    def rpopen( self, *cmd, **opts ):
+        "Return a Popen object on underlying server in root namespace"
+        params = { 'stdin': PIPE,
+                   'stdout': PIPE,
+                   'stderr': STDOUT,
+                   'sudo': True }
+        params.update( opts )
+        return self._popen( *cmd, **params )
 
     def rcmd( self, *cmd, **opts):
         """rcmd: run a command on underlying server
            in root namespace
            args: string or list of strings
            returns: stdout and stderr"""
-        sudo = opts.pop( 'sudo', True )
-        popen = self.rpopen( *cmd, sudo=sudo, **opts )
+        popen = self.rpopen( *cmd, **opts )
+        # print 'RCMD: POPEN:', popen
         # These loops are tricky to get right.
         # Once the process exits, we can read
         # EOF twice if necessary.
@@ -226,24 +209,25 @@ class RemoteMixin( object ):
                 break
         return result
 
-    def _popen( self, cmd, **params):
+    @staticmethod
+    def _ignoreSignal():
+        "Ignore SIGINT"
+        signal( SIGINT, SIG_IGN )
+
+    def _popen( self, cmd, sudo=True, **params):
         """Spawn a process on a remote node
             cmd: remote command to run (list)
             **params: parameters to Popen()
             returns: Popen() object"""
-        cmd = [ 'sudo', '-E' ] + cmd
-        if self.user and self.server:
-            if self.controlPath:
-                cmd = [ 'ssh', '-tt', '-S', self.controlPath,
-                        '%s@%s' % ( self.user, self.serverIP ) ] + cmd
-            else:
-                warn( 'No control path to %s:%s\n' % (
-                 self.name, self.serverIP ) )
-                cmd = [ 'ssh', '-tt', '%s@%s'
-                       % ( self.user, self.serverIP ) ] + cmd
-        old = signal( SIGINT, SIG_IGN )
+        if type( cmd ) is str:
+            cmd = cmd.split()
+        if sudo:
+            cmd = [ 'sudo', '-E' ] + cmd
+        if self.dest:
+            cmd = self.sshcmd + cmd
+        params.update( preexec_fn=self._ignoreSignal )
+        # print 'POPEN', ' '.join(cmd), params
         popen = super( RemoteMixin, self )._popen( cmd, **params )
-        signal( SIGINT, old )
         return popen
 
 
@@ -444,7 +428,6 @@ class RoundRobinPlacer( Placer ):
         return server
 
 
-
 class SwitchBinPlacer( Placer ):
     """Place switches (and controllers) into evenly-sized bins,
        and attempt to co-locate hosts and switches"""
@@ -635,87 +618,11 @@ class MininetCluster( Mininet ):
             exit( 1 )
         info( '\n' )
 
-    def startConnection( self, server1=None, server2=None ):
-        """Start a master ssh connection between node1 and node2,
-           on one of their servers (lowest alphabetically)
-           and add it to our list of connections
-           (wait for 'OK' before it actually starts up)
-           returns: user@ip, control path, connection or None"""
-        if server1 == server2:
-            # No connection is required
-            return
-        # Use a canonical order
-        # Note that None will end up as server1
-        server1, server2 = sorted( ( server1, server2 ) )
-        dest2 = '%s@%s' % ( self.user, self.serverIP[ server2 ] )
-        cfile2 = '%s/%s-%s' % ( self.cdir, server1, server2 )
-        # Create new master ssh connection
-        cmd = self.sshcmd + [ '-n', '-o', 'ControlPersist=yes',
-               '-M', '-S', cfile2,
-               dest2, 'echo OK' ]
-        if server1:
-            # Create remote connection
-            # We MUST have an existing connection to server1
-            dest1, cfile1, _conn = self.connections[ ( None, server1 ) ]
-            ssh = [ 'ssh', '-n', '-S', cfile1, dest1 ]
-            cmd = ssh + cmd
-        # Create and return connection
-        conn2 = self.popen( cmd )
-        return dest2, cfile2, conn2
-    
-    def waitForConnections( _self, conns ):
-        "Wait for a specific ssh connection to start up"
-        for _dest, _cfile, conn in conns:
-            assert conn.stdout.read( 2 ) == 'OK'
-            info( '.' )
-
     def modifiedaddHost( self, *args, **kwargs ):
         "Slightly modify addHost"
         kwargs[ 'splitInit' ] = True
         return Mininet.addHost( *args, **kwargs )
 
-    def startConnections( self ):
-        "Initialize master ssh connections to servers"
-        # Create ssh master connections
-        conns = []
-        for server in self.servers:
-            if not server:
-                continue
-            key = ( None, server )
-            if key not in self.connections:
-                info( server, '' )
-                conn = self.startConnection( *key )
-                self.connections[ key ] = conn
-                conns.append( conn )
-        self.waitForConnections( conns )
-        info( '\n' )
-
-    def startLinkConnections( self ):
-        "Create control connections for server pairs"
-        links = self.topo.links()
-        conns = []
-        for link in links:
-            node1, node2 = link
-            # Server pair for link
-            server1, server2 = [
-                self.topo.node_info[ n ][ 'server' ] for n in node1, node2 ]
-            server1, server2 = sorted( ( server1, server2 ) )
-            key = ( server1, server2 )
-            if server1 != server2 and key not in self.connections:
-                # Create a new control connection
-                info( '(%s,%s)' % ( server1, server2 ) )
-                conn = self.startConnection( *key )
-                self.connections[ key ] = conn
-                conns.append( conn )
-        self.waitForConnections( conns )
-
-    def stopConnections( self ):
-        for dest, cfile, conn in self.connections.values():
-            cmd = [ 'ssh', '-O', 'stop', '-S', cfile, dest ]
-            errRun( cmd )
-            conn.terminate()
-            conn.wait()
-        self.connections = []
 
     def placeNodes( self ):
         """Place nodes on servers (if they don't have a server), and
@@ -751,25 +658,12 @@ class MininetCluster( Mininet ):
              Intf( 'eth0', node=controller ).updateIP()
         return controller
 
-
     def buildFromTopo( self, *args, **kwargs ):
         "Start network"
-        info( '*** Starting server connections\n' )
-        self.startConnections()
-        info( '\n' )
         info( '*** Placing nodes\n' )
         self.placeNodes()
         info( '\n' )
-        info( '*** Starting link connections\n' )
-        self.startLinkConnections()
-        info( '\n' )
         Mininet.buildFromTopo( self, *args, **kwargs )
-
-    def stop( self ):
-        "Stop network"
-        Mininet.stop( self )
-        info( '*** Stopping server connections\n' )
-        self.stopConnections()
 
 
 def testNsTunnels():
@@ -891,11 +785,21 @@ def testMininetCluster():
     net.pingAll()
     net.stop()
 
+def signalTest():
+    "Make sure hosts are robust to signals"
+    h = RemoteHost( 'h0', server='ubuntu1' )
+    h.shell.send_signal( SIGINT )
+    h.shell.poll()
+    if h.shell.returncode is None:
+        print 'OK: ', h, 'has not exited'
+    else:
+        print 'FAILURE:', h, 'exited with code', returncode
+    h.stop()
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     # testRemoteTopo()
     # testRemoteNet()
-    testMininetCluster()
+    # testMininetCluster()
     # testRemoteSwitches()
-
-
+    signalTest()
