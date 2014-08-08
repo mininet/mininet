@@ -343,7 +343,8 @@ class Node( object ):
     def pexec( self, *args, **kwargs ):
         """Execute a command using popen
            returns: out, err, exitcode"""
-        popen = self.popen( *args, **kwargs)
+        popen = self.popen( *args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                           **kwargs )
         # Warning: this can fail with large numbers of fds!
         out, err = popen.communicate()
         exitcode = popen.wait()
