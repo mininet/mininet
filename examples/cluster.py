@@ -17,8 +17,8 @@ These are largely interoperable with local objects.
 
 - One Mininet to rule them all
 
-It is important that a single topology be able to contain local nodes and
-remote nodes.
+It is important that the same topologies, APIs, and CLI can be used
+with minimal or no modification in both local and distributed environments.
 
 - Multiple placement models
 
@@ -35,9 +35,9 @@ pair of mininet servers that needs to communicate.
 How are tunnels created?
 
 We have several options including ssh, GRE, OF capsulator, socat, VDE, l2tp,
-etc.. It's not clear what the best one is.  Probably ssh tunnels if we're
-going to have ssh connections to the mininet servers. We will probably want
-to support GRE as well because it's very easy to set up with OVS.
+etc..  It's not clear what the best one is.  For now, we use ssh tunnels since
+they are encrypted and semi-automatically shared.  We will probably want to
+support GRE as well because it's very easy to set up with OVS.
 
 How are tunnels destroyed?
 
@@ -45,8 +45,8 @@ They are destroyed when the links are deleted in Mininet.stop()
 
 How does RemoteNode.popen() work?
 
-It could work in a variety of ways. One way would be to create a shared ssh
-connection to the remote Mininet server and run mnexec -a -g.
+It opens a shared ssh connection to the remote server and attaches to
+the namespace using mnexec -a -g.
 
 Is there any value to using Paramiko vs. raw ssh?
 
