@@ -177,7 +177,6 @@ class RemoteMixin( object ):
             self.sendCmd( 'echo $$' )
         else:
             self.pid = int( self.cmd( 'echo $$' ) )
-        self.cmd( 'stty sane -echo' )
 
     def finishInit( self ):
         self.pid = int( self.waitOutput() )
