@@ -165,7 +165,6 @@ class Node( object ):
             self.pollOut.poll()
         self.waiting = False
         self.cmd( 'stty -echo' )
-        self.pid = int( self.cmd( 'echo $$' ) )
 
     def cleanup( self ):
         "Help python collect its garbage."
