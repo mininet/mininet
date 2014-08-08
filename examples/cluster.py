@@ -15,10 +15,6 @@ Core classes:
 
 These are largely interoperable with local objects.
 
-Question: if we want to share a single ssh connection to all of the remote
-objects on a Mininet server, how should this be handled? Should it be
-handled in the RemoteNode() class or in another class?
-
 - One Mininet to rule them all
 
 It is important that a single topology be able to contain local nodes and
@@ -38,9 +34,10 @@ pair of mininet servers that needs to communicate.
 
 How are tunnels created?
 
-We have several options including OF capsulator, socat, vxlan, VDE, l2tp, etc.
-It's not clear what the best one is.  Probably ssh tunnels if we're going to
-have ssh connections to the mininet servers.
+We have several options including ssh, GRE, OF capsulator, socat, VDE, l2tp,
+etc.. It's not clear what the best one is.  Probably ssh tunnels if we're
+going to have ssh connections to the mininet servers. We will probably want
+to support GRE as well because it's very easy to set up with OVS.
 
 How are tunnels destroyed?
 
@@ -58,20 +55,17 @@ Maybe, but it doesn't seem to support L2 tunneling.
 Should we preflight the entire network, including all server-to-server
 connections?
 
-Yes! We don't yet do this with link connections however.
+Yes! We don't yet do this with remote server-to-server connections yet.
 
 Should we multiplex the link ssh connections?
 
-YES!! This involves keeping track of all of the server-server links.
-Note that the link connections will have to be disambiguated somehow.
-For example, they could be server1-server2
+Yes, this is done automatically with ControlMaster=auto.
 
 Note on ssh and DNS:
 Please add UseDNS: no to your /etc/ssh/sshd_config!!!
 
 Things to do:
 
-- control paths for links
 - asynchronous/pipelined startup
 - ssh debugging/profiling
 - make connections into real objects
