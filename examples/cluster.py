@@ -4,7 +4,7 @@
 cluster.py: prototyping/experimentation for distributed Mininet,
             aka Mininet: Cluster Edition
 
-Bob Lantz, Spring 2013
+Author: Bob Lantz
 
 Core classes:
 
@@ -66,10 +66,12 @@ Please add UseDNS: no to your /etc/ssh/sshd_config!!!
 
 Things to do:
 
-- asynchronous/pipelined startup
+- asynchronous/pipelined/parallel startup
 - ssh debugging/profiling
 - make connections into real objects
-
+- support for other tunneling schemes
+- tests and benchmarks
+- hifi support (e.g. delay compensation)
 """
 
 from mininet.node import Node, Host, OVSSwitch, Controller
