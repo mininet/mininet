@@ -26,11 +26,10 @@ class DemoCLI( CLI ):
     def do_plot( self, line ):
         "Plot topology colored by node placement"
         # Import networkx if needed
+        global nx, plt
         if not nx:
-            global nx, graphviz_layout, plt
             try:
                 import networkx as nx
-                from networkx import graphviz_layout
                 import matplotlib.pyplot as plt
             except:
                 error( 'plot requires networkx and matplotlib - '
