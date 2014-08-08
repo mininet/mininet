@@ -3,7 +3,7 @@
 "CLI for Mininet Cluster Edition prototype demo"
 
 from mininet.cli import CLI
-from mininet.log import output
+from mininet.log import output, error
 
 nx, graphviz_layout, plt = None, None, None  # Will be imported on demand
 
@@ -47,7 +47,7 @@ class DemoCLI( CLI ):
                   for link in self.mn.links ]
         g.add_edges_from( links )
         # Pick some shapes and colors
-        shapes = hlen * [ 's' ] + slen * [ 'o' ]
+        # shapes = hlen * [ 's' ] + slen * [ 'o' ]
         color = dict( zip( servers, self.colorsFor( servers ) ) )
         # Plot it!
         pos = nx.graphviz_layout( g )

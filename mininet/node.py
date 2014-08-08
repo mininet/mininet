@@ -50,7 +50,7 @@ Future enhancements:
 """
 
 import os
-import pty
+from pty import openpty
 import re
 import signal
 import select
@@ -122,14 +122,14 @@ class Node( object ):
         return Popen( cmd, **params )
 
     # Command support via shell process in namespace
-    def startShell( self ):
+    def startShell( self, mnopts=None, pty=True ):
         "Start a shell process for running commands"
         if self.shell:
             error( "%s: shell is already running\n" % self.name )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
-        opts = '-cd'
+        opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
             opts += 'n'
         # bash -m: enable job control, i: force interactive
@@ -137,14 +137,18 @@ class Node( object ):
         # prompt is set to sentinel chr( 127 )
         cmd = [ 'mnexec', opts, 'env',  'PS1=' + chr( 127 ),
                 'bash', '--norc', '-mis', 'mininet:' + self.name ]
-        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
-        # in the subprocess and insulate it from signals (e.g. SIGINT)
-        # received by the parent
-        master, slave = pty.openpty()
-        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
-                                  close_fds=False )
-        self.stdin = os.fdopen( master )
-        self.stdout = self.stdin
+        if pty:
+            # Spawn a shell subprocess in a pseudo-tty, to disable buffering
+            # in the subprocess and insulate it from signals (e.g. SIGINT)
+            # received by the parent
+            conn, slave = openpty()
+            self.shell = self._popen( cmd, stdin=slave, stdout=slave,
+                                      stderr=STDOUT, close_fds=False )
+            self.stdin = self.stdout = os.fdopen( conn, 'rw' )
+        else:
+            self.shell = self._popen( cmd, stdin=PIPE, stdout=PIPE,
+                                      stderr=STDOUT, close_fds=True )
+            self.stdin, self.stdout = self.shell.stdin, self.shell.stdout
         self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
@@ -255,6 +259,7 @@ class Node( object ):
 
     def sendInt( self, intr=chr( 3 ) ):
         "Interrupt running command."
+        debug( 'sendInt: writing chr(%d)\n' % ord( intr ) )
         self.write( intr )
 
     def monitor( self, timeoutms=None, findPid=True ):
@@ -329,15 +334,11 @@ class Node( object ):
             # popen( cmd, arg1, arg2... )
             cmd = list( args )
         # Attach to our namespace  using mnexec -a
-        mncmd = defaults[ 'mncmd' ]
-        del defaults[ 'mncmd' ]
-        cmd = mncmd + cmd
+        cmd = defaults.pop( 'mncmd' ) + cmd
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
-        old = signal.signal( signal.SIGINT, signal.SIG_IGN )
         popen = self._popen( cmd, **defaults )
-        signal.signal( signal.SIGINT, old )
         return popen
 
     def pexec( self, *args, **kwargs ):

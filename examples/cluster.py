@@ -84,20 +84,16 @@ from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun, makeIntfPair, errRun, retry
-from mininet.cli import CLI as CLIbase
 from mininet.examples.clustercli import CLI
-from mininet.log import setLogLevel, debug, info, warn, error
+from mininet.log import setLogLevel, debug, info, error
 
-from signal import signal, SIGINT, SIG_IGN
+from signal import signal, SIGINT, SIGHUP, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
-import select
-import pty
 import os
-from time import sleep
 from random import randrange
 from sys import exit
 import re
-from itertools import chain
+
 from distutils.version import StrictVersion
 
 # BL note: so little code is required for remote nodes,
@@ -115,7 +111,9 @@ class RemoteMixin( object ):
     # ssh base command
     # BatchMode yes: don't ask for password
     # ForwardAgent yes: forward authentication credentials
-    sshbase = [ 'ssh', '-o', 'BatchMode=yes', '-o', 'ForwardAgent=yes' ]
+    sshbase = [ 'ssh',
+                '-o', 'BatchMode=yes',
+                '-o', 'ForwardAgent=yes', '-tt' ]
 
     def __init__( self, name, server=None, user=None, serverIP=None,
                   controlPath='/tmp/mn-%r@%h:%p', splitInit=False, **kwargs):
@@ -144,7 +142,7 @@ class RemoteMixin( object ):
             if self.controlPath:
                 self.sshcmd = self.sshbase + [ '-o', 'ControlPath=' + self.controlPath,
                                                '-o', 'ControlMaster=auto' ]
-            self.sshcmd = self.sshcmd + [ '-tt', self.dest ]
+            self.sshcmd = self.sshcmd + [ self.dest ]
         self.splitInit = splitInit
         super( RemoteMixin, self ).__init__( name, **kwargs )
 
@@ -165,7 +163,7 @@ class RemoteMixin( object ):
                 if ipmatch:
                     return ipmatch[ 0 ]
             # Otherwise, look up remote server
-            output = quietRun( 'host %s' % server )
+            output = quietRun( 'getent ahostsv4 %s' % server )
         ips = cls._ipMatchRegex.findall( output )
         ip = ips[ 0 ] if ips else None
         return ip
@@ -173,11 +171,13 @@ class RemoteMixin( object ):
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
+        kwargs.update( mnopts='-c', pty=True)
         super( RemoteMixin, self ).startShell( *args, **kwargs )
         if self.splitInit:
             self.sendCmd( 'echo $$' )
         else:
             self.pid = int( self.cmd( 'echo $$' ) )
+        self.cmd( 'stty sane -echo' )
 
     def finishInit( self ):
         self.pid = int( self.waitOutput() )
@@ -211,10 +211,10 @@ class RemoteMixin( object ):
 
     @staticmethod
     def _ignoreSignal():
-        "Ignore SIGINT"
-        signal( SIGINT, SIG_IGN )
+        "Detach from process group to ignore all signals"
+        os.setpgrp()
 
-    def _popen( self, cmd, sudo=True, **params):
+    def _popen( self, cmd, sudo=True, tt=True, **params):
         """Spawn a process on a remote node
             cmd: remote command to run (list)
             **params: parameters to Popen()
@@ -224,11 +224,26 @@ class RemoteMixin( object ):
         if sudo:
             cmd = [ 'sudo', '-E' ] + cmd
         if self.dest:
-            cmd = self.sshcmd + cmd
+            if tt:
+                cmd = self.sshcmd + cmd
+            else:
+                # Hack: remove -tt
+                sshcmd = list( self.sshcmd )
+                sshcmd.remove( '-tt' )
+                cmd = sshcmd + cmd
         params.update( preexec_fn=self._ignoreSignal )
         # print 'POPEN', ' '.join(cmd), params
         popen = super( RemoteMixin, self )._popen( cmd, **params )
         return popen
+
+    def popen( self, *args, **kwargs ):
+        "Hack: disable -tt"
+        return super( RemoteMixin, self).popen( *args, tt=False, **kwargs )
+
+    def terminate( self ):
+        "Since we've detached our pgrp, kill the shell manually"
+        self.shell.send_signal( SIGHUP )
+        super( RemoteMixin, self ).terminate()
 
 
 class RemoteNode( RemoteMixin, Node ):
@@ -248,8 +263,8 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
         if self.server not in cls.OVSVersions:
-            info = self.cmd( 'ovs-vsctl --version' )
-            cls.OVSVersions[ self.server ] =  re.findall( '\d+\.\d+', info )[ 0 ]
+            vers = self.cmd( 'ovs-vsctl --version' )
+            cls.OVSVersions[ self.server ] = re.findall( '\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                 StrictVersion( '1.10' ) )
 
@@ -368,8 +383,8 @@ class RemoteLink( Link ):
                     self.tunnel.pid, self.cmd )
         else:
             status = "OK"
-        return "%s %s" % ( Link.status( self ), status )
-
+        result = "%s %s" % ( Link.status( self ), status )
+        return result
 
 
 # Some simple placement algorithms for MininetCluster
@@ -584,7 +599,7 @@ class MininetCluster( Mininet ):
     def popen( self, cmd ):
         "Popen() for server connections"
         old = signal( SIGINT, SIG_IGN )
-        conn = Popen( cmd, stdout=PIPE, close_fds=True )
+        conn = Popen( cmd, stdin=PIPE, stdout=PIPE, close_fds=True )
         signal( SIGINT, old )
         return conn
 
@@ -596,6 +611,10 @@ class MininetCluster( Mininet ):
         """Pre-check to make sure connection works and that
            we can call sudo without a password"""
         result = 0
+        if 'SSH_AUTH_SOCK' not in os.environ:
+            error( '*** SSH_AUTH_SOCK is required, but is not set.\n'
+                   '*** You may need to use sudo -E\n' )
+            exit( 1 )
         info( '*** Checking servers\n' )
         for server in self.servers:
             ip = self.serverIP[ server ]
@@ -604,6 +623,7 @@ class MininetCluster( Mininet ):
             info( server, '' )
             dest = '%s@%s' % ( self.user, ip )
             cmd = self.sshcmd + [ '-n', dest, 'sudo true' ]
+            debug( ' '.join( cmd ), '\n' )
             out, err, code = errRun( cmd )
             if code != 0:
                 error( '\nstartConnection: server connection check failed '
@@ -793,7 +813,7 @@ def signalTest():
     if h.shell.returncode is None:
         print 'OK: ', h, 'has not exited'
     else:
-        print 'FAILURE:', h, 'exited with code', returncode
+        print 'FAILURE:', h, 'exited with code', h.shell.returncode
     h.stop()
 
 if __name__ == '__main__':

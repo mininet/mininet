@@ -2,8 +2,7 @@
 
 "clusterdemo.py: demo of Mininet Cluster Edition prototype"
 
-from mininet.examples.cluster import (
-    MininetCluster, SwitchBinPlacer, RandomPlacer )
+from mininet.examples.cluster import MininetCluster, SwitchBinPlacer
 from mininet.topolib import TreeTopo
 from mininet.log import setLogLevel
 from mininet.examples.clustercli import DemoCLI as CLI

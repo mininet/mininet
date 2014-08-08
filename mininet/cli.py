@@ -380,8 +380,9 @@ class CLI( Cmd ):
         # interrupt to the shell, but for remote nodes we
         # DON'T want to send an interrupt to ssh, because
         # that will cause the connection to die.
-        if hasattr( node, 'server' ):
-            quietRun( [ 'stty', 'intr', ''] )
+        # if hasattr( node, 'server' ):
+        #    quietRun( [ 'stty', 'intr', ''] )
+        quietRun( 'stty intr "^C"' )
         while True:
             try:
                 bothPoller.poll()
