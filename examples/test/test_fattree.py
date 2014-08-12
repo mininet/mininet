@@ -19,7 +19,7 @@ class testFatTree( unittest.TestCase ):
         p = pexpect.spawn( 'python -m mininet.examples.fattree' )
         p.expect( self.prompt, timeout=6000 ) 
         p.sendline( 'pingall' )
-        p.expect ( '(\d+)% dropped' )
+        p.expect ( '(\d+)% dropped', timeout=6000 )
         percent = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )
