@@ -133,8 +133,6 @@ function mn_deps {
 function mn_dev {
     echo "Installing Mininet developer dependencies"
     $install doxygen doxypy texlive-fonts-recommended
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 14.04` = 1 ]; then
-        $install doxygen-latex
 }
 
 # The following will cause a full OF install, covering:
