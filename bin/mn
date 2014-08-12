@@ -25,7 +25,7 @@ from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
-                           NOX, RemoteController, DefaultController,
+                           NOX, RemoteController, getAvailableController,
                            UserSwitch, OVSSwitch,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
@@ -64,7 +64,7 @@ CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
-                'default': DefaultController,
+                'default': None,
                 'none': lambda name: None }
 
 LINKDEF = 'default'
@@ -203,6 +203,15 @@ class MininetRunner( object ):
         opts.add_option( '--version', action='callback', callback=version )
 
         self.options, self.args = opts.parse_args()
+
+        if self.options.controller == "default":
+            controller_name = getAvailableController()
+            if controller_name is not None:
+                self.options.controller = controller_name
+            else:
+                # fallback to lxbr switch, which does not use OF controller
+                self.options.switch = 'lxbr'
+                self.options.controller = 'none'
 
         # We don't accept extra arguments after the options
         if self.args:
