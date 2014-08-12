@@ -4,12 +4,17 @@
 
 user=$(whoami)
 SSHDIR=/tmp/mn/ssh
-usage=$'./authenticate [ host1 ] [ host2 ] ... \n
+usage=$'./authenticate [ -h ] [ host1 ] [ host2 ] ... \n
         Tear down a mininet cluster after using ./authenticate to 
-        set up ssh'
+        set up temporary ssh'
 
 if [ -z "$1" ]; then
     echo "ERROR: Must input a hostname"
+    echo "$usage"
+    exit
+fi
+
+if [ "$1" == "-h" ]; then
     echo "$usage"
     exit
 fi
@@ -25,14 +30,14 @@ for i in "$@"; do
 done
 
 for host in $hosts; do
-    echo "***cleaning up $host ..."
+    echo "***cleaning up $host"
     sudo ssh $user@$host "sudo umount /home/$user/.ssh
                           sudo umount /root/.ssh
                           sudo rm -rf $SSHDIR"
 done
-echo "**unmounting local directories..."
+echo "**unmounting local directories"
 sudo umount /home/$user/.ssh
 sudo umount /root/.ssh
-echo "***removing temporary ssh directory..."
+echo "***removing temporary ssh directory"
 sudo rm -rf $SSHDIR
 echo "done!"
