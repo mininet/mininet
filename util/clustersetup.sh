@@ -125,6 +125,7 @@ else
         h)  showHelp=true;;
         p)  persistent=true;;
         c)  clean=true;;
+        ?)  showHelp=true;;
         esac
     done
     shift $(($OPTIND - 1))
