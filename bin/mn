@@ -26,7 +26,7 @@ from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, DefaultController,
-                           UserSwitch, OVSSwitch,
+                           UserSwitch, OVSBridge, OVSSwitch,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
@@ -48,6 +48,7 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
              'ovs':  OVSSwitch,
+             'ovsb' : OVSBridge,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
              'ovsl': OVSLegacyKernelSwitch,
