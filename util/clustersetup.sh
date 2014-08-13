@@ -46,6 +46,7 @@ persistentSetup() {
     cat $USERDIR/cluster_key.pub >> $USERDIR/authorized_keys
     echo "***configuring ssh"
     echo "IdentityFile $USERDIR/cluster_key" >> $USERDIR/config
+    echo "IdentityFile $USERDIR/id_rsa" >> $USERDIR/config
 
     for host in $hosts; do
         echo "***copying public key to $host"
@@ -54,7 +55,9 @@ persistentSetup() {
         scp $USERDIR/cluster_key $user@$host:$USERDIR
         scp $USERDIR/cluster_key.pub $user@$host:$USERDIR
         echo "***configuring remote host"
-        ssh -o ForwardAgent=yes  $user@$host "echo 'IdentityFile $USERDIR/cluster_key' >> $USERDIR/config"
+        ssh -o ForwardAgent=yes  $user@$host "
+        echo 'IdentityFile $USERDIR/cluster_key' >> $USERDIR/config
+        echo 'IdentityFile $USERDIR/id_rsa' >> $USERDIR/config"
     done
 
     for host in $hosts; do
