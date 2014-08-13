@@ -26,7 +26,7 @@ from mininet.log import lg, LEVELS, info, debug, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, getAvailableController,
-                           UserSwitch, OVSSwitch,
+                           UserSwitch, OVSBridge, OVSSwitch,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
@@ -48,6 +48,7 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
              'ovs':  OVSSwitch,
+             'ovsb' : OVSBridge,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
              'ovsl': OVSLegacyKernelSwitch,
@@ -204,15 +205,6 @@ class MininetRunner( object ):
 
         self.options, self.args = opts.parse_args()
 
-        if self.options.controller == "default":
-            controller_name = getAvailableController()
-            if controller_name is not None:
-                self.options.controller = controller_name
-            else:
-                # fallback to lxbr switch, which does not use OF controller
-                self.options.switch = 'lxbr'
-                self.options.controller = 'none'
-
         # We don't accept extra arguments after the options
         if self.args:
             opts.print_help()
@@ -237,6 +229,17 @@ class MininetRunner( object ):
             exit()
 
         start = time.time()
+
+        if self.options.controller == "default":
+            controller_name = getAvailableController()
+            if controller_name is not None:
+                self.options.controller = controller_name
+            else:
+                # fallback to OVS Bridge switch, which does not use OF controller
+                info('*** No default OpenFlow implementation found!\n')
+                info('    Fallback to ovsb switch implementation.\n')
+                self.options.switch = 'ovsb'
+                self.options.controller = 'none'
 
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
