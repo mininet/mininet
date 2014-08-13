@@ -996,20 +996,8 @@ class OVSLegacyKernelSwitch( Switch ):
         self.deleteIntfs()
 
 
-class OVSSwitch( Switch ):
-    "Open vSwitch switch. Depends on ovs-vsctl."
-
-    def __init__( self, name, failMode='secure', datapath='kernel',
-                 inband=False, **params ):
-        """Init.
-           name: name for switch
-           failMode: controller loss behavior (secure|open)
-           datapath: userspace or kernel mode (kernel|user)
-           inband: use in-band control (False)"""
-        Switch.__init__( self, name, **params )
-        self.failMode = failMode
-        self.datapath = datapath
-        self.inband = inband
+class OVSSwitchBase( Switch ):
+    'a base class for OVS switches; does not contain OpenFlow code at all'
 
     @classmethod
     def setup( cls ):
@@ -1045,10 +1033,6 @@ class OVSSwitch( Switch ):
                   ' -- '.join( '--if-exists del-br %s' % s
                                for s in switches ) )
 
-    def dpctl( self, *args ):
-        "Run ovs-ofctl command"
-        return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
-
     @staticmethod
     def TCReapply( intf ):
         """Unfortunately OVS and Mininet are fighting
@@ -1066,6 +1050,52 @@ class OVSSwitch( Switch ):
     def detach( self, intf ):
         "Disconnect a data port"
         self.cmd( 'ovs-vsctl del-port', self, intf )
+
+
+class OVSBridge( OVSSwitchBase ):
+    "OpenVSwitch Bridge (similar to OVSSwitch, but no OpenFlow)"
+
+    def __init__( self, name, **kwargs ):
+        OVSSwitchBase.__init__( self, name, **kwargs )
+
+    def connected( self ):
+        return True
+
+    def start( self, controllers ):
+        if self.inNamespace:
+            raise Exception(
+                'OVS kernel switch does not work in a namespace' )
+        self.cmd( 'ovs-vsctl del-br', self )
+        intfs = ' '.join( '-- add-port %s %s ' % ( self, intf )
+                         for intf in self.intfList() if not intf.IP() )
+        cmd = ( 'ovs-vsctl add-br %s ' % self + intfs )
+        self.cmd( cmd )
+        for intf in self.intfList():
+            self.TCReapply( intf )
+
+    def stop( self ):
+        self.cmd( 'ovs-vsctl del-br', self )
+        self.deleteIntfs()
+
+
+class OVSSwitch( OVSSwitchBase ):
+    "Open vSwitch switch using OpenFlow controller. Depends on ovs-vsctl."
+
+    def __init__( self, name, failMode='secure', datapath='kernel',
+                 inband=False, **params ):
+        """Init.
+           name: name for switch
+           failMode: controller loss behavior (secure|open)
+           datapath: userspace or kernel mode (kernel|user)
+           inband: use in-band control (False)"""
+        OVSSwitchBase.__init__( self, name, **params )
+        self.failMode = failMode
+        self.datapath = datapath
+        self.inband = inband
+
+    def dpctl( self, *args ):
+        "Run ovs-ofctl command"
+        return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
 
     def controllerUUIDs( self ):
         "Return ovsdb UUIDs for our controllers"
@@ -1352,9 +1382,19 @@ class RemoteController( Controller ):
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
+DEFAULT_CONTROLLERS = [ ('ref', Controller), ('ovsc', OVSController) ]
+DEFAULT_CONTROLLERS_CLASSES = [ klass for _, klass in DEFAULT_CONTROLLERS ]
 
-def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
+def getAvailableController():
+    "find name of any default controller that is available; None if nothing is available"
+    for name, controller in DEFAULT_CONTROLLERS:
+        if controller.isAvailable():
+            return name
+    return None
+
+def DefaultController( name, order = DEFAULT_CONTROLLERS_CLASSES, **kwargs ):
     "find any controller that is available and run it"
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
+    return None
