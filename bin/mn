@@ -27,7 +27,8 @@ from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, DefaultController,
                            UserSwitch, OVSBridge, OVSSwitch,
-                           OVSLegacyKernelSwitch, IVSSwitch )
+                           OVSLegacyKernelSwitch, IVSSwitch,
+                           getAvailableController )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
@@ -65,7 +66,7 @@ CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
-                'default': DefaultController,
+                'default': None,
                 'none': lambda name: None }
 
 LINKDEF = 'default'
@@ -229,6 +230,17 @@ class MininetRunner( object ):
             exit()
 
         start = time.time()
+
+        if self.options.controller == "default":
+            controller_name = getAvailableController()
+            if controller_name is not None:
+                self.options.controller = controller_name
+            else:
+                # fallback to OVS Bridge switch, which does not use OF controller
+                info('*** No default OpenFlow implementation found!\n')
+                info('    Fallback to ovsb switch implementation.\n')
+                self.options.switch = 'ovsb'
+                self.options.controller = 'none'
 
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )

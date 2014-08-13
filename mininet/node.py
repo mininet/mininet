@@ -1382,9 +1382,19 @@ class RemoteController( Controller ):
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
+DEFAULT_CONTROLLERS = [ ('ref', Controller), ('ovsc', OVSController) ]
+DEFAULT_CONTROLLERS_CLASSES = [ klass for _, klass in DEFAULT_CONTROLLERS ]
 
-def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
+def getAvailableController():
+    "find name of any default controller that is available; None if nothing is available"
+    for name, controller in DEFAULT_CONTROLLERS:
+        if controller.isAvailable():
+            return name
+    return None
+
+def DefaultController( name, order = DEFAULT_CONTROLLERS_CLASSES, **kwargs ):
     "find any controller that is available and run it"
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
+    return None
