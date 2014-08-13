@@ -495,6 +495,9 @@ function oftest {
 function riplpox {
     echo "Installing RiplPOX"
 
+    #Checkout tested version of POX to run RiplPOX
+    cd $BUILD_DIR/pox
+    git checkout 0a1bbb8
     cd $BUILD_DIR
 
     #Install from source, build RipL, and apply patch
