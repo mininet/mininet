@@ -1,6 +1,22 @@
 #!/usr/bin/env bash
 
 # Mininet ssh authentication script for cluster edition
+# This script will create a single key pair, which is then
+# propagated throughout the entire cluster. The same key pair
+# is used for both the user ssh directory and root ssh directory
+# on each node. 
+# There are two options for setup; temporary setup
+# persistent setup. If no options are specified, and the script
+# is only given ip addresses or host names, it will default to
+# the temporary setup. An ssh directory is then created in
+# /tmp/mn/ssh on each node, and mounted with the keys over the
+# root and user's ssh. This setup can easily be torn down by running
+# clustersetup with the -c option.
+# If the -p option is used, the setup will be persistent. In this
+# case, the key pair will be be distributed directly to each node's
+# ssh directory, but will be called cluster_key. An option to
+# specify this key for use will be added to the config file in each
+# user's ssh directory.
 
 
 set -e
