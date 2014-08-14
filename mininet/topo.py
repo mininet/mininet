@@ -62,6 +62,7 @@ class Topo(object):
         self.sopts = params.pop( 'sopts', {} )
         self.lopts = params.pop( 'lopts', {} )
         self.ports = {}  # ports[src][dst] is port on src that connects to dst
+        self.numPorts = {}  # numPorts[ src ] is number of ports attached to src
         self.build( *args, **params )
 
     def build( self, *args, **params ):
@@ -115,17 +116,27 @@ class Topo(object):
         @param src source switch name
         @param dst destination switch name
         '''
+        self.numPorts.setdefault( src, 0 )
+        self.numPorts.setdefault( dst, 0 )
         self.ports.setdefault(src, {})
         self.ports.setdefault(dst, {})
         # New port: number of outlinks + base
         src_base = 1 if self.isSwitch(src) else 0
         dst_base = 1 if self.isSwitch(dst) else 0
+
         if sport is None:
-            sport = len(self.ports[src]) + src_base
+            sport = self.numPorts[ src ] + src_base
         if dport is None:
-            dport = len(self.ports[dst]) + dst_base
-        self.ports[src][dst] = sport
-        self.ports[dst][src] = dport
+            dport = self.numPorts[ dst ] + dst_base
+
+        if src in self.ports.keys() and dst in self.ports[ src ].keys():
+                self.ports[ src ][ dst ].append( sport )
+                self.ports[ dst ][ src ].append( dport )
+        else:
+            self.ports[ src ][ dst ] = [ sport ]
+            self.ports[ dst ][ src ] = [ dport ]
+        self.numPorts[ src ] += 1
+        self.numPorts[ dst ] += 1
 
     def nodes(self, sort=True):
         "Return nodes in graph"
