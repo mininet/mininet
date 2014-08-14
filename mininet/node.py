@@ -41,8 +41,6 @@ RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
     created or managed by mininet.
 
-TODO: NAT
-
 Future enhancements:
 
 - Possibly make Node, Switch and Controller more abstract so that
@@ -1362,71 +1360,3 @@ def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
-
-class NAT( Node ):
-    """NAT: Provides connectivity to external network"""
-
-    def __init__( self, name, inetIntf='eth0', subnet='10.0/8', localIntf=None, **params):
-        super( NAT, self ).__init__( name, **params )
-
-        """Start NAT/forwarding between Mininet and external network
-        inetIntf: interface for internet access
-        subnet: Mininet subnet (default 10.0/8)="""
-        self.inetIntf = inetIntf
-        self.subnet = subnet
-        self.localIntf = localIntf
-
-    def config( self, **params ):
-        super( NAT, self).config( **params )
-        """Configure the NAT and iptables"""
-
-        if not self.localIntf:
-            self.localIntf =  self.defaultIntf()
-
-        self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-
-        # Flush any currently active rules
-        # TODO: is this safe?
-        self.cmd( 'iptables -F' )
-        self.cmd( 'iptables -t nat -F' )
-
-        # Create default entries for unmatched traffic
-        self.cmd( 'iptables -P INPUT ACCEPT' )
-        self.cmd( 'iptables -P OUTPUT ACCEPT' )
-        self.cmd( 'iptables -P FORWARD DROP' )
-
-        # Configure NAT
-        self.cmd( 'iptables -I FORWARD -i', self.localIntf, '-d', self.subnet, '-j DROP' )
-        self.cmd( 'iptables -A FORWARD -i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
-        self.cmd( 'iptables -A FORWARD -i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
-        self.cmd( 'iptables -t nat -A POSTROUTING -o ', self.inetIntf, '-j MASQUERADE' )
-
-        # Instruct the kernel to perform forwarding
-        self.cmd( 'sysctl net.ipv4.ip_forward=1' )
-
-        # Prevent network-manager from messing with our interface
-        # by specifying manual configuration in /etc/network/interfaces
-        intf = self.localIntf
-        cfile = '/etc/network/interfaces'
-        line = '\niface %s inet manual\n' % intf
-        config = open( cfile ).read()
-        if ( line ) not in config:
-            info( '*** Adding "' + line.strip() + '" to ' + cfile )
-            with open( cfile, 'a' ) as f:
-                f.write( line )
-        # Probably need to restart network-manager to be safe -
-        # hopefully this won't disconnect you
-        self.cmd( 'service network-manager restart' )
-
-    def terminate( self ):
-        """Stop NAT/forwarding between Mininet and external network"""
-        # Flush any currently active rules
-        # TODO: is this safe?
-        self.cmd( 'iptables -F' )
-        self.cmd( 'iptables -t nat -F' )
-
-        # Instruct the kernel to stop forwarding
-        self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-
-        super( NAT, self ).terminate()
-

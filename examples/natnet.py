@@ -20,7 +20,7 @@ natnet.py: Example network with NATs
 
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import NAT
+from mininet.nodelib import NAT
 from mininet.log import setLogLevel
 from mininet.cli import CLI
 from mininet.util import irange

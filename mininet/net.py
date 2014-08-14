@@ -96,7 +96,8 @@ from itertools import chain, groupby
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller, NAT
+from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
+from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
