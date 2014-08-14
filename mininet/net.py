@@ -384,7 +384,7 @@ class Mininet( object ):
             srcPort, dstPort = topo.port( srcName, dstName )
             self.addLink( src, dst, srcPort, dstPort, **params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
-        
+
         info( '\n' )
 
     def configureControlNetwork( self ):

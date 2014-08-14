@@ -1190,7 +1190,7 @@ class IVSSwitch(Switch):
         args.append( self.opts )
 
         logfile = '/tmp/ivs.%s.log' % self.name
-        
+
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self ):

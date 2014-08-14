@@ -122,6 +122,7 @@ class Intf( object ):
         "Return whether interface is up"
         if setUp:
             cmdOutput = self.ifconfig( 'up' )
+            # no output indicates success
             if cmdOutput:
                 error( "Error setting %s up: %s " % ( self.name, cmdOutput ) )
                 return False

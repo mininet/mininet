@@ -192,6 +192,8 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
         cmdOutput = srcNode.cmd( cmd )
     else:
         cmdOutput = quietRun( cmd )
+    # If ip link set does not produce any output, then we can assume
+    # that the link has been moved successfully.
     if cmdOutput:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
