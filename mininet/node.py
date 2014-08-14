@@ -261,6 +261,7 @@ class Node( object ):
         # Look for PID
         marker = chr( 1 ) + r'\d+\r\n'
         if findPid and chr( 1 ) in data:
+            # Marker can be read in chunks; continue until all of it is read
             while not re.findall( marker, data ):
                 data += self.read( 1024 )
             markers = re.findall( marker, data )

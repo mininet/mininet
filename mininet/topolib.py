@@ -6,8 +6,7 @@ from mininet.net import Mininet
 class TreeTopo( Topo ):
     "Topology for a tree network with a given depth and fanout."
 
-    def __init__( self, depth=1, fanout=2 ):
-        super( TreeTopo, self ).__init__()
+    def build( self, depth=1, fanout=2 ):
         # Numbering:  h1..N, s1..M
         self.hostNum = 1
         self.switchNum = 1
@@ -42,8 +41,8 @@ class TorusTopo( Topo ):
        with the default controller or any Ethernet bridge
        without STP turned on! It can be used with STP, e.g.:
        # mn --topo torus,3,3 --switch lxbr,stp=1 --test pingall"""
-    def __init__( self, x, y, *args, **kwargs ):
-        Topo.__init__( self, *args, **kwargs )
+    
+    def build( self, x, y ):
         if x < 3 or y < 3:
             raise Exception( 'Please use 3x3 or greater for compatibility '
                             'with 2.1' )
