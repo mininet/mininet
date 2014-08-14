@@ -7,7 +7,7 @@ natnet.py: Example network with NATs
            h0
            |
            s0
-           |        
+           |
     ----------------
     |              |
    nat1           nat2
@@ -26,7 +26,7 @@ from mininet.cli import CLI
 from mininet.util import irange
 
 class InternetTopo(Topo):
-    "TODO: Single switch connected to n hosts."
+    "Single switch connected to n hosts."
     def __init__(self, n=2, h=1, **opts):
         Topo.__init__(self, **opts)
 
@@ -57,7 +57,7 @@ class InternetTopo(Topo):
             self.addLink(host, switch)
 
 def run():
-    "TODO: Create network and run simple performance test"
+    "Create network and run the CLI"
     topo = InternetTopo()
     net = Mininet(topo=topo)
     net.start()
