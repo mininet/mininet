@@ -1003,7 +1003,7 @@ class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
     def __init__( self, name, failMode='secure', datapath='kernel',
-                 inband=False, **params ):
+                 inband=False, protocols=None, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
@@ -1013,6 +1013,7 @@ class OVSSwitch( Switch ):
         self.failMode = failMode
         self.datapath = datapath
         self.inband = inband
+        self.protocols = protocols
 
     @classmethod
     def setup( cls ):
@@ -1130,6 +1131,8 @@ class OVSSwitch( Switch ):
                      'other-config:disable-in-band=true ' % self )
         if self.datapath == 'user':
             cmd += '-- set bridge %s datapath_type=netdev ' % self
+        if self.protocols:
+            cmd += '-- set bridge %s protocols=%s' % ( self, self.protocols )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         for uuid in self.controllerUUIDs():
             if uuid.count( '-' ) != 4:
