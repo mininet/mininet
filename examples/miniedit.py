@@ -13,7 +13,7 @@ Controller icon from http://semlabs.co.uk/
 OpenFlow icon from https://www.opennetworking.org/
 """
 
-MINIEDIT_VERSION = '2.2.0.0'
+MINIEDIT_VERSION = '2.2.0.1'
 
 from optparse import OptionParser
 from Tkinter import *
@@ -161,35 +161,9 @@ class customOvs(OVSSwitch):
     def setSwitchIP(self, ip):
         self.switchIP = ip
 
-    def getOpenFlowVersion(self):
-        return self.openFlowVersions
-
-    def setOpenFlowVersion(self, versions):
-        self.openFlowVersions = []
-        if versions['ovsOf10'] == '1':
-            self.openFlowVersions.append('OpenFlow10')
-        if versions['ovsOf11'] == '1':
-            self.openFlowVersions.append('OpenFlow11')
-        if versions['ovsOf12'] == '1':
-            self.openFlowVersions.append('OpenFlow12')
-        if versions['ovsOf13'] == '1':
-            self.openFlowVersions.append('OpenFlow13')
-
-    def configureOpenFlowVersion(self):
-        if not ( 'OpenFlow11' in self.openFlowVersions or
-                 'OpenFlow12' in self.openFlowVersions or
-                 'OpenFlow13' in self.openFlowVersions ):
-            return
-
-        protoList = ",".join(self.openFlowVersions)
-        print 'Configuring OpenFlow to '+protoList
-        self.cmd( 'ovs-vsctl -- set bridge', self, 'protocols='+protoList)
-
     def start( self, controllers ):
         # Call superclass constructor
         OVSSwitch.start( self, controllers )
-        # Set OpenFlow Versions
-        self.configureOpenFlowVersion()
         # Set Switch IP address
         if (self.switchIP is not None):
             self.cmd( 'ifconfig', self, self.switchIP )
@@ -2757,13 +2731,28 @@ class MiniEdit( Frame ):
                     switchClass = IVSSwitch
                 else:
                     switchClass = customOvs
+
+                if switchClass == customOvs:
+                    # Set OpenFlow versions
+                    self.openFlowVersions = []
+                    if self.appPrefs['openFlowVersions']['ovsOf10'] == '1':
+                        self.openFlowVersions.append('OpenFlow10')
+                    if self.appPrefs['openFlowVersions']['ovsOf11'] == '1':
+                        self.openFlowVersions.append('OpenFlow11')
+                    if self.appPrefs['openFlowVersions']['ovsOf12'] == '1':
+                        self.openFlowVersions.append('OpenFlow12')
+                    if self.appPrefs['openFlowVersions']['ovsOf13'] == '1':
+                        self.openFlowVersions.append('OpenFlow13')
+                    protoList = ",".join(self.openFlowVersions)
+                    switchParms['protocols'] = protoList
                 newSwitch = net.addSwitch( name , cls=switchClass, **switchParms)
+
+                # Some post startup config
                 if switchClass == CustomUserSwitch:
                     if ('switchIP' in opts):
                         if (len(opts['switchIP']) > 0):
                             newSwitch.setSwitchIP(opts['switchIP'])
                 if switchClass == customOvs:
-                    newSwitch.setOpenFlowVersion(self.appPrefs['openFlowVersions'])
                     if ('switchIP' in opts):
                         if (len(opts['switchIP']) > 0):
                             newSwitch.setSwitchIP(opts['switchIP'])
