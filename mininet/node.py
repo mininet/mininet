@@ -1269,6 +1269,11 @@ class Controller( Node ):
                   ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
+    def stop( self ):
+        "Stop controller."
+        self.cmd( 'kill %' + self.command )
+        self.terminate()
+
     def IP( self, intf=None ):
         "Return IP address of the Controller"
         if self.intfs:
