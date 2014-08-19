@@ -205,7 +205,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         if self.shell:
-            os.killpg( self.pid, signal.SIGKILL )
+            os.killpg( self.pid, signal.SIGHUP )
         self.cleanup()
 
     def stop( self ):
@@ -1268,11 +1268,6 @@ class Controller( Node ):
         self.cmd( self.command + ' ' + self.cargs % self.port +
                   ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
-
-    def stop( self ):
-        "Stop controller."
-        self.cmd( 'kill %' + self.command )
-        self.terminate()
 
     def IP( self, intf=None ):
         "Return IP address of the Controller"
