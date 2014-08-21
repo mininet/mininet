@@ -279,7 +279,11 @@ class TCIntf( Intf ):
             return
 
         # Clear existing configuration
-        cmds = [ '%s qdisc del dev %s root' ]
+        tcoutput = self.tc( '%s qdisc show dev %s' )
+        if "priomap" not in tcoutput:
+            cmds = [ '%s qdisc del dev %s root' ]
+        else:
+            cmds = []
 
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
@@ -307,6 +311,9 @@ class TCIntf( Intf ):
         # Execute all the commands in our node
         debug("at map stage w/cmds: %s\n" % cmds)
         tcoutputs = [ self.tc(cmd) for cmd in cmds ]
+        for output in tcoutputs:
+            if output != '':
+                error( "*** Error: %s" % output )
         debug( "cmds:", cmds, '\n' )
         debug( "outputs:", tcoutputs, '\n' )
         result[ 'tcoutputs'] = tcoutputs
