@@ -1077,11 +1077,15 @@ class OVSSwitch( Switch ):
                     for uuid in self.controllerUUIDs() ]
         return reduce( or_, results, False )
 
-    def start( self, controllers ):
-        "Start up a new OVS OpenFlow switch using ovs-vsctl"
+    def startPreCheck( self ):
+        "Run some prechecks before configuring OVS"
         if self.inNamespace and datapath=='kernel':
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
+
+    def start( self, controllers ):
+        "Start up a new OVS OpenFlow switch using ovs-vsctl"
+        self.startPreCheck()
         # We should probably call config instead, but this
         # requires some rethinking...
         self.cmd( 'ifconfig lo up' )
