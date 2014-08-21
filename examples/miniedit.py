@@ -13,10 +13,11 @@ Controller icon from http://semlabs.co.uk/
 OpenFlow icon from https://www.opennetworking.org/
 """
 
-MINIEDIT_VERSION = '2.1.0.8.1'
+MINIEDIT_VERSION = '2.2.0.1'
 
 from optparse import OptionParser
 from Tkinter import *
+from ttk import Notebook
 from tkMessageBox import showinfo, showerror, showwarning
 from subprocess import call
 import tkFont
@@ -28,6 +29,7 @@ import json
 from distutils.version import StrictVersion
 import os
 import sys
+from functools import partial
 
 if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
@@ -38,9 +40,10 @@ from mininet.log import info, error, debug, output, setLogLevel
 from mininet.net import Mininet, VERSION
 from mininet.util import ipStr, netParse, ipAdd, quietRun
 from mininet.util import buildTopo
+from mininet.util import custom, customConstructor
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
-from mininet.node import CPULimitedHost, Host, Node
+from mininet.node import CPULimitedHost, Host, Node, HostWithPrivateDirs
 from mininet.node import OVSKernelSwitch, OVSSwitch, UserSwitch
 from mininet.link import TCLink, Intf, Link
 from mininet.cli import CLI
@@ -66,6 +69,40 @@ CONTROLLERS = { 'ref': Controller,
                 'nox': NOX,
                 'remote': RemoteController,
                 'none': lambda name: None }
+LINKDEF = 'default'
+LINKS = { 'default': Link,
+          'tc': TCLink }
+HOSTDEF = 'proc'
+HOSTS = { 'proc': Host,
+          'rt': custom( CPULimitedHost, sched='rt' ),
+          'cfs': custom( CPULimitedHost, sched='cfs' ) }
+
+
+class CPULimitedHostWithPrivateDirs( CPULimitedHost ):
+    "Host with private directories"
+
+    def __init__( self, name, sched='cfs', **kwargs ):
+        "privateDirs: list of private directory strings or tuples"
+        self.name = name
+        self.privateDirs = kwargs.pop( 'privateDirs', [] )
+        CPULimitedHost.__init__( self, name, sched, **kwargs )
+        self.mountPrivateDirs()
+
+    def mountPrivateDirs( self ):
+        "mount private directories"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                # mount given private directory
+                privateDir = directory[ 1 ] % self.__dict__
+                mountPoint = directory[ 0 ]
+                self.cmd( 'mkdir -p %s' % privateDir )
+                self.cmd( 'mkdir -p %s' % mountPoint )
+                self.cmd( 'mount --bind %s %s' %
+                               ( privateDir, mountPoint ) )
+            else:
+                # mount temporary filesystem on directory
+                self.cmd( 'mkdir -p %s' % directory )
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
 class InbandController( RemoteController ):
 
@@ -124,35 +161,9 @@ class customOvs(OVSSwitch):
     def setSwitchIP(self, ip):
         self.switchIP = ip
 
-    def getOpenFlowVersion(self):
-        return self.openFlowVersions
-
-    def setOpenFlowVersion(self, versions):
-        self.openFlowVersions = []
-        if versions['ovsOf10'] == '1':
-            self.openFlowVersions.append('OpenFlow10')
-        if versions['ovsOf11'] == '1':
-            self.openFlowVersions.append('OpenFlow11')
-        if versions['ovsOf12'] == '1':
-            self.openFlowVersions.append('OpenFlow12')
-        if versions['ovsOf13'] == '1':
-            self.openFlowVersions.append('OpenFlow13')
-
-    def configureOpenFlowVersion(self):
-        if not ( 'OpenFlow11' in self.openFlowVersions or
-                 'OpenFlow12' in self.openFlowVersions or
-                 'OpenFlow13' in self.openFlowVersions ):
-            return
-
-        protoList = ",".join(self.openFlowVersions)
-        print 'Configuring OpenFlow to '+protoList
-        self.cmd( 'ovs-vsctl -- set bridge', self, 'protocols='+protoList)
-
     def start( self, controllers ):
         # Call superclass constructor
         OVSSwitch.start( self, controllers )
-        # Set OpenFlow Versions
-        self.configureOpenFlowVersion()
         # Set Switch IP address
         if (self.switchIP is not None):
             self.cmd( 'ifconfig', self, self.switchIP )
@@ -201,7 +212,7 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             # Selection of switch type
             Label(self.leftfieldFrame, text="Default Switch:").grid(row=3, sticky=E)
             self.switchType = StringVar(self.leftfieldFrame)
-            self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Open vSwitch", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
+            self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Open vSwitch Kernel Mode", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
             self.switchTypeMenu.grid(row=3, column=1, sticky=W)
             switchTypePref = self.prefValues['switchType']
             if switchTypePref == 'ivs':
@@ -211,7 +222,7 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             elif switchTypePref == 'user':
                 self.switchType.set("Userspace Switch")
             else:
-                self.switchType.set("Open vSwitch")
+                self.switchType.set("Open vSwitch Kernel Mode")
 
 
             # Fields for OVS OpenFlow version
@@ -431,36 +442,43 @@ class HostDialog(CustomDialog):
 
         def body(self, master):
             self.rootFrame = master
-            self.leftfieldFrame = Frame(self.rootFrame)
-            self.leftfieldFrame.grid(row=0, column=0, sticky='nswe', columnspan=2)
-            self.rightfieldFrame = Frame(self.rootFrame)
-            self.rightfieldFrame.grid(row=0, column=2, sticky='nswe', columnspan=2)
+            n = Notebook(self.rootFrame)
+            self.propFrame = Frame(n)
+            self.vlanFrame = Frame(n)
+            self.interfaceFrame = Frame(n)
+            self.mountFrame = Frame(n)
+            n.add(self.propFrame, text='Properties')
+            n.add(self.vlanFrame, text='VLAN Interfaces')
+            n.add(self.interfaceFrame, text='External Interfaces')
+            n.add(self.mountFrame, text='Private Directories')
+            n.pack()
 
+            ### TAB 1
             # Field for Hostname
-            Label(self.leftfieldFrame, text="Hostname:").grid(row=0, sticky=E)
-            self.hostnameEntry = Entry(self.leftfieldFrame)
+            Label(self.propFrame, text="Hostname:").grid(row=0, sticky=E)
+            self.hostnameEntry = Entry(self.propFrame)
             self.hostnameEntry.grid(row=0, column=1)
             if 'hostname' in self.prefValues:
                 self.hostnameEntry.insert(0, self.prefValues['hostname'])
 
             # Field for Switch IP
-            Label(self.leftfieldFrame, text="IP Address:").grid(row=1, sticky=E)
-            self.ipEntry = Entry(self.leftfieldFrame)
+            Label(self.propFrame, text="IP Address:").grid(row=1, sticky=E)
+            self.ipEntry = Entry(self.propFrame)
             self.ipEntry.grid(row=1, column=1)
             if 'ip' in self.prefValues:
                 self.ipEntry.insert(0, self.prefValues['ip'])
 
             # Field for default route
-            Label(self.leftfieldFrame, text="Default Route:").grid(row=2, sticky=E)
-            self.routeEntry = Entry(self.leftfieldFrame)
+            Label(self.propFrame, text="Default Route:").grid(row=2, sticky=E)
+            self.routeEntry = Entry(self.propFrame)
             self.routeEntry.grid(row=2, column=1)
             if 'defaultRoute' in self.prefValues:
                 self.routeEntry.insert(0, self.prefValues['defaultRoute'])
 
             # Field for CPU
-            Label(self.rightfieldFrame, text="Amount CPU:").grid(row=0, sticky=E)
-            self.cpuEntry = Entry(self.rightfieldFrame)
-            self.cpuEntry.grid(row=0, column=1)
+            Label(self.propFrame, text="Amount CPU:").grid(row=3, sticky=E)
+            self.cpuEntry = Entry(self.propFrame)
+            self.cpuEntry.grid(row=3, column=1)
             if 'cpu' in self.prefValues:
                 self.cpuEntry.insert(0, str(self.prefValues['cpu']))
             # Selection of Scheduler
@@ -468,26 +486,40 @@ class HostDialog(CustomDialog):
                 sched =  self.prefValues['sched']
             else:
                 sched = 'host'
-            self.schedVar = StringVar(self.rightfieldFrame)
-            self.schedOption = OptionMenu(self.rightfieldFrame, self.schedVar, "host", "cfs", "rt")
-            self.schedOption.grid(row=0, column=2, sticky=W)
+            self.schedVar = StringVar(self.propFrame)
+            self.schedOption = OptionMenu(self.propFrame, self.schedVar, "host", "cfs", "rt")
+            self.schedOption.grid(row=3, column=2, sticky=W)
             self.schedVar.set(sched)
 
             # Selection of Cores
-            Label(self.rightfieldFrame, text="Cores:").grid(row=1, sticky=E)
-            self.coreEntry = Entry(self.rightfieldFrame)
-            self.coreEntry.grid(row=1, column=1)
+            Label(self.propFrame, text="Cores:").grid(row=4, sticky=E)
+            self.coreEntry = Entry(self.propFrame)
+            self.coreEntry.grid(row=4, column=1)
             if 'cores' in self.prefValues:
                 self.coreEntry.insert(1, self.prefValues['cores'])
 
+            # Start command
+            Label(self.propFrame, text="Start Command:").grid(row=5, sticky=E)
+            self.startEntry = Entry(self.propFrame)
+            self.startEntry.grid(row=5, column=1, sticky='nswe', columnspan=3)
+            if 'startCommand' in self.prefValues:
+                self.startEntry.insert(0, str(self.prefValues['startCommand']))
+            # Stop command
+            Label(self.propFrame, text="Stop Command:").grid(row=6, sticky=E)
+            self.stopEntry = Entry(self.propFrame)
+            self.stopEntry.grid(row=6, column=1, sticky='nswe', columnspan=3)
+            if 'stopCommand' in self.prefValues:
+                self.stopEntry.insert(0, str(self.prefValues['stopCommand']))
+
+            ### TAB 2
             # External Interfaces
             self.externalInterfaces = 0
-            Label(self.rootFrame, text="External Interface:").grid(row=1, column=0, sticky=E)
-            self.b = Button( self.rootFrame, text='Add', command=self.addInterface)
-            self.b.grid(row=1, column=1)
+            Label(self.interfaceFrame, text="External Interface:").grid(row=0, column=0, sticky=E)
+            self.b = Button( self.interfaceFrame, text='Add', command=self.addInterface)
+            self.b.grid(row=0, column=1)
 
-            self.interfaceFrame = VerticalScrolledTable(self.rootFrame, rows=0, columns=1, title='External Interfaces')
-            self.interfaceFrame.grid(row=2, column=0, sticky='nswe', columnspan=2)
+            self.interfaceFrame = VerticalScrolledTable(self.interfaceFrame, rows=0, columns=1, title='External Interfaces')
+            self.interfaceFrame.grid(row=1, column=0, sticky='nswe', columnspan=2)
             self.tableFrame = self.interfaceFrame.interior
             self.tableFrame.addRow(value=['Interface Name'], readonly=True)
 
@@ -499,14 +531,15 @@ class HostDialog(CustomDialog):
             for externalInterface in externalInterfaces:
                 self.tableFrame.addRow(value=[externalInterface])
 
+            ### TAB 3
             # VLAN Interfaces
             self.vlanInterfaces = 0
-            Label(self.rootFrame, text="VLAN Interface:").grid(row=1, column=2, sticky=E)
-            self.vlanButton = Button( self.rootFrame, text='Add', command=self.addVlanInterface)
-            self.vlanButton.grid(row=1, column=3)
+            Label(self.vlanFrame, text="VLAN Interface:").grid(row=0, column=0, sticky=E)
+            self.vlanButton = Button( self.vlanFrame, text='Add', command=self.addVlanInterface)
+            self.vlanButton.grid(row=0, column=1)
 
-            self.vlanFrame = VerticalScrolledTable(self.rootFrame, rows=0, columns=2, title='VLAN Interfaces')
-            self.vlanFrame.grid(row=2, column=2, sticky='nswe', columnspan=2)
+            self.vlanFrame = VerticalScrolledTable(self.vlanFrame, rows=0, columns=2, title='VLAN Interfaces')
+            self.vlanFrame.grid(row=1, column=0, sticky='nswe', columnspan=2)
             self.vlanTableFrame = self.vlanFrame.interior
             self.vlanTableFrame.addRow(value=['IP Address','VLAN ID'], readonly=True)
 
@@ -515,6 +548,31 @@ class HostDialog(CustomDialog):
                 vlanInterfaces = self.prefValues['vlanInterfaces']
             for vlanInterface in vlanInterfaces:
                 self.vlanTableFrame.addRow(value=vlanInterface)
+
+            ### TAB 4
+            # Private Directories
+            self.privateDirectories = 0
+            Label(self.mountFrame, text="Private Directory:").grid(row=0, column=0, sticky=E)
+            self.mountButton = Button( self.mountFrame, text='Add', command=self.addDirectory)
+            self.mountButton.grid(row=0, column=1)
+
+            self.mountFrame = VerticalScrolledTable(self.mountFrame, rows=0, columns=2, title='Directories')
+            self.mountFrame.grid(row=1, column=0, sticky='nswe', columnspan=2)
+            self.mountTableFrame = self.mountFrame.interior
+            self.mountTableFrame.addRow(value=['Mount','Persistent Directory'], readonly=True)
+
+            directoryList = []
+            if 'privateDirectory' in self.prefValues:
+                directoryList = self.prefValues['privateDirectory']
+            for privateDir in directoryList:
+                if isinstance( privateDir, tuple ):
+                    self.mountTableFrame.addRow(value=privateDir)
+                else:
+                    self.mountTableFrame.addRow(value=[privateDir,''])
+
+
+        def addDirectory( self ):
+            self.mountTableFrame.addRow()
 
         def addVlanInterface( self ):
             self.vlanTableFrame.addRow()
@@ -534,6 +592,13 @@ class HostDialog(CustomDialog):
                     len(self.vlanTableFrame.get(row, 1)) > 0 and
                     row > 0):
                     vlanInterfaces.append([self.vlanTableFrame.get(row, 0), self.vlanTableFrame.get(row, 1)])
+            privateDirectories = []
+            for row in range(self.mountTableFrame.rows):
+                if (len(self.mountTableFrame.get(row, 0)) > 0 and row > 0):
+                    if(len(self.mountTableFrame.get(row, 1)) > 0):
+                        privateDirectories.append((self.mountTableFrame.get(row, 0), self.mountTableFrame.get(row, 1)))
+                    else:
+                        privateDirectories.append(self.mountTableFrame.get(row, 0))
 
             results = {'cpu': self.cpuEntry.get(),
                        'cores':self.coreEntry.get(),
@@ -541,6 +606,9 @@ class HostDialog(CustomDialog):
                        'hostname':self.hostnameEntry.get(),
                        'ip':self.ipEntry.get(),
                        'defaultRoute':self.routeEntry.get(),
+                       'startCommand':self.startEntry.get(),
+                       'stopCommand':self.stopEntry.get(),
+                       'privateDirectory':privateDirectories,
                        'externalInterfaces':externalInterfaces,
                        'vlanInterfaces':vlanInterfaces}
             self.result = results
@@ -555,34 +623,35 @@ class SwitchDialog(CustomDialog):
 
         def body(self, master):
             self.rootFrame = master
+            self.leftfieldFrame = Frame(self.rootFrame)
+            self.rightfieldFrame = Frame(self.rootFrame)
+            self.leftfieldFrame.grid(row=0, column=0, sticky='nswe')
+            self.rightfieldFrame.grid(row=0, column=1, sticky='nswe')
 
             rowCount = 0
             externalInterfaces = []
             if 'externalInterfaces' in self.prefValues:
                 externalInterfaces = self.prefValues['externalInterfaces']
 
-            self.fieldFrame = Frame(self.rootFrame)
-            self.fieldFrame.grid(row=0, column=0, sticky='nswe')
-
             # Field for Hostname
-            Label(self.fieldFrame, text="Hostname:").grid(row=rowCount, sticky=E)
-            self.hostnameEntry = Entry(self.fieldFrame)
+            Label(self.leftfieldFrame, text="Hostname:").grid(row=rowCount, sticky=E)
+            self.hostnameEntry = Entry(self.leftfieldFrame)
             self.hostnameEntry.grid(row=rowCount, column=1)
             self.hostnameEntry.insert(0, self.prefValues['hostname'])
             rowCount+=1
 
             # Field for DPID
-            Label(self.fieldFrame, text="DPID:").grid(row=rowCount, sticky=E)
-            self.dpidEntry = Entry(self.fieldFrame)
+            Label(self.leftfieldFrame, text="DPID:").grid(row=rowCount, sticky=E)
+            self.dpidEntry = Entry(self.leftfieldFrame)
             self.dpidEntry.grid(row=rowCount, column=1)
             if 'dpid' in self.prefValues:
                 self.dpidEntry.insert(0, self.prefValues['dpid'])
             rowCount+=1
 
             # Field for Netflow
-            Label(self.fieldFrame, text="Enable NetFlow:").grid(row=rowCount, sticky=E)
+            Label(self.leftfieldFrame, text="Enable NetFlow:").grid(row=rowCount, sticky=E)
             self.nflow = IntVar()
-            self.nflowButton = Checkbutton(self.fieldFrame, variable=self.nflow)
+            self.nflowButton = Checkbutton(self.leftfieldFrame, variable=self.nflow)
             self.nflowButton.grid(row=rowCount, column=1, sticky=W)
             if 'netflow' in self.prefValues:
                 if self.prefValues['netflow'] == '0':
@@ -594,9 +663,9 @@ class SwitchDialog(CustomDialog):
             rowCount+=1
 
             # Field for sflow
-            Label(self.fieldFrame, text="Enable sFlow:").grid(row=rowCount, sticky=E)
+            Label(self.leftfieldFrame, text="Enable sFlow:").grid(row=rowCount, sticky=E)
             self.sflow = IntVar()
-            self.sflowButton = Checkbutton(self.fieldFrame, variable=self.sflow)
+            self.sflowButton = Checkbutton(self.leftfieldFrame, variable=self.sflow)
             self.sflowButton.grid(row=rowCount, column=1, sticky=W)
             if 'sflow' in self.prefValues:
                 if self.prefValues['sflow'] == '0':
@@ -608,9 +677,9 @@ class SwitchDialog(CustomDialog):
             rowCount+=1
 
             # Selection of switch type
-            Label(self.fieldFrame, text="Switch Type:").grid(row=rowCount, sticky=E)
-            self.switchType = StringVar(self.fieldFrame)
-            self.switchTypeMenu = OptionMenu(self.fieldFrame, self.switchType, "Default", "Open vSwitch", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
+            Label(self.leftfieldFrame, text="Switch Type:").grid(row=rowCount, sticky=E)
+            self.switchType = StringVar(self.leftfieldFrame)
+            self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Default", "Open vSwitch Kernel Mode", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
             self.switchTypeMenu.grid(row=rowCount, column=1, sticky=W)
             if 'switchType' in self.prefValues:
                 switchTypePref = self.prefValues['switchType']
@@ -621,7 +690,7 @@ class SwitchDialog(CustomDialog):
                 elif switchTypePref == 'user':
                     self.switchType.set("Userspace Switch")
                 elif switchTypePref == 'ovs':
-                    self.switchType.set("Open vSwitch")
+                    self.switchType.set("Open vSwitch Kernel Mode")
                 else:
                     self.switchType.set("Default")
             else:
@@ -629,34 +698,49 @@ class SwitchDialog(CustomDialog):
             rowCount+=1
 
             # Field for Switch IP
-            Label(self.fieldFrame, text="IP Address:").grid(row=rowCount, sticky=E)
-            self.ipEntry = Entry(self.fieldFrame)
+            Label(self.leftfieldFrame, text="IP Address:").grid(row=rowCount, sticky=E)
+            self.ipEntry = Entry(self.leftfieldFrame)
             self.ipEntry.grid(row=rowCount, column=1)
             if 'switchIP' in self.prefValues:
                 self.ipEntry.insert(0, self.prefValues['switchIP'])
             rowCount+=1
 
             # Field for DPCTL port
-            Label(self.fieldFrame, text="DPCTL port:").grid(row=rowCount, sticky=E)
-            self.dpctlEntry = Entry(self.fieldFrame)
+            Label(self.leftfieldFrame, text="DPCTL port:").grid(row=rowCount, sticky=E)
+            self.dpctlEntry = Entry(self.leftfieldFrame)
             self.dpctlEntry.grid(row=rowCount, column=1)
             if 'dpctl' in self.prefValues:
                 self.dpctlEntry.insert(0, self.prefValues['dpctl'])
             rowCount+=1
 
             # External Interfaces
-            Label(self.fieldFrame, text="External Interface:").grid(row=rowCount, sticky=E)
-            self.b = Button( self.fieldFrame, text='Add', command=self.addInterface)
-            self.b.grid(row=rowCount, column=1)
+            Label(self.rightfieldFrame, text="External Interface:").grid(row=0, sticky=E)
+            self.b = Button( self.rightfieldFrame, text='Add', command=self.addInterface)
+            self.b.grid(row=0, column=1)
 
-            self.interfaceFrame = VerticalScrolledTable(self.rootFrame, rows=0, columns=1, title='External Interfaces')
-            self.interfaceFrame.grid(row=2, column=0, sticky='nswe')
+            self.interfaceFrame = VerticalScrolledTable(self.rightfieldFrame, rows=0, columns=1, title='External Interfaces')
+            self.interfaceFrame.grid(row=1, column=0, sticky='nswe', columnspan=2)
             self.tableFrame = self.interfaceFrame.interior
 
             # Add defined interfaces
             for externalInterface in externalInterfaces:
                 self.tableFrame.addRow(value=[externalInterface])
-            rowCount+=1
+
+            self.commandFrame = Frame(self.rootFrame)
+            self.commandFrame.grid(row=1, column=0, sticky='nswe', columnspan=2)
+            self.commandFrame.columnconfigure(1, weight=1)
+            # Start command
+            Label(self.commandFrame, text="Start Command:").grid(row=0, column=0, sticky=W)
+            self.startEntry = Entry(self.commandFrame)
+            self.startEntry.grid(row=0, column=1,  sticky='nsew')
+            if 'startCommand' in self.prefValues:
+                self.startEntry.insert(0, str(self.prefValues['startCommand']))
+            # Stop command
+            Label(self.commandFrame, text="Stop Command:").grid(row=1, column=0, sticky=W)
+            self.stopEntry = Entry(self.commandFrame)
+            self.stopEntry.grid(row=1, column=1, sticky='nsew')
+            if 'stopCommand' in self.prefValues:
+                self.stopEntry.insert(0, str(self.prefValues['stopCommand']))
 
         def addInterface( self ):
             self.tableFrame.addRow()
@@ -692,6 +776,8 @@ class SwitchDialog(CustomDialog):
             results = {'externalInterfaces':externalInterfaces,
                        'hostname':self.hostnameEntry.get(),
                        'dpid':dpid,
+                       'startCommand':self.startEntry.get(),
+                       'stopCommand':self.stopEntry.get(),
                        'sflow':str(self.sflow.get()),
                        'netflow':str(self.nflow.get()),
                        'dpctl':self.dpctlEntry.get(),
@@ -707,7 +793,7 @@ class SwitchDialog(CustomDialog):
                 results['switchType'] = 'userns'
             elif sw == 'Userspace Switch':
                 results['switchType'] = 'user'
-            elif sw == 'Open vSwitch':
+            elif sw == 'Open vSwitch Kernel Mode':
                 results['switchType'] = 'ovs'
             else:
                 results['switchType'] = 'default'
@@ -877,6 +963,7 @@ class ControllerDialog(tkSimpleDialog.Dialog):
         def body(self, master):
 
             self.var = StringVar(master)
+            self.protcolvar = StringVar(master)
 
             rowCount=0
             # Field for Hostname
@@ -908,6 +995,20 @@ class ControllerDialog(tkSimpleDialog.Dialog):
                 self.var.set("OVS Controller")
             rowCount+=1
 
+            # Field for Controller Protcol
+            Label(master, text="Protocol:").grid(row=rowCount, sticky=E)
+            if 'controllerProtocol' in self.ctrlrValues:
+               controllerProtocol = self.ctrlrValues['controllerProtocol']
+            else:
+               controllerProtocol = 'tcp'
+            self.protcol = OptionMenu(master, self.protcolvar, "TCP", "SSL")
+            self.protcol.grid(row=rowCount, column=1, sticky=W)
+            if controllerProtocol == 'ssl':
+                self.protcolvar.set("SSL")
+            else:
+                self.protcolvar.set("TCP")
+            rowCount+=1
+
             # Field for Remove Controller IP
             remoteFrame= LabelFrame(master, text='Remote/In-Band Controller', padx=5, pady=5)
             remoteFrame.grid(row=rowCount, column=0, columnspan=2, sticky=W)
@@ -921,14 +1022,11 @@ class ControllerDialog(tkSimpleDialog.Dialog):
             return self.hostnameEntry # initial focus
 
         def apply(self):
-            hostname = self.hostnameEntry.get()
-            controllerType = self.var.get()
-            remoteIP = self.e1.get()
-            controllerPort = int(self.e2.get())
-            self.result = { 'hostname': hostname,
-                            'remoteIP': remoteIP,
-                            'remotePort': controllerPort}
+            self.result = { 'hostname': self.hostnameEntry.get(),
+                            'remoteIP': self.e1.get(),
+                            'remotePort': int(self.e2.get())}
 
+            controllerType = self.var.get()
             if controllerType == 'Remote Controller':
                 self.result['controllerType'] = 'remote'
             elif controllerType == 'In-Band Controller':
@@ -937,6 +1035,11 @@ class ControllerDialog(tkSimpleDialog.Dialog):
                 self.result['controllerType'] = 'ref'
             else:
                 self.result['controllerType'] = 'ovsc'
+            controllerProtocol = self.protcolvar.get()
+            if controllerProtocol == 'SSL':
+                self.result['controllerProtocol'] = 'ssl'
+            else:
+                self.result['controllerProtocol'] = 'tcp'
 
 class ToolTip(object):
 
@@ -1144,7 +1247,7 @@ class MiniEdit( Frame ):
         fileMenu.add_command( label="New", font=font, command=self.newTopology )
         fileMenu.add_command( label="Open", font=font, command=self.loadTopology )
         fileMenu.add_command( label="Save", font=font, command=self.saveTopology )
-        fileMenu.add_command( label="Export", font=font, command=self.exportTopology )
+        fileMenu.add_command( label="Export Level 2 Script", font=font, command=self.exportScript )
         fileMenu.add_separator()
         fileMenu.add_command( label='Quit', command=self.quit, font=font )
 
@@ -1305,6 +1408,17 @@ class MiniEdit( Frame ):
         self.itemToWidget[ item ] = icon
         icon.links = {}
 
+    def convertJsonUnicode(self, input):
+        "Some part of Mininet don't like Unicode"
+        if isinstance(input, dict):
+            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in input.iteritems()}
+        elif isinstance(input, list):
+            return [self.convertJsonUnicode(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input
+
     def loadTopology( self ):
         "Load command."
         c = self.canvas
@@ -1317,7 +1431,7 @@ class MiniEdit( Frame ):
         if f == None:
             return
         self.newTopology()
-        loadedTopology = eval(f.read())
+        loadedTopology = self.convertJsonUnicode(json.load(f))
 
         # Load application preferences
         if 'application' in loadedTopology:
@@ -1372,6 +1486,16 @@ class MiniEdit( Frame ):
             x = host['x']
             y = host['y']
             self.addNode('Host', nodeNum, float(x), float(y), name=hostname)
+
+            # Fix JSON converting tuple to list when saving
+            if 'privateDirectory' in host['opts']:
+                newDirList = []
+                for privateDir in host['opts']['privateDirectory']:
+                    if isinstance( privateDir, list ):
+                        newDirList.append((privateDir[0],privateDir[1]))
+                    else:
+                        newDirList.append(privateDir)
+                host['opts']['privateDirectory'] = newDirList
             self.hostOpts[hostname] = host['opts']
             icon = self.findWidgetByName(hostname)
             icon.bind('<Button-3>', self.do_hostPopup )
@@ -1545,14 +1669,13 @@ class MiniEdit( Frame ):
 
             try:
                 f = open(fileName, 'wb')
-                #f.write(str(savingDictionary))
                 f.write(json.dumps(savingDictionary, sort_keys=True, indent=4, separators=(',', ': ')))
             except Exception as er:
                 print er
             finally:
                 f.close()
 
-    def exportTopology( self ):
+    def exportScript( self ):
         "Export command."
         myFormats = [
             ('Mininet Custom Topology','*.py'),
@@ -1575,6 +1698,7 @@ class MiniEdit( Frame ):
             f.write("from mininet.cli import CLI\n")
             f.write("from mininet.log import setLogLevel, info\n")
             f.write("from mininet.link import TCLink, Intf\n")
+            f.write("from subprocess import call\n")
 
             inBandCtrl = False
             hasLegacySwitch = False
@@ -1613,6 +1737,10 @@ class MiniEdit( Frame ):
                 if 'Controller' in tags:
                     opts = self.controllers[name]
                     controllerType = opts['controllerType']
+                    if 'controllerProtocol' in opts:
+                        controllerProtocol = opts['controllerProtocol']
+                    else:
+                        controllerProtocol = 'tcp'
                     controllerIP = opts['remoteIP']
                     controllerPort = opts['remotePort']
 
@@ -1630,6 +1758,7 @@ class MiniEdit( Frame ):
                     else:
                         f.write("                      controller=Controller,\n")
         
+                    f.write("                      protocol='"+controllerProtocol+"',\n")
                     f.write("                      port="+str(controllerPort)+")\n")
                     f.write("\n")
 
@@ -1757,7 +1886,7 @@ class MiniEdit( Frame ):
                     f.write("    "+srcName+dstName+" = "+linkOpts+"\n")
                 f.write("    net.addLink("+srcName+", "+dstName)
                 if optsExist:
-                    f.write(", link=TCLink , **"+srcName+dstName)
+                    f.write(", cls=TCLink , **"+srcName+dstName)
                 f.write(")\n")
 
             f.write("\n")
@@ -1780,7 +1909,7 @@ class MiniEdit( Frame ):
 
             f.write("\n")
 
-            f.write("    info( '*** Configuring switches\\n')\n")
+            f.write("    info( '*** Post configure switches and hosts\\n')\n")
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
@@ -1821,10 +1950,75 @@ class MiniEdit( Frame ):
                         for vlanInterface in opts['vlanInterfaces']:
                             f.write("    "+name+".cmd('vconfig add "+name+"-eth0 "+vlanInterface[1]+"')\n")
                             f.write("    "+name+".cmd('ifconfig "+name+"-eth0."+vlanInterface[1]+" "+vlanInterface[0]+"')\n")
+                    # Run User Defined Start Command
+                    if ('startCommand' in opts):
+                        f.write("    "+name+".cmdPrint('"+opts['startCommand']+"')\n")
+                if 'Switch' in tags:
+                    opts = self.switchOpts[name]
+                    # Run User Defined Start Command
+                    if ('startCommand' in opts):
+                        f.write("    "+name+".cmdPrint('"+opts['startCommand']+"')\n")
 
+            # Configure NetFlow
+            nflowValues = self.appPrefs['netflow']
+            if len(nflowValues['nflowTarget']) > 0:
+                nflowEnabled = False
+                nflowSwitches = ''
+                for widget in self.widgetToItem:
+                    name = widget[ 'text' ]
+                    tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+    
+                    if 'Switch' in tags:
+                        opts = self.switchOpts[name]
+                        if 'netflow' in opts:
+                            if opts['netflow'] == '1':
+                                nflowSwitches = nflowSwitches+' -- set Bridge '+name+' netflow=@MiniEditNF'
+                                nflowEnabled=True
+                if nflowEnabled:
+                    nflowCmd = 'ovs-vsctl -- --id=@MiniEditNF create NetFlow '+ 'target=\\\"'+nflowValues['nflowTarget']+'\\\" '+ 'active-timeout='+nflowValues['nflowTimeout']
+                    if nflowValues['nflowAddId'] == '1':
+                        nflowCmd = nflowCmd + ' add_id_to_interface=true'
+                    else:
+                        nflowCmd = nflowCmd + ' add_id_to_interface=false'
+                    f.write("    \n")
+                    f.write("    call('"+nflowCmd+nflowSwitches+"', shell=True)\n")
+
+            # Configure sFlow
+            sflowValues = self.appPrefs['sflow']
+            if len(sflowValues['sflowTarget']) > 0:
+                sflowEnabled = False
+                sflowSwitches = ''
+                for widget in self.widgetToItem:
+                    name = widget[ 'text' ]
+                    tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+    
+                    if 'Switch' in tags:
+                        opts = self.switchOpts[name]
+                        if 'sflow' in opts:
+                            if opts['sflow'] == '1':
+                                sflowSwitches = sflowSwitches+' -- set Bridge '+name+' sflow=@MiniEditSF'
+                                sflowEnabled=True
+                if sflowEnabled:
+                    sflowCmd = 'ovs-vsctl -- --id=@MiniEditSF create sFlow '+ 'target=\\\"'+sflowValues['sflowTarget']+'\\\" '+ 'header='+sflowValues['sflowHeader']+' '+ 'sampling='+sflowValues['sflowSampling']+' '+ 'polling='+sflowValues['sflowPolling']
+                    f.write("    \n")
+                    f.write("    call('"+sflowCmd+sflowSwitches+"', shell=True)\n")
 
             f.write("\n")
             f.write("    CLI(net)\n")
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                if 'Host' in tags:
+                    opts = self.hostOpts[name]
+                    # Run User Defined Stop Command
+                    if ('stopCommand' in opts):
+                        f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
+                if 'Switch' in tags:
+                    opts = self.switchOpts[name]
+                    # Run User Defined Stop Command
+                    if ('stopCommand' in opts):
+                        f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
+
             f.write("    net.stop()\n")
             f.write("\n")
             f.write("if __name__ == '__main__':\n")
@@ -1948,6 +2142,7 @@ class MiniEdit( Frame ):
             name = self.nodePrefixes[ node ] + str( self.controllerCount )
             ctrlr = { 'controllerType': 'ref',
                       'hostname': name,
+                      'controllerProtocol': 'tcp',
                       'remoteIP': '127.0.0.1',
                       'remotePort': 6633}
             self.controllers[name] = ctrlr
@@ -2272,6 +2467,10 @@ class MiniEdit( Frame ):
         if hostBox.result:
             newHostOpts = {'nodeNum':self.hostOpts[name]['nodeNum']}
             newHostOpts['sched'] = hostBox.result['sched']
+            if len(hostBox.result['startCommand']) > 0:
+                newHostOpts['startCommand'] = hostBox.result['startCommand']
+            if len(hostBox.result['stopCommand']) > 0:
+                newHostOpts['stopCommand'] = hostBox.result['stopCommand']
             if len(hostBox.result['cpu']) > 0:
                 newHostOpts['cpu'] = float(hostBox.result['cpu'])
             if len(hostBox.result['cores']) > 0:
@@ -2288,6 +2487,8 @@ class MiniEdit( Frame ):
                 newHostOpts['externalInterfaces'] = hostBox.result['externalInterfaces']
             if len(hostBox.result['vlanInterfaces']) > 0:
                 newHostOpts['vlanInterfaces'] = hostBox.result['vlanInterfaces']
+            if len(hostBox.result['privateDirectory']) > 0:
+                newHostOpts['privateDirectory'] = hostBox.result['privateDirectory']
             self.hostOpts[name] = newHostOpts
             print 'New host details for ' + name + ' = ' + str(newHostOpts)
 
@@ -2309,6 +2510,10 @@ class MiniEdit( Frame ):
             newSwitchOpts = {'nodeNum':self.switchOpts[name]['nodeNum']}
             newSwitchOpts['switchType'] = switchBox.result['switchType']
             newSwitchOpts['controllers'] = self.switchOpts[name]['controllers']
+            if len(switchBox.result['startCommand']) > 0:
+                newSwitchOpts['startCommand'] = switchBox.result['startCommand']
+            if len(switchBox.result['stopCommand']) > 0:
+                newSwitchOpts['stopCommand'] = switchBox.result['stopCommand']
             if len(switchBox.result['dpctl']) > 0:
                 newSwitchOpts['dpctl'] = switchBox.result['dpctl']
             if len(switchBox.result['dpid']) > 0:
@@ -2498,6 +2703,7 @@ class MiniEdit( Frame ):
 
             if 'Switch' in tags:
                 opts = self.switchOpts[name]
+                #print str(opts)
 
                 # Create the correct switch class
                 switchClass = customOvs
@@ -2525,13 +2731,28 @@ class MiniEdit( Frame ):
                     switchClass = IVSSwitch
                 else:
                     switchClass = customOvs
+
+                if switchClass == customOvs:
+                    # Set OpenFlow versions
+                    self.openFlowVersions = []
+                    if self.appPrefs['openFlowVersions']['ovsOf10'] == '1':
+                        self.openFlowVersions.append('OpenFlow10')
+                    if self.appPrefs['openFlowVersions']['ovsOf11'] == '1':
+                        self.openFlowVersions.append('OpenFlow11')
+                    if self.appPrefs['openFlowVersions']['ovsOf12'] == '1':
+                        self.openFlowVersions.append('OpenFlow12')
+                    if self.appPrefs['openFlowVersions']['ovsOf13'] == '1':
+                        self.openFlowVersions.append('OpenFlow13')
+                    protoList = ",".join(self.openFlowVersions)
+                    switchParms['protocols'] = protoList
                 newSwitch = net.addSwitch( name , cls=switchClass, **switchParms)
+
+                # Some post startup config
                 if switchClass == CustomUserSwitch:
                     if ('switchIP' in opts):
                         if (len(opts['switchIP']) > 0):
                             newSwitch.setSwitchIP(opts['switchIP'])
                 if switchClass == customOvs:
-                    newSwitch.setOpenFlowVersion(self.appPrefs['openFlowVersions'])
                     if ('switchIP' in opts):
                         if (len(opts['switchIP']) > 0):
                             newSwitch.setSwitchIP(opts['switchIP'])
@@ -2548,6 +2769,7 @@ class MiniEdit( Frame ):
                 newSwitch = net.addHost( name , cls=LegacyRouter)
             elif 'Host' in tags:
                 opts = self.hostOpts[name]
+                #print str(opts)
                 ip = None
                 defaultRoute = None
                 if 'defaultRoute' in opts and len(opts['defaultRoute']) > 0:
@@ -2560,9 +2782,18 @@ class MiniEdit( Frame ):
                     ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
 
                 # Create the correct host class
-                hostCls = Host
                 if 'cores' in opts or 'cpu' in opts:
-                    hostCls=CPULimitedHost
+                    if ('privateDirectory' in opts):
+                        hostCls = partial( CPULimitedHostWithPrivateDirs,
+                                           privateDirs=opts['privateDirectory'] )
+                    else:
+                        hostCls=CPULimitedHost
+                else:
+                    if ('privateDirectory' in opts):
+                        hostCls = partial( HostWithPrivateDirs,
+                                           privateDirs=opts['privateDirectory'] )
+                    else:
+                        hostCls=Host
                 newHost = net.addHost( name,
                                        cls=hostCls,
                                        ip=ip,
@@ -2590,28 +2821,37 @@ class MiniEdit( Frame ):
 
                 # Get controller info from panel
                 controllerType = opts['controllerType']
+                if 'controllerProtocol' in opts:
+                    controllerProtocol = opts['controllerProtocol']
+                else:
+                    controllerProtocol = 'tcp'
+                    opts['controllerProtocol'] = 'tcp'
+                controllerIP = opts['remoteIP']
+                controllerPort = opts['remotePort']
 
                 # Make controller
                 print 'Getting controller selection:'+controllerType
-                controllerIP = opts['remoteIP']
-                controllerPort = opts['remotePort']
                 if controllerType == 'remote':
                     net.addController(name=name,
                                       controller=RemoteController,
                                       ip=controllerIP,
+                                      protocol=controllerProtocol,
                                       port=controllerPort)
                 elif controllerType == 'inband':
                     net.addController(name=name,
                                       controller=InbandController,
                                       ip=controllerIP,
+                                      protocol=controllerProtocol,
                                       port=controllerPort)
                 elif controllerType == 'ovsc':
                     net.addController(name=name,
                                       controller=OVSController,
+                                      protocol=controllerProtocol,
                                       port=controllerPort)
                 else:
                     net.addController(name=name,
                                       controller=Controller,
+                                      protocol=controllerProtocol,
                                       port=controllerPort)
 
             else:
@@ -2637,11 +2877,13 @@ class MiniEdit( Frame ):
                 dst=link['dest']
                 linkopts=link['linkOpts']
                 srcName, dstName = src[ 'text' ], dst[ 'text' ]
-                src, dst = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
+                srcNode, dstNode = net.nameToNode[ srcName ], net.nameToNode[ dstName ]
                 if linkopts:
-                    net.addLink(src, dst, cls=TCLink, **linkopts)
+                    net.addLink(srcNode, dstNode, cls=TCLink, **linkopts)
                 else:
-                    net.addLink(src, dst)
+                    #print str(srcNode)
+                    #print str(dstNode)
+                    net.addLink(srcNode, dstNode)
                 self.canvas.itemconfig(key, dash=())
 
 
@@ -2667,19 +2909,28 @@ class MiniEdit( Frame ):
 
     def postStartSetup( self ):
 
-        # Setup host VLAN subinterfaces
+        # Setup host details
         for widget in self.widgetToItem:
             name = widget[ 'text' ]
             tags = self.canvas.gettags( self.widgetToItem[ widget ] )
             if 'Host' in tags:
+                newHost = self.net.get(name)
                 opts = self.hostOpts[name]
                 # Attach vlan interfaces
                 if ('vlanInterfaces' in opts):
                     for vlanInterface in opts['vlanInterfaces']:
                         print 'adding vlan interface '+vlanInterface[1]
-                        newHost = self.net.get(name)
-                        newHost.cmdPrint('vconfig add '+name+'-eth0 '+vlanInterface[1])
                         newHost.cmdPrint('ifconfig '+name+'-eth0.'+vlanInterface[1]+' '+vlanInterface[0])
+                # Run User Defined Start Command
+                if ('startCommand' in opts):
+                    newHost.cmdPrint(opts['startCommand'])
+            if 'Switch' in tags:
+                newNode = self.net.get(name)
+                opts = self.switchOpts[name]
+                # Run User Defined Start Command
+                if ('startCommand' in opts):
+                    newNode.cmdPrint(opts['startCommand'])
+
 
         # Configure NetFlow
         nflowValues = self.appPrefs['netflow']
@@ -2782,6 +3033,23 @@ class MiniEdit( Frame ):
     def stop( self ):
         "Stop network."
         if self.net is not None:
+            # Stop host details
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                if 'Host' in tags:
+                    newHost = self.net.get(name)
+                    opts = self.hostOpts[name]
+                    # Run User Defined Stop Command
+                    if ('stopCommand' in opts):
+                        newHost.cmdPrint(opts['stopCommand'])
+                if 'Switch' in tags:
+                    newNode = self.net.get(name)
+                    opts = self.switchOpts[name]
+                    # Run User Defined Stop Command
+                    if ('stopCommand' in opts):
+                        newNode.cmdPrint(opts['stopCommand'])
+
             self.net.stop()
         cleanUpScreens()
         self.net = None
@@ -2908,6 +3176,8 @@ class MiniEdit( Frame ):
         opts = OptionParser( description=desc, usage=usage )
 
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
+        addDictOption( opts, LINKS, LINKDEF, 'link' )
+
         opts.add_option( '--custom', type='string', default=None,
                          help='read custom topo and node params from .py' +
                          'file' )
@@ -2947,7 +3217,8 @@ class MiniEdit( Frame ):
             return
         self.newTopology()
         topo = buildTopo( TOPOS, self.options.topo )
-        importNet = Mininet(topo=topo, build=False)
+        link = customConstructor( LINKS, self.options.link )
+        importNet = Mininet(topo=topo, build=False, link=link)
         importNet.build()
 
         c = self.canvas
@@ -2965,6 +3236,7 @@ class MiniEdit( Frame ):
             icon.bind('<Button-3>', self.do_controllerPopup )
             ctrlr = { 'controllerType': 'ref',
                       'hostname': name,
+                      'controllerProtocol': controller.protocol,
                       'remoteIP': controller.ip,
                       'remotePort': controller.port}
             self.controllers[name] = ctrlr
@@ -3038,6 +3310,7 @@ class MiniEdit( Frame ):
         print 'links:'+str(len(topo.links()))
         #[('h1', 's3'), ('h2', 's4'), ('s3', 's4')]
         for link in topo.links():
+            print str(link)
             srcNode = link[0]
             src = self.findWidgetByName(srcNode)
             sx, sy = self.canvas.coords( self.widgetToItem[ src ] )
@@ -3046,10 +3319,13 @@ class MiniEdit( Frame ):
             dest = self.findWidgetByName(destNode)
             dx, dy = self.canvas.coords( self.widgetToItem[ dest]  )
 
+            params = topo.linkInfo( srcNode, destNode )
+            print 'Link Parameters='+str(params)
+
             self.link = self.canvas.create_line( sx, sy, dx, dy, width=4,
                                              fill='blue', tag='link' )
             c.itemconfig(self.link, tags=c.gettags(self.link)+('data',))
-            self.addLink( src, dest )
+            self.addLink( src, dest, linkopts=params )
             self.createDataLinkBindings()
             self.link = self.linkWidget = None
 
