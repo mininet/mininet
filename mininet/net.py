@@ -97,6 +97,7 @@ from itertools import chain, groupby
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
 from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
+from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
@@ -208,7 +209,7 @@ class Mininet( object ):
                                   prefixLen=self.prefixLen ) +
                                   '/%s' % self.prefixLen }
         if self.autoSetMacs:
-            defaults[ 'mac'] = macColonHex( self.nextIP )
+            defaults[ 'mac' ] = macColonHex( self.nextIP )
         if self.autoPinCpus:
             defaults[ 'cores' ] = self.nextCore
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
@@ -259,6 +260,20 @@ class Mininet( object ):
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
+
+    def addNAT( self, name='nat0', connect=True, inNamespace=False, **params ):
+        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace, 
+                            subnet=self.ipBase, **params )
+        # find first switch and create link
+        if connect:
+            # connect the nat to the first switch
+            self.addLink( nat, self.switches[ 0 ] )
+            # set the default route on hosts
+            natIP = nat.params[ 'ip' ].split('/')[ 0 ]
+            for host in self.hosts:
+                if host.inNamespace:
+                    host.setDefaultRoute( 'via %s' % natIP )
+        return nat
 
     # BL: We now have four ways to look up nodes
     # This may (should?) be cleaned up in the future.

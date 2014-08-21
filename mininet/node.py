@@ -1358,7 +1358,6 @@ class RemoteController( Controller ):
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
-
 def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
     "find any controller that is available and run it"
     for controller in order:

@@ -200,6 +200,9 @@ class MininetRunner( object ):
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
+        opts.add_option( '--nat', action='store_true',
+                         default=False, help="adds a NAT to the topology "
+                         "that connects Mininet to the physical network" )
         opts.add_option( '--version', action='callback', callback=version )
 
         self.options, self.args = opts.parse_args()
@@ -256,6 +259,10 @@ class MininetRunner( object ):
                   xterms=xterms, autoSetMacs=mac,
                   autoStaticArp=arp, autoPinCpus=pin,
                   listenPort=listenPort )
+
+        if self.options.nat:
+            nat = mn.addNAT()
+            nat.configDefault()
 
         if self.options.pre:
             CLI( mn, script=self.options.pre )
