@@ -722,11 +722,14 @@ class Mininet( object ):
         duration: test duration in seconds
         returns a single list of measured CPU fractions as floats.
         """
+        cores = int( quietRun( 'nproc' ) )
         pct = cpu * 100
         info('*** Testing CPU %.0f%% bandwidth limit\n' % pct)
         hosts = self.hosts
+        # for each host, start a while loop for each core
         for h in hosts:
-            h.cmd( 'while true; do a=1; done &' )
+            for _core in range( cores ):
+                h.cmd( 'while true; do a=1; done &' )
         pids = [h.cmd( 'echo $!' ).strip() for h in hosts]
         pids_str = ",".join(["%s" % pid for pid in pids])
         cmd = 'ps -p %s -o pid,%%cpu,args' % pids_str
