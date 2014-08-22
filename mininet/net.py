@@ -94,6 +94,7 @@ import random
 import copy
 from time import sleep
 from itertools import chain, groupby
+from math import ceil
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
@@ -726,33 +727,41 @@ class Mininet( object ):
         duration: test duration in seconds
         returns a single list of measured CPU fractions as floats.
         """
+        cores = int( quietRun( 'nproc' ) )
         pct = cpu * 100
-        info('*** Testing CPU %.0f%% bandwidth limit\n' % pct)
+        info( '*** Testing CPU %.0f%% bandwidth limit\n' % pct )
         hosts = self.hosts
+        cores = int( quietRun( 'nproc' ) )
+        # number of processes to run a while loop on per host
+        num_procs = int( ceil( cores * cpu ) )
+        pids = {}
         for h in hosts:
-            h.cmd( 'while true; do a=1; done &' )
-        pids = [h.cmd( 'echo $!' ).strip() for h in hosts]
-        pids_str = ",".join(["%s" % pid for pid in pids])
-        cmd = 'ps -p %s -o pid,%%cpu,args' % pids_str
-        # It's a shame that this is what pylint prefers
-        outputs = []
-        for _ in range( duration ):
+            pids[ h ] = []
+            for _core in range( num_procs ):
+                h.cmd( 'while true; do a=1; done &' )
+                pids[ h ].append( h.cmd( 'echo $!' ).strip() )
+        outputs = {}
+        time = {}
+        # get the initial cpu time for each host
+        for host in hosts:
+            outputs[ host ] = []
+            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+                time[ host ] = float( f.read() )
+        for _ in range( 5 ):
             sleep( 1 )
-            outputs.append( quietRun( cmd ).strip() )
-        for h in hosts:
-            h.cmd( 'kill $!' )
+            for host in hosts:
+                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+                    readTime = float( f.read() )
+                outputs[ host ].append( ( ( readTime - time[ host ] )
+                                        / 1000000000 ) / cores * 100 )
+                time[ host ] = readTime
+        for h, pids in pids.items():
+            for pid in pids:
+                h.cmd( 'kill -9 %s' % pid )
         cpu_fractions = []
-        for test_output in outputs:
-            # Split by line.  Ignore first line, which looks like this:
-            # PID %CPU COMMAND\n
-            for line in test_output.split('\n')[1:]:
-                r = r'\d+\s*(\d+\.\d+)'
-                m = re.search( r, line )
-                if m is None:
-                    error( '*** Error: could not extract CPU fraction: %s\n' %
-                           line )
-                    return None
-                cpu_fractions.append( float( m.group( 1 ) ) )
+        for _host, outputs in outputs.items():
+            for pct in outputs:
+                cpu_fractions.append( pct )
         output( '*** Results: %s\n' % cpu_fractions )
         return cpu_fractions
 
