@@ -97,11 +97,15 @@ class testOptionsTopoCommon( object ):
         "Verify that link delays are accurate within a bound."
         DELAY_MS = 15
         DELAY_TOLERANCE = 0.8  # Delay fraction below which test should fail
+        REPS = 3
         lopts = { 'delay': '%sms' % DELAY_MS, 'use_htb': True }
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass, autoStaticArp=True,
                       waitConnected=True )
-        ping_delays = mn.run( mn.pingFull )
+        mn.start()
+        for _ in range( REPS ):
+            ping_delays = mn.pingFull()
+        mn.stop()
         test_outputs = ping_delays[0]
         # Ignore unused variables below
         # pylint: disable-msg=W0612

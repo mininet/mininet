@@ -888,7 +888,9 @@ class UserSwitch( Switch ):
 
     def connected( self ):
         "Is the switch connected to a controller?"
-        return 'remote.is-connected=true' in self.dpctl( 'status' )
+        status = self.dpctl( 'status' )
+        return ( 'remote.is-connected=true' in status and
+                 'local.is-connected=true' in status )
 
     @staticmethod
     def TCReapply( intf ):
