@@ -312,8 +312,8 @@ class Mininet( object ):
             port1: source port
             port2: dest port
             returns: link object"""
-        mac1 = macColonHex( random.randint( 1, (2**24 - 1) ) )
-        mac2 = macColonHex( random.randint( 1, (2**24 - 1) ) )
+        mac1 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
+        mac2 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
         defaults = { 'port1': port1,
                      'port2': port2,
                      'addr1': mac1,
