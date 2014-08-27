@@ -160,6 +160,7 @@ class Node( object ):
             self.pollOut.poll()
         self.waiting = False
         self.cmd( 'stty -echo' )
+        self.cmd( 'set +m' )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -241,9 +242,13 @@ class Node( object ):
         if printPid and not isShellBuiltin( cmd ):
             if len( cmd ) > 0 and cmd[ -1 ] == '&':
                 # print ^A{pid}\n so monitor() can set lastPid
-                cmd += ' printf "\\001%d\n" $! \n'
+                cmd += ' printf "\\001%d\\012" $! '
             else:
                 cmd = 'mnexec -p ' + cmd
+        # if a builtin command is backgrounded, it yields a PID
+        elif isShellBuiltin( cmd ):
+            if len( cmd ) > 0 and cmd[ -1 ] == '&':
+                cmd += ' printf "\\001%d\\012" $! '
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
@@ -258,9 +263,13 @@ class Node( object ):
            timeoutms: timeout in ms or None to wait indefinitely."""
         self.waitReadable( timeoutms )
         data = self.read( 1024 )
+        pidre = r'\[\d+\] \d+\r\n'
         # Look for PID
         marker = chr( 1 ) + r'\d+\r\n'
         if findPid and chr( 1 ) in data:
+            # suppress the job and PID of a backgrounded command
+            if re.findall( pidre, data ):
+                data = re.sub( pidre, '', data )
             # Marker can be read in chunks; continue until all of it is read
             while not re.findall( marker, data ):
                 data += self.read( 1024 )
@@ -1262,7 +1271,7 @@ class Controller( Node ):
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.command + ' ' + self.cargs % self.port +
-                  ' 1>' + cout + ' 2>' + cout + '&' )
+                  ' 1>' + cout + ' 2>' + cout + ' &' )
         self.execed = False
 
     def stop( self ):
