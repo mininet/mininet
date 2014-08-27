@@ -1347,6 +1347,27 @@ class NOX( Controller ):
                              cdir=noxCoreDir,
                              **kwargs )
 
+class RYU( Controller ):
+    "Controller to run Ryu application"
+    def __init__( self, name, *ryuArgs, **kwargs ):
+        """Init.
+        name: name to give controller.
+        ryuArgs: arguments and modules to pass to Ryu"""
+        homeDir = quietRun( 'printenv HOME' ).strip( '\r\n' )
+        ryuCoreDir = '%s/ryu/ryu/app/' % homeDir
+        if not ryuArgs:
+            warn( 'warning: no Ryu modules specified; '
+                  'running simple_switch only\n' )
+            ryuArgs = [ ryuCoreDir + 'simple_switch.py' ]
+        elif type( ryuArgs ) not in ( list, tuple ):
+            ryuArgs = [ ryuArgs ]
+
+        Controller.__init__( self, name,
+                         command='ryu-manager',
+                         cargs='--ofp-tcp-listen-port %s ' + 
+                         ' '.join( ryuArgs ),
+                         cdir=ryuCoreDir,
+                         **kwargs )
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."

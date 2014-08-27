@@ -383,6 +383,38 @@ function ivs {
     sudo make install
 }
 
+# Install RYU
+function ryu {
+    echo "Installing RYU..."
+
+    # install Ryu dependencies"
+    $install autoconf automake g++ libtool python make
+    if [ "$DIST" = "Ubuntu" ]; then
+        $install libxml2 libxslt-dev python-pip python-dev
+        sudo pip install gevent
+    elif [ "$DIST" = "Debian" ]; then
+        $install libxml2 libxslt-dev python-pip python-dev
+        sudo pip install gevent
+    fi
+
+    # if needed, update python-six
+    SIX_VER=`pip show six | grep Version | awk '{print $2}'`
+    if version_ge 1.7.0 $SIX_VER; then
+        echo "Installing python-six version 1.7.0..."
+        sudo pip install -I six==1.7.0
+    fi
+    # fetch RYU
+    cd $BUILD_DIR/
+    git clone git://github.com/osrg/ryu.git ryu
+    cd ryu
+
+    # install ryu
+    sudo python ./setup.py install
+
+    # Add symbolic link to /usr/bin
+    sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
+}
+
 # Install NOX with tutorial files
 function nox {
     echo "Installing NOX w/tutorial files..."
@@ -645,7 +677,7 @@ function vm_clean {
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhikmnprtvVwx03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdfhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -672,6 +704,7 @@ function usage {
     printf -- ' -v: install Open (V)switch\n' >&2
     printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
+    printf -- ' -y: install R(y)u Controller\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
@@ -684,7 +717,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvV:wx03' OPTION
+    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -717,6 +750,7 @@ else
             1.3) nox13;;
             *)  echo "Invalid OpenFlow version $OF_VERSION";;
             esac;;
+      y)    ryu;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
       ?)    usage;;
