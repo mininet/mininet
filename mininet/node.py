@@ -239,16 +239,12 @@ class Node( object ):
             # Replace empty commands with something harmless
             cmd = 'echo -n'
         self.lastCmd = cmd
-        if printPid and not isShellBuiltin( cmd ):
-            if len( cmd ) > 0 and cmd[ -1 ] == '&':
-                # print ^A{pid}\n so monitor() can set lastPid
-                cmd += ' printf "\\001%d\\012" $! '
-            else:
-                cmd = 'mnexec -p ' + cmd
-        # if a builtin command is backgrounded, it yields a PID
-        elif isShellBuiltin( cmd ):
-            if len( cmd ) > 0 and cmd[ -1 ] == '&':
-                cmd += ' printf "\\001%d\\012" $! '
+        # if a builtin command is backgrounded, it still yields a PID
+        if len( cmd ) > 0 and cmd[ -1 ] == '&':
+            # print ^A{pid}\n so monitor() can set lastPid
+            cmd += ' printf "\\001%d\\012" $! '
+        elif printPid and not isShellBuiltin( cmd ):
+            cmd = 'mnexec -p ' + cmd
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
