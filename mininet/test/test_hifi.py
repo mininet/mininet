@@ -45,7 +45,7 @@ class testOptionsTopoCommon( object ):
         mn = Mininet( topo=SingleSwitchOptionsTopo( n=n, hopts=hopts,
                                                     lopts=lopts ),
                       host=CPULimitedHost, link=TCLink,
-                      switch=self.switchClass )
+                      switch=self.switchClass, waitConnected=True )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 
@@ -67,7 +67,8 @@ class testOptionsTopoCommon( object ):
         #self.runOptionsTopoTest( N, hopts=hopts )
 
         mn = Mininet( SingleSwitchOptionsTopo( n=N, hopts=hopts ),
-                      host=CPULimitedHost, switch=self.switchClass )
+                      host=CPULimitedHost, switch=self.switchClass,
+                      waitConnected=True )
         mn.start()
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
@@ -77,13 +78,16 @@ class testOptionsTopoCommon( object ):
 
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
-        BW = .5  # Mbps
+        if self.switchClass is UserSwitch:
+            self.skipTest ( 'UserSwitch has very poor performance, so skip for now' )
+        BW = 5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
         lopts = { 'bw': BW, 'use_htb': True }
         # Also verify correctness of limit limitng within a bound.
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
-                      link=TCLink, switch=self.switchClass )
+                      link=TCLink, switch=self.switchClass,
+                      waitConnected=True )
         bw_strs = mn.run( mn.iperf, format='m' )
         for bw_str in bw_strs:
             bw = float( bw_str.split(' ')[0] )
@@ -95,7 +99,8 @@ class testOptionsTopoCommon( object ):
         DELAY_TOLERANCE = 0.8  # Delay fraction below which test should fail
         lopts = { 'delay': '%sms' % DELAY_MS, 'use_htb': True }
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
-                      link=TCLink, switch=self.switchClass, autoStaticArp=True )
+                      link=TCLink, switch=self.switchClass, autoStaticArp=True,
+                      waitConnected=True )
         ping_delays = mn.run( mn.pingFull )
         test_outputs = ping_delays[0]
         # Ignore unused variables below
@@ -117,7 +122,8 @@ class testOptionsTopoCommon( object ):
         lopts = { 'loss': LOSS_PERCENT, 'use_htb': True }
         mn = Mininet( topo=SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       host=CPULimitedHost, link=TCLink,
-                      switch=self.switchClass )
+                      switch=self.switchClass,
+                      waitConnected=True )
         # Drops are probabilistic, but the chance of no dropped packets is
         # 1 in 100 million with 4 hops for a link w/99% loss.
         dropped_total = 0

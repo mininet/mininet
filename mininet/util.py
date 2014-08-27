@@ -145,7 +145,7 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2 ):
+def makeIntfPair( intf1, intf2, addr1=None, addr2=None ):
     """Make a veth pair connecting intf1 and intf2.
        intf1: string, interface
        intf2: string, interface
@@ -154,7 +154,11 @@ def makeIntfPair( intf1, intf2 ):
     quietRun( 'ip link del ' + intf1 )
     quietRun( 'ip link del ' + intf2 )
     # Create new pair
-    cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
+    if addr1 is None and addr2 is None:
+        cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
+    else:
+        cmd = ( 'ip link add name ' + intf1 + ' address ' + addr1 +
+                ' type veth peer name ' + intf2 + ' address ' + addr2 )
     cmdOutput = quietRun( cmd )
     if cmdOutput == '':
         return True
@@ -185,10 +189,12 @@ def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
     intf = str( intf )
     cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
     if srcNode:
-        srcNode.cmd( cmd )
+        cmdOutput = srcNode.cmd( cmd )
     else:
-        quietRun( cmd )
-    if ( ' %s:' % intf ) not in dstNode.cmd( 'ip link show', intf ):
+        cmdOutput = quietRun( cmd )
+    # If ip link set does not produce any output, then we can assume
+    # that the link has been moved successfully.
+    if cmdOutput:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
                    ' not successfully moved to ' + dstNode.name + '\n' )

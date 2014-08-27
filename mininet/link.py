@@ -32,7 +32,7 @@ class Intf( object ):
 
     "Basic interface object that can configure itself."
 
-    def __init__( self, name, node=None, port=None, link=None, **params ):
+    def __init__( self, name, node=None, port=None, link=None, mac=None, **params ):
         """name: interface name (e.g. h1-eth0)
            node: owning node (where this intf most likely lives)
            link: parent link if we're part of a link
@@ -40,7 +40,13 @@ class Intf( object ):
         self.node = node
         self.name = name
         self.link = link
-        self.mac, self.ip, self.prefixLen = None, None, None
+        self.mac = mac
+        self.ip, self.prefixLen = None, None
+        
+        # if interface is lo, we know the ip is 127.0.0.1.
+        # This saves an ifconfig command per node
+        if self.name == 'lo':
+            self.ip = '127.0.0.1'
         # Add to node (and move ourselves if necessary )
         node.addIntf( self, port=port )
         # Save params for future reference
@@ -91,6 +97,19 @@ class Intf( object ):
         self.mac = macs[ 0 ] if macs else None
         return self.mac
 
+    # Instead of updating ip and mac separately,
+    # use one ifconfig call to do it simultaneously.
+    # This saves an ifconfig command, which improves performance.
+
+    def updateAddr( self ):
+        "Return IP address and MAC address based on ifconfig."
+        ifconfig = self.ifconfig()
+        ips = self._ipMatchRegex.findall( ifconfig )
+        macs = self._macMatchRegex.findall( ifconfig )
+        self.ip = ips[ 0 ] if ips else None
+        self.mac = macs[ 0 ] if macs else None
+        return self.ip, self.mac
+
     def IP( self ):
         "Return IP address"
         return self.ip
@@ -102,8 +121,15 @@ class Intf( object ):
     def isUp( self, setUp=False ):
         "Return whether interface is up"
         if setUp:
-            self.ifconfig( 'up' )
-        return "UP" in self.ifconfig()
+            cmdOutput = self.ifconfig( 'up' )
+            # no output indicates success
+            if cmdOutput:
+                error( "Error setting %s up: %s " % ( self.name, cmdOutput ) )
+                return False
+            else:
+                return True
+        else:
+            return "UP" in self.ifconfig()
 
     def rename( self, newname ):
         "Rename interface"
@@ -154,8 +180,6 @@ class Intf( object ):
         self.setParam( r, 'setIP', ip=ip )
         self.setParam( r, 'isUp', up=up )
         self.setParam( r, 'ifconfig', ifconfig=ifconfig )
-        self.updateIP()
-        self.updateMAC()
         return r
 
     def delete( self ):
@@ -328,7 +352,7 @@ class Link( object ):
        Other types of links could be tunnels, link emulators, etc.."""
 
     def __init__( self, node1, node2, port1=None, port2=None,
-                  intfName1=None, intfName2=None,
+                  intfName1=None, intfName2=None, addr1=None, addr2=None,
                   intf=Intf, cls1=None, cls2=None, params1=None,
                   params2=None ):
         """Create veth link to another node, making two new interfaces.
@@ -354,7 +378,7 @@ class Link( object ):
         if not intfName2:
             intfName2 = self.intfName( node2, port2 )
 
-        self.makeIntfPair( intfName1, intfName2 )
+        self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
 
         if not cls1:
             cls1 = intf
@@ -366,9 +390,9 @@ class Link( object ):
             params2 = {}
 
         intf1 = cls1( name=intfName1, node=node1, port=port1,
-                      link=self, **params1  )
+                      link=self, mac=addr1, **params1  )
         intf2 = cls2( name=intfName2, node=node2, port=port2,
-                      link=self, **params2 )
+                      link=self, mac=addr2, **params2 )
 
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
@@ -379,13 +403,13 @@ class Link( object ):
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( cls, intf1, intf2 ):
+    def makeIntfPair( cls, intf1, intf2, addr1=None, addr2=None ):
         """Create pair of interfaces
            intf1: name of interface 1
            intf2: name of interface 2
            (override this class method [and possibly delete()]
            to change link type)"""
-        makeIntfPair( intf1, intf2  )
+        makeIntfPair( intf1, intf2, addr1, addr2 )
 
     def delete( self ):
         "Delete this link"
@@ -398,10 +422,12 @@ class Link( object ):
 class TCLink( Link ):
     "Link with symmetric TC interfaces configured via opts"
     def __init__( self, node1, node2, port1=None, port2=None,
-                  intfName1=None, intfName2=None, **params ):
+                  intfName1=None, intfName2=None,
+                  addr1=None, addr2=None, **params ):
         Link.__init__( self, node1, node2, port1=port1, port2=port2,
                        intfName1=intfName1, intfName2=intfName2,
                        cls1=TCIntf,
                        cls2=TCIntf,
+                       addr1=addr1, addr2=addr2,
                        params1=params,
                        params2=params)

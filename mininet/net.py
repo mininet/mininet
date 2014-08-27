@@ -90,6 +90,7 @@ import os
 import re
 import select
 import signal
+import random
 import copy
 from time import sleep
 from itertools import chain, groupby
@@ -326,8 +327,12 @@ class Mininet( object ):
             port1: source port
             port2: dest port
             returns: link object"""
+        mac1 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
+        mac2 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
         defaults = { 'port1': port1,
                      'port2': port2,
+                     'addr1': mac1,
+                     'addr2': mac2,
                      'intf': self.intf }
         defaults.update( params )
         if not cls:
@@ -350,7 +355,6 @@ class Mininet( object ):
             # quietRun( 'renice +18 -p ' + repr( host.pid ) )
             # This may not be the right place to do this, but
             # it needs to be done somewhere.
-            host.cmd( 'ifconfig lo up' )
         info( '\n' )
 
     def buildFromTopo( self, topo=None ):
