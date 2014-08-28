@@ -68,7 +68,12 @@ def exampleAllHosts( vlan ):
     net.stop()
 
 class VLANStarTopo( Topo ):
-    """Example topology that uses host in multiple VLANs"""
+    """Example topology that uses host in multiple VLANs
+
+       The topology has a single switch. There are k VLANs with
+       n hosts in each, all connected to the single switch. There
+       are also n hosts that are not in any VLAN, also connected to
+       the switch."""
 
     def build( self, k=2, n=2, vlanBase=100 ):
         s1 = self.addSwitch( 's1' )
