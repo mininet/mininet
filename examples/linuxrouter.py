@@ -3,6 +3,18 @@
 """
 linuxrouter.py: Example network with Linux IP router
  
+This example converts a Node into a router using IP forwarding
+already built into Linux.
+
+The topology contains a router with three IP subnets:
+ - 192.168.1.0/24 (interface IP: 192.168.1.1)
+ - 172.16.0.0/12 (interface IP: 172.16.0.1)
+ - 10.0.0.0/8 (interface IP: 10.0.0.1)
+
+ It also contains three hosts, one in each subnet:
+ - h1 (IP: 192.168.1.100)
+ - h2 (IP: 172.16.0.100)
+ - h3 (IP: 10.0.0.100)
 
 """
 
@@ -14,6 +26,7 @@ from mininet.cli import CLI
 from mininet.util import irange
 
 class Router( Node ):
+    "A Node with IP forwarding enabled."
 
     def config( self, **params ):
         super( Router, self).config( **params )
@@ -25,25 +38,25 @@ class Router( Node ):
         super( Router, self ).terminate()
 
 
-class NetworkTopo(Topo):
-    def __init__(self, n=2, h=1, **opts):
-        Topo.__init__(self, **opts)
+class NetworkTopo( Topo ):
+    "A simple topology of a router with three subnets (one host in each)."
 
-        router = self.addNode('r0', cls=Router, ip='192.168.1.1/24')
-        h1 = self.addHost('h1', ip='192.168.1.100/8', defaultRoute='via 192.168.1.1')
-        h2 = self.addHost('h2', ip='172.16.0.100/8', defaultRoute='via 172.16.0.1')
-        h3 = self.addHost('h3', ip='10.0.0.100/24', defaultRoute='via 10.0.0.1')
-        self.addLink(h1, router, intfName2='r0-eth1', params2={ 'ip' : '192.168.1.1/24' })
-        self.addLink(h2, router, intfName2='r0-eth2', params2={ 'ip' : '172.16.0.1/24' })
-        self.addLink(h3, router, intfName2='r0-eth3', params2={ 'ip' : '10.0.0.1/24' })
+    def build( self, n=2, h=1, **opts ):
+        router = self.addNode( 'r0', cls=Router, ip='192.168.1.1/24' )
+        h1 = self.addHost( 'h1', ip='192.168.1.100/24', defaultRoute='via 192.168.1.1' )
+        h2 = self.addHost( 'h2', ip='172.16.0.100/12', defaultRoute='via 172.16.0.1' )
+        h3 = self.addHost( 'h3', ip='10.0.0.100/8', defaultRoute='via 10.0.0.1' )
+        self.addLink( h1, router, intfName2='r0-eth1', params2={ 'ip' : '192.168.1.1/24' } )
+        self.addLink( h2, router, intfName2='r0-eth2', params2={ 'ip' : '172.16.0.1/12' } )
+        self.addLink( h3, router, intfName2='r0-eth3', params2={ 'ip' : '10.0.0.1/8' } )
 
 def run():
     topo = NetworkTopo()
-    net = Mininet(topo=topo)
+    net = Mininet( topo=topo, controller=None ) # no controller needed
     net.start()
-    CLI(net)
+    CLI( net )
     net.stop()
 
 if __name__ == '__main__':
-    setLogLevel('info')
+    setLogLevel( 'info' )
     run()
