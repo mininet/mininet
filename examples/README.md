@@ -79,6 +79,11 @@ This example shows how to connect a Mininet network to the Internet
 using NAT. It also answers the eternal question "why can't I ping
 `google.com`?"
 
+#### numberedports.py
+
+This example verifies the mininet ofport numbers match up to the ovs port numbers.
+It also verifies that the port numbers match up to the interface numbers
+
 #### popen.py:
 
 This example monitors a number of hosts using `host.popen()` and
@@ -118,7 +123,7 @@ memory and `sysctl` configuration (see `INSTALL`.)
 This example creates a 64-host tree network, and attempts to check full
 connectivity using `ping`, for different switch/datapath types.
 
-#### numberedports.py
+#### vlanhost.py:
 
-This example verifies the mininet ofport numbers match up to the ovs port numbers.
-It also verifies that the port numbers match up to the interface numbers
+An example of how to subclass Host to use a VLAN on its primary interface.
+

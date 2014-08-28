@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 vlanhost.py: Host subclass that uses a VLAN tag for the default interface.
 
@@ -24,6 +25,7 @@ Usage (example uses VLAN ID=1000):
 """
 
 from mininet.node import Host
+from mininet.topo import Topo
 
 class VLANHost( Host ):
 
@@ -52,7 +54,7 @@ class VLANHost( Host ):
 hosts = { 'vlan': VLANHost }
 
 
-def exampleUsage( vlan ):
+def exampleAllHosts( vlan ):
     """Simple example of how VLANHost can be used in a script"""
     # This is where the magic happens...
     host = partial( VLANHost, vlan=vlan )
@@ -65,6 +67,30 @@ def exampleUsage( vlan ):
     CLI( net )
     net.stop()
 
+class VLANStarTopo( Topo ):
+    """Example topology that uses host in multiple VLANs"""
+
+    def build( self, k=2, n=2, vlanBase=100 ):
+        s1 = self.addSwitch( 's1' )
+        for i in range( k ):
+            vlan = vlanBase + i
+            for j in range(n):
+                name = 'h%d-%d' % ( j+1, vlan )
+                h = self.addHost( name, cls=VLANHost, vlan=vlan )
+                self.addLink( h, s1 )
+        for j in range( n ):
+            h = self.addHost( 'h%d' % (j+1) )
+            self.addLink( h, s1 )
+
+
+def exampleCustomTags( vlan ):
+    """Simple example that exercises VLANStarTopo"""
+
+    net = Mininet( topo=VLANStarTopo() )
+    net.start()
+    CLI( net )
+    net.stop()
+
 if __name__ == '__main__':
     import sys
     from functools import partial
@@ -72,12 +98,16 @@ if __name__ == '__main__':
     from mininet.net import Mininet
     from mininet.cli import CLI
     from mininet.topo import SingleSwitchTopo
+    from mininet.log import setLogLevel
+
+    setLogLevel( 'info' )
 
     try:
         vlan = int( sys.argv[ 1 ] )
     except Exception:
-        print 'Usage: vlanhost.py <vlan id>\n'
-        print 'Using VLAN ID=100...'
-        vlan = 100
+        vlan = None
 
-    exampleUsage( vlan )
+    if vlan:
+        exampleAllHosts( vlan )
+    else:
+        exampleCustomTags( vlan )
