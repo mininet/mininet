@@ -56,6 +56,11 @@ This example shows how to use link and CPU limits.
 This example shows how to create a custom topology programatically
 by subclassing Topo, and how to run a series of tests on it.
 
+### linuxrouter.py:
+
+This example shows how to create and configure a router in Mininet
+that uses Linux IP forwarding.
+
 #### miniedit.py:
 
 This example demonstrates creating a network via a graphical editor.
