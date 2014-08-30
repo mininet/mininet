@@ -740,7 +740,7 @@ class Mininet( object ):
             sleep( 1 )
             outputs.append( quietRun( cmd ).strip() )
         for h in hosts:
-            h.cmd( 'kill %1' )
+            h.cmd( 'kill $!' )
         cpu_fractions = []
         for test_output in outputs:
             # Split by line.  Ignore first line, which looks like this:
