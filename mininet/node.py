@@ -606,6 +606,12 @@ class CPULimitedHost( Host ):
         # still does better with larger period values.
         self.period_us = kwargs.get( 'period_us', 100000 )
         self.sched = sched
+        if self.sched == 'rt':
+            release = quietRun( 'uname -r' ).strip('\r\n')
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
+                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
+                exit( 1 )
         self.rtprio = 20
 
     def cgroupSet( self, param, value, resource='cpu' ):
