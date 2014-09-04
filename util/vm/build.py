@@ -192,7 +192,10 @@ def findiso( flavor ):
     if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
         log( '* Retrieving', url )
         run( 'curl -C - -o %s %s' % ( iso, url ) )
-        if 'ISO' not in run( 'file ' + iso ):
+        # Make sure the file header/type is something reasonable like
+        # 'ISO' or 'x86 boot sector', and not random html or text
+        result = run( 'file ' + iso )
+        if 'ISO' not in result and 'boot' not in result:
             os.remove( iso )
             raise Exception( 'findiso: could not download iso from ' + url )
         # Write-protect iso, signaling it is complete
