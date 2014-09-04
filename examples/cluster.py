@@ -586,7 +586,7 @@ class MininetCluster( Mininet ):
                    'link': RemoteLink,
                    'precheck': True }
         params.update( kwargs )
-        servers = params.pop( 'servers', [] )
+        servers = params.pop( 'servers', [ None ] )
         servers = [ s if s != 'localhost' else None for s in servers ]
         self.servers = servers
         self.serverIP = params.pop( 'serverIP', {} )
