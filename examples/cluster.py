@@ -129,7 +129,7 @@ class RemoteMixin( object ):
                 serverIP = self.findServerIP( server )
         self.serverIP = serverIP
         if not user:
-            user = quietRun( 'who am i' ).split()[ 0 ]
+            user = quietRun( 'echo $SUDO_USER' )
         self.user = user
         if self.user and self.server:
             self.dest = '%s@%s' % ( self.user, self.serverIP )
@@ -595,7 +595,7 @@ class MininetCluster( Mininet ):
                               for server in self.servers }
         self.user = params.pop( 'user', None )
         if self.servers and not self.user:
-            self.user = quietRun( 'who am i' ).split()[ 0 ]
+            self.user = quietRun( 'echo $SUDO_USER' )
         if params.pop( 'precheck' ):
             self.precheck()
         self.connections = {}
