@@ -29,7 +29,7 @@
 #define VERSION "(devel)"
 #endif
 
-void usage(char *name) 
+void usage(char *name)
 {
     printf("Execution utility for Mininet\n\n"
            "Usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] cmd args...\n\n"
@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
     char path[PATH_MAX];
     int nsid;
     int pid;
+
     static struct sched_param sp;
     while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
         switch(c) {
@@ -156,10 +157,16 @@ int main(int argc, char *argv[])
             sprintf(path, "/proc/%d/ns/mnt", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0 || setns(nsid, 0) != 0) {
-                /* Plan B: chroot into pid's root file system */
+                char *cwd = get_current_dir_name();
+                /* Plan B: chroot/chdir into pid's root file system */
                 sprintf(path, "/proc/%d/root", pid);
                 if (chroot(path) < 0) {
                     perror(path);
+                    return 1;
+                }
+                /* need to chdir to correct working directory */
+                if (chdir(cwd) != 0) {
+                    perror(cwd);
                     return 1;
                 }
             }
@@ -184,7 +191,7 @@ int main(int argc, char *argv[])
             exit(0);
         default:
             usage(argv[0]);
-            exit(1); 
+            exit(1);
         }
 
     if (optind < argc) {
@@ -192,7 +199,7 @@ int main(int argc, char *argv[])
         perror(argv[optind]);
         return 1;
     }
-    
+
     usage(argv[0]);
 
     return 0;
