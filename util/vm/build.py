@@ -728,9 +728,12 @@ def generateOVF( name, osname, osid, diskname, disksize, mem=1024, cpus=1,
 
 def qcow2size( qcow2 ):
     "Return virtual disk size (in bytes) of qcow2 image"
-    output = check_output( [ 'file', qcow2 ] )
-    assert 'QCOW' in output
-    bytes = int( re.findall( '(\d+) bytes', output )[ 0 ] )
+    output = check_output( [ 'qemu-img', 'info', qcow2 ] )
+    try:
+        assert 'format: qcow' in output
+        bytes = int( re.findall( '(\d+) bytes', output )[ 0 ] )
+    except:
+        raise Exception( 'Could not determine size of %s' % qcow2 )
     return bytes
 
 
