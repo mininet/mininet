@@ -595,6 +595,8 @@ class Mininet( object ):
         r += r'(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+)/(\d+\.\d+) ms'
         m = re.search( r, pingOutput )
         if m is None:
+            if received == 0:
+                return errorTuple
             error( '*** Error: could not parse ping output: %s\n' %
                    pingOutput )
             return errorTuple
