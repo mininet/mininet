@@ -125,12 +125,8 @@ class RemoteMixin( object ):
         if server == 'localhost':
             server = None
         self.server = server
-        if not serverIP:
-                serverIP = self.findServerIP( server )
-        self.serverIP = serverIP
-        if not user:
-            user = quietRun( 'echo $SUDO_USER' )
-        self.user = user
+        self.serverIP = serverIP if serverIP else self.findServerIP( server )
+        self.user = user if user else self.findUser()
         if self.user and self.server:
             self.dest = '%s@%s' % ( self.user, self.serverIP )
         else:
@@ -145,6 +141,20 @@ class RemoteMixin( object ):
             self.sshcmd = self.sshcmd + [ self.dest ]
         self.splitInit = splitInit
         super( RemoteMixin, self ).__init__( name, **kwargs )
+
+    @staticmethod
+    def findUser():
+        "Try to return logged-in (usually non-root) user"
+        try:
+            # If we're running sudo
+            return os.environ[ 'SUDO_USER' ]
+        except:
+            try:
+                # Logged-in user (if we have a tty)
+                return quietRun( 'who am i' ).split()[ 0 ]
+            except:
+                # Give up and return effective user
+                return quietRun( 'whoami' )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
@@ -593,9 +603,7 @@ class MininetCluster( Mininet ):
         if not self.serverIP:
             self.serverIP = { server: RemoteMixin.findServerIP( server )
                               for server in self.servers }
-        self.user = params.pop( 'user', None )
-        if self.servers and not self.user:
-            self.user = quietRun( 'echo $SUDO_USER' )
+        self.user = params.pop( 'user', RemoteMixin.findUser() )
         if params.pop( 'precheck' ):
             self.precheck()
         self.connections = {}
