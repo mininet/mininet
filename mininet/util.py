@@ -145,21 +145,22 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2, addr1=None, addr2=None ):
+def makeIntfPair( intf1, intf2, addr1=None, addr2=None, run=quietRun ):
     """Make a veth pair connecting intf1 and intf2.
        intf1: string, interface
        intf2: string, interface
-       returns: success boolean"""
+       node: node to run on or None (default)
+       returns: ip link add result"""
     # Delete any old interfaces with the same names
-    quietRun( 'ip link del ' + intf1 )
-    quietRun( 'ip link del ' + intf2 )
+    run( 'ip link del ' + intf1 )
+    run( 'ip link del ' + intf2 )
     # Create new pair
     if addr1 is None and addr2 is None:
         cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
     else:
         cmd = ( 'ip link add name ' + intf1 + ' address ' + addr1 +
                 ' type veth peer name ' + intf2 + ' address ' + addr2 )
-    cmdOutput = quietRun( cmd )
+    cmdOutput = run( cmd )
     if cmdOutput == '':
         return True
     else:
@@ -180,36 +181,32 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
-def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
+def moveIntfNoRetry( intf, dstNode, printError=False ):
     """Move interface to node, without retrying.
        intf: string, interface
         dstNode: destination Node
-        srcNode: source Node or None (default) for root ns
         printError: if true, print error"""
     intf = str( intf )
     cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
-    if srcNode:
-        cmdOutput = srcNode.cmd( cmd )
-    else:
-        cmdOutput = quietRun( cmd )
+    cmdOutput = quietRun( cmd )
     # If ip link set does not produce any output, then we can assume
     # that the link has been moved successfully.
     if cmdOutput:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
-                   ' not successfully moved to ' + dstNode.name + '\n' )
+                   ' not successfully moved to ' + dstNode.name + ':\n',
+                   cmdOutput )
         return False
     return True
 
-def moveIntf( intf, dstNode, srcNode=None, printError=False,
+def moveIntf( intf, dstNode, srcNode=None, printError=True,
              retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
        dstNode: destination Node
-       srcNode: source Node or None (default) for root ns
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, dstNode,
-          srcNode=srcNode, printError=printError )
+           printError=printError )
 
 # Support for dumping network
 

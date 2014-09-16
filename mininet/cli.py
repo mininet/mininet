@@ -75,7 +75,7 @@ class CLI( Cmd ):
                 for node in self.mn.values():
                     while node.waiting:
                         node.sendInt()
-                        node.monitor()
+                        node.waitOutput()
                 if self.isatty():
                     quietRun( 'stty echo sane intr "^C"' )
                 self.cmdloop()
@@ -330,6 +330,11 @@ class CLI( Cmd ):
         self.onecmd(line)
         elapsed = time.time() - start
         self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
+
+    def do_links( self, line ):
+        "Report on links"
+        for link in self.mn.links:
+            print link, link.status()
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
