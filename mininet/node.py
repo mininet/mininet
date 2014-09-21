@@ -678,7 +678,7 @@ class CPULimitedHost( Host ):
         "Internal method: return parameters for RT bandwidth"
         pstr, qstr = 'rt_period_us', 'rt_runtime_us'
         # RT uses wall clock time for period and quota
-        quota = int( self.period_us * f * numCores() )
+        quota = int( self.period_us * f )
         return pstr, qstr, self.period_us, quota
 
     def cfsInfo( self, f):
