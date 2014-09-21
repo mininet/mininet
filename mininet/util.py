@@ -234,6 +234,15 @@ def dumpNetConnections( net ):
     nodes = net.controllers + net.switches + net.hosts
     dumpNodeConnections( nodes )
 
+def dumpPorts( switches ):
+    "dump interface to openflow port mappings for each switch"
+    for switch in switches:
+        output( '%s ' % switch.name )
+        for intf in switch.intfList():
+            port = switch.ports[ intf ]
+            output( '%s:%d ' % ( intf, port ) )
+        output( '\n' )
+
 # IP and Mac address formatting and parsing
 
 def _colonHex( val, bytecount ):
