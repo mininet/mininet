@@ -8,15 +8,14 @@ from mininet.net import Mininet
 from mininet.link import TCIntf
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
-from mininet.util import custom
-from mininet.log import setLogLevel
+from mininet.util import custom, quietRun
+from mininet.log import setLogLevel, info
 
 
 def testLinkLimit( net, bw ):
     "Run bandwidth limit test"
-    print '*** Testing network %.2f Mbps bandwidth limit' % bw
-    net.iperf( )
-
+    info( '*** Testing network %.2f Mbps bandwidth limit\n' % bw )
+    net.iperf()
 
 def limit( bw=10, cpu=.1 ):
     """Example/test of link and CPU bandwidth limits
@@ -25,7 +24,13 @@ def limit( bw=10, cpu=.1 ):
     intf = custom( TCIntf, bw=bw )
     myTopo = TreeTopo( depth=1, fanout=2 )
     for sched in 'rt', 'cfs':
-        print '*** Testing with', sched, 'bandwidth limiting'
+        info( '*** Testing with', sched, 'bandwidth limiting\n' )
+        if sched == 'rt':
+            release = quietRun( 'uname -r' ).strip('\r\n')
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
+                info( '*** RT Scheduler is not enabled in your kernel. Skipping this test\n' )
+                continue
         host = custom( CPULimitedHost, sched=sched, cpu=cpu )
         net = Mininet( topo=myTopo, intf=intf, host=host )
         net.start()
