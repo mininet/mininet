@@ -400,6 +400,12 @@ class CLI( Cmd ):
                 # read data but before it has been printed.
                 node.sendInt()
 
+    def precmd( self, line ):
+        "allow for comments in the cli"
+        if '#' in line:
+            line = line.split( '#' )[ 0 ]
+        return line
+
 
 # Helper functions
 
