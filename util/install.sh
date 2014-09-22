@@ -85,10 +85,6 @@ OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_TAG=v$OVS_RELEASE
 
-# Command-line versions overrides that simplify custom VM creation
-# To use, pass in the vars on the cmd line before install.sh, e.g.
-# WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
-WS_DISSECTOR_REV=${WS_DISSECTOR_REV:-""}
 OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 
 
@@ -200,65 +196,33 @@ function of13 {
     cd $BUILD_DIR
 }
 
-function wireshark_version_check {
-    # Check Wireshark version
-    WS=$(which wireshark)
-    WS_VER_PATCH=(1 10) # targetting wireshark 1.10.0
-    WS_VER=($($WS --version | sed 's/[a-z ]*\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/'))
-    if [ "${WS_VER[0]}" -lt "${WS_VER_PATCH[0]}" ] ||
-       [[ "${WS_VER[0]}" -le "${WS_VER_PATCH[0]}" && "${WS_VER[1]}" -lt "${WS_VER_PATCH[1]}" ]]
-    then
-        # pre-1.10.0 wireshark
-        echo "Setting revision: pre-ws-1.10.0"
-        WS_DISSECTOR_REV="pre-ws-1.10.0" 
-    fi
-}
-
 function wireshark {
-    echo "Installing Wireshark dissector..."
-
+    echo "Installing Wireshark"
     if [ "$DIST" = "Fedora" ]; then
-        # Just install Fedora's wireshark RPMS
-        # Fedora's wirehark >= 1.10.2-2 includes an OF dissector
-        # (it has been backported from the future Wireshark 1.12 code base)
         $install wireshark wireshark-gnome
-        return
-    fi
-
-    $install wireshark tshark libgtk2.0-dev
-
-    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
-        # Install newer version
-        $install scons mercurial libglib2.0-dev
-        $install libwiretap-dev libwireshark-dev
-        cd $BUILD_DIR
-        hg clone https://bitbucket.org/barnstorm/of-dissector
-        if [[ -z "$WS_DISSECTOR_REV" ]]; then
-            wireshark_version_check
-        fi
-        cd of-dissector
-        if [[ -n "$WS_DISSECTOR_REV" ]]; then
-            hg checkout ${WS_DISSECTOR_REV}
-        fi
-        # Build dissector
-        cd src
-        export WIRESHARK=/usr/include/wireshark
-        scons
-        # libwireshark0/ on 11.04; libwireshark1/ on later
-        WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
-        WSPLUGDIR=$WSDIR/plugins/
-        sudo cp openflow.so $WSPLUGDIR
-        echo "Copied openflow plugin to $WSPLUGDIR"
     else
-        # Install older version from reference source
-        cd $BUILD_DIR/openflow/utilities/wireshark_dissectors/openflow
-        make
-        sudo make install
+        $install wireshark tshark
     fi
+
+    echo "Cloning LoxiGen and building openflow.lua dissector"
+    cd $BUILD_DIR
+    git clone https://github.com/floodlight/loxigen.git
+    cd loxigen
+    make wireshark
+
+    # Copy into plugin directory
+    # libwireshark0/ on 11.04; libwireshark1/ on later
+    WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
+    WSPLUGDIR=$WSDIR/plugins/
+    PLUGIN=loxi_output/wireshark/openflow.lua
+    sudo cp $PLUGIN $WSPLUGDIR
+    echo "Copied openflow plugin $PLUGIN to $WSPLUGDIR"
 
     # Copy coloring rules: OF is white-on-blue:
     mkdir -p $HOME/.wireshark
     cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+
+    cd $BUILD_DIR
 }
 
 
