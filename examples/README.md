@@ -13,7 +13,7 @@ process running in a namespace. Doesn't use OpenFlow.
 
 #### consoles.py:
 
-This example creates a grid of console windows, one for each node, 
+This example creates a grid of console windows, one for each node,
 and allows interaction with and monitoring of each console, including
 graphical monitoring.
 
@@ -65,9 +65,14 @@ that uses Linux IP forwarding.
 
 This example demonstrates creating a network via a graphical editor.
 
+#### mobility.py
+
+This example demonstrates detaching an interface from one switch and
+attaching it another as a basic way to move a host around a network.
+
 #### multiping.py:
 
-This example demonstrates one method for 
+This example demonstrates one method for
 monitoring output from multiple hosts, using `node.monitor()`.
 
 #### multipoll.py:
