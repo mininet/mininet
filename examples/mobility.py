@@ -27,25 +27,10 @@ from mininet.log import output, warn
 
 from random import randint
 from re import findall
-from distutils.version import StrictVersion
+
 
 class MobilitySwitch( OVSSwitch ):
     "Switch that can reattach and rename interfaces"
-
-    @classmethod
-    def setup( cls ):
-        "Call our parent method and determine OVS version"
-        OVSSwitch.setup()
-        info = quietRun( 'ovs-vsctl --version' )
-        cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
-        if cls.isOldOVS():
-            warn( 'WARNING: port selection may not work '
-                  ' with OVS ', cls.OVSVersion )
-
-    @classmethod
-    def isOldOVS( cls ):
-        return ( StrictVersion( cls.OVSVersion ) <
-             StrictVersion( '1.10' ) )
 
     def delIntf( self, intf ):
         "Remove (and detach) an interface"
