@@ -13,6 +13,66 @@ setup for testing, and can even be emulated with the Mininet package.
 
 from mininet.util import irange, natural, naturalSeq
 
+class NodeID(object):
+    '''Topo node identifier.'''
+    sdpidlist = []
+
+    def __init__(self, dpid=None, nodetype=None, name=None):
+        '''Init.
+
+        @param dpid dpid
+        '''
+        # DPID-compatible hashable identifier: opaque 64-bit unsigned int
+        self.nodetype = nodetype
+        if name:
+            self.name = name
+            self.nodetype = name[0]
+            if self.nodetype == 'h':
+                self.dpid = int( name[1:] ) + max( self.sdpidlist )
+            else:
+                self.dpid = int( name[1:] )
+        elif nodetype == 's':
+            self.name = self.nodetype + str( dpid )
+            self.dpid = dpid
+            self.sdpidlist.append( dpid )
+        elif dpid not in self.sdpidlist:
+            self.nodetype = 'h'
+            self.name = self.nodetype + str( dpid - max( self.sdpidlist ))
+            self.dpid = dpid
+        else:
+            self.nodetype = 's'
+            self.name = self.nodetype + str( dpid )
+            self.dpid = dpid
+
+    def __str__(self):
+        '''String conversion.
+
+        @return str dpid as string
+        '''
+        return str( self.dpid )
+
+    def name_str(self):
+        '''Name conversion.
+
+        @return name name as string
+        '''
+        if self.nodetype == 'h':
+            return self.nodetype + str( self.dpid - max( self.sdpidlist ))
+        else:
+            return self.nodetype + str( self.dpid )
+
+    def mac_str(self):
+        '''Return MAC string'''
+        return "00:00:00:00:00:%02x" %( self.dpid )
+
+    def ip_str(self):
+        '''Name conversion.
+
+        @return ip ip as string
+        '''
+        return "10.0.0.%i" %( self.dpid )
+
+
 class MultiGraph( object ):
     "Utility class to track nodes and edges - replaces networkx.Graph"
 
@@ -25,10 +85,10 @@ class MultiGraph( object ):
 
     def add_edge( self, src, dest ):
         "Add edge to graph"
-        src, dest = sorted( ( src, dest ) )
         self.add_node( src )
         self.add_node( dest )
         self.data[ src ].append( dest )
+        self.data[ dest ].append( src )
 
     def nodes( self ):
         "Return list of graph nodes"
@@ -38,7 +98,8 @@ class MultiGraph( object ):
         "Iterator: return graph edges"
         for src in self.data.keys():
             for dest in self.data[ src ]:
-                yield ( src, dest )
+                if src <= dest:
+                    yield ( src, dest )
 
     def __getitem__( self, node ):
         "Return link dict for the given node"

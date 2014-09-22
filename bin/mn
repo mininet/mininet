@@ -27,11 +27,11 @@ from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            NOX, RemoteController, DefaultController,
                            UserSwitch, OVSSwitch,
-                           OVSLegacyKernelSwitch, IVSSwitch )
+                           OVSLegacyKernelSwitch, IVSSwitch, RiplPOX )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
-from mininet.topolib import TreeTopo, TorusTopo
+from mininet.topolib import TreeTopo, TorusTopo, FatTreeTopo1
 from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
 
@@ -52,7 +52,8 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
           'tree': TreeTopo,
-          'torus': TorusTopo }
+          'torus': TorusTopo, 
+          'fattree': FatTreeTopo1 }
 
 SWITCHDEF = 'ovsk'
 SWITCHES = { 'user': UserSwitch,
@@ -74,6 +75,7 @@ CONTROLLERS = { 'ref': Controller,
                 'nox': NOX,
                 'remote': RemoteController,
                 'default': DefaultController,
+                'riplpox': RiplPOX,
                 'none': lambda name: None }
 
 LINKDEF = 'default'

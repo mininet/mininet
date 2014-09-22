@@ -1381,3 +1381,24 @@ def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
     for controller in order:
         if controller.isAvailable():
             return controller( name, **kwargs )
+
+class RiplPOX( Controller ):
+    "Controller to run RiplPOX application."
+
+    POXDIR = os.environ[ 'HOME' ] + '/pox'
+
+    def __init__( self, name='riplpox',
+                  cdir = POXDIR,
+                  command='python pox.py',
+                  cargs='--no-cli openflow.of_01 --port=%s ' +
+                  'riplpox.riplpox --topo=fattree,4,2 --routing=random --mode=reactive',
+                   **kwargs ):
+        """Init.
+           name: name to give controller
+           riplpoxArgs: arguments (strings) to pass to RiplPOX"""
+
+        Controller.__init__( self, name,
+                             command=command,
+                             cargs=cargs,
+                             cdir=cdir,
+                             **kwargs )
