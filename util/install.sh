@@ -208,15 +208,18 @@ function of13 {
 }
 
 
-function wireshark {
-    echo "Installing Wireshark"
-    if [ "$DIST" = "Fedora" ]; then
-        $install wireshark wireshark-gnome
-    else
-        $install wireshark tshark
+function install_wireshark {
+    if ! which wireshark; then
+        echo "Installing Wireshark"
+        if [ "$DIST" = "Fedora" ]; then
+            $install wireshark wireshark-gnome
+        else
+            $install wireshark tshark
+        fi
     fi
 
     # Copy coloring rules: OF is white-on-blue:
+    echo "Optionally installing wireshark color filters"
     mkdir -p $HOME/.wireshark
     cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 
@@ -701,7 +704,7 @@ else
       v)    ovs;;
       V)    OVS_RELEASE=$OPTARG;
             ubuntuOvs;;
-      w)    wireshark;;
+      w)    install_wireshark;;
       x)    case $OF_VERSION in
             1.0) nox;;
             1.3) nox13;;
