@@ -216,8 +216,12 @@ function wireshark {
         $install wireshark tshark
     fi
 
+    # Copy coloring rules: OF is white-on-blue:
+    mkdir -p $HOME/.wireshark
+    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+
     echo "Checking Wireshark version"
-    WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
+    WSVER=`wireshark -v | egrep -o -m 1 '[0-9\.]+' | head -1`
     if version_ge $WSVER 1.12; then
         echo "Wireshark version $WSVER >= 1.12 - returning"
         return
@@ -236,10 +240,6 @@ function wireshark {
     PLUGIN=loxi_output/wireshark/openflow.lua
     sudo cp $PLUGIN $WSPLUGDIR
     echo "Copied openflow plugin $PLUGIN to $WSPLUGDIR"
-
-    # Copy coloring rules: OF is white-on-blue:
-    mkdir -p $HOME/.wireshark
-    cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 
     cd $BUILD_DIR
 }
