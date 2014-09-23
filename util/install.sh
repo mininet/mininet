@@ -74,6 +74,17 @@ fi
 # More distribution info
 DIST_LC=`echo $DIST | tr [A-Z] [a-z]` # as lower case
 
+
+# Determine whether version $1 >= version $2
+# usage: if version_ge 1.20 1.2.3; then echo "true!"; fi
+function version_ge {
+    # sort -V sorts by *version number*
+    latest=`printf "$1\n$2" | sort -V | tail -1`
+    # If $1 is latest version, then $1 >= $2
+    [ "$1" == "$latest" ]
+}
+
+
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
 
@@ -85,10 +96,6 @@ OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_TAG=v$OVS_RELEASE
 
-# Command-line versions overrides that simplify custom VM creation
-# To use, pass in the vars on the cmd line before install.sh, e.g.
-# WS_DISSECTOR_REV=pre-ws-1.10.0 install.sh -w
-WS_DISSECTOR_REV=${WS_DISSECTOR_REV:-""}
 OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 
 
@@ -200,65 +207,41 @@ function of13 {
     cd $BUILD_DIR
 }
 
-function wireshark_version_check {
-    # Check Wireshark version
-    WS=$(which wireshark)
-    WS_VER_PATCH=(1 10) # targetting wireshark 1.10.0
-    WS_VER=($($WS --version | sed 's/[a-z ]*\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/'))
-    if [ "${WS_VER[0]}" -lt "${WS_VER_PATCH[0]}" ] ||
-       [[ "${WS_VER[0]}" -le "${WS_VER_PATCH[0]}" && "${WS_VER[1]}" -lt "${WS_VER_PATCH[1]}" ]]
-    then
-        # pre-1.10.0 wireshark
-        echo "Setting revision: pre-ws-1.10.0"
-        WS_DISSECTOR_REV="pre-ws-1.10.0" 
-    fi
-}
 
 function wireshark {
-    echo "Installing Wireshark dissector..."
-
+    echo "Installing Wireshark"
     if [ "$DIST" = "Fedora" ]; then
-        # Just install Fedora's wireshark RPMS
-        # Fedora's wirehark >= 1.10.2-2 includes an OF dissector
-        # (it has been backported from the future Wireshark 1.12 code base)
         $install wireshark wireshark-gnome
-        return
-    fi
-
-    $install wireshark tshark libgtk2.0-dev
-
-    if [ "$DIST" = "Ubuntu" ] && [ "$RELEASE" != "10.04" ]; then
-        # Install newer version
-        $install scons mercurial libglib2.0-dev
-        $install libwiretap-dev libwireshark-dev
-        cd $BUILD_DIR
-        hg clone https://bitbucket.org/barnstorm/of-dissector
-        if [[ -z "$WS_DISSECTOR_REV" ]]; then
-            wireshark_version_check
-        fi
-        cd of-dissector
-        if [[ -n "$WS_DISSECTOR_REV" ]]; then
-            hg checkout ${WS_DISSECTOR_REV}
-        fi
-        # Build dissector
-        cd src
-        export WIRESHARK=/usr/include/wireshark
-        scons
-        # libwireshark0/ on 11.04; libwireshark1/ on later
-        WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
-        WSPLUGDIR=$WSDIR/plugins/
-        sudo cp openflow.so $WSPLUGDIR
-        echo "Copied openflow plugin to $WSPLUGDIR"
     else
-        # Install older version from reference source
-        cd $BUILD_DIR/openflow/utilities/wireshark_dissectors/openflow
-        make
-        sudo make install
+        $install wireshark tshark
     fi
 
     # Copy coloring rules: OF is white-on-blue:
     mkdir -p $HOME/.wireshark
-    cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+
+    echo "Checking Wireshark version"
+    WSVER=`wireshark -v | egrep -o -m 1 '[0-9\.]+' | head -1`
+    if version_ge $WSVER 1.12; then
+        echo "Wireshark version $WSVER >= 1.12 - returning"
+        return
+    fi
+
+    echo "Cloning LoxiGen and building openflow.lua dissector"
+    cd $BUILD_DIR
+    git clone https://github.com/floodlight/loxigen.git
+    cd loxigen
+    make wireshark
+
+    # Copy into plugin directory
+    # libwireshark0/ on 11.04; libwireshark1/ on later
+    WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
+    WSPLUGDIR=$WSDIR/plugins/
+    PLUGIN=loxi_output/wireshark/openflow.lua
+    sudo cp $PLUGIN $WSPLUGDIR
+    echo "Copied openflow plugin $PLUGIN to $WSPLUGDIR"
+
+    cd $BUILD_DIR
 }
 
 
@@ -269,7 +252,7 @@ function ubuntuOvs {
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_TARBALL_LOC=http://openvswitch.org/releases
 
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
         rm -rf $OVS_SRC
         mkdir -p $OVS_SRC
         cd $OVS_SRC
@@ -418,7 +401,7 @@ function nox {
     # Apply patches
     git checkout -b tutorial-destiny
     git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
         git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
