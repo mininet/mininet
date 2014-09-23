@@ -224,7 +224,7 @@ function install_wireshark {
     cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
-    WSVER=`wireshark -v | egrep -o -m 1 '[0-9\.]+' | head -1`
+    WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
     if version_ge $WSVER 1.12; then
         echo "Wireshark version $WSVER >= 1.12 - returning"
         return
@@ -592,7 +592,7 @@ function all {
     # Skip mn_dev (doxypy/texlive/fonts/etc.) because it's huge
     # mn_dev
     of
-    wireshark
+    install_wireshark
     ovs
     # We may add ivs once it's more mature
     # ivs
