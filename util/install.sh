@@ -74,6 +74,17 @@ fi
 # More distribution info
 DIST_LC=`echo $DIST | tr [A-Z] [a-z]` # as lower case
 
+
+# Determine whether version $1 >= version $2
+# usage: if version_ge 1.20 1.2.3; then echo "true!"; fi
+function version_ge {
+    # sort -V sorts by *version number*
+    latest=`printf "$1\n$2" | sort -V | tail -1`
+    # If $1 is latest version, then $1 >= $2
+    [ "$1" == "$latest" ]
+}
+
+
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
 
@@ -196,12 +207,20 @@ function of13 {
     cd $BUILD_DIR
 }
 
+
 function wireshark {
     echo "Installing Wireshark"
     if [ "$DIST" = "Fedora" ]; then
         $install wireshark wireshark-gnome
     else
         $install wireshark tshark
+    fi
+
+    echo "Checking Wireshark version"
+    WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
+    if version_ge $WSVER 1.12; then
+        echo "Wireshark version $WSVER >= 1.12 - returning"
+        return
     fi
 
     echo "Cloning LoxiGen and building openflow.lua dissector"
@@ -233,7 +252,7 @@ function ubuntuOvs {
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_TARBALL_LOC=http://openvswitch.org/releases
 
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
         rm -rf $OVS_SRC
         mkdir -p $OVS_SRC
         cd $OVS_SRC
@@ -382,7 +401,7 @@ function nox {
     # Apply patches
     git checkout -b tutorial-destiny
     git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
-    if [ "$DIST" = "Ubuntu" ] && [ `expr $RELEASE '>=' 12.04` = 1 ]; then
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
         git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
