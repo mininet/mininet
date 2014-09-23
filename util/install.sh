@@ -775,7 +775,7 @@ function install_erlang {
 
     if [ ! `which kerl` ]; then
         KERL_DESTINATION="/usr/local/bin/kerl"
-        curl -o $KERL_DESTINATION -O https://raw.github.com/spawngrid/kerl/master/kerl
+        curl --fail -o $KERL_DESTINATION -O https://raw.github.com/spawngrid/kerl/master/kerl
         chmod a+x $KERL_DESTINATION
     fi
 
