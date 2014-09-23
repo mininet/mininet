@@ -204,25 +204,31 @@ function wireshark {
         $install wireshark tshark
     fi
 
-    echo "Cloning LoxiGen and building openflow.lua dissector"
-    cd $BUILD_DIR
-    git clone https://github.com/floodlight/loxigen.git
-    cd loxigen
-    make wireshark
+    WS=$(which wireshark)
+    WS_VER=($($WS --version | sed 's/[a-z ]*\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/'))
+    if [ "${WS_VER[0]}" -lt 1 ] || [ "${WS_VER[0]}" -eq 1 ] &&
+       [ "${WS_VER[1]}" -lt 12 ]
+    then
+        echo "Cloning LoxiGen and building openflow.lua dissector"
+        cd $BUILD_DIR
+        git clone https://github.com/floodlight/loxigen.git
+        cd loxigen
+        make wireshark
 
-    # Copy into plugin directory
-    # libwireshark0/ on 11.04; libwireshark1/ on later
-    WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
-    WSPLUGDIR=$WSDIR/plugins/
-    PLUGIN=loxi_output/wireshark/openflow.lua
-    sudo cp $PLUGIN $WSPLUGDIR
-    echo "Copied openflow plugin $PLUGIN to $WSPLUGDIR"
+        # Copy into plugin directory
+        # libwireshark0/ on 11.04; libwireshark1/ on later
+        WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
+        WSPLUGDIR=$WSDIR/plugins/
+        PLUGIN=loxi_output/wireshark/openflow.lua
+        sudo cp $PLUGIN $WSPLUGDIR
+        echo "Copied openflow plugin $PLUGIN to $WSPLUGDIR"
 
-    # Copy coloring rules: OF is white-on-blue:
-    mkdir -p $HOME/.wireshark
-    cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+        # Copy coloring rules: OF is white-on-blue:
+        mkdir -p $HOME/.wireshark
+        cp $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 
-    cd $BUILD_DIR
+        cd $BUILD_DIR
+    fi
 }
 
 
