@@ -221,6 +221,8 @@ function of13 {
     NBEESRC="nbeesrc-jan-10-2013"
     NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
     wget -nc ${NBEEURL}${NBEESRC}.zip
+    # Remove existing directory, if any
+    rm -rf ${NBEESRC}
     unzip ${NBEESRC}.zip
     cd ${NBEESRC}/src
     cmake .
