@@ -441,7 +441,12 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
        returns: pexpect object to qemu process"""
     # pexpect might not be installed until after depend() is called
     global pexpect
-    import pexpect
+    if not pexpect:
+        import pexpect
+    class Spawn( pexpect.spawn ):
+        "Subprocess is sudo, so we have to sudo kill it"
+        def close( self, force=False ):
+            srun( 'kill %d' % self.pid )
     arch = archFor( kernel )
     log( '* Detected kernel architecture', arch )
     if NoKVM:
@@ -462,7 +467,7 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
     cmd = ' '.join( cmd )
     log( '* BOOTING VM FROM', cow )
     log( cmd )
-    vm = pexpect.spawn( cmd, timeout=TIMEOUT, logfile=logfile )
+    vm = Spawn( cmd, timeout=TIMEOUT, logfile=logfile )
     return vm
 
 
