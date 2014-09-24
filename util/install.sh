@@ -326,17 +326,24 @@ function ovs {
         $install openvswitch-datapath-dkms
     fi
 
-    $install openvswitch-switch openvswitch-controller
+    $install openvswitch-switch
+    if $install openvswitch-controller; then
+        # Switch can run on its own, but
+        # Mininet should control the controller
+        # This appears to only be an issue on Ubuntu/Debian
+        if sudo service openvswitch-controller stop; then
+            echo "Stopped running controller"
+        fi
+        if [ -e /etc/init.d/openvswitch-controller ]; then
+            sudo update-rc.d openvswitch-controller disable
+        fi
+    else
+        echo "Attempting to install openvswitch-testcontroller"
+        if ! $install openvswitch-testcontroller; then
+            echo "Failed - giving up"
+        fi
+    fi
 
-    # Switch can run on its own, but
-    # Mininet should control the controller
-    # This appears to only be an issue on Ubuntu/Debian
-    if sudo service openvswitch-controller stop; then
-        echo "Stopped running controller"
-    fi
-    if [ -e /etc/init.d/openvswitch-controller ]; then
-        sudo update-rc.d openvswitch-controller disable
-    fi
 }
 
 function remove_ovs {
