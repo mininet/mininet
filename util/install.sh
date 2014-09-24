@@ -574,6 +574,7 @@ function nox13 {
 
     # Fetch NOX destiny
     cd $BUILD_DIR/
+    rm -rf nox13oflib
     git clone https://github.com/CPqD/nox13oflib.git
     cd nox13oflib
 
@@ -595,6 +596,7 @@ function nox13 {
 function pox {
     echo "Installing POX into $BUILD_DIR/pox..."
     cd $BUILD_DIR
+    rm -rf pox
     git clone https://github.com/noxrepo/pox.git
 }
 
@@ -607,6 +609,7 @@ function oftest {
 
     # Install oftest:
     cd $BUILD_DIR/
+    rm -rf oftest
     git clone git://github.com/floodlight/oftest
 }
 
@@ -620,6 +623,7 @@ function cbench {
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
     cd $BUILD_DIR/
+    rm -rf oflops
     git clone git://gitosis.stanford.edu/oflops.git
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
