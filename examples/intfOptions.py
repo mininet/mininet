@@ -13,7 +13,7 @@ from mininet.link import TCLink
 
 def intfOptions():
     "run various traffic control commands on a single interface"
-    net = Mininet()
+    net = Mininet( autoStaticArp=True )
     net.addController( 'c0' )
     h1 = net.addHost( 'h1' )
     h2 = net.addHost( 'h2' )
@@ -32,13 +32,12 @@ def intfOptions():
 
     info( '\n*** Configuring one intf with loss of 50%\n' )
     link1.intf1.config( loss=50 )
-    info( '\n*** Running 20 pings to test\n' )
-    info( net.hosts[ 0 ].cmd( 'ping -c 20 -i .2 10.0.0.2' ) )
-    
+    info( '\n' )
+    net.iperf( ( h1, h2 ), l4Type='UDP' )
     
     info( '\n*** Configuring one intf with delay of 15ms\n' )
     link1.intf1.config( delay='15ms' )
-    info( '\n*** Run a ping to confirm delay' )
+    info( '\n*** Run a ping to confirm delay\n' )
     net.pingPairFull()
     
     info( '\n*** Done testing\n' )
