@@ -15,7 +15,7 @@ class testIntfOptions( unittest.TestCase ):
         p = pexpect.spawn( 'python -m mininet.examples.intfOptions ' )
         tolerance = .8
         opts = [ "Results: \['([\d\.]+) .bits/sec",
-                 "(\d+) packets transmitted, (\d+) received, (\d+)% packet loss, time (\d+)ms",
+                 "Results: \['10M', '([\d\.]+) .bits/sec",
                  "h(\d+)->h(\d+): (\d)/(\d), rtt min/avg/max/mdev ([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms",
                  pexpect.EOF ]
         while True:
@@ -25,17 +25,14 @@ class testIntfOptions( unittest.TestCase ):
                 self.assertGreaterEqual( bw, float( 5 * tolerance ) )
                 self.assertLessEqual( bw, float( 5 + 5 * ( 1 - tolerance ) ) )
             elif index == 1:
-                loss = int( p.match.group( 3 ) )
-                msg = ( "testing packet loss at 50%\n",
-                        "this test will sometimes fail\n",
-                        "ran 20 pings accross network\n",
-                        "packet loss is %d%%\n\n"
-                        % loss )
-                self.assertGreaterEqual( loss, 50 * .8, msg )
-                self.assertLessEqual( loss,  50 + 50 * ( 1 - tolerance ), msg )
+                BW = 10
+                measuredBw = float( p.match.group( 1 ) )
+                loss = ( measuredBw / BW ) * 100
+                self.assertGreaterEqual( loss, 50 * tolerance )
+                self.assertLessEqual( loss,  50 + 50 * ( 1 - tolerance ) )
             elif index == 2:
                 delay = float( p.match.group( 6 ) )
-                self.assertGreaterEqual( delay, 15 * .8 )
+                self.assertGreaterEqual( delay, 15 * tolerance )
                 self.assertLessEqual( delay,  15 + 15 * ( 1 - tolerance ) )
             else:
                 break
