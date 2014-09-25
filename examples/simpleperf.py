@@ -31,17 +31,16 @@ class SingleSwitchTopo(Topo):
 
 def perfTest():
     "Create network and run simple performance test"
-    topo = SingleSwitchTopo(n=4)
-    net = Mininet(topo=topo,
-                  host=CPULimitedHost, link=TCLink)
+    topo = SingleSwitchTopo( n=4 )
+    net = Mininet( topo=topo,
+                  host=CPULimitedHost, link=TCLink,
+                  autoStaticArp=True )
     net.start()
     print "Dumping host connections"
     dumpNodeConnections(net.hosts)
-    print "Testing network connectivity"
-    net.pingAll()
     print "Testing bandwidth between h1 and h4"
     h1, h4 = net.getNodeByName('h1', 'h4')
-    net.iperf((h1, h4))
+    results = net.iperf( ( h1, h4 ), l4Type='UDP' )
     net.stop()
 
 if __name__ == '__main__':
