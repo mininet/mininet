@@ -59,6 +59,16 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
+
+    # wait until each host's sshd has started up
+    remaining = list( network.hosts )
+    while True:
+        for host in tuple( remaining ):
+            if 'sshd is running' in host.cmd( 'service ssh status' ):
+                remaining.remove( host )
+        if not remaining:
+            break
+
     print
     print "*** Hosts are running sshd at the following addresses:"
     print
