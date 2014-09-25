@@ -16,7 +16,8 @@ class testCPU( unittest.TestCase ):
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.cpu' )
-        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', pexpect.EOF ]
+        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', 
+                 'please enable RT_GROUP_SCHED', pexpect.EOF ]
         scheds = []
         while True:
             index = p.expect( opts, timeout=600 )
@@ -29,6 +30,8 @@ class testCPU( unittest.TestCase ):
                     previous_bw = 10 ** 4 # 10 GB/s
                 self.assertTrue( bw < previous_bw )
                 previous_bw = bw
+            elif index == 1:
+                self.skipTest( 'please enable RT_GROUP_SCHED' )
             else:
                 break
 
