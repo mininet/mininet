@@ -509,7 +509,7 @@ def coreTest( vm, prompt=Prompt ):
     # know the time for each test, which means that this
     # script will have to change as we add more tests.
     for test in range( 0, 2 ):
-        if vm.expect( [ 'OK', 'FAILED', pexpect.TIMEOUT ], timeout=180 ) == 0:
+        if vm.expect( [ 'OK.*\r\n', 'FAILED.*\r\n', pexpect.TIMEOUT ], timeout=180 ) == 0:
             log( '* Test', test, 'OK' )
         else:
             log( '* Test', test, 'FAILED' )
