@@ -653,8 +653,8 @@ class CPULimitedHost( Host ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         # Tell mnexec to execute command in our cgroup
-        mncmd = [ 'mnexec', '-da', str( self.pid ),
-                  '-g', self.name ]
+        mncmd = [ 'mnexec', '-g', self.name,
+                  '-da', str( self.pid ) ]
         if self.sched == 'rt':
             mncmd += [ '-r', str( self.rtprio ) ]
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
