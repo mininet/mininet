@@ -538,3 +538,22 @@ def ensureRoot():
         print "*** Mininet must run as root."
         exit( 1 )
     return
+
+def waitListening( client, server, port, timeout=None ):
+    "Wait until server is listening on port"
+    if not client.cmd( 'which telnet' ):
+        raise Exception('Could not find telnet' )
+    cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
+           ( server.IP(), port ) )
+    time = 0
+    while 'Connected' not in client.cmd( cmd ):
+        if timeout:
+            if time >= timeout:
+                error( 'could not connect to %s on port %d\n'
+                       % ( client, port ) )
+                break
+        output('waiting for', server,
+               'to listen on port', port, '\n')
+        sleep( .5 )
+        time += .5
+

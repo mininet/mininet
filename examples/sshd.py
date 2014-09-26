@@ -24,6 +24,7 @@ from mininet.log import lg
 from mininet.node import Node
 from mininet.topolib import TreeTopo
 from mininet.link import Link
+from mininet.util import waitListening
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
@@ -59,15 +60,10 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
-
+    client = network.switches[ 0 ]
     # wait until each host's sshd has started up
-    remaining = list( network.hosts )
-    while True:
-        for host in tuple( remaining ):
-            if 'sshd is running' in host.cmd( 'service ssh status' ):
-                remaining.remove( host )
-        if not remaining:
-            break
+    for server in network.hosts:
+        waitListening( client, server, 22, timeout=5 )
 
     print
     print "*** Hosts are running sshd at the following addresses:"
