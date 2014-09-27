@@ -24,10 +24,12 @@ of switches, this example demonstrates:
 """
 
 from mininet.net import Mininet
-from mininet.node import OVSKernelSwitch, Controller
+from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg
 from mininet.util import irange
+from mininet.link import TCLink
+from functools import partial
 
 import sys
 flush = sys.stdout.flush
@@ -67,15 +69,23 @@ def linearBandwidthTest( lengths ):
     switchCount = max( lengths )
     hostCount = switchCount + 1
 
-    switches = { 'Open vSwitch kernel': OVSKernelSwitch }
+    switches = { 'reference user': UserSwitch,
+                 'Open vSwitch kernel': OVSKernelSwitch }
 
     topo = LinearTestTopo( hostCount )
 
     for datapath in switches.keys():
+        # we can remove this later when/if the userswitch is fixed
+        if switches[ datapath ] is UserSwitch:
+            print "*** Skipping User Switch due to poor performance"
+            continue
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        net = Mininet( topo=topo, switch=Switch, controller=Controller, waitConnected=True )
+        link = partial( TCLink, delay='1ms' )
+        net = Mininet( topo=topo, switch=Switch,
+                       controller=Controller, waitConnected=True,
+                       link=link )
         net.start()
         print "*** testing basic connectivity"
         for n in lengths:
