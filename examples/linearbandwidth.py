@@ -24,7 +24,7 @@ of switches, this example demonstrates:
 """
 
 from mininet.net import Mininet
-from mininet.node import UserSwitch, OVSKernelSwitch, Controller
+from mininet.node import OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg
 from mininet.util import irange
@@ -67,8 +67,7 @@ def linearBandwidthTest( lengths ):
     switchCount = max( lengths )
     hostCount = switchCount + 1
 
-    switches = { 'reference user': UserSwitch,
-                 'Open vSwitch kernel': OVSKernelSwitch }
+    switches = { 'Open vSwitch kernel': OVSKernelSwitch }
 
     topo = LinearTestTopo( hostCount )
 
