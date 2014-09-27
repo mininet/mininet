@@ -60,10 +60,9 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
-    client = network.switches[ 0 ]
     # wait until each host's sshd has started up
     for server in network.hosts:
-        waitListening( client, server, 22, timeout=5 )
+        waitListening( server=server, port=22, timeout=5 )
 
     print
     print "*** Hosts are running sshd at the following addresses:"

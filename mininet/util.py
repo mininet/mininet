@@ -10,6 +10,7 @@ import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
+from functools import partial
 
 # Command execution support
 
@@ -61,12 +62,6 @@ def errRun( *cmd, **kwargs ):
        stderr: STDOUT to merge stderr with stdout
        shell: run command using shell
        echo: monitor output to console"""
-    # Allow passing in a list or a string
-    if len( cmd ) == 1:
-        cmd = cmd[ 0 ]
-        if isinstance( cmd, str ):
-            cmd = cmd.split( ' ' )
-    cmd = [ str( arg ) for arg in cmd ]
     # By default we separate stderr, don't run in a shell, and don't echo
     stderr = kwargs.get( 'stderr', PIPE )
     shell = kwargs.get( 'shell', False )
@@ -74,6 +69,14 @@ def errRun( *cmd, **kwargs ):
     if echo:
         # cmd goes to stderr, output goes to stdout
         info( cmd, '\n' )
+    if len( cmd ) == 1:
+        cmd = cmd[ 0 ]
+    # Allow passing in a list or a string
+    if isinstance( cmd, str ) and not shell:
+        cmd = cmd.split( ' ' )
+        cmd = [ str( arg ) for arg in cmd ]
+    elif isinstance( cmd, list ) and shell:
+        cmd = " ".join( arg for arg in cmd )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
@@ -539,18 +542,20 @@ def ensureRoot():
         exit( 1 )
     return
 
-def waitListening( client, server, port, timeout=None ):
+def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     "Wait until server is listening on port"
-    if not client.cmd( 'which telnet' ):
+    run = ( client.cmd if client else
+                partial( quietRun, shell=True ) )
+    if not run( 'which telnet' ):
         raise Exception('Could not find telnet' )
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
            ( server.IP(), port ) )
     time = 0
-    while 'Connected' not in client.cmd( cmd ):
+    while 'Connected' not in run( cmd ):
         if timeout:
             if time >= timeout:
                 error( 'could not connect to %s on port %d\n'
-                       % ( client, port ) )
+                       % ( server, port ) )
                 break
         output('waiting for', server,
                'to listen on port', port, '\n')
