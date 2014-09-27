@@ -26,6 +26,8 @@ Usage (example uses VLAN ID=1000):
 
 from mininet.node import Host
 from mininet.topo import Topo
+from mininet.util import quietRun
+from mininet.log import error
 
 class VLANHost( Host ):
 
@@ -107,6 +109,11 @@ if __name__ == '__main__':
 
     setLogLevel( 'info' )
 
+    if not quietRun( 'which vconfig' ):
+        error( "Cannot find command 'vconfig'\nThe packge",
+               "'vlan' is required in Ubuntu or Debian,",
+               "or 'vconfig' in Fedora\n" )
+        exit()
     try:
         vlan = int( sys.argv[ 1 ] )
     except Exception:
