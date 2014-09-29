@@ -582,6 +582,13 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     # Install NTP
     $install ntp
 
+    # Install vconfig for VLAN example
+    if [ "$DIST" = "Fedora" ]; then
+        $install vconfig
+    else
+        $install vlan
+    fi
+
     # Set git to colorize everything.
     git config --global color.diff auto
     git config --global color.status auto
