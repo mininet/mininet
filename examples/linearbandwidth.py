@@ -28,6 +28,8 @@ from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg
 from mininet.util import irange
+from mininet.link import TCLink
+from functools import partial
 
 import sys
 flush = sys.stdout.flush
@@ -70,13 +72,20 @@ def linearBandwidthTest( lengths ):
     switches = { 'reference user': UserSwitch,
                  'Open vSwitch kernel': OVSKernelSwitch }
 
+    # UserSwitch is horribly slow with recent kernels.
+    # We can reinstate it once its performance is fixed
+    del switches[ 'reference user' ]
+
     topo = LinearTestTopo( hostCount )
 
     for datapath in switches.keys():
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        net = Mininet( topo=topo, switch=Switch, controller=Controller, waitConnected=True )
+        link = partial( TCLink, delay='1ms' )
+        net = Mininet( topo=topo, switch=Switch,
+                       controller=Controller, waitConnected=True,
+                       link=link )
         net.start()
         print "*** testing basic connectivity"
         for n in lengths:
