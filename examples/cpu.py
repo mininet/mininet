@@ -8,7 +8,7 @@ from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
 from mininet.util import custom
-from mininet.log import setLogLevel, output
+from mininet.log import setLogLevel, output, info
 
 from time import sleep
 
@@ -38,7 +38,11 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
             host = custom( CPULimitedHost, sched=sched,
                            period_us=period_us,
                            cpu=cpu )
-            net = Mininet( topo=topo, host=host )
+            try:
+                net = Mininet( topo=topo, host=host )
+            except:
+                info( '*** Skipping host %s\n' % sched )
+                break
             net.start()
             net.pingAll()
             hosts = [ net.getNodeByName( h ) for h in topo.hosts() ]
