@@ -31,7 +31,7 @@ class testLinearBandwidth( unittest.TestCase ):
                 elif unit[ 0 ] == 'M':
                     bw *= 10 ** 6
                 elif unit[ 0 ] == 'G':
-                    bw *= 10 ** 9a
+                    bw *= 10 ** 9
                 # check that we have a previous result to compare to
                 if n != 1:
                     self.assertTrue( bw < previous_bw )
