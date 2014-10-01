@@ -491,6 +491,9 @@ def disableNtpd( vm, prompt=Prompt, ntpserver='pool.ntp.org' ):
     vm.expect( prompt )
     log( '* Setting clock from', ntpserver  )
     vm.sendline( 'sudo -n ntpdate ' + ntpserver )
+    vm.expect( prompt )
+    log( '* Waiting one second and running date command' )
+    vm.sendline( 'sleep 1 && date ' )
 
 
 def sanityTest( vm ):
