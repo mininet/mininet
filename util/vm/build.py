@@ -484,6 +484,15 @@ def login( vm, user='mininet', password='mininet' ):
     log( '* Waiting for login...' )
 
 
+def disableNtpd( vm, prompt=Prompt, ntpserver='pool.ntp.org' ):
+    "Turn off ntpd and set clock from pool.ntp.org"
+    log( '* Turning off ntpd' )
+    vm.sendline( 'sudo -n service ntp stop' )
+    vm.expect( prompt )
+    log( '* Setting clock from', ntpserver  )
+    vm.sendline( 'sudo -n ntpdate ' + ntpserver )
+
+
 def sanityTest( vm ):
     "Run Mininet sanity test (pingall) in vm"
     vm.sendline( 'sudo mn --test pingall' )
@@ -802,6 +811,10 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
 
 def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
+    # We disable ntpd and set the time so that it won't be
+    # messing with the time during tests
+    disableNtpd( vm )
+    vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
