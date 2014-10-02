@@ -484,14 +484,14 @@ def login( vm, user='mininet', password='mininet' ):
     log( '* Waiting for login...' )
 
 
-def disableNtpd( vm, prompt=Prompt, ntpserver='pool.ntp.org' ):
-    "Turn off ntpd and set clock from pool.ntp.org"
+def disableNtpd( vm, prompt=Prompt ):
+    "Turn off ntpd and set clock immediately"
     log( '* Turning off ntpd' )
     vm.sendline( 'sudo -n service ntp stop' )
     vm.expect( prompt )
-    log( '* Setting clock from', ntpserver  )
+    log( '* Setting clock' )
     # -gq: set and quit immediately
-    vm.sendline( 'sudo -n ntpd -gq ' + ntpserver )
+    vm.sendline( 'sudo -n ntpd -gq' )
     vm.expect( prompt )
     log( '* Waiting one second and running date command' )
     vm.sendline( 'sleep 1 && date ' )
