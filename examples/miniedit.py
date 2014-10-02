@@ -43,7 +43,7 @@ from mininet.util import buildTopo
 from mininet.util import custom, customConstructor
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
-from mininet.node import CPULimitedHost, Host, Node, HostWithPrivateDirs
+from mininet.node import CPULimitedHost, Host, Node
 from mininet.node import OVSKernelSwitch, OVSSwitch, UserSwitch
 from mininet.link import TCLink, Intf, Link
 from mininet.cli import CLI
@@ -77,32 +77,6 @@ HOSTS = { 'proc': Host,
           'rt': custom( CPULimitedHost, sched='rt' ),
           'cfs': custom( CPULimitedHost, sched='cfs' ) }
 
-
-class CPULimitedHostWithPrivateDirs( CPULimitedHost ):
-    "Host with private directories"
-
-    def __init__( self, name, sched='cfs', **kwargs ):
-        "privateDirs: list of private directory strings or tuples"
-        self.name = name
-        self.privateDirs = kwargs.pop( 'privateDirs', [] )
-        CPULimitedHost.__init__( self, name, sched, **kwargs )
-        self.mountPrivateDirs()
-
-    def mountPrivateDirs( self ):
-        "mount private directories"
-        for directory in self.privateDirs:
-            if isinstance( directory, tuple ):
-                # mount given private directory
-                privateDir = directory[ 1 ] % self.__dict__
-                mountPoint = directory[ 0 ]
-                self.cmd( 'mkdir -p %s' % privateDir )
-                self.cmd( 'mkdir -p %s' % mountPoint )
-                self.cmd( 'mount --bind %s %s' %
-                               ( privateDir, mountPoint ) )
-            else:
-                # mount temporary filesystem on directory
-                self.cmd( 'mkdir -p %s' % directory )
-                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
 class InbandController( RemoteController ):
 
@@ -2784,16 +2758,17 @@ class MiniEdit( Frame ):
                 # Create the correct host class
                 if 'cores' in opts or 'cpu' in opts:
                     if ('privateDirectory' in opts):
-                        hostCls = partial( CPULimitedHostWithPrivateDirs,
+                        hostCls = partial( CPULimitedHost,
                                            privateDirs=opts['privateDirectory'] )
                     else:
                         hostCls=CPULimitedHost
                 else:
                     if ('privateDirectory' in opts):
-                        hostCls = partial( HostWithPrivateDirs,
+                        hostCls = partial( Host,
                                            privateDirs=opts['privateDirectory'] )
                     else:
                         hostCls=Host
+                print hostCls
                 newHost = net.addHost( name,
                                        cls=hostCls,
                                        ip=ip,
