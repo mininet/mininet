@@ -86,7 +86,9 @@ class Intf( object ):
 
     def updateIP( self ):
         "Return updated IP address based on ifconfig"
-        ifconfig = self.ifconfig()
+        # use pexec instead of node.cmd so that we dont read
+        # backgrounded output from the cli.
+        ifconfig, _err, _exitCode = self.node.pexec( 'ifconfig %s' % self.name )
         ips = self._ipMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
         return self.ip
