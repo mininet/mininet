@@ -562,8 +562,11 @@ class Mininet( object ):
                     opts = ''
                     if timeout:
                         opts = '-W %s' % timeout
-                    result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
-                    sent, received = self._parsePing( result )
+                    if dest.intfs:
+                        result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
+                        sent, received = self._parsePing( result )
+                    else:
+                        sent, received = 0, 0
                     packets += sent
                     if received > sent:
                         error( '*** Error: received too many packets' )
