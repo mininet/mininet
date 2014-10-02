@@ -490,7 +490,8 @@ def disableNtpd( vm, prompt=Prompt, ntpserver='pool.ntp.org' ):
     vm.sendline( 'sudo -n service ntp stop' )
     vm.expect( prompt )
     log( '* Setting clock from', ntpserver  )
-    vm.sendline( 'sudo -n ntpdate ' + ntpserver )
+    # -gq: set and quit immediately
+    vm.sendline( 'sudo -n ntpd -gq ' + ntpserver )
     vm.expect( prompt )
     log( '* Waiting one second and running date command' )
     vm.sendline( 'sleep 1 && date ' )
