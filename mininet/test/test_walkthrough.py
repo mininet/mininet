@@ -9,6 +9,7 @@ TODO: missing xterm test
 import unittest
 import pexpect
 import os
+import re
 from mininet.util import quietRun
 
 class testWalkthrough( unittest.TestCase ):
@@ -25,7 +26,10 @@ class testWalkthrough( unittest.TestCase ):
     def testWireshark( self ):
         "Use tshark to test the of dissector"
         tshark = pexpect.spawn( 'tshark -i lo -R of' )
-        tshark.expect( 'Capturing on lo' )
+        if ubuntuVersion() == '12.04':
+            tshark.expect( 'Capturing on lo' )
+        else:
+            tshark.expect( "Capturing on 'Loopback'" )
         mn = pexpect.spawn( 'mn --test pingall' )
         mn.expect( '0% dropped' )
         tshark.expect( 'OFP 74 Hello' )
@@ -101,11 +105,11 @@ class testWalkthrough( unittest.TestCase ):
                 break
         self.assertEqual( ifcount, 3, 'Missing interfaces on s1')
         # h1 ps
-        p.sendline( 'h1 ps -a' )
+        p.sendline( "h1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         h1Output = p.before
         # s1 ps
-        p.sendline( 's1 ps -a' )
+        p.sendline( "s1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         s1Output = p.before
         # strip command from ps output
@@ -208,7 +212,7 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn -v debug --test none' )
         p.expect( pexpect.EOF )
         lines = p.before.split( '\n' )
-        self.assertTrue( len( lines ) > 100, "Debug output is too short" )
+        self.assertTrue( len( lines ) > 70, "Debug output is too short" )
 
     def testCustomTopo( self ):
         "Start Mininet using a custom topo, then run pingall"
@@ -326,6 +330,12 @@ class testWalkthrough( unittest.TestCase ):
         net.expect( pexpect.EOF )
         pox.sendintr()
         pox.wait()
+
+def ubuntuVersion():
+    releaseStr = quietRun( 'cat /etc/lsb-release' )
+    versionStr = re.findall( 'DISTRIB_RELEASE=\d+.\d+', releaseStr )[ 0 ]
+    version = versionStr.split( '=' )[ 1 ]
+    return version
 
 if __name__ == '__main__':
     unittest.main()
