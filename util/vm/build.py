@@ -554,6 +554,20 @@ def walkthroughTest( vm, prompt=Prompt ):
     vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
 
+def useTest( vm, prompt=Prompt ):
+    "Use VM interactively - exit by pressing control-]"
+    old = vm.logfile
+    if old == stdout:
+        # Avoid doubling every output character!
+        log( '* Temporarily disabling logging to stdout' )
+        vm.logfile = None
+    log( '* Switching to interactive use - press control-] to exit' )
+    vm.interact()
+    if old == stdout:
+        log( '* Restoring logging to stdout' )
+        vm.logfile = stdout
+
+
 def checkOutBranch( vm, branch, prompt=Prompt ):
     # This is a bit subtle; it will check out an existing branch (e.g. master)
     # if it exists; otherwise it will create a detached branch.
