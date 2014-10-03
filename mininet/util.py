@@ -543,7 +543,8 @@ def ensureRoot():
     return
 
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
-    "Wait until server is listening on port"
+    """Wait until server is listening on port.
+       returns True if server is listening"""
     run = ( client.cmd if client else
                 partial( quietRun, shell=True ) )
     if not run( 'which telnet' ):
@@ -554,12 +555,13 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     time = 0
     while 'Connected' not in run( cmd ):
         if timeout:
+            print time
             if time >= timeout:
                 error( 'could not connect to %s on port %d\n'
                        % ( server, port ) )
-                break
+                return False
         output('waiting for', server,
                'to listen on port', port, '\n')
         sleep( .5 )
         time += .5
-
+    return True

@@ -4,9 +4,10 @@
 
 import sys
 from mininet.node import Host
-from mininet.util import ensureRoot
+from mininet.util import ensureRoot, waitListening
 
 ensureRoot()
+timeout = 5
 
 print "*** Creating nodes"
 h1 = Host( 'h1' )
@@ -33,5 +34,10 @@ cmd = '/usr/sbin/sshd -o UseDNS=no -u0 -o "Banner /tmp/%s.banner"' % h1.name
 if len( sys.argv ) > 1:
     cmd += ' ' + ' '.join( sys.argv[ 1: ] )
 h1.cmd( cmd )
+listening = waitListening( server=h1, port=22, timeout=timeout )
 
-print "*** You may now ssh into", h1.name, "at", h1.IP()
+if listening:
+    print "*** You may now ssh into", h1.name, "at", h1.IP()
+else:
+    print ( "*** Warning: after %s seconds, %s is not listening on port 22"
+            % ( timeout, h1.name ) )
