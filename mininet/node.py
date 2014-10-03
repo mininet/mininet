@@ -1293,6 +1293,7 @@ class Controller( Node ):
     def stop( self ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
+        self.cmd( 'wait %' + self.command )
         self.terminate()
 
     def IP( self, intf=None ):
