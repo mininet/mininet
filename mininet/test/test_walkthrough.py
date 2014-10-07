@@ -26,13 +26,10 @@ class testWalkthrough( unittest.TestCase ):
     def testWireshark( self ):
         "Use tshark to test the of dissector"
         tshark = pexpect.spawn( 'tshark -i lo -R of' )
-        if ubuntuVersion() == '12.04':
-            tshark.expect( 'Capturing on lo' )
-        else:
-            tshark.expect( "Capturing on 'Loopback'" )
+        tshark.expect( [ 'Capturing on lo', "Capturing on 'Loopback'" ] )
         mn = pexpect.spawn( 'mn --test pingall' )
         mn.expect( '0% dropped' )
-        tshark.expect( 'OFP 74 Hello' )
+        tshark.expect( [ '74 Hello', '74 of_hello' ] )
         tshark.sendintr()
 
     def testBasic( self ):
@@ -68,7 +65,7 @@ class testWalkthrough( unittest.TestCase ):
             node = p.match.group( 1 )
             actual.append( node )
             p.expect( '\n' )
-        self.assertEqual( actual.sort(), nodes.sort(), '"nodes" and "dump" differ' ) 
+        self.assertEqual( actual.sort(), nodes.sort(), '"nodes" and "dump" differ' )
         p.expect( self.prompt )
         p.sendline( 'exit' )
         p.wait()
@@ -331,11 +328,6 @@ class testWalkthrough( unittest.TestCase ):
         pox.sendintr()
         pox.wait()
 
-def ubuntuVersion():
-    releaseStr = quietRun( 'cat /etc/lsb-release' )
-    versionStr = re.findall( 'DISTRIB_RELEASE=\d+.\d+', releaseStr )[ 0 ]
-    version = versionStr.split( '=' )[ 1 ]
-    return version
 
 if __name__ == '__main__':
     unittest.main()
