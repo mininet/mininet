@@ -52,7 +52,8 @@ LogToConsole = False        # VM output to console rather than log file
 SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 NoKVM = False               # Don't use kvm and use emulation instead
 Branch = None               # Branch to update and check out before testing
-Zip = False                  # Archive .ovf and .vmdk into a .zip file
+Zip = False                 # Archive .ovf and .vmdk into a .zip file
+Forward = []                # VM port forwarding options (-redir)
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -464,6 +465,8 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
             '-initrd', initrd,
             '-drive file=%s,if=virtio' % cow,
             '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
+    if Forward:
+        cmd += sum( [ [ '-redir', f ] for f in Forward ], [] )
     cmd = ' '.join( cmd )
     log( '* BOOTING VM FROM', cow )
     log( cmd )
@@ -934,7 +937,7 @@ def testString():
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT
+    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT, Forward
     parser = argparse.ArgumentParser( description='Mininet VM build script',
                                       epilog=buildFlavorString() + ' ' +
                                       testString() )
@@ -972,6 +975,8 @@ def parseArgs():
                          help='archive .ovf and .vmdk into .zip file' )
     parser.add_argument( '-o', '--out',
                          help='output file for test image (vmdk)' )
+    parser.add_argument( '-f', '--forward', default=[], action='append',
+                         help='forward VM ports to local server, e.g. tcp:5555::22' )
     args = parser.parse_args()
     if args.depend:
         depend()
@@ -989,6 +994,8 @@ def parseArgs():
         Zip = True
     if args.timeout:
         TIMEOUT = args.timeout
+    if args.forward:
+        Forward = args.forward
     if not args.test and not args.run and not args.post:
         args.test = [ 'sanity', 'core' ]
     for flavor in args.flavor:
