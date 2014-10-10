@@ -14,7 +14,7 @@ class testMultiTest( unittest.TestCase ):
     def testMultiTest( self ):
         "Verify pingall (0% dropped) and hX-eth0 interface for each host (ifconfig)"
         p = pexpect.spawn( 'python -m mininet.examples.multitest' )
-        p.expect ( '(\d+\.\d{2})% dropped' )
+        p.expect( '(\d+\.\d{2})% dropped' )
         percent = float( p.match.group( 1 ) ) if p.match else -1
         self.assertEqual( percent, 0 )
         ifCount = 0
