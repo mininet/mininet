@@ -19,12 +19,12 @@ class testVLANHost( unittest.TestCase ):
         p = pexpect.spawn( 'python -m mininet.examples.vlanhost' )
         p.expect( self.prompt )
         p.sendline( 'pingall 1' ) #ping timeout=1
-        p.expect( '(\d+)% dropped', timeout=30  ) # there should be 24 failed pings
-        percent = int( p.match.group( 1 ) ) if p.match else -1
+        p.expect ( '(\d+\.\d{2})% dropped', timeout=30  ) # there should be 24 failed pings
+        percent = float( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )
         p.wait()
-        self.assertEqual( percent, 80 )
+        self.assertEqual( percent, 80 ) 
 
     def testSpecificVLAN( self ):
         "Test connectivity between hosts on a specific VLAN"
