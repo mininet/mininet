@@ -137,7 +137,8 @@ class CLI( Cmd ):
         dumpNodeConnections( self.mn.values() )
 
     def do_sh( self, line ):
-        "Run an external shell command"
+        """Run an external shell command
+           Usage: sh [cmd args]"""
         call( line, shell=True )
 
     # do_py() and do_px() need to catch any exception during eval()/exec()
@@ -187,7 +188,8 @@ class CLI( Cmd ):
         self.mn.pingPairFull()
 
     def do_iperf( self, line ):
-        "Simple iperf TCP test between two (optionally specified) hosts."
+        """Simple iperf TCP test between two (optionally specified) hosts.
+           Usage: iperf node1 node2"""
         args = line.split()
         if not args:
             self.mn.iperf()
@@ -206,7 +208,8 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperf src dst\n' )
 
     def do_iperfudp( self, line ):
-        "Simple iperf UDP test between two (optionally specified) hosts."
+        """Simple iperf UDP test between two (optionally specified) hosts.
+           Usage: iperfudp bw node1 node2"""
         args = line.split()
         if not args:
             self.mn.iperf( l4Type='UDP' )
@@ -238,7 +241,8 @@ class CLI( Cmd ):
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
-        "Bring link(s) between two nodes up or down."
+        """Bring link(s) between two nodes up or down.
+           Usage: link node1 node2 [up/down]"""
         args = line.split()
         if len(args) != 3:
             error( 'invalid number of args: link end1 end2 [up down]\n' )
@@ -248,7 +252,8 @@ class CLI( Cmd ):
             self.mn.configLinkStatus( *args )
 
     def do_xterm( self, line, term='xterm' ):
-        "Spawn xterm(s) for the given node(s)."
+        """Spawn xterm(s) for the given node(s).
+           Usage: xterm node1 node2 ..."""
         args = line.split()
         if not args:
             error( 'usage: %s node1 node2 ...\n' % term )
@@ -262,7 +267,8 @@ class CLI( Cmd ):
 
     def do_x( self, line ):
         """Create an X11 tunnel to the given node,
-           optionally starting a client."""
+           optionally starting a client.
+           Usage: x node [cmd args]"""
         args = line.split()
         if not args:
             error( 'usage: x node [cmd args]...\n' )
@@ -272,7 +278,8 @@ class CLI( Cmd ):
             self.mn.terms += runX11( node, cmd )
 
     def do_gterm( self, line ):
-        "Spawn gnome-terminal(s) for the given node(s)."
+        """Spawn gnome-terminal(s) for the given node(s).
+           Usage: gterm node1 node2 ..."""
         self.do_xterm( line, term='gterm' )
 
     def do_exit( self, _line ):
@@ -293,7 +300,8 @@ class CLI( Cmd ):
         return isatty( self.stdin.fileno() )
 
     def do_noecho( self, line ):
-        "Run an interactive command with echoing turned off."
+        """Run an interactive command with echoing turned off.
+           Usage: noecho [cmd args]"""
         if self.isatty():
             quietRun( 'stty -echo' )
         self.default( line )
@@ -301,7 +309,8 @@ class CLI( Cmd ):
             quietRun( 'stty echo' )
 
     def do_source( self, line ):
-        "Read commands from an input file."
+        """Read commands from an input file.
+           Usage: source <file>"""
         args = line.split()
         if len(args) != 1:
             error( 'usage: source <file>\n' )
@@ -320,7 +329,8 @@ class CLI( Cmd ):
         self.inputFile = None
 
     def do_dpctl( self, line ):
-        "Run dpctl (or ovs-ofctl) command on all switches."
+        """Run dpctl (or ovs-ofctl) command on all switches.
+           Usage: dpctl command [arg1] [arg2] ..."""
         args = line.split()
         if len(args) < 1:
             error( 'usage: dpctl command [arg1] [arg2] ...\n' )
