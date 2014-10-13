@@ -690,9 +690,36 @@ class Mininet( object ):
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
            returns: results two-element array of server and client speeds"""
+        
+        """
+        Currently when the server side iperf service not reachable by the client, 
+        the mininet console either hangs forever (not responsive to to any keys 
+        Or continuously prints the message "waiting for iperf to startup"
+        Actually there are two issues :
+            1. when iperf session end point was created in mininet , if connectivity exists
+            client will know in matter of secs . Per
+            per current login client waits forever without yielding. default telnet wait 
+            time of 60 secs is good enough. Therefore while loop is not necessary. If 
+            statement is good enough.
+            2. Since client to server connectivity can be verified within few secs, telnet with 60 sec 
+            timeout is overkill. You get console full of msgs or console doesnt yield or 
+            hangs till telnet timeout. We can accomplish the same verification . It is common 
+            practice to use netcat(nc) to accomplish the same.
+        Fix has been verified with iperf between hosts, between unreachable hosts, switches.
+        """
+
+           
+        """ commented 
         if not quietRun( 'which telnet' ):
             error( 'Cannot find telnet in $PATH - required for iperf test' )
             return
+
+        """
+
+        if not quietRun( 'which nc' ):
+            error( 'Cannot find nc in $PATH - required for iperf test' )
+            return
+
         if not hosts:
             hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         else:
@@ -715,10 +742,29 @@ class Mininet( object ):
         while server.lastPid is None:
             servout += server.monitor()
         if l4Type == 'TCP':
+
+            """
+            While loop is replaced by if block
+
             while 'Connected' not in client.cmd(
                     'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
                 info( 'Waiting for iperf to start up...' )
                 sleep(.5)
+
+            """
+        if l4Type == 'TCP':
+            sleep(0.5)
+            ### Changed to handle a. hang issue when one of the hosts not reachable
+            ### b. continuous waiting loop c. reduced waiting verification using Net cat vs telnet
+            if ( 'succeeded' not in client.cmd(
+                    'nc -w 3 -v -z  %s 5001' % server.IP())) :
+                output('waiting for iperf to start up...\n')
+                ## since session has failed, cleanup server end point and 
+                server.sendInt()
+                servout += server.waitOutput()
+                error("\niperf Error: Unable to reach the server %s on port 5001. iperf failed \n\n" %server.IP() )
+                return 
+
         cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
                              bwArgs )
         debug( 'Client output: %s\n' % cliout )
