@@ -11,6 +11,12 @@ import pexpect
 import os
 import re
 from mininet.util import quietRun
+from distutils.version import StrictVersion
+
+def tsharkVersion():
+    versionStr = quietRun( 'tshark -v' )
+    versionMatch = re.findall( 'TShark \d+.\d+.\d+', versionStr )[0]
+    return versionMatch.split()[ 1 ]
 
 class testWalkthrough( unittest.TestCase ):
 
@@ -25,11 +31,14 @@ class testWalkthrough( unittest.TestCase ):
 
     def testWireshark( self ):
         "Use tshark to test the of dissector"
-        tshark = pexpect.spawn( 'tshark -i lo -R of' )
+        if StrictVersion( tsharkVersion() ) < StrictVersion( '1.12.0' ):
+            tshark = pexpect.spawn( 'tshark -i lo -R of' )
+        else:
+            tshark = pexpect.spawn( 'tshark -i lo -Y openflow_v1' )
         tshark.expect( [ 'Capturing on lo', "Capturing on 'Loopback'" ] )
         mn = pexpect.spawn( 'mn --test pingall' )
         mn.expect( '0% dropped' )
-        tshark.expect( [ '74 Hello', '74 of_hello' ] )
+        tshark.expect( [ '74 Hello', '74 of_hello', '74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
 
     def testBasic( self ):
