@@ -689,7 +689,10 @@ class Mininet( object ):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
-           returns: results two-element array of server and client speeds"""
+           returns: results two-element array of [ server, client ] speeds
+           note: send() is buffered, so client rate can be much higher than
+           the actual transmission rate; on an unloaded system, server
+           rate should be much closer to the actual receive rate"""
         if not quietRun( 'which telnet' ):
             error( 'Cannot find telnet in $PATH - required for iperf test' )
             return

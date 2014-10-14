@@ -136,9 +136,14 @@ class testOptionsTopoCommon( object ):
                 'switch = %s\n'
                 % ( BW, bw_strs, N, loptsStr, self.switchClass ) )
 
-        for bw_str in bw_strs:
-            bw = float( bw_str.split(' ')[0] )
-            self.assertWithinTolerance( bw, BW, BW_TOLERANCE, msg )
+        # On the client side, iperf doesn't wait for ACKs - it simply
+        # reports how long it took to fill up the TCP send buffer.
+        # As long as the kernel doesn't wait a long time before
+        # delivering bytes to the iperf server, its reported data rate
+        # should be close to the actual receive rate.
+        serverRate, clientRate = bw_strs
+        bw = float( serverRate.split(' ')[0] )
+        self.assertWithinTolerance( bw, BW, BW_TOLERANCE, msg )
 
     def testLinkDelay( self ):
         "Verify that link delays are accurate within a bound."
