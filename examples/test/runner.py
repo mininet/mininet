@@ -12,6 +12,18 @@ import sys
 from mininet.util import ensureRoot
 from mininet.clean import cleanup
 
+class MininetTestResult( unittest.TextTestResult ):
+    def addFailure( self, test, err ):
+        super( MininetTestResult, self ).addFailure( test, err )
+        cleanup()
+    def addError( self,test, err ):
+        super( MininetTestResult, self ).addError( test, err )
+        cleanup()
+
+class MininetTestRunner( unittest.TextTestRunner ):
+    def _makeResult( self ):
+        return MininetTestResult( self.stream, self.descriptions, self.verbosity )
+
 def runTests( testDir, verbosity=1 ):
     "discover and run all tests in testDir"
     # ensure root and cleanup before starting tests
@@ -20,7 +32,7 @@ def runTests( testDir, verbosity=1 ):
     # discover all tests in testDir
     testSuite = unittest.defaultTestLoader.discover( testDir )
     # run tests
-    unittest.TextTestRunner( verbosity=verbosity ).run( testSuite )
+    MininetTestRunner( verbosity=verbosity ).run( testSuite )
 
 if __name__ == '__main__':
     # get the directory containing example tests
