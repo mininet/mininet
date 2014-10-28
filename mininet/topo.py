@@ -126,7 +126,7 @@ class Topo( object ):
            returns: host name"""
         if not opts and self.hopts:
             opts = self.hopts
-        return self.addNode(name, **opts)
+        return self.addNode( name, **opts )
 
     def addSwitch( self, name, **opts ):
         """Convenience method: Add switch to graph.
@@ -135,7 +135,7 @@ class Topo( object ):
            returns: switch name"""
         if not opts and self.sopts:
             opts = self.sopts
-        result = self.addNode(name, isSwitch=True, **opts)
+        result = self.addNode( name, isSwitch=True, **opts )
         return result
 
     def addLink( self, node1, node2, port1=None, port2=None,
@@ -146,9 +146,8 @@ class Topo( object ):
            returns: link info key"""
         if not opts and self.lopts:
             opts = self.lopts
-        port1, port2 = self.addPort(node1, node2, port1, port2)
+        port1, port2 = self.addPort( node1, node2, port1, port2 )
         opts.update( node1=node1, node2=node2, port1=port1, port2=port2 )
-        assert 'node1' in opts
         self.g.add_edge(node1, node2, key, opts )
         return key
 
@@ -179,7 +178,7 @@ class Topo( object ):
         """Return links.
            sort: sort links alphabetically
            withKeys: return key in tuple
-           @return links list of ( src, dst [,key ] )"""
+           returns: links list of ( src, dst [,key ] )"""
         if not sort:
             return self.g.edges( data=withInfo, key=withKeys )
         else:
@@ -246,7 +245,7 @@ class Topo( object ):
     def setlinkInfo( self, src, dst, info, key=None ):
         "Set link metadata dict"
         entry, key = self._linkEntry( src, dst, key )
-        entry [ key ] = info
+        entry[ key ] = info
 
     def nodeInfo( self, name ):
         "Return metadata (dict) for node"
