@@ -337,18 +337,18 @@ class Mininet( object ):
             paramDict: dictionary of additional link params (optional)
             params: additional link params (optional)
             returns: link object"""
-        mac1 = self.randMac()
-        mac2 = self.randMac()
-        paramDict = {} if paramDict is None else paramDict
-        paramDict.update( params )
         # Ugly: try to ensure that node1 and node2 line up correctly with
-        # other link parameters
-        node1 = self[ paramDict.pop( 'node1', node1.name ) ]
-        node2 = self[ paramDict.pop( 'node2', node2.name ) ]
+        # other link parameters, and allow either nodes or names
+        paramDict = {} if paramDict is None else dict( paramDict )
+        paramDict.update( params )
+        node1 = paramDict.pop( 'node1', node1 )
+        node2 = paramDict.pop( 'node2', node1 )
+        node1 = node1 if type( node1 ) != str else self[ node1 ]
+        node2 = node2 if type( node2 ) != str else self[ node2 ]
         paramDict.setdefault( 'port1', port1 )
         paramDict.setdefault( 'port2', port2 )
-        paramDict.setdefault( 'addr1', mac1 )
-        paramDict.setdefault( 'addr2', mac2 )
+        paramDict.setdefault( 'addr1', self.randMac() )
+        paramDict.setdefault( 'addr2', self.randMac() )
         cls = self.link if cls is None else cls
         link = cls( node1, node2, **paramDict )
         self.links.append( link )
@@ -408,12 +408,10 @@ class Mininet( object ):
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
-        for srcName, dstName in topo.links( sort=True ):
-            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
-            params = topo.linkInfo( srcName, dstName )
-            srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort, paramDict=params )
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
+        for srcName, dstName, params in topo.links(
+                sort=True, withInfo=True ):
+            self.addLink( srcName, dstName, paramDict=params )
+            info( '(%s, %s) ' % ( srcName, dstName ) )
 
         info( '\n' )
 

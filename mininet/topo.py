@@ -53,22 +53,24 @@ class MultiGraph( object ):
            data: return list of ( node, attrs)"""
         return self.node.items() if data else self.node.keys()
 
-    def edges_iter( self, data=False ):
+    def edges_iter( self, data=False, key=False):
         "Iterator: return graph edges"
         for src, entry in self.edge.iteritems():
             for dst, keys in entry.iteritems():
                 if [ src, dst ] != sorted( [ src, dst ] ):
                     # Skip duplicate edges
                     continue
-                for key, attrs in keys.iteritems():
+                for k, attrs in keys.iteritems():
                     if data:
                         yield( ( src, dst, attrs ) )
+                    elif key:
+                        yield( ( src, dst, k ) )
                     else:
                         yield( ( src, dst ) )
 
-    def edges( self, data=False ):
+    def edges( self, data=False, key=False ):
         "Return list of graph edges"
-        return list( self.edges_iter( data ) )
+        return list( self.edges_iter( data=data, key=key ) )
 
 
     def __getitem__( self, node ):
@@ -88,7 +90,7 @@ class MultiGraph( object ):
         return g
 
 
-class Topo(object):
+class Topo( object ):
     "Data center network representation for structured multi-trees."
 
     def __init__( self, *args, **params ):
@@ -146,6 +148,7 @@ class Topo(object):
             opts = self.lopts
         port1, port2 = self.addPort(node1, node2, port1, port2)
         opts.update( node1=node1, node2=node2, port1=port1, port2=port2 )
+        assert 'node1' in opts
         self.g.add_edge(node1, node2, key, opts )
         return key
 
@@ -172,20 +175,24 @@ class Topo(object):
            returns: list of hosts"""
         return [ n for n in self.nodes( sort ) if not self.isSwitch( n ) ]
 
-    def links( self, sort=True, withKeys=False ):
+    def links( self, sort=True, withInfo=False, withKeys=False ):
         """Return links.
            sort: sort links alphabetically
            withKeys: return key in tuple
            @return links list of ( src, dst [,key ] )"""
         if not sort:
-            return self.g.edges( withKeys )
+            return self.g.edges( data=withInfo, key=withKeys )
         else:
-            if withKeys:
-                links = [ tuple( self.sorted( ( s, d ) ) ) + [ k ]
-                          for s, d, k in self.g.edges( data=True ) ]
+            if withInfo:
+                links = [ tuple( self.sorted( ( s, d ) ) + [ info ] )
+                          for s, d, info in self.g.edges( data=True ) ]
+            elif withKeys:
+                links = [ tuple( self.sorted( ( s, d ) ) + [ key ] )
+                          for s, d, key in self.g.edges( key=True ) ]
             else:
-                links = [ tuple ( self.sorted( e ) ) for e in self.g.edges() ]
-            return sorted( links, key=naturalSeq )
+                links = [ tuple ( self.sorted( e ) )
+                          for e in self.g.edges() ]
+            return self.sorted( links )
 
     # This legacy port management mechanism is clunky and will probably
     # be removed at some point.
