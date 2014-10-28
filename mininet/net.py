@@ -321,25 +321,36 @@ class Mininet( object ):
         "return (key,value) tuple list for every node in net"
         return zip( self.keys(), self.values() )
 
+    @staticmethod
+    def randMac():
+        "Return a random, non-multicast MAC address"
+        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
+    
     def addLink( self, node1, node2, port1=None, port2=None,
-                 cls=None, **params ):
+                 cls=None, paramDict=None, **params ):
         """"Add a link from node1 to node2
             node1: source node
             node2: dest node
-            port1: source port
-            port2: dest port
+            port1: source port (optional)
+            port2: dest port (optional)
+            cls: link class (optional)
+            paramDict: dictionary of additional link params (optional)
+            params: additional link params (optional)
             returns: link object"""
-        mac1 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
-        mac2 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
-        defaults = { 'port1': port1,
-                     'port2': port2,
-                     'addr1': mac1,
-                     'addr2': mac2,
-                     'intf': self.intf }
-        defaults.update( params )
-        if not cls:
-            cls = self.link
-        link = cls( node1, node2, **defaults )
+        mac1 = self.randMac()
+        mac2 = self.randMac()
+        paramDict = {} if paramDict is None else paramDict
+        paramDict.update( params )
+        # Ugly: try to ensure that node1 and node2 line up correctly with
+        # other link parameters
+        node1 = self[ paramDict.pop( 'node1', node1.name ) ]
+        node2 = self[ paramDict.pop( 'node2', node2.name ) ]
+        paramDict.setdefault( 'port1', port1 )
+        paramDict.setdefault( 'port2', port2 )
+        paramDict.setdefault( 'addr1', mac1 )
+        paramDict.setdefault( 'addr2', mac2 )
+        cls = self.link if cls is None else cls
+        link = cls( node1, node2, **paramDict )
         self.links.append( link )
         return link
 
@@ -397,11 +408,11 @@ class Mininet( object ):
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
-        for srcName, dstName in topo.links(sort=True):
+        for srcName, dstName in topo.links( sort=True ):
             src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
             params = topo.linkInfo( srcName, dstName )
             srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort, **params )
+            self.addLink( src, dst, srcPort, dstPort, paramDict=params )
             info( '(%s, %s) ' % ( src.name, dst.name ) )
 
         info( '\n' )
