@@ -26,7 +26,7 @@ class alterableCLI( CLI ):
             error( '*** no switch named %s\n' % switchname )
             return
         switch = self.mn.nameToNode[ switchname ]
-        self.mn.removeNode( switch )
+        self.mn.delNode( switch )
 
     def do_dellink( self, line ):
         "usage: dellink node1 node2"
@@ -150,6 +150,8 @@ class alterNet( Mininet ):
         for intf, n in nodeLinks.items():
             del n.intfs[ n.ports[ intf ] ]
             del n.ports[ intf ]
+            self.links.remove( intf.link )
+            intf.link = None
         if node in self.hosts:
             self.hosts.remove( node )
         elif node in self.switches:
@@ -168,7 +170,11 @@ class alterNet( Mininet ):
                 intfs.remove( intf )
                 intf2 = intfs[0]
                 if intf2 in node2.intfList():
-                    intf.link.delete()
+                    #remove the link from the list of links, maybe should be in link.delete()?
+                    self.links.remove( intf.link )
+                    intf.link.delete() # this deletes the interfaces on both ends of the link
+                    intf.link = None
+                    intf2.link = None
                     port1 = node1.ports[ intf1 ]
                     port2 = node2.ports[ intf2 ]
                     del node1.nameToIntf[ intf1.name ]
