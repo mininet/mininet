@@ -112,7 +112,7 @@ class RemoteMixin( object ):
                 '-o', 'BatchMode=yes',
                 '-o', 'ForwardAgent=yes', '-tt' ]
 
-    def __init__( self, name, server=None, user=None, serverIP=None,
+    def __init__( self, name, server='localhost', user=None, serverIP=None,
                   controlPath='/tmp/mn-%r@%h:%p', splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
@@ -122,18 +122,18 @@ class RemoteMixin( object ):
            splitInit: split initialization?
            **kwargs: see Node()"""
         # We connect to servers by IP address
-        if server == 'localhost':
-            server = None
-        self.server = server
-        self.serverIP = serverIP if serverIP else self.findServerIP( server )
+        self.server = server if server else 'localhost'
+        self.serverIP = serverIP if serverIP else self.findServerIP( self.server )
         self.user = user if user else self.findUser()
-        if self.user and self.server:
+        if self.user and self.server != 'localhost':
             self.dest = '%s@%s' % ( self.user, self.serverIP )
+            self.isRemote = True
         else:
+            self.isRemote = False
             self.dest = None
         self.controlPath = controlPath
         self.sshcmd = []
-        if self.dest:
+        if hasattr( self, 'server' ) and self.isRemote:
             self.sshcmd = [ 'sudo', '-E', '-u', self.user ] + self.sshbase
             if self.controlPath:
                 self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
@@ -160,20 +160,14 @@ class RemoteMixin( object ):
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
 
     @classmethod
-    def findServerIP( cls, server, intf='eth0' ):
+    def findServerIP( cls, server ):
         "Return our server's IP address"
-        # Check for this server
-        if not server:
-            output = quietRun( 'ifconfig %s' % intf  )
-        # Otherwise, handle remote server
-        else:
-            # First, check for an IP address
-            if server:
-                ipmatch = cls._ipMatchRegex.findall( server )
-                if ipmatch:
-                    return ipmatch[ 0 ]
-            # Otherwise, look up remote server
-            output = quietRun( 'getent ahostsv4 %s' % server )
+        # First, check for an IP address
+        ipmatch = cls._ipMatchRegex.findall( server )
+        if ipmatch:
+            return ipmatch[ 0 ]
+        # Otherwise, look up remote server
+        output = quietRun( 'getent ahostsv4 %s' % server )
         ips = cls._ipMatchRegex.findall( output )
         ip = ips[ 0 ] if ips else None
         return ip
@@ -181,7 +175,7 @@ class RemoteMixin( object ):
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
-        if self.dest:
+        if hasattr( self, 'server' ) and self.isRemote:
             kwargs.update( mnopts='-c' )
         super( RemoteMixin, self ).startShell( *args, **kwargs )
         if self.splitInit:
@@ -231,7 +225,7 @@ class RemoteMixin( object ):
             returns: Popen() object"""
         if type( cmd ) is str:
             cmd = cmd.split()
-        if self.dest:
+        if hasattr( self, 'server' ) and self.isRemote:
             if sudo:
                 cmd = [ 'sudo', '-E' ] + cmd
             if tt:
@@ -312,9 +306,9 @@ class RemoteLink( Link ):
             (override this method [and possibly delete()]
             to change link type)"""
         node1, node2 = self.node1, self.node2
-        server1 = getattr( node1, 'server', None )
-        server2 = getattr( node2, 'server', None )
-        if not server1 and not server2:
+        server1 = getattr( node1, 'server', 'localhost' )
+        server2 = getattr( node2, 'server', 'localhost' )
+        if server1 == 'localhost' and server2 == 'localhost':
             # Local link
             return makeIntfPair( intfname1, intfname2, addr1, addr2 )
         elif server1 == server2:
@@ -596,8 +590,8 @@ class MininetCluster( Mininet ):
                    'link': RemoteLink,
                    'precheck': True }
         params.update( kwargs )
-        servers = params.pop( 'servers', [ None ] )
-        servers = [ s if s != 'localhost' else None for s in servers ]
+        servers = params.pop( 'servers', [ 'localhost' ] )
+        servers = [ s if s else 'localhost' for s in servers ]
         self.servers = servers
         self.serverIP = params.pop( 'serverIP', {} )
         if not self.serverIP:
@@ -672,6 +666,9 @@ class MininetCluster( Mininet ):
                                  links=self.topo.links() )
         for node in nodes:
             config = self.topo.node_info[ node ]
+            # keep local server name consistent accross nodes
+            if 'server' in config.keys() and config[ 'server' ] == None:
+                config[ 'server' ] = 'localhost'
             server = config.setdefault( 'server', placer.place( node ) )
             if server:
                 config.setdefault( 'serverIP', self.serverIP[ server ] )
