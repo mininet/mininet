@@ -510,7 +510,7 @@ class Node( object ):
            value may also be list or dict"""
         name, value = param.items()[ 0 ]
         f = getattr( self, method, None )
-        if not f or value is None:
+        if not f:
             return
         if type( value ) is list:
             result = f( *value )
@@ -655,8 +655,14 @@ class CPULimitedHost( Host ):
         # Tell mnexec to execute command in our cgroup
         mncmd = [ 'mnexec', '-g', self.name,
                   '-da', str( self.pid ) ]
-        if self.sched == 'rt':
+        cpuTime = int( self.cgroupGet( 'rt_runtime_us', 'cpu' ) )
+        # if our cgroup is not given any cpu time,
+        # we cannot assign the RR Scheduler.
+        if self.sched == 'rt' and cpuTime > 0:
             mncmd += [ '-r', str( self.rtprio ) ]
+        elif self.sched == 'rt' and cpuTime <= 0:
+            debug( '***error: not enough cpu time available for %s.' % self.name,
+                    'Using cfs scheduler for subprocess\n' )
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
@@ -707,8 +713,9 @@ class CPULimitedHost( Host ):
            f: CPU bandwidth limit (fraction)
            sched: 'rt' or 'cfs'
            Note 'cfs' requires CONFIG_CFS_BANDWIDTH"""
+        # if cpu fraction is None, reset to default of 0
         if not f:
-            return
+            f = -1
         if not sched:
             sched = self.sched
         if sched == 'rt':
@@ -721,15 +728,17 @@ class CPULimitedHost( Host ):
             # Reset to unlimited
             quota = -1
         # Set cgroup's period and quota
-        self.cgroupSet( pstr, period )
-        self.cgroupSet( qstr, quota )
+        setPeriod = self.cgroupSet( pstr, period )
+        setQuota = self.cgroupSet( qstr, quota )
         if sched == 'rt':
             # Set RT priority if necessary
-            self.chrt()
-        info( '(%s %d/%dus) ' % ( sched, quota, period ) )
+            sched = self.chrt()
+        info( '(%s %d/%dus) ' % ( sched, setQuota, setPeriod ) )
 
     def setCPUs( self, cores, mems=0 ):
         "Specify (real) cores that our cgroup can run on"
+        if not cores:
+            return
         if type( cores ) is list:
             cores = ','.join( [ str( c ) for c in cores ] )
         self.cgroupSet( resource='cpuset', param='cpus',
@@ -743,7 +752,7 @@ class CPULimitedHost( Host ):
         errFail( 'cgclassify -g cpuset:/%s %s' % (
                  self.name, self.pid ) )
 
-    def config( self, cpu=None, cores=None, **params ):
+    def config( self, cpu=-1, cores=None, **params ):
         """cpu: desired overall system CPU fraction
            cores: (real) core(s) this host can run on
            params: parameters for Node.config()"""
