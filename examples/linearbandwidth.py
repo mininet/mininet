@@ -93,6 +93,9 @@ def linearBandwidthTest( lengths ):
         print "*** testing bandwidth"
         for n in lengths:
             src, dst = net.hosts[ 0 ], net.hosts[ n ]
+            # Try to prime the pump to reduce PACKET_INs during test
+            # since the reference controller is reactive
+            src.cmd( 'telnet', dst.IP(), '5001' )
             print "testing", src.name, "<->", dst.name,
             bandwidth = net.iperf( [ src, dst ] )
             print bandwidth
