@@ -180,6 +180,14 @@ class Node( object ):
                 self.cmd( 'mkdir -p %s' % directory ) 
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
+    def unmountPrivateDirs( self ):
+        "mount private directories"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                self.cmd( 'umount ', directory[ 0 ] )
+            else:
+                self.cmd( 'umount ', directory )
+
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process
             cmd: command to run (list)
@@ -229,6 +237,7 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
+        self.unmountPrivateDirs()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )
