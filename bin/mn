@@ -34,6 +34,7 @@ from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo, TorusTopo
 from mininet.util import custom, customConstructor
 from mininet.util import buildTopo
+from mininet.util import updateMininet
 
 from functools import partial
 
@@ -214,6 +215,9 @@ class MininetRunner( object ):
                          default=False, help="adds a NAT to the topology "
                          "that connects Mininet to the physical network" )
         opts.add_option( '--version', action='callback', callback=version )
+        opts.add_option( '--upgrade', action='callback', callback=updateMininet,
+                         callback_kwargs={ 'version':VERSION },
+                         help='check for Mininet updates' )
         opts.add_option( '--cluster', type='string', default=None,
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
