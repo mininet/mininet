@@ -73,7 +73,7 @@ class MultiGraph( object ):
 
     def edges( self, data=False, keys=False ):
         "Return list of graph edges"
-        return list( self.edges_iter( data=data, keys=key ) )
+        return list( self.edges_iter( data=data, keys=keys ) )
 
 
     def __getitem__( self, node ):
@@ -84,12 +84,13 @@ class MultiGraph( object ):
         "Return the number of nodes"
         return len( self.node )
 
-    def convertTo( self, cls, data=False ):
+    def convertTo( self, cls, data=False, keys=False ):
         """Convert to a new object of networkx.MultiGraph-like class cls
-           data: include node and edge data"""
+           data: include node and edge data
+           keys: include edge keys as well as edge data"""
         g = cls()
         g.add_nodes_from( self.nodes( data=data ) )
-        g.add_edges_from( self.edges( data=data ) )
+        g.add_edges_from( self.edges( data=( data or keys ), keys=keys ) )
         return g
 
 
@@ -265,6 +266,12 @@ class Topo( object ):
     def setNodeInfo( self, name, info ):
         "Set metadata (dict) for node"
         self.g.node[ name ] = info
+
+    def convertTo( self, cls, data=True, keys=True ):
+        """Convert to a new object of networkx.MultiGraph-like class cls
+           data: include node and edge data (default True)
+           keys: include edge keys as well as edge data (default True)"""
+        return self.g.convertTo( cls, data=data, keys=keys )
 
     @staticmethod
     def sorted( items ):
