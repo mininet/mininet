@@ -203,7 +203,11 @@ class Topo( object ):
            withInfo: return link info
            returns: list of ( src, dst [,key, info ] )"""
         links = list( self.iterLinks( withKeys, withInfo ) )
-        return links if not sort else self.sorted( links )
+        if not sorted:
+            return links
+        # Ignore info when sorting
+        tupleSize = 3 if withKeys else 2
+        return sorted( links, key=( lambda l: naturalSeq( l[ 0 : tupleSize ] ) ) )
 
     # This legacy port management mechanism is clunky and will probably
     # be removed at some point.
