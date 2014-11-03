@@ -207,7 +207,7 @@ class Topo( object ):
             return links
         # Ignore info when sorting
         tupleSize = 3 if withKeys else 2
-        return sorted( links, key=( lambda l: naturalSeq( l[ 0 : tupleSize ] ) ) )
+        return sorted( links, key=( lambda l: naturalSeq( l[ :tupleSize ] ) ) )
 
     # This legacy port management mechanism is clunky and will probably
     # be removed at some point.
