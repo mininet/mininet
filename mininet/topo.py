@@ -19,7 +19,6 @@ class MultiGraph( object ):
     def __init__( self ):
         self.node = {}
         self.edge = {}
-        self.edgeinfo = {}
 
     def add_node( self, node, attr_dict=None, **attrs):
         """Add node to graph
