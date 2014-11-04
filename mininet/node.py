@@ -75,12 +75,14 @@ class Node( object ):
     def __init__( self, name, inNamespace=True, **params ):
         """name: name of node
            inNamespace: in network namespace?
+           privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
 
         # Make sure class actually works
         self.checkSetup()
 
         self.name = params.get( 'name', name )
+        self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
@@ -100,6 +102,7 @@ class Node( object ):
 
         # Start command interpreter shell
         self.startShell()
+        self.mountPrivateDirs()
 
     # File descriptor to node mapping support
     # Class variables and methods
@@ -161,6 +164,30 @@ class Node( object ):
         self.cmd( 'stty -echo' )
         self.cmd( 'set +m' )
 
+    def mountPrivateDirs( self ):
+        "mount private directories"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                # mount given private directory
+                privateDir = directory[ 1 ] % self.__dict__ 
+                mountPoint = directory[ 0 ]
+                self.cmd( 'mkdir -p %s' % privateDir )
+                self.cmd( 'mkdir -p %s' % mountPoint )
+                self.cmd( 'mount --bind %s %s' %
+                               ( privateDir, mountPoint ) )
+            else:
+                # mount temporary filesystem on directory
+                self.cmd( 'mkdir -p %s' % directory ) 
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
+
+    def unmountPrivateDirs( self ):
+        "mount private directories"
+        for directory in self.privateDirs:
+            if isinstance( directory, tuple ):
+                self.cmd( 'umount ', directory[ 0 ] )
+            else:
+                self.cmd( 'umount ', directory )
+
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process
             cmd: command to run (list)
@@ -210,6 +237,7 @@ class Node( object ):
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
+        self.unmountPrivateDirs()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )
@@ -590,11 +618,9 @@ class Node( object ):
         "Make sure our class dependencies are available"
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
 
-
 class Host( Node ):
     "A host is simply a Node"
     pass
-
 
 class CPULimitedHost( Host ):
 
@@ -761,33 +787,6 @@ class CPULimitedHost( Host ):
         "Initialization for CPULimitedHost class"
         mountCgroups()
         cls.inited = True
-
-class HostWithPrivateDirs( Host ):
-    "Host with private directories"
-
-    def __init__( self, name, *args, **kwargs ):
-        "privateDirs: list of private directory strings or tuples"
-        self.name = name
-        self.privateDirs = kwargs.pop( 'privateDirs', [] )
-        Host.__init__( self, name, *args, **kwargs )
-        self.mountPrivateDirs()
-
-    def mountPrivateDirs( self ):
-        "mount private directories"
-        for directory in self.privateDirs:
-            if isinstance( directory, tuple ):
-                # mount given private directory
-                privateDir = directory[ 1 ] % self.__dict__ 
-                mountPoint = directory[ 0 ]
-                self.cmd( 'mkdir -p %s' % privateDir )
-                self.cmd( 'mkdir -p %s' % mountPoint )
-                self.cmd( 'mount --bind %s %s' %
-                               ( privateDir, mountPoint ) )
-            else:
-                # mount temporary filesystem on directory
-                self.cmd( 'mkdir -p %s' % directory ) 
-                self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
-
 
 
 # Some important things to note:

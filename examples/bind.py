@@ -35,7 +35,7 @@ on '/var/mn'
 """
 
 from mininet.net import Mininet
-from mininet.node import Host, HostWithPrivateDirs
+from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import SingleSwitchTopo
 from mininet.log import setLogLevel, info, debug
@@ -51,15 +51,12 @@ def testHostWithPrivateDirs():
     privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ), 
                     ( '/var/run', '/tmp/%(name)s/var/run' ), 
                       '/var/mn' ]
-    host = partial( HostWithPrivateDirs,
+    host = partial( Host,
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
     net.start()
-    directories = []
-    for directory in privateDirs:
-        directories.append( directory[ 0 ]
-                            if isinstance( directory, tuple )
-                            else directory )
+    directories = [ directory[ 0 ] if isinstance( directory, tuple )
+                    else directory for directory in privateDirs ]
     info( 'Private Directories:',  directories, '\n' )
     CLI( net )
     net.stop()
