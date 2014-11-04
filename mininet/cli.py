@@ -463,6 +463,18 @@ class CLI( Cmd ):
             line = line.split( '#' )[ 0 ]
         return line
 
+    def do_update( self, line ):
+        '''
+        updates the address and status for each host and switch interfac in the network
+        usage: update
+        '''
+        for h in self.mn.hosts:
+            for i in h.intfs.values():
+                i.updateAddr()
+        for s in self.mn.switches:
+            for i in s.intfs.values():
+                i.updateAddr()
+
 
 # Helper functions
 
