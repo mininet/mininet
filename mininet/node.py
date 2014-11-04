@@ -11,15 +11,12 @@ Host: a virtual host. By default, a host is simply a shell; commands
     may be sent using Cmd (which waits for output), or using sendCmd(),
     which returns immediately, allowing subsequent monitoring using
     monitor(). Examples of how to run experiments using this
-    functionality are provided in the examples/ directory.
+    functionality are provided in the examples/ directory. By default,
+    hosts share the root file system, but they may also specify private
+    directories.
 
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
-
-HostWithPrivateDirs: a virtual host that has user-specified private
-    directories. These may be temporary directories stored as a tmpfs,
-    or persistent directories that are mounted from another directory in
-    the root filesystem.
 
 Switch: superclass for switch nodes.
 
