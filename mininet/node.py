@@ -1188,7 +1188,19 @@ class OVSSwitch( Switch ):
             self.cmd( 'ip link del', self )
         self.deleteIntfs()
 
+
 OVSKernelSwitch = OVSSwitch
+
+
+class OVSBridge( OVSSwitch ):
+    "OVSBridge is an OVSSwitch in standalone/bridge mode"
+    
+    def __init__( self, args, **kwargs ):
+        kwargs.update( failMode='standalone' )
+        OVSSwitch.__init__( self, args, **kwargs )
+    
+    def start( self, controllers ):
+        OVSSwitch.start( self, controllers=[] )
 
 
 class IVSSwitch(Switch):
@@ -1413,8 +1425,15 @@ class RemoteController( Controller ):
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
-def DefaultController( name, order=[ Controller, OVSController ], **kwargs ):
-    "find any controller that is available and run it"
-    for controller in order:
+
+DefaultControllers = [ Controller, OVSController ]
+
+def findController( controllers=DefaultControllers ):
+    "Return first available controller from list, if any"
+    for controller in controllers:
         if controller.isAvailable():
             return controller( name, **kwargs )
+
+def DefaultController( name, controllers=DefaultControllers, **kwargs ):
+    "Find a controller that is available and instantiate it"
+    return findController( controllers )( name, **kwargs )
