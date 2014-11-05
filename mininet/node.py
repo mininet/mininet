@@ -166,7 +166,7 @@ class Node( object ):
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 # mount given private directory
-                privateDir = directory[ 1 ] % self.__dict__ 
+                privateDir = directory[ 1 ] % self.__dict__
                 mountPoint = directory[ 0 ]
                 self.cmd( 'mkdir -p %s' % privateDir )
                 self.cmd( 'mkdir -p %s' % mountPoint )
@@ -174,7 +174,7 @@ class Node( object ):
                                ( privateDir, mountPoint ) )
             else:
                 # mount temporary filesystem on directory
-                self.cmd( 'mkdir -p %s' % directory ) 
+                self.cmd( 'mkdir -p %s' % directory )
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
     def unmountPrivateDirs( self ):
@@ -640,13 +640,9 @@ class CPULimitedHost( Host ):
         # still does better with larger period values.
         self.period_us = kwargs.get( 'period_us', 100000 )
         self.sched = sched
-        if self.sched == 'rt':
-            release = quietRun( 'uname -r' ).strip('\r\n')
-            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
-            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
-                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
-                exit( 1 )
-        self.rtprio = 20
+        if sched == 'rt':
+            self.checkRtGroupSched()
+            self.rtprio = 20
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
@@ -709,6 +705,19 @@ class CPULimitedHost( Host ):
         # RT uses wall clock time for period and quota
         quota = int( self.period_us * f )
         return pstr, qstr, self.period_us, quota
+
+    _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
+
+    @classmethod
+    def checkRtGroupSched( cls ):
+        "Check (Ubuntu,Debian) kernel config for CONFIG_RT_GROUP_SCHED for RT"
+        if not cls._rtGroupSched:
+            release = quietRun( 'uname -r' ).strip('\r\n')
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
+                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
+                exit( 1 )
+            cls._rtGroupSched = True
 
     def cfsInfo( self, f):
         "Internal method: return parameters for CFS bandwidth"
@@ -1370,7 +1379,7 @@ class RYU( Controller ):
 
         Controller.__init__( self, name,
                          command='ryu-manager',
-                         cargs='--ofp-tcp-listen-port %s ' + 
+                         cargs='--ofp-tcp-listen-port %s ' +
                          ' '.join( ryuArgs ),
                          cdir=ryuCoreDir,
                          **kwargs )
