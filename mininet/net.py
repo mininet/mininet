@@ -579,7 +579,7 @@ class Mininet( object ):
         if packets > 0:
             ploss = 100.0 * lost / packets
             received = packets - lost
-            output( "*** Results: %i%% dropped (%d/%d received)\n" %
+            output( "*** Results: %.2f%% dropped (%d/%d received)\n" %
                     ( ploss, received, packets ) )
         else:
             ploss = 0

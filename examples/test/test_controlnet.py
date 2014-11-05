@@ -16,8 +16,8 @@ class testControlNet( unittest.TestCase ):
         p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
-        p.expect ( '(\d+)% dropped' )
-        percent = int( p.match.group( 1 ) ) if p.match else -1
+        p.expect ( '(\d+\.\d{2})% dropped' )
+        percent = float( p.match.group( 1 ) ) if p.match else -1
         self.assertEqual( percent, 0 )
         p.expect( self.prompt )
         p.sendline( 'exit' )
