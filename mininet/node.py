@@ -689,6 +689,19 @@ class CPULimitedHost( Host ):
         super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
+    _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
+    
+    @classmethod
+    def checkRtGroupSched( cls ):
+        "Check (Ubuntu,Debian) kernel config for CONFIG_RT_GROUP_SCHED for RT"
+        if not cls._rtGroupSched:
+            release = quietRun( 'uname -r' ).strip('\r\n')
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
+                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
+                exit( 1 )
+            cls._rtGroupSched = True
+
     def chrt( self ):
         "Set RT scheduling priority"
         quietRun( 'chrt -p %s %s' % ( self.rtprio, self.pid ) )
@@ -706,20 +719,7 @@ class CPULimitedHost( Host ):
         quota = int( self.period_us * f )
         return pstr, qstr, self.period_us, quota
 
-    _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
-
-    @classmethod
-    def checkRtGroupSched( cls ):
-        "Check (Ubuntu,Debian) kernel config for CONFIG_RT_GROUP_SCHED for RT"
-        if not cls._rtGroupSched:
-            release = quietRun( 'uname -r' ).strip('\r\n')
-            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
-            if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
-                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
-                exit( 1 )
-            cls._rtGroupSched = True
-
-    def cfsInfo( self, f):
+    def cfsInfo( self, f ):
         "Internal method: return parameters for CFS bandwidth"
         pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
         # CFS uses wall clock time for period and CPU time for quota.
@@ -729,6 +729,9 @@ class CPULimitedHost( Host ):
             debug( '(cfsInfo: increasing default period) ' )
             quota = 1000
             period = int( quota / f / numCores() )
+        # Reset to unlimited on negative quota
+        if quota < 0:
+            quota = -1
         return pstr, qstr, period, quota
 
     # BL comment:
@@ -740,25 +743,23 @@ class CPULimitedHost( Host ):
     # to CPU seconds per second, essentially assuming that
     # all CPUs are the same.
 
-    def setCPUFrac( self, f=-1, sched=None):
+    def setCPUFrac( self, f, sched=None ):
         """Set overall CPU fraction for this host
-           f: CPU bandwidth limit (fraction)
+           f: CPU bandwidth limit (positive fraction, or -1 for cfs unlimited)
            sched: 'rt' or 'cfs'
-           Note 'cfs' requires CONFIG_CFS_BANDWIDTH"""
-        # if cpu fraction is None, reset to default of 0
-        if not f:
-            f = -1
+           Note 'cfs' requires CONFIG_CFS_BANDWIDTH, 
+           and 'rt' requires CONFIG_RT_GROUP_SCHED"""
         if not sched:
             sched = self.sched
         if sched == 'rt':
+            if not f or f < 0:
+                raise Exception( 'Please set a positive CPU fraction for sched=rt\n' )
+                return
             pstr, qstr, period, quota = self.rtInfo( f )
         elif sched == 'cfs':
             pstr, qstr, period, quota = self.cfsInfo( f )
         else:
             return
-        if quota < 0:
-            # Reset to unlimited
-            quota = -1
         # Set cgroup's period and quota
         setPeriod = self.cgroupSet( pstr, period )
         setQuota = self.cgroupSet( qstr, quota )
