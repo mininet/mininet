@@ -691,29 +691,39 @@ function openmul {
 
     # Install MUL Controller deps:
     echo "Install Dependency of MUL Controller..."
-    if [ "$DIST" = "Ubuntu" ]; then
+    if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
         $install flex bison build-essential expect g++-multilib \
                  tofrodos zlib1g-dev gawk libffi-dev gettext python python-all-dev \
                  swig libcurl4-gnutls-dev libglib2.0-dev libevent-dev libssl-dev autoconf libtool
 
-        pip install --upgrade pip
+        $install python-pip
+        sudo pip install --upgrade pip
 
-        cd $BUILD_DIR/openmul
+        cd openmul
 
-        pip install -r python_req.txt
+        sudo pip install -r python_req.txt
         $install --force-yes python-daemon
+
+    elif [ "$DIST" = "Fedora" ]; then
+        $install flex bison yumex expect \
+                 tofrodos zlib-devel gawk libffi-devel gettext python python-devel \
+                 swig curl-devel glib2-devel libevent-devel openssl-devel autoconf libtool
+
+        $install python-pip
+        sudo pip install --upgrade pip
+
+        cd openmul
+
+        sudo pip install -r python_req.txt
+        $install python-daemon
+
     else
-        echo "Distribution other than Ubuntu..."
+        echo "Distribution other than Ubuntu/Debian/Fedora..."
     fi
 
     # Build
-    if [ "$ARCH" = "i386" ]; then
-        export CFLAGS="-I /usr/include/glib-2.0/ -I /usr/lib/i386-linux-gnu/glib-2.0/include/"
-    else
-        export CFLAGS="-I /usr/include/glib-2.0/ -I /usr/lib/x86_64-linux-gnu/glib-2.0/include/"
-    fi
     ./autogen.sh
-    ./configure --with-vty=yes
+    CFLAGS=`pkg-config --cflags glib-2.0` ./configure --with-vty=yes
     make
 }
 
