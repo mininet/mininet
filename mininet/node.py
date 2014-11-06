@@ -1432,7 +1432,7 @@ def findController( controllers=DefaultControllers ):
     "Return first available controller from list, if any"
     for controller in controllers:
         if controller.isAvailable():
-            return controller( name, **kwargs )
+            return controller
 
 def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     "Find a controller that is available and instantiate it"
