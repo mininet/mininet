@@ -674,14 +674,14 @@ class CPULimitedHost( Host ):
         # Tell mnexec to execute command in our cgroup
         mncmd = [ 'mnexec', '-g', self.name,
                   '-da', str( self.pid ) ]
-        cpuTime = int( self.cgroupGet( 'rt_runtime_us', 'cpu' ) )
         # if our cgroup is not given any cpu time,
         # we cannot assign the RR Scheduler.
-        if self.sched == 'rt' and cpuTime > 0:
-            mncmd += [ '-r', str( self.rtprio ) ]
-        elif self.sched == 'rt' and cpuTime <= 0:
-            debug( '***error: not enough cpu time available for %s.' % self.name,
-                    'Using cfs scheduler for subprocess\n' )
+        if self.sched == 'rt':
+            if int( self.cgroupGet( 'rt_runtime_us', 'cpu' ) ) <= 0:
+                mncmd += [ '-r', str( self.rtprio ) ]
+            else:
+                debug( '*** error: not enough cpu time available for %s.' % self.name,
+                      'Using cfs scheduler for subprocess\n' )
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
