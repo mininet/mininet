@@ -487,17 +487,16 @@ def login( vm, user='mininet', password='mininet' ):
     log( '* Waiting for login...' )
 
 
-def disableNtpd( vm, prompt=Prompt ):
+def setClock( vm, prompt=Prompt ):
     "Turn off ntpd and set clock immediately"
-    log( '* Turning off ntpd' )
+    log( '* Attempting to shut down ntpd' )
     vm.sendline( 'sudo -n service ntp stop' )
     vm.expect( prompt )
-    log( '* Setting clock' )
-    # -gq: set and quit immediately
-    vm.sendline( 'sudo -n ntpd -gq' )
-    vm.expect( prompt )
-    log( '* Waiting one second and running date command' )
-    vm.sendline( 'sleep 1 && date ' )
+    log( '* Getting seconds since epoch from this server' )
+    # Note r'date +%s' specifies a format for 'date', not python!
+    seconds = int( run( r'date +%s' ) )
+    log( '* Setting VM clock' )
+    vm.sendline( 'sudo date -s @%d' % seconds )
 
 
 def sanityTest( vm ):
@@ -832,9 +831,9 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
 
 def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
-    # We disable ntpd and set the time so that it won't be
+    # We disable ntpd and set the time so that ntpd won't be
     # messing with the time during tests
-    disableNtpd( vm )
+    setClock( vm )
     vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
