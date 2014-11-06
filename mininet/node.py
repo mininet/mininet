@@ -1436,4 +1436,8 @@ def findController( controllers=DefaultControllers ):
 
 def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     "Find a controller that is available and instantiate it"
-    return findController( controllers )( name, **kwargs )
+    controller = findController( controllers )
+    if not controller:
+        raise Exception( 'Could not find a default OpenFlow controller' )
+    return controller( name, **kwargs )
+
