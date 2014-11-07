@@ -84,7 +84,7 @@ several new features, including:
 * An improved MiniEdit GUI (`examples/miniedit.py`) - thanks to
   Gregory Gee
 
-* Experimental cluster support - consult the documentation for details,
+* Experimental cluster support - consult the documentation[1] for details,
   as well as `examples/cluster.py` and an experimental `--cluster`
   option for topologies built with the default `Host` and `OVSSwitch`
   classes:
