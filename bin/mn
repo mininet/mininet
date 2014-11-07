@@ -25,8 +25,8 @@ from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, debug, warn, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
-                           RYU, NOX, RemoteController, DefaultController,
-                           UserSwitch, OVSSwitch,
+                           RYU, NOX, RemoteController, findController, DefaultController,
+                           UserSwitch, OVSSwitch, OVSBridge,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
@@ -54,14 +54,16 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
           'tree': TreeTopo,
           'torus': TorusTopo }
 
-SWITCHDEF = 'ovsk'
+SWITCHDEF = 'default'
 SWITCHES = { 'user': UserSwitch,
              'ovs':  OVSSwitch,
+             'ovsbr' : OVSBridge,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
              'ovsl': OVSLegacyKernelSwitch,
              'ivs': IVSSwitch,
-             'lxbr': LinuxBridge }
+             'lxbr': LinuxBridge,
+             'default': OVSSwitch }
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
@@ -73,8 +75,8 @@ CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
-                'default': DefaultController,
                 'ryu': RYU,
+                'default': DefaultController,  # Note: replaced below
                 'none': lambda name: None }
 
 LINKDEF = 'default'
@@ -252,6 +254,22 @@ class MininetRunner( object ):
 
         start = time.time()
 
+        if self.options.controller == 'default':
+            # Update default based on available controllers
+            CONTROLLERS[ 'default' ] = findController()
+            if CONTROLLERS[ 'default' ] is None:
+                if self.options.switch == 'default':
+                    # Fall back to OVS Bridge, which does not use an OF controller
+                    info( '*** No default OpenFlow controller found for default switch!\n' )
+                    info( '*** Falling back to OVS Bridge\n' )
+                    self.options.switch = 'ovsbr'
+                    self.options.controller = 'none'
+                elif self.options.switch in ( 'ovsbr', 'lxbr' ):
+                    self.options.controller = 'none'
+                else:
+                    raise Exception( "Could not find a default controller for switch %s" %
+                                     self.options.switch )
+        
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )
