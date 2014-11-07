@@ -342,6 +342,10 @@ class Mininet( object ):
         options = dict( params )
         options.setdefault( 'addr1', self.randMac() )
         options.setdefault( 'addr2', self.randMac() )
+        if port1 is not None:
+            options.setdefault( 'port1', port1 )
+        if port2 is not None:
+            options.setdefault( 'port2', port2 )
         cls = self.link if cls is None else cls
         link = cls( node1, node2, **options )
         self.links.append( link )
