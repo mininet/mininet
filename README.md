@@ -3,7 +3,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.2b0
+Version 2.2.0b0
 
 ### What is Mininet?
 
@@ -66,9 +66,9 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.2b0
+### New features in this release
 
-Mininet 2.2b0 provides a number of bug fixes as well as
+This release provides a number of bug fixes as well as
 several new features, including:
 
 * Improved OpenFlow 1.3 support
@@ -132,7 +132,7 @@ hard work that Mininet continues to grow and improve.
 Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
-The Mininet 2.2b0 Core Team:
+The Mininet Core Team:
 
 * Bob Lantz
 * Brian O'Connor
