@@ -324,33 +324,26 @@ class Mininet( object ):
     @staticmethod
     def randMac():
         "Return a random, non-multicast MAC address"
-        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
+        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  |
+                            0x020000000000 )
     
     def addLink( self, node1, node2, port1=None, port2=None,
-                 cls=None, paramDict=None, **params ):
+                 cls=None, **params ):
         """"Add a link from node1 to node2
-            node1: source node
-            node2: dest node
+            node1: source node (or name)
+            node2: dest node (or name)
             port1: source port (optional)
             port2: dest port (optional)
             cls: link class (optional)
-            paramDict: dictionary of additional link params (optional)
             params: additional link params (optional)
             returns: link object"""
-        # Ugly: try to ensure that node1 and node2 line up correctly with
-        # other link parameters, and allow either nodes or names
-        paramDict = {} if paramDict is None else dict( paramDict )
-        paramDict.update( params )
-        node1 = paramDict.pop( 'node1', node1 )
-        node2 = paramDict.pop( 'node2', node1 )
         node1 = node1 if type( node1 ) != str else self[ node1 ]
         node2 = node2 if type( node2 ) != str else self[ node2 ]
-        paramDict.setdefault( 'port1', port1 )
-        paramDict.setdefault( 'port2', port2 )
-        paramDict.setdefault( 'addr1', self.randMac() )
-        paramDict.setdefault( 'addr2', self.randMac() )
+        options = dict( params )
+        options.setdefault( 'addr1', self.randMac() )
+        options.setdefault( 'addr2', self.randMac() )
         cls = self.link if cls is None else cls
-        link = cls( node1, node2, **paramDict )
+        link = cls( node1, node2, **options )
         self.links.append( link )
         return link
 
@@ -410,7 +403,7 @@ class Mininet( object ):
         info( '\n*** Adding links:\n' )
         for srcName, dstName, params in topo.links(
                 sort=True, withInfo=True ):
-            self.addLink( srcName, dstName, paramDict=params )
+            self.addLink( **params )
             info( '(%s, %s) ' % ( srcName, dstName ) )
 
         info( '\n' )
