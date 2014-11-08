@@ -397,12 +397,13 @@ class Mininet( object ):
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
-        for srcName, dstName in topo.links(sort=True):
+        for srcName, dstName in set( topo.links( sort=True ) ):
             src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
             params = topo.linkInfo( srcName, dstName )
-            srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort, **params )
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
+            srcPorts, dstPorts = topo.port( srcName, dstName )
+            for srcPort, dstPort in zip( srcPorts, dstPorts ):
+                self.addLink( src, dst, srcPort, dstPort, **params )
+                info( '( %s, %s ) ' % ( src.name, dst.name ) )
 
         info( '\n' )
 
