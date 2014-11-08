@@ -448,7 +448,7 @@ def natural( text ):
     def num( s ):
         "Convert text segment to int if necessary"
         return int( s ) if s.isdigit() else s
-    return [  num( s ) for s in re.split( r'(\d+)', text ) ]
+    return [  num( s ) for s in re.split( r'(\d+)', str( text ) ) ]
 
 def naturalSeq( t ):
     "Natural sort key function for sequences"
