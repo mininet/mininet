@@ -11,6 +11,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+import tempfile
 
 # Command execution support
 
@@ -565,3 +566,97 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         sleep( .5 )
         time += .5
     return True
+
+def updateMininet( option, opt_str, value, parser, *args, **kwargs ):
+    # TODO check root
+    # TODO check dependencies (git and make)
+    url = 'https://github.com/mininet/mininet'
+    choice = None
+    if parser.rargs:
+        choice = parser.rargs[ 0 ]
+    current = kwargs['version']
+    print 'Your current version is: %s' % current
+
+    # get available releases
+    if not choice:
+        s = quietRun('git ls-remote --tags %s' % url)
+        #TODO check output for network failure
+        tags = []
+        for t in re.finditer(r'refs/tags/(\d\S*)', s):
+            v = t.group(1)
+            if v > current:
+                tags.append( t.group(1) )
+        if tags:
+            print 'Available versions:\n', '\n'.join( tags )
+        else:
+            print 'Congratulations! You are up-to-date.'
+
+    # ask user to select a version
+    while not choice:
+        choice = raw_input('Select a version: ')
+        if choice in tags:
+            break
+        elif 'exit' in choice:
+            exit()
+        else:
+            print 'Error: Please type an available version.'
+            choice = None
+
+    # sanity check
+    if choice < current:
+        print 'WARNING: The version that you have selected is a downgrade.'
+    elif choice == current:
+        print 'Version %s is already installed' % current
+        exit()
+
+    # confirm choice
+    if not re.match( r'[yY][eE]?[sS]?',
+                     raw_input( 'Do you want to upgrade to %s? [y/N] ' % choice ) ):
+        print 'ABORTED'
+        exit()
+
+    # proceed with installation
+    # 1. detect make develop
+    if 'dist-packages' in __file__:
+        ## mkdir; cd; git init
+        develop = False
+        installDir = tempfile.mkdtemp() + '/mininet'
+        os.mkdir( installDir )
+        os.chdir( installDir )
+        quietRun( 'git init' )
+    else:
+        ## cd to mininet directory
+        develop = True
+        print ( 'FAILURE: You have enabled "sudo make develop".\n\n'
+                'To upgrade, check out the latest code and run "util/install.sh -n" '
+                'and then re-run "sudo make develop".' )
+        exit()
+    # 2. fetch the tag
+    if run( 'git fetch https://github.com/mininet/mininet %s' % choice ):
+        print 'FAILURE: Could not update to %s' % choice
+        exit()
+    # 3. check to see if there is a branch conflict
+    if run( 'git show-ref --verify --quiet refs/heads/%s' % choice ):
+        # branch does not exist
+        print run( 'git checkout -b %s FETCH_HEAD' % choice )
+    else:
+        # This should not happen until develop is supported...
+        # TODO: branch already exists
+        ## git checkout %s
+        ## git reset --hard FETCH_HEAD
+        print '... make develop enabled'
+    # 4. perform installation
+    if develop:
+        ## sudo make develop
+        print '... make develop enabled'
+    else:
+        # remove mininet prior to upgrade
+        oldDir = __file__.split( 'mininet/util' )[0]
+        for f in os.listdir( oldDir + '/..' ):
+            print f
+            if 'mininet' in f:
+                print run( 'rm -rfv %s' % oldDir + '/../' + f )
+        # run the install script
+        os.execl( installDir+'/util/install.sh', 'install.sh', '-n' )
+        #TODO remove temp dir
+    exit()
