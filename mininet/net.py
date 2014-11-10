@@ -697,11 +697,15 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None ):
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None,
+               seconds=5):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses opposite hosts
            l4Type: string, one of [ TCP, UDP ]
-           returns: results two-element array of [ server, client ] speeds
+           udpBw: bandwidth target for UDP test
+           format: iperf format argument if any
+           seconds: iperf time to transmit
+           returns: two-element array of [ server, client ] speeds
            note: send() is buffered, so client rate can be much higher than
            the actual transmission rate; on an unloaded system, server
            rate should be much closer to the actual receive rate"""
@@ -734,8 +738,8 @@ class Mininet( object ):
                     'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
                 info( 'Waiting for iperf to start up...' )
                 sleep(.5)
-        cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
-                             bwArgs )
+        cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
+                             server.IP() + ' ' + bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
         servout += server.waitOutput()
