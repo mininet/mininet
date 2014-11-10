@@ -27,7 +27,7 @@ from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg
-from mininet.util import irange
+from mininet.util import irange, quietRun
 from mininet.link import TCLink
 from functools import partial
 
@@ -78,6 +78,10 @@ def linearBandwidthTest( lengths ):
 
     topo = LinearTestTopo( hostCount )
 
+    # Select TCP Reno
+    output = quietRun( 'sysctl -w net.ipv4.tcp_congestion_control=reno' )
+    assert 'reno' in output
+
     for datapath in switches.keys():
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
@@ -97,7 +101,7 @@ def linearBandwidthTest( lengths ):
             # since the reference controller is reactive
             src.cmd( 'telnet', dst.IP(), '5001' )
             print "testing", src.name, "<->", dst.name,
-            bandwidth = net.iperf( [ src, dst ] )
+            bandwidth = net.iperf( [ src, dst ], seconds=10 )
             print bandwidth
             flush()
             results[ datapath ] += [ ( n, bandwidth ) ]
