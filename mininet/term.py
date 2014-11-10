@@ -41,7 +41,7 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
        title: base title
        term: 'xterm' or 'gterm'
        returns: two Popen objects, tunnel and terminal"""
-    title += ': ' + node.name
+    title = '"%s: %s"' % ( title, node.name )
     if not node.inNamespace:
         title += ' (root)'
     cmds = {
