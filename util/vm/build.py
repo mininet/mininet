@@ -487,10 +487,13 @@ def login( vm, user='mininet', password='mininet' ):
     log( '* Waiting for login...' )
 
 
-def setClock( vm, prompt=Prompt ):
-    "Turn off ntpd and set clock immediately"
-    log( '* Attempting to shut down ntpd' )
-    vm.sendline( 'sudo -n service ntp stop' )
+def removeNtpd( vm, prompt=Prompt, ntpPackage='ntp' ):
+    "Remove ntpd and set clock immediately"
+    log( '* Removing ntpd' )
+    vm.sendline( 'sudo apt-get -y remove ' + ntpPackage )
+    vm.expect( prompt )
+    # Try to make sure that it isn't still running
+    vm.sendline( 'sudo pkill ntpd' )
     vm.expect( prompt )
     log( '* Getting seconds since epoch from this server' )
     # Note r'date +%s' specifies a format for 'date', not python!
@@ -833,7 +836,7 @@ def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
     "Run tests (list) in vm (pexpect object)"
     # We disable ntpd and set the time so that ntpd won't be
     # messing with the time during tests
-    setClock( vm )
+    removeNtpd( vm )
     vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
