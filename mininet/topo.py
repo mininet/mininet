@@ -23,7 +23,8 @@ class MultiGraph( object ):
     def add_node( self, node, attr_dict=None, **attrs):
         """Add node to graph
            attr_dict: attribute dict (optional)
-           attrs: more attributes (optional)"""
+           attrs: more attributes (optional)
+           warning: updates attr_dict with attrs"""
         attr_dict = {} if attr_dict is None else attr_dict
         attr_dict.update( attrs )
         self.node[ node ] = attr_dict
@@ -31,7 +32,9 @@ class MultiGraph( object ):
     def add_edge( self, src, dst, key=None, attr_dict=None, **attrs ):
         """Add edge to graph
            key: optional key
-           attr_dict: optional attribute dict"""
+           attr_dict: optional attribute dict
+           attrs: more attributes
+           warning: udpates attr_dict with attrs"""
         attr_dict = {} if attr_dict is None else attr_dict
         attr_dict.update( attrs )
         self.node.setdefault( src, {} )
@@ -151,6 +154,7 @@ class Topo( object ):
         if not opts and self.lopts:
             opts = self.lopts
         port1, port2 = self.addPort( node1, node2, port1, port2 )
+        opts = dict( opts )
         opts.update( node1=node1, node2=node2, port1=port1, port2=port2 )
         self.g.add_edge(node1, node2, key, opts )
         return key
