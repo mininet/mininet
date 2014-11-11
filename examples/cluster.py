@@ -83,7 +83,7 @@ from mininet.util import quietRun, makeIntfPair, errRun, retry
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 
-from signal import signal, SIGINT, SIGHUP, SIG_IGN
+from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
 import os
 from random import randrange
@@ -174,7 +174,7 @@ class RemoteMixin( object ):
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
-        if hasattr( self, 'server' ) and self.isRemote:
+        if self.isRemote:
             kwargs.update( mnopts='-c' )
         super( RemoteMixin, self ).startShell( *args, **kwargs )
         if self.splitInit:
@@ -224,7 +224,7 @@ class RemoteMixin( object ):
             returns: Popen() object"""
         if type( cmd ) is str:
             cmd = cmd.split()
-        if hasattr( self, 'server' ) and self.isRemote:
+        if self.isRemote:
             if sudo:
                 cmd = [ 'sudo', '-E' ] + cmd
             if tt:
