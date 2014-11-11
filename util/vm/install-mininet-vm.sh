@@ -13,13 +13,14 @@ sudo sed -i -e 's/ubuntu/mininet-vm/g' /etc/hosts
 sudo hostname `cat /etc/hostname`
 sudo sed -i -e 's/quiet splash/text/' /etc/default/grub
 sudo update-grub
-# 12.10 and earlier
-sudo sed -i -e 's/us.archive.ubuntu.com/mirrors.kernel.org/' \
-	/etc/apt/sources.list
-# 13.04 and later
-sudo sed -i -e 's/\/archive.ubuntu.com/\/mirrors.kernel.org/' \
-	/etc/apt/sources.list
+# Update from official archive
 sudo apt-get update
+# 12.10 and earlier
+#sudo sed -i -e 's/us.archive.ubuntu.com/mirrors.kernel.org/' \
+#	/etc/apt/sources.list
+# 13.04 and later
+#sudo sed -i -e 's/\/archive.ubuntu.com/\/mirrors.kernel.org/' \
+#	/etc/apt/sources.list
 # Clean up vmware easy install junk if present
 if [ -e /etc/issue.backup ]; then
     sudo mv /etc/issue.backup /etc/issue
