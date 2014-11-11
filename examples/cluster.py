@@ -340,6 +340,13 @@ class RemoteLink( Link ):
     def makeTunnel( self, node1, node2, intfname1, intfname2,
                     addr1=None, addr2=None ):
         "Make a tunnel across switches on different servers"
+        # We should never try to create a tunnel to ourselves!
+        assert node1.server != 'localhost' or node2.server != 'localhost'
+        # And we can't ssh into this server remotely as 'localhost',
+        # so try again swappping node1 and node2
+        if node2.server == 'localhost':
+            return self.makeTunnel( node2, node1, intfname2, intfname1,
+                                    addr2, addr1 )
         # 1. Create tap interfaces
         for node in node1, node2:
             # For now we are hard-wiring tap9, which we will rename
@@ -665,7 +672,7 @@ class MininetCluster( Mininet ):
                                  switches=self.topo.switches(),
                                  links=self.topo.links() )
         for node in nodes:
-            config = self.topo.node_info[ node ]
+            config = self.topo.nodeInfo( node )
             # keep local server name consistent accross nodes
             if 'server' in config.keys() and config[ 'server' ] == None:
                 config[ 'server' ] = 'localhost'
