@@ -53,8 +53,8 @@ class DemoCLI( CLI ):
         pos = nx.graphviz_layout( g )
         opts = { 'ax': None, 'font_weight': 'bold',
 		 'width': 2, 'edge_color': 'darkblue' }
-        hcolors = [ color[ h.server ] for h in hosts ]
-        scolors = [ color[ s.server ] for s in switches ]
+        hcolors = [ color[ getattr( h, 'server', 'localhost' ) ] for h in hosts ]
+        scolors = [ color[ getattr( s, 'server', 'localhost' ) ] for s in switches ]
         nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800, label='host',
                           node_color=hcolors, node_shape='s', **opts )
         nx.draw_networkx( g, pos=pos, nodelist=switches, node_size=1000,
