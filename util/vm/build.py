@@ -333,9 +333,11 @@ skipx
 
 # Tell the Ubuntu/Debian installer to stop asking stupid questions
 
-PreseedText = """
-d-i mirror/country string manual
-d-i mirror/http/hostname string mirrors.kernel.org
+PreseedText = ( """
+"""
+#d-i mirror/country string manual
+#d-i mirror/http/hostname string mirrors.kernel.org
+"""
 d-i mirror/http/directory string /ubuntu
 d-i mirror/http/proxy string
 d-i partman/confirm_write_new_label boolean true
@@ -345,7 +347,7 @@ d-i partman/confirm_nooverwrite boolean true
 d-i user-setup/allow-password-weak boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
-"""
+""" )
 
 def makeKickstartFloppy():
     "Create and return kickstart floppy, kickstart, preseed"
