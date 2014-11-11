@@ -490,21 +490,21 @@ def login( vm, user='mininet', password='mininet' ):
 def removeNtpd( vm, prompt=Prompt, ntpPackage='ntp' ):
     "Remove ntpd and set clock immediately"
     log( '* Removing ntpd' )
-    vm.sendline( 'sudo apt-get -qy remove ' + ntpPackage )
+    vm.sendline( 'sudo -n apt-get -qy remove ' + ntpPackage )
     vm.expect( prompt )
     # Try to make sure that it isn't still running
-    vm.sendline( 'sudo pkill ntpd' )
+    vm.sendline( 'sudo -n pkill ntpd' )
     vm.expect( prompt )
     log( '* Getting seconds since epoch from this server' )
     # Note r'date +%s' specifies a format for 'date', not python!
     seconds = int( run( r'date +%s' ) )
     log( '* Setting VM clock' )
-    vm.sendline( 'sudo date -s @%d' % seconds )
+    vm.sendline( 'sudo -n date -s @%d' % seconds )
 
 
 def sanityTest( vm ):
     "Run Mininet sanity test (pingall) in vm"
-    vm.sendline( 'sudo mn --test pingall' )
+    vm.sendline( 'sudo -n mn --test pingall' )
     if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
         log( '* Sanity check OK' )
     else:
@@ -516,9 +516,9 @@ def sanityTest( vm ):
 def coreTest( vm, prompt=Prompt ):
     "Run core tests (make test) in VM"
     log( '* Making sure cgroups are mounted' )
-    vm.sendline( 'sudo service cgroup-lite restart' )
+    vm.sendline( 'sudo -n service cgroup-lite restart' )
     vm.expect( prompt )
-    vm.sendline( 'sudo cgroups-mount' )
+    vm.sendline( 'sudo -n cgroups-mount' )
     vm.expect( prompt )
     log( '* Running make test' )
     vm.sendline( 'cd ~/mininet; sudo make test' )
@@ -537,7 +537,7 @@ def coreTest( vm, prompt=Prompt ):
 
 def installPexpect( vm, prompt=Prompt ):
     "install pexpect"
-    vm.sendline( 'sudo apt-get -qy install python-pexpect' )
+    vm.sendline( 'sudo -n apt-get -qy install python-pexpect' )
     vm.expect( prompt )
 
 
@@ -550,19 +550,19 @@ def noneTest( vm, prompt=Prompt ):
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
     installPexpect( vm, prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v -quick' )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v -quick' )
 
 
 def examplesfullTest( vm, prompt=Prompt ):
     "Full (slow) test of mininet examples"
     installPexpect( vm, prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v' )
 
 
 def walkthroughTest( vm, prompt=Prompt ):
     "Test mininet walkthrough"
     installPexpect( vm, prompt )
-    vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
+    vm.sendline( 'sudo -n python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
 
 def useTest( vm, prompt=Prompt ):
@@ -588,7 +588,7 @@ def checkOutBranch( vm, branch, prompt=Prompt ):
     vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
                  + branch + '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
-    vm.sendline( 'sudo make install' )
+    vm.sendline( 'sudo -n make install' )
 
 
 def interact( vm, tests, pre='', post='', prompt=Prompt ):
@@ -607,7 +607,7 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
                  'install-mininet-vm.sh' % branch )
     vm.expect( prompt )
     log( '* Running VM install script' )
-    installcmd = 'bash install-mininet-vm.sh'
+    installcmd = 'bash -v install-mininet-vm.sh'
     if Branch:
         installcmd += ' ' + Branch
     vm.sendline( installcmd )
@@ -910,7 +910,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
     if runFunction:
         runFunction( vm, **runArgs )
     log( '* Shutting down' )
-    vm.sendline( 'sudo shutdown -h now ' )
+    vm.sendline( 'sudo -n shutdown -h now ' )
     log( '* Waiting for shutdown' )
     vm.wait()
     if outputFile:

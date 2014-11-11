@@ -259,7 +259,8 @@ class MininetRunner( object ):
             CONTROLLERS[ 'default' ] = findController()
             if CONTROLLERS[ 'default' ] is None:
                 if self.options.switch == 'default':
-                    # Fall back to OVS Bridge, which does not use an OF controller
+                    # Fall back to OVS Bridge, which does not u
+                    se an OF controller
                     info( '*** No default OpenFlow controller found for default switch!\n' )
                     info( '*** Falling back to OVS Bridge\n' )
                     self.options.switch = 'ovsbr'
