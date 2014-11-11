@@ -162,8 +162,8 @@ def srun( cmd, **kwargs ):
 def depend():
     "Install package dependencies"
     log( '* Installing package dependencies' )
-    run( 'sudo apt-get -y update' )
-    run( 'sudo apt-get install -y'
+    run( 'sudo apt-get -qy update' )
+    run( 'sudo install -qy'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs dnsmasq curl'
          ' python-setuptools mtools zip' )
@@ -490,7 +490,7 @@ def login( vm, user='mininet', password='mininet' ):
 def removeNtpd( vm, prompt=Prompt, ntpPackage='ntp' ):
     "Remove ntpd and set clock immediately"
     log( '* Removing ntpd' )
-    vm.sendline( 'sudo apt-get -y remove ' + ntpPackage )
+    vm.sendline( 'sudo apt-get -qy remove ' + ntpPackage )
     vm.expect( prompt )
     # Try to make sure that it isn't still running
     vm.sendline( 'sudo pkill ntpd' )
@@ -534,28 +534,34 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'output:' )
             log( vm.before )
 
-def noneTest( vm ):
+
+def installPexpect( vm, prompt=Prompt ):
+    "install pexpect"
+    vm.sendline( 'sudo apt-get -qy install python-pexpect' )
+    vm.expect( prompt )
+
+
+def noneTest( vm, prompt=Prompt ):
     "This test does nothing"
+    installPexpect( vm, prompt )
     vm.sendline( 'echo' )
+
 
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
+    installPexpect( vm, prompt )
     vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v -quick' )
 
 
 def examplesfullTest( vm, prompt=Prompt ):
     "Full (slow) test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
+    installPexpect( vm, prompt )
     vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
 
 
 def walkthroughTest( vm, prompt=Prompt ):
     "Test mininet walkthrough"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
+    installPexpect( vm, prompt )
     vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
 
