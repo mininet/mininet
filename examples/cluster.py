@@ -125,21 +125,20 @@ class RemoteMixin( object ):
         self.server = server if server else 'localhost'
         self.serverIP = serverIP if serverIP else self.findServerIP( self.server )
         self.user = user if user else self.findUser()
+        self.controlPath = controlPath
+        self.splitInit = splitInit
         if self.user and self.server != 'localhost':
             self.dest = '%s@%s' % ( self.user, self.serverIP )
-            self.isRemote = True
-        else:
-            self.isRemote = False
-            self.dest = None
-        self.controlPath = controlPath
-        self.sshcmd = []
-        if hasattr( self, 'server' ) and self.isRemote:
             self.sshcmd = [ 'sudo', '-E', '-u', self.user ] + self.sshbase
             if self.controlPath:
                 self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
-                                               '-o', 'ControlMaster=auto' ]
+                                 '-o', 'ControlMaster=auto' ]
             self.sshcmd = self.sshcmd + [ self.dest ]
-        self.splitInit = splitInit
+            self.isRemote = True
+        else:
+            self.dest = None
+            self.sshcmd = []
+            self.isRemote = False
         super( RemoteMixin, self ).__init__( name, **kwargs )
 
     @staticmethod
