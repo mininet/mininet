@@ -254,8 +254,7 @@ class MininetRunner( object ):
     def begin( self ):
         "Create and run mininet."
 
-        global CLI
-        
+
         if self.options.clean:
             cleanup()
             exit()
@@ -303,11 +302,11 @@ class MininetRunner( object ):
             print "Please specify --innamespace OR --cluster"
             exit()
         Net = MininetWithControlNet if inNamespace else Mininet
+        cli = ClusterCLI if cluster else CLI
         if cluster:
             warn( '*** WARNING: Experimental cluster mode!\n'
               '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
             host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
-            CLI = ClusterCLI
             Net = partial( MininetCluster, servers=cluster.split( ',' ),
                            placement=PLACEMENT[ self.options.placement ] )
 
@@ -325,7 +324,7 @@ class MininetRunner( object ):
             nat.configDefault()
 
         if self.options.pre:
-            CLI( mn, script=self.options.pre )
+            cli( mn, script=self.options.pre )
 
         test = self.options.test
         test = ALTSPELLING.get( test, test )
