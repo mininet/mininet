@@ -32,7 +32,7 @@ from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo, TorusTopo
-from mininet.util import custom, customConstructor
+from mininet.util import customConstructor
 from mininet.util import buildTopo
 
 from functools import partial
@@ -67,8 +67,8 @@ SWITCHES = { 'user': UserSwitch,
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
-          'rt': custom( CPULimitedHost, sched='rt' ),
-          'cfs': custom( CPULimitedHost, sched='cfs' ) }
+          'rt': partial( CPULimitedHost, sched='rt' ),
+          'cfs': partial( CPULimitedHost, sched='cfs' ) }
 
 CONTROLLERDEF = 'default'
 CONTROLLERS = { 'ref': Controller,
@@ -118,32 +118,6 @@ def version( *_args ):
     print "%s" % VERSION
     exit()
 
-def custom( option, opt_str, value, parser, *args, **kwargs ):
-    """Parse custom file and add params.
-       option: option e.g. --custom
-       opt_str: option string e.g. --custom
-       value: the value the follows the option
-       parser: option parser instance
-       args: empty tuple
-       kwargs: dict that contains { self : MininetRunner reference }"""
-
-    self = kwargs['self']
-    files = []
-    if os.path.isfile( value ):
-        # accept any single file (including those with commas)
-        files.append( value )
-    else:
-        # accept a comma-separated list of filenames
-        files += value.split(',')
-
-    for fileName in files:
-        customs = {}
-        if os.path.isfile( fileName ):
-            execfile( fileName, customs, customs )
-            for name, val in customs.iteritems():
-                self.setCustom( name, val )
-        else:
-            raise Exception( 'could not find custom file: %s' % fileName )
 
 class MininetRunner( object ):
     "Build, setup, and run Mininet."
@@ -157,6 +131,29 @@ class MininetRunner( object ):
         self.parseArgs()
         self.setup()
         self.begin()
+
+    def custom( self, option, opt_str, value, parser ):
+        """Parse custom file and add params.
+           option: option e.g. --custom
+           opt_str: option string e.g. --custom
+           value: the value the follows the option
+           parser: option parser instance"""
+        files = []
+        if os.path.isfile( value ):
+            # Accept any single file (including those with commas)
+            files.append( value )
+        else:
+            # Accept a comma-separated list of filenames
+            files += value.split(',')
+        
+        for fileName in files:
+            customs = {}
+            if os.path.isfile( fileName ):
+                execfile( fileName, customs, customs )
+                for name, val in customs.iteritems():
+                    self.setCustom( name, val )
+            else:
+                raise Exception( 'could not find custom file: %s' % fileName )
 
     def setCustom( self, name, value ):
         "Set custom parameters for MininetRunner."
@@ -191,9 +188,9 @@ class MininetRunner( object ):
 
         opts.add_option( '--clean', '-c', action='store_true',
                          default=False, help='clean and exit' )
-        opts.add_option( '--custom', action='callback', callback=custom,
-                         type='string', callback_kwargs={ 'self' : self },
-                         help='read custom classes or params from .py file' )
+        opts.add_option( '--custom', action='callback',
+                         callback=partial( self.custom, self=self ),
+                         type='string', help='read custom classes or params from .py file(s)' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
                          help='|'.join( TESTS ) )
