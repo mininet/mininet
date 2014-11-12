@@ -53,19 +53,28 @@ like to contribute an installation script, we would welcome it!)
 
    Note that the above git command will check out the latest and greatest
    Mininet (which we recommend!) If you want to run the last tagged/released
-   version of Mininet, use:
+   version of Mininet, you can look at the release tags using
+
+        cd mininet
+        git tag
+
+    and then
 
         git clone git://github.com/mininet/mininet
-        git checkout -b 2.1.0 2.1.0
+        git checkout <release tag>
 
-   If you are running Ubuntu, you may be able to use our handy
-   `install.sh` script, which is in `mininet/util`.
+   where <release tag> is the release you want to check out.
+
+   If you are running Ubuntu, Debian, or Fedora, you may be able to use
+   our handy `install.sh` script, which is in `mininet/util`.
 
    *WARNING: USE AT YOUR OWN RISK!*
 
    `install.sh` is a bit intrusive and may possibly damage your OS
    and/or home directory, by creating/modifying several directories
-   such as `mininet`, `openflow`, `oftest`, `pox`, etc..
+   such as `mininet`, `openflow`, `oftest`, `pox`, etc.. We recommend
+   trying it in a VM before trying it on a system you use from day to day.
+
    Although we hope it won't do anything completely terrible, you may
    want to look at the script before you run it, and you should make
    sure your system and home directory are backed up just in case!
