@@ -118,6 +118,33 @@ def version( *_args ):
     print "%s" % VERSION
     exit()
 
+def custom( option, opt_str, value, parser, *args, **kwargs ):
+    """Parse custom file and add params.
+       option: option e.g. --custom
+       opt_str: option string e.g. --custom
+       value: the value the follows the option
+       parser: option parser instance
+       args: empty tuple
+       kwargs: dict that contains { self : MininetRunner reference }"""
+
+    self = kwargs['self']
+    files = []
+    if os.path.isfile( value ):
+        # accept any single file (including those with commas)
+        files.append( value )
+    else:
+        # accept a comma-separated list of filenames
+        files += value.split(',')
+
+    for fileName in files:
+        customs = {}
+        if os.path.isfile( fileName ):
+            execfile( fileName, customs, customs )
+            for name, val in customs.iteritems():
+                self.setCustom( name, val )
+        else:
+            raise Exception( 'could not find custom file: %s' % fileName )
+
 class MininetRunner( object ):
     "Build, setup, and run Mininet."
 
@@ -144,26 +171,9 @@ class MininetRunner( object ):
             # Add or modify global variable or class
             globals()[ name ] = value
 
-    def parseCustomFile( self, fileName ):
-        "Parse custom file and add params before parsing cmd-line options."
-        customs = {}
-        if os.path.isfile( fileName ):
-            execfile( fileName, customs, customs )
-            for name, val in customs.iteritems():
-                self.setCustom( name, val )
-        else:
-            raise Exception( 'could not find custom file: %s' % fileName )
-
     def parseArgs( self ):
         """Parse command-line args and return options object.
            returns: opts parse options dict"""
-        if '--custom' in sys.argv:
-            index = sys.argv.index( '--custom' )
-            if len( sys.argv ) > index + 1:
-                filename = sys.argv[ index + 1 ]
-                self.parseCustomFile( filename )
-            else:
-                raise Exception( 'Custom file name not found' )
 
         desc = ( "The %prog utility creates Mininet network from the\n"
                  "command line. It can create parametrized topologies,\n"
@@ -181,9 +191,9 @@ class MininetRunner( object ):
 
         opts.add_option( '--clean', '-c', action='store_true',
                          default=False, help='clean and exit' )
-        opts.add_option( '--custom', type='string', default=None,
-                         help='read custom topo and node params from .py' +
-                         'file' )
+        opts.add_option( '--custom', action='callback', callback=custom,
+                         type='string', callback_kwargs={ 'self' : self },
+                         help='read custom classes or params from .py file' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
                          help='|'.join( TESTS ) )
@@ -215,7 +225,8 @@ class MininetRunner( object ):
         opts.add_option( '--nat', action='store_true',
                          default=False, help="adds a NAT to the topology "
                          "that connects Mininet to the physical network" )
-        opts.add_option( '--version', action='callback', callback=version )
+        opts.add_option( '--version', action='callback', callback=version,
+                         help='prints the version and exits' )
         opts.add_option( '--cluster', type='string', default=None,
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
