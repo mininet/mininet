@@ -534,6 +534,8 @@ class Node( object ):
            param: arg=value (ignore if value=None)
            value may also be list or dict"""
         name, value = param.items()[ 0 ]
+        if value is None:
+            return
         f = getattr( self, method, None )
         if not f:
             return
