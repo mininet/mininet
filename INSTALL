@@ -162,10 +162,8 @@ like to contribute an installation script, we would welcome it!)
 
    * A Linux kernel compiled with network namespace support enabled
 
-   * An OpenFlow implementation (either the reference user or kernel
-     space implementations, or Open vSwitch.) Appropriate kernel
-     modules (e.g. tun and ofdatapath for the reference kernel
-     implementation) must be loaded.
+   * An compatible software switch such as Open vSwitch or
+     the Linux bridge.
 
    * Python, `bash`, `ping`, `iperf`, etc.
 
