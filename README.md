@@ -84,14 +84,15 @@ several new features, including:
 * An improved MiniEdit GUI (`examples/miniedit.py`) - thanks to
   Gregory Gee
 
-* Experimental cluster support - consult the [documentation][1] for details,
+* Support for multiple `--custom` arguments to `mn`
+
+* Experimental cluster support - consult the 
+  [documentation](http://docs.mininet.org) for details -
   as well as `examples/cluster.py` and an experimental `--cluster`
   option for topologies built with the default `Host` and `OVSSwitch`
   classes:
 
   `mn --cluster localhost,server1,server2`
-
-[1]: http://docs.mininet.org
 
 Note that examples contain experimental features which might
 "graduate" into mainline Mininet in the future, but they should 
