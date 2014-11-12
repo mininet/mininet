@@ -113,18 +113,21 @@ class RemoteMixin( object ):
                 '-o', 'ForwardAgent=yes', '-tt' ]
 
     def __init__( self, name, server='localhost', user=None, serverIP=None,
-                  controlPath='/tmp/mn-%r@%h:%p', splitInit=False, **kwargs):
+                  controlPath=False, splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
            server: remote server (optional)
            user: user on remote server (optional)
-           controlPath: ssh control path template (optional)
+           controlPath: specify shared ssh control path (optional)
            splitInit: split initialization?
            **kwargs: see Node()"""
         # We connect to servers by IP address
         self.server = server if server else 'localhost'
         self.serverIP = serverIP if serverIP else self.findServerIP( self.server )
         self.user = user if user else self.findUser()
+        if controlPath is True:
+            # Set a default control path for shared SSH connections
+            controlPath = '/tmp/mn-%r@%h:%p'
         self.controlPath = controlPath
         self.splitInit = splitInit
         if self.user and self.server != 'localhost':

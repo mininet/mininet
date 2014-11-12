@@ -254,7 +254,6 @@ class MininetRunner( object ):
     def begin( self ):
         "Create and run mininet."
 
-
         if self.options.clean:
             cleanup()
             exit()
