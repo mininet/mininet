@@ -242,7 +242,7 @@ class Topo( object ):
             sport: optional source port (otherwise use lowest src port)
             returns: tuple (sport, dport), where
                 sport = port on source switch leading to the destination switch
-                dport = port on destination switch leading to the source switch
+                dport = port on destination switch leading to the source switch
             Note that you can also look up ports using linkInfo()"""
         # A bit ugly and slow vs. single-link implementation ;-(
         ports = [ ( sport, entry[ 1 ] )
