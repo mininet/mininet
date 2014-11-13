@@ -60,7 +60,6 @@ like to contribute an installation script, we would welcome it!)
 
     and then
 
-        git clone git://github.com/mininet/mininet
         git checkout <release tag>
 
    where <release tag> is the release you want to check out.
