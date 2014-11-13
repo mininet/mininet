@@ -140,6 +140,9 @@ function mn_deps {
 function mn_dev {
     echo "Installing Mininet developer dependencies"
     $install doxygen doxypy texlive-fonts-recommended
+    if ! $install doxygen-latex; then
+        echo "doxygen-latex not needed"
+    fi
 }
 
 # The following will cause a full OF install, covering:
