@@ -686,6 +686,51 @@ function vm_clean {
 
 }
 
+# Install MUL Controller for OpenFlow 1.3
+function openmul {
+    echo "Installing MUL Controller..."
+
+    git clone https://github.com/openmul/openmul.git
+
+    # Install MUL Controller deps:
+    echo "Install Dependency of MUL Controller..."
+    if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
+        $install flex bison build-essential expect g++-multilib \
+                 tofrodos zlib1g-dev gawk libffi-dev gettext python python-all-dev \
+                 swig libcurl4-gnutls-dev libglib2.0-dev libevent-dev libssl-dev autoconf libtool
+
+        $install python-pip
+        sudo pip install --upgrade pip
+
+        cd openmul
+
+        sudo pip install -r python_req.txt
+        $install --force-yes python-daemon
+
+    elif [ "$DIST" = "Fedora" ]; then
+        $install flex bison yumex expect \
+                 tofrodos zlib-devel gawk libffi-devel gettext python python-devel \
+                 swig curl-devel glib2-devel libevent-devel openssl-devel autoconf libtool
+
+        $install python-pip
+        sudo pip install --upgrade pip
+
+        cd openmul
+
+        sudo pip install -r python_req.txt
+        $install python-daemon
+
+    else
+        echo "Distribution other than Ubuntu/Debian/Fedora..."
+    fi
+
+    # Build
+    ./autogen.sh
+    CFLAGS=`pkg-config --cflags glib-2.0` ./configure --with-vty=yes
+    make
+    sudo make install
+}
+
 function usage {
     printf '\nUsage: %s [-abcdfhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
@@ -718,6 +763,7 @@ function usage {
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
+    printf -- ' -M: -installs MUL Controller\n' >&2
     exit 2
 }
 
@@ -727,7 +773,7 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION
+    while getopts 'abcdefhikmnprs:tvV:wxy03M' OPTION
     do
       case $OPTION in
       a)    all;;
@@ -763,6 +809,7 @@ else
       y)    ryu;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
+      M)    openmul;;
       ?)    usage;;
       esac
     done

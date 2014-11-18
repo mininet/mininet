@@ -1277,10 +1277,11 @@ class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
-    def __init__( self, name, inNamespace=False, command='controller',
+    def __init__( self, name, inNamespace=False, command='controller', auxCommand=None,
                   cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
                   port=6633, protocol='tcp', **params ):
         self.command = command
+        self.auxCommand = auxCommand
         self.cargs = cargs
         self.cdir = cdir
         self.ip = ip
@@ -1312,17 +1313,23 @@ class Controller( Node ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
         pathCheck( self.command )
+        if self.auxCommand is not None:                                                                          |  ----------------------------------------------------------------------------------------------------------------
+            pathCheck( self.auxCommand )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.command + ' ' + self.cargs % self.port +
                   ' 1>' + cout + ' 2>' + cout + ' &' )
+        if self.auxCommand is not None:                                                                          |  ----------------------------------------------------------------------------------------------------------------
+            self.cmd( self.auxCommand + ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
         self.cmd( 'wait %' + self.command )
+        if self.auxCommand is not None:                                                                          |          self.cmd( 'wait %' + self.command )                                                                     
+            self.cmd( 'kill %' + self.auxCommand )
         self.terminate()
 
     def IP( self, intf=None ):
@@ -1398,6 +1405,27 @@ class RYU( Controller ):
                          ' '.join( ryuArgs ),
                          cdir=ryuCoreDir,
                          **kwargs )
+                         
+class MUL( Controller ):
+    "Controller to run a MUL application."
+
+    def __init__( self, name, *mulArgs, **kwargs ):
+        """Init.
+           name: name to give controller
+           mulArgs: arguments (strings) to pass to MUL"""
+        if not mulArgs:
+            warn( 'warning: no MUL modules specified; '
+                  'running packetdump only\n' )
+            mulArgs = [ 'packetdump' ]
+        elif type( mulArgs ) not in ( list, tuple ):
+            mulArgs = [ mulArgs ]
+
+        Controller.__init__( self, name,
+                             command='mul',
+                             auxCommand='mull2sw',
+                             cargs='-P %s ' +
+                             ' '.join( mulArgs ),
+                             **kwargs )
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
