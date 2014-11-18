@@ -255,6 +255,13 @@ class RemoteMixin( object ):
         return super( RemoteMixin, self).addIntf( *args,
                         moveIntfFn=RemoteLink.moveIntf, **kwargs )
 
+    def cleanup( self ):
+        "Help python collect its garbage."
+        # Intfs may end up in root NS
+        for intfName in self.intfNames():
+            if self.name in intfName:
+                self.rcmd( 'ip link del ' + intfName )
+        self.shell = None
 
 class RemoteNode( RemoteMixin, Node ):
     "A node on a remote server"
