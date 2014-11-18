@@ -189,7 +189,7 @@ class MininetRunner( object ):
         opts.add_option( '--clean', '-c', action='store_true',
                          default=False, help='clean and exit' )
         opts.add_option( '--custom', action='callback',
-                         callback=partial( self.custom, self=self ),
+                         callback=self.custom,
                          type='string', help='read custom classes or params from .py file(s)' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
