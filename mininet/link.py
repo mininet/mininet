@@ -26,6 +26,7 @@ Link: basic link class for creating veth pairs
 
 from mininet.log import info, error, debug
 from mininet.util import makeIntfPair, quietRun
+import mininet.node
 import re
 
 class Intf( object ):
@@ -452,6 +453,38 @@ class Link( object ):
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
+
+
+class OVSIntf( Intf ):
+    "Patch interface on an OVSSwitch"
+
+    def ifconfig( self, cmd ):
+        if cmd == 'up':
+            "OVSIntf is always up"
+            return
+        else:
+            raise Exception( 'OVSIntf cannot do ifconfig ' + cmd )
+
+
+class OVSLink( Link ):
+    "Link that makes patch links between OVSSwitches"
+
+    def __init__( self, node1, node2, **kwargs ):
+        "See Link.__init__() for options"
+        self.isPatchLink = False
+        if ( type( node1 ) is mininet.node.OVSSwitch and
+             type( node2 ) is mininet.node.OVSSwitch ):
+             self.isPatchLink = True
+             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
+        Link.__init__( self, node1, node2, **kwargs )
+
+    def makeIntfPair( self, *args, **kwargs ):
+        "Usually delegated to OVSSwitch"
+        if self.isPatchLink:
+            return None, None
+        else:
+            return Link.makeIntfPair( *args, **kwargs )
+
 
 class TCLink( Link ):
     "Link with symmetric TC interfaces configured via opts"

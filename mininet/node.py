@@ -58,7 +58,7 @@ from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
-from mininet.link import Link, Intf, TCIntf
+from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
 
@@ -1145,6 +1145,18 @@ class OVSSwitch( Switch ):
                 return True
         return self.failMode == 'standalone'
 
+    @staticmethod
+    def patchOpts( intf ):
+        "Return OVS patch port options (if any) for intf"
+        if type( intf ) is not OVSIntf:
+            # Ignore if it's not a patch link
+            return ''
+        intf1, intf2 = intf.link.intf1, intf.link.intf2
+        peer = intf1 if intf1 != intf else intf2
+        return ( '-- set Interface %s type=patch '
+                 '-- set Interface %s options:peer=%s ' %
+                 ( intf, intf, peer ) )
+
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
@@ -1157,6 +1169,7 @@ class OVSSwitch( Switch ):
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
                           '-- set Interface %s ' % intf +
                           'ofport_request=%s ' % self.ports[ intf ]
+                          + self.patchOpts( intf )
                           for intf in self.intfList()
                           if self.ports[ intf ] and not intf.IP() )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
