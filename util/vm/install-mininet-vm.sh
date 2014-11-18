@@ -6,7 +6,7 @@
 #
 # optional argument: Mininet branch to install
 set -e
-echo `whoami` ALL=NOPASSWD: ALL | sudo tee -a /etc/sudoers > /dev/null
+echo `whoami` ALL=(ALL) NOPASSWD:ALL | sudo tee -a /etc/sudoers > /dev/null
 sudo sed -i -e 's/Default/#Default/' /etc/sudoers
 echo mininet-vm | sudo tee /etc/hostname > /dev/null
 sudo sed -i -e 's/ubuntu/mininet-vm/g' /etc/hosts
