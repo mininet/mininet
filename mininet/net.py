@@ -265,7 +265,7 @@ class Mininet( object ):
         return controller_new
 
     def addNAT( self, name='nat0', connect=True, inNamespace=False, **params ):
-        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace, 
+        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace,
                             subnet=self.ipBase, **params )
         # find first switch and create link
         if connect:
@@ -326,7 +326,7 @@ class Mininet( object ):
         "Return a random, non-multicast MAC address"
         return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  |
                             0x020000000000 )
-    
+
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
         """"Add a link from node1 to node2
@@ -386,7 +386,7 @@ class Mininet( object ):
 
         if not self.controllers and self.controller:
             # Add a default controller
-            info( '** No controller defined, adding default controller\n' )
+            info( '*** Adding controller\n' )
             classes = self.controller
             if type( classes ) is not list:
                 classes = [ classes ]
