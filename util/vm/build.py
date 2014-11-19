@@ -840,11 +840,13 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     os.chdir( '..' )
 
 
-def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
+def runTests( vm, tests=None, pre='', post='', prompt=Prompt, uninstallNtpd=False ):
     "Run tests (list) in vm (pexpect object)"
     # We disable ntpd and set the time so that ntpd won't be
-    # messing with the time during tests
-    removeNtpd( vm )
+    # messing with the time during tests. Set to true for a COW
+    # disk and False for a non-COW disk.
+    if uninstallNtpd:
+        removeNtpd( vm )
     vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
@@ -1021,7 +1023,8 @@ def parseArgs():
             exit( 1 )
     for image in args.image:
         bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,
-                    post=args.post, memory=args.memory, outputFile=args.out )
+                    post=args.post, memory=args.memory, outputFile=args.out,
+                    uninstallNtpd=True  )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
