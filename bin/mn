@@ -338,13 +338,13 @@ class MininetRunner( object ):
             mn.ping()
             mn.iperf()
         elif test == 'cli':
-            CLI( mn )
+            cli( mn )
         elif test != 'build':
             mn.waitConnected()
             getattr( mn, test )()
 
         if self.options.post:
-            CLI( mn, script=self.options.post )
+            cli( mn, script=self.options.post )
 
         mn.stop()
 
