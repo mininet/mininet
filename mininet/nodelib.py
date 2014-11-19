@@ -6,6 +6,8 @@ This contains additional Node types which you may find to be useful.
 
 from mininet.node import Node, Switch
 from mininet.log import setLogLevel, info
+from mininet.moduledeps import pathCheck
+
 
 class LinuxBridge( Switch ):
     "Linux Bridge (with optional spanning tree)"
@@ -31,6 +33,7 @@ class LinuxBridge( Switch ):
             return True
     
     def start( self, controllers ):
+        "Start Linux bridge"
         self.cmd( 'ifconfig', self, 'down' )
         self.cmd( 'brctl delbr', self )
         self.cmd( 'brctl addbr', self )
@@ -43,8 +46,19 @@ class LinuxBridge( Switch ):
         self.cmd( 'ifconfig', self, 'up' )
 
     def stop( self ):
+        "Stop Linux bridge"
         self.cmd( 'ifconfig', self, 'down' )
         self.cmd( 'brctl delbr', self )
+
+    def dpctl( self, *args ):
+        "Run brctl command"
+        return self.cmd( 'brctl', *args )
+
+    @classmethod
+    def setup( cls ):
+        "Make sure our class dependencies are available"
+        pathCheck( 'brctl', moduleName='bridge-utils' )
+
 
 class NAT( Node ):
     """NAT: Provides connectivity to external network"""
