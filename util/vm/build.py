@@ -163,7 +163,7 @@ def depend():
     "Install package dependencies"
     log( '* Installing package dependencies' )
     run( 'sudo apt-get -qy update' )
-    run( 'sudo install -qy'
+    run( 'sudo apt-get -qy install'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs dnsmasq curl'
          ' python-setuptools mtools zip' )
