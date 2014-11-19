@@ -847,7 +847,7 @@ def runTests( vm, tests=None, pre='', post='', prompt=Prompt, uninstallNtpd=Fals
     # disk and False for a non-COW disk.
     if uninstallNtpd:
         removeNtpd( vm )
-    vm.expect( prompt )
+        vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
