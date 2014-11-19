@@ -687,6 +687,7 @@ function vm_clean {
 function openmul {
     echo "Installing MUL Controller..."
 
+    cd $BUILD_DIR/
     git clone https://github.com/openmul/openmul.git
 
     # Install MUL Controller deps:

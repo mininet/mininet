@@ -27,7 +27,7 @@ from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            RYU, NOX, RemoteController, DefaultController,
                            UserSwitch, OVSSwitch,
-                           OVSLegacyKernelSwitch, IVSSwitch )
+                           OVSLegacyKernelSwitch, IVSSwitch, MUL )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
@@ -72,6 +72,7 @@ CONTROLLERDEF = 'default'
 CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
+                'mulc' : MUL,
                 'remote': RemoteController,
                 'default': DefaultController,
                 'ryu': RYU,

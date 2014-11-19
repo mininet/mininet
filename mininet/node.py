@@ -1284,14 +1284,14 @@ class Controller( Node ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
         pathCheck( self.command )
-        if self.auxCommand is not None:                                                                          |  ----------------------------------------------------------------------------------------------------------------
+        if self.auxCommand is not None:
             pathCheck( self.auxCommand )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.command + ' ' + self.cargs % self.port +
                   ' 1>' + cout + ' 2>' + cout + ' &' )
-        if self.auxCommand is not None:                                                                          |  ----------------------------------------------------------------------------------------------------------------
+        if self.auxCommand is not None:
             self.cmd( self.auxCommand + ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
@@ -1299,8 +1299,9 @@ class Controller( Node ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
         self.cmd( 'wait %' + self.command )
-        if self.auxCommand is not None:                                                                          |          self.cmd( 'wait %' + self.command )                                                                     
+        if self.auxCommand is not None:
             self.cmd( 'kill %' + self.auxCommand )
+            self.cmd( 'wait %' + self.auxCommand )
         self.terminate()
 
     def IP( self, intf=None ):
@@ -1380,20 +1381,17 @@ class RYU( Controller ):
 class MUL( Controller ):
     "Controller to run a MUL application."
 
-    def __init__( self, name, *mulArgs, **kwargs ):
+    def __init__( self, name, port=6633, *mulArgs, **kwargs ):
         """Init.
            name: name to give controller
            mulArgs: arguments (strings) to pass to MUL"""
-        if not mulArgs:
-            warn( 'warning: no MUL modules specified; '
-                  'running packetdump only\n' )
-            mulArgs = [ 'packetdump' ]
-        elif type( mulArgs ) not in ( list, tuple ):
+        if type( mulArgs ) not in ( list, tuple ):
             mulArgs = [ mulArgs ]
 
         Controller.__init__( self, name,
                              command='mul',
                              auxCommand='mull2sw',
+                             port=port,
                              cargs='-P %s ' +
                              ' '.join( mulArgs ),
                              **kwargs )
