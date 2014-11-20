@@ -1208,7 +1208,7 @@ class OVSBridge( OVSSwitch ):
 class IVSSwitch(Switch):
     """IVS virtual switch"""
 
-    def __init__( self, name, verbose=True, **kwargs ):
+    def __init__( self, name, verbose=False, **kwargs ):
         Switch.__init__( self, name, **kwargs )
         self.verbose = verbose
 
