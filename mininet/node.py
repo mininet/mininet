@@ -1248,11 +1248,10 @@ class Controller( Node ):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
 
-    def __init__( self, name, inNamespace=False, command='controller', auxCommand=None,
+    def __init__( self, name, inNamespace=False, command='controller',
                   cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
                   port=6633, protocol='tcp', **params ):
         self.command = command
-        self.auxCommand = auxCommand
         self.cargs = cargs
         self.cdir = cdir
         self.ip = ip
@@ -1284,8 +1283,6 @@ class Controller( Node ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
         pathCheck( self.command )
-        if self.auxCommand is not None:
-            pathCheck( self.auxCommand )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
@@ -1299,9 +1296,6 @@ class Controller( Node ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
         self.cmd( 'wait %' + self.command )
-        if self.auxCommand is not None:
-            self.cmd( 'kill %' + self.auxCommand )
-            self.cmd( 'wait %' + self.auxCommand )
         self.terminate()
 
     def IP( self, intf=None ):
@@ -1388,13 +1382,31 @@ class MUL( Controller ):
         if type( mulArgs ) not in ( list, tuple ):
             mulArgs = [ mulArgs ]
 
+        self.auxCommand = 'mull2sw'
         Controller.__init__( self, name,
                              command='mul',
-                             auxCommand='mull2sw',
                              port=port,
                              cargs='-P %s ' +
                              ' '.join( mulArgs ),
                              **kwargs )
+
+    def start( self ):
+        """Start <controller> <args> on MUL controller.
+           """
+        cout = '/tmp/' + self.name + '.log'
+        if self.auxCommand is not None:
+            pathCheck( self.auxCommand )
+            self.cmd( self.auxCommand + ' 1>' + cout + ' 2>' + cout + '&' )
+        Controller.start( self )
+
+    def stop( self ):
+        "Stop MUL controller."
+        self.cmd( 'kill %' + self.command )
+        self.cmd( 'wait %' + self.command )
+        if self.auxCommand is not None:
+            self.cmd( 'kill %' + self.auxCommand )
+            self.cmd( 'wait %' + self.auxCommand )
+        self.terminate()
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
