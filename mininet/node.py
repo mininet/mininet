@@ -1288,8 +1288,6 @@ class Controller( Node ):
             self.cmd( 'cd ' + self.cdir )
         self.cmd( self.command + ' ' + self.cargs % self.port +
                   ' 1>' + cout + ' 2>' + cout + ' &' )
-        if self.auxCommand is not None:
-            self.cmd( self.auxCommand + ' 1>' + cout + ' 2>' + cout + '&' )
         self.execed = False
 
     def stop( self ):
