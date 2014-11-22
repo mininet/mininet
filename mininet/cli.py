@@ -367,7 +367,7 @@ class CLI( Cmd ):
             if command == 'start':
                 self.mn.get( sw ).start( self.mn.controllers )
             elif command == 'stop':
-                self.mn.get( sw ).stop( False )
+                self.mn.get( sw ).stop( deleteIntfs=False )
             else:
                 error( 'invalid command: switch <switch name> {start, stop}\n' )
 
