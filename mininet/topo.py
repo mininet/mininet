@@ -45,7 +45,7 @@ class MultiGraph( object ):
         entry = self.edge[ dst ][ src ] = self.edge[ src ][ dst ]
         # If no key, pick next ordinal number
         if key is None:
-            keys = [ k for k in entry.keys() if type( k ) is int ]
+            keys = [ k for k in entry.keys() if isinstance( k, int ) ]
             key = max( [ 0 ] + keys ) + 1
         entry[ key ] = attr_dict
         return key

@@ -388,7 +388,7 @@ def sysctlTestAndSet( name, limit ):
     #read limit
     with open( name, 'r' ) as readFile:
         oldLimit = readFile.readline()
-        if type( limit ) is int:
+        if isinstance( limit, int ):
             #compare integer limits before overriding
             if int( oldLimit ) < limit:
                 with open( name, 'w' ) as writeFile:

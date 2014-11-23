@@ -258,7 +258,7 @@ class Node( object ):
         assert not self.waiting
         printPid = kwargs.get( 'printPid', True )
         # Allow sendCmd( [ list ] )
-        if len( args ) == 1 and type( args[ 0 ] ) is list:
+        if len( args ) == 1 and isinstance( args[ 0 ], list ):
             cmd = args[ 0 ]
         # Allow sendCmd( cmd, arg1, arg2... )
         elif len( args ) > 0:
@@ -352,7 +352,7 @@ class Node( object ):
                      [ 'mnexec', '-da', str( self.pid ) ] }
         defaults.update( kwargs )
         if len( args ) == 1:
-            if type( args[ 0 ] ) is list:
+            if isinstance( args[ 0 ], list ):
                 # popen([cmd, arg1, arg2...])
                 cmd = args[ 0 ]
             elif isinstance( args[ 0 ], basestring ):
@@ -539,9 +539,9 @@ class Node( object ):
         f = getattr( self, method, None )
         if not f:
             return
-        if type( value ) is list:
+        if isinstance( value, list ):
             result = f( *value )
-        elif type( value ) is dict:
+        elif isinstance( valude, dict ):
             result = f( **value )
         else:
             result = f( value )
@@ -774,7 +774,7 @@ class CPULimitedHost( Host ):
         "Specify (real) cores that our cgroup can run on"
         if not cores:
             return
-        if type( cores ) is list:
+        if isinstance( cores, list ):
             cores = ','.join( [ str( c ) for c in cores ] )
         self.cgroupSet( resource='cpuset', param='cpus',
                         value=cores )
@@ -937,7 +937,7 @@ class UserSwitch( Switch ):
            over tc queuing disciplines. To resolve the conflict,
            we re-create the user switch's configuration, but as a
            leaf of the TCIntf-created configuration."""
-        if type( intf ) is TCIntf:
+        if isinstance( intf, TCIntf ):
             ifspeed = 10000000000 # 10 Gbps
             minspeed = ifspeed * 0.001
 
@@ -1097,7 +1097,7 @@ class OVSSwitch( Switch ):
         """Unfortunately OVS and Mininet are fighting
            over tc queuing disciplines. As a quick hack/
            workaround, we clear OVS's and reapply our own."""
-        if type( intf ) is TCIntf:
+        if isinstance( intf, TCIntf ):
             intf.config( **intf.params )
 
     def attach( self, intf ):

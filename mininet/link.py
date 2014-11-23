@@ -160,9 +160,9 @@ class Intf( object ):
         f = getattr( self, method, None )
         if not f or value is None:
             return
-        if type( value ) is list:
+        if isinstance( value, list ):
             result = f( *value )
-        elif type( value ) is dict:
+        elif isinstance( value, dict ):
             result = f( **value )
         else:
             result = f( value )
