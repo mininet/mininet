@@ -541,7 +541,7 @@ class Node( object ):
             return
         if isinstance( value, list ):
             result = f( *value )
-        elif isinstance( valude, dict ):
+        elif isinstance( value, dict ):
             result = f( **value )
         else:
             result = f( value )
