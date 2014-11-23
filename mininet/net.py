@@ -338,8 +338,8 @@ class Mininet( object ):
             params: additional link params (optional)
             returns: link object"""
         # Accept node objects or names
-        node1 = node1 if type( node1 ) != str else self[ node1 ]
-        node2 = node2 if type( node2 ) != str else self[ node2 ]
+        node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
+        node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
         options = dict( params )
         # Port is optional
         if port1 is not None:
@@ -388,7 +388,7 @@ class Mininet( object ):
             # Add a default controller
             info( '*** Adding controller\n' )
             classes = self.controller
-            if type( classes ) is not list:
+            if not isinstance( classes, list ):
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
                 # Allow Controller objects because nobody understands currying
@@ -808,9 +808,9 @@ class Mininet( object ):
         elif dst not in self.nameToNode:
             error( 'dst not in network: %s\n' % dst )
         else:
-            if type( src ) is str:
+            if isinstance( src, basestring ):
                 src = self.nameToNode[ src ]
-            if type( dst ) is str:
+            if isinstance( dst, basestring ):
                 dst = self.nameToNode[ dst ]
             connections = src.connectionsTo( dst )
             if len( connections ) == 0:

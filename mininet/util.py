@@ -549,7 +549,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
                 partial( quietRun, shell=True ) )
     if not run( 'which telnet' ):
         raise Exception('Could not find telnet' )
-    serverIP = server if type( server ) is str else server.IP()
+    serverIP = server if isinstance( server, basestring ) else server.IP()
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
            ( serverIP, port ) )
     time = 0

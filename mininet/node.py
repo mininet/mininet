@@ -355,7 +355,7 @@ class Node( object ):
             if type( args[ 0 ] ) is list:
                 # popen([cmd, arg1, arg2...])
                 cmd = args[ 0 ]
-            elif type( args[ 0 ] ) is str:
+            elif isinstance( args[ 0 ], basestring ):
                 # popen("cmd arg1 arg2...")
                 cmd = args[ 0 ].split()
             else:
@@ -432,7 +432,7 @@ class Node( object ):
         """
         if not intf:
             return self.defaultIntf()
-        elif type( intf ) is str:
+        elif isinstance( intf, basestring):
             return self.nameToIntf[ intf ]
         else:
             return intf
@@ -484,7 +484,7 @@ class Node( object ):
         """Set the default route to go through intf.
            intf: Intf or {dev <intfname> via <gw-ip> ...}"""
         # Note setParam won't call us if intf is none
-        if type( intf ) is str and ' ' in intf:
+        if isinstance( intf, basestring ) and ' ' in intf:
             params = intf
         else:
             params = 'dev %s' % intf
