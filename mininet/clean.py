@@ -16,6 +16,7 @@ import time
 from mininet.log import info
 from mininet.term import cleanUpScreens
 
+
 def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
@@ -32,7 +33,7 @@ def killprocs( pattern ):
             pids = ''
         if pids:
             sh( 'pkill -f 9 mininet:' )
-            sleep( .5 )
+            time.sleep( .5 )
         else:
             break
 
@@ -49,7 +50,7 @@ def cleanup():
     # you can't connect to them either, so they're mostly harmless.
     # Send SIGTERM first to give processes a chance to shutdown cleanly.
     sh( 'killall ' + zombies + ' 2> /dev/null' )
-    time.sleep(1)
+    time.sleep( 1 )
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
     # And kill off sudo mnexec
