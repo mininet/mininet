@@ -135,7 +135,8 @@ class RemoteMixin( object ):
             self.sshcmd = [ 'sudo', '-E', '-u', self.user ] + self.sshbase
             if self.controlPath:
                 self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
-                                 '-o', 'ControlMaster=auto' ]
+                                 '-o', 'ControlMaster=auto',
+                                 '-o', 'ControlPersist=' + '1' ]
             self.sshcmd = self.sshcmd + [ self.dest ]
             self.isRemote = True
         else:
