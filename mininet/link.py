@@ -417,7 +417,7 @@ class Link( object ):
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
 
-    def intfName( _self, node, n ):
+    def intfName( self, node, n ):
         "Construct a canonical interface name node-ethN for interface n."
         return node.name + '-eth' + repr( n )
 
