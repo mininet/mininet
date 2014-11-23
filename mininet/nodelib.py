@@ -5,7 +5,7 @@ This contains additional Node types which you may find to be useful.
 """
 
 from mininet.node import Node, Switch
-from mininet.log import setLogLevel, info
+from mininet.log import info
 from mininet.moduledeps import pathCheck
 
 

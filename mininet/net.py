@@ -91,7 +91,7 @@ import re
 import select
 import signal
 import random
-import copy
+
 from time import sleep
 from itertools import chain, groupby
 from math import ceil

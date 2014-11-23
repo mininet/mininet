@@ -36,7 +36,7 @@ import atexit
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
-from mininet.util import ( quietRun, isShellBuiltin, dumpNodeConnections,
+from mininet.util import ( quietRun, dumpNodeConnections,
                          dumpPorts )
 
 class CLI( Cmd ):

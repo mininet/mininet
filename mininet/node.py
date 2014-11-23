@@ -51,7 +51,7 @@ import pty
 import re
 import signal
 import select
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE
 from operator import or_
 from time import sleep
 
