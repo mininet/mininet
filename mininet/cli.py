@@ -351,6 +351,26 @@ class CLI( Cmd ):
         for link in self.mn.links:
             print link, link.status()
 
+    def do_switch( self, line ):
+        "Starts or stops a switch"
+        args = line.split()
+        if len(args) != 2:
+            error( 'invalid number of args: switch <switch name> {start, stop}\n' )
+            return
+        sw = args[ 0 ]
+        command = args[ 1 ]
+        if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches :
+            error( 'invalid switch: %s\n' % args[ 1 ] )
+        else:
+            sw = args[ 0 ]
+            command = args[ 1 ]
+            if command == 'start':
+                self.mn.get( sw ).start( self.mn.controllers )
+            elif command == 'stop':
+                self.mn.get( sw ).stop( deleteIntfs=False )
+            else:
+                error( 'invalid command: switch <switch name> {start, stop}\n' )
+
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
         Overridden to run shell commands when a node is the first CLI argument.

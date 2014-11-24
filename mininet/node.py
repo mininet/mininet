@@ -981,11 +981,12 @@ class UserSwitch( Switch ):
                 if not intf.IP():
                     self.TCReapply( intf )
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Stop OpenFlow reference user datapath."
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 
 class OVSLegacyKernelSwitch( Switch ):
@@ -1031,11 +1032,12 @@ class OVSLegacyKernelSwitch( Switch ):
                   ' 1>' + ofplog + ' 2>' + ofplog + '&' )
         self.execed = False
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Terminate kernel datapath."
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 
 class OVSSwitch( Switch ):
@@ -1183,12 +1185,13 @@ class OVSSwitch( Switch ):
             self.TCReapply( intf )
 
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Terminate OVS switch."
         self.cmd( 'ovs-vsctl del-br', self )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
 
 OVSKernelSwitch = OVSSwitch
@@ -1205,7 +1208,7 @@ class OVSBridge( OVSSwitch ):
         OVSSwitch.start( self, controllers=[] )
 
 
-class IVSSwitch(Switch):
+class IVSSwitch( Switch ):
     """IVS virtual switch"""
 
     def __init__( self, name, verbose=False, **kwargs ):
@@ -1251,11 +1254,12 @@ class IVSSwitch(Switch):
 
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
-    def stop( self ):
+    def stop( self, deleteIntfs=True ):
         "Terminate IVS switch."
         self.cmd( 'kill %ivs' )
         self.cmd( 'wait' )
-        self.deleteIntfs()
+        if deleteIntfs:
+            self.deleteIntfs()
 
     def attach( self, intf ):
         "Connect a data port"
