@@ -41,7 +41,7 @@ from functools import partial
 from mininet.examples.cluster import ( MininetCluster, RemoteHost,
                                        RemoteOVSSwitch, RemoteLink,
                                        SwitchBinPlacer, RandomPlacer )
-from mininet.examples.clustercli import DemoCLI as ClusterCLI
+from mininet.examples.clustercli import ClusterCLI
 
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 

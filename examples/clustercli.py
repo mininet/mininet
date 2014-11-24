@@ -8,7 +8,7 @@ from mininet.log import output, error
 nx, graphviz_layout, plt = None, None, None  # Will be imported on demand
 
 
-class DemoCLI( CLI ):
+class ClusterCLI( CLI ):
     "CLI with additional commands for Cluster Edition demo"
 
     @staticmethod

@@ -5,7 +5,7 @@
 from mininet.examples.cluster import MininetCluster, SwitchBinPlacer
 from mininet.topolib import TreeTopo
 from mininet.log import setLogLevel
-from mininet.examples.clustercli import DemoCLI as CLI
+from mininet.examples.clustercli import ClusterCLI as CLI
 
 def demo():
     "Simple Demo of Cluster Mode"
