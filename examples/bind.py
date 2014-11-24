@@ -38,7 +38,7 @@ from mininet.net import Mininet
 from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import SingleSwitchTopo
-from mininet.log import setLogLevel, info, debug
+from mininet.log import setLogLevel, info
 
 from functools import partial
 

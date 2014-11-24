@@ -32,6 +32,7 @@ class ClusterCLI( CLI ):
                 import networkx as nx
                 import matplotlib.pyplot as plt
                 import pygraphviz
+                assert pygraphviz  # silence pyflakes
             except:
                 error( 'plot requires networkx, matplotlib and pygraphviz - '
                        'please install them and try again\n' )
@@ -40,7 +41,6 @@ class ClusterCLI( CLI ):
         g = nx.Graph()
         mn = self.mn
         servers, hosts, switches = mn.servers, mn.hosts, mn.switches
-        hlen, slen = len( hosts ), len( switches )
         nodes = hosts + switches
         g.add_nodes_from( nodes )
         links = [ ( link.intf1.node, link.intf2.node )

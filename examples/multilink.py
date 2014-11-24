@@ -6,7 +6,7 @@ between nodes.
 """
 
 from mininet.cli import CLI
-from mininet.log import lg, info
+from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.topo import Topo
     
@@ -31,5 +31,5 @@ class simpleMultiLinkTopo( Topo ):
             self.addLink( s1, h2 )
 
 if __name__ == '__main__':
-    lg.setLogLevel( 'info' )
+    setLogLevel( 'info' )
     runMultiLink()

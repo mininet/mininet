@@ -9,7 +9,6 @@ and that the ovs ports match the mininet ports.
 from mininet.net import Mininet
 from mininet.node import Controller
 from mininet.log import setLogLevel, info, warn
-from mininet.node import Node
 
 def validatePort( switch, intf ):
     "Validate intf's OF port number"
@@ -48,7 +47,6 @@ def net():
     net.addLink( h4, s1 )
     net.addLink( h5, s1, port1 = 1, port2 = 9 ) # specify a different port to connect host 5 to on the switch.
 
-    root = Node( 'root', inNamespace=False )
     info( '*** Starting network\n' )
     net.start()
 

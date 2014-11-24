@@ -5,7 +5,7 @@ A sanity check for cluster edition
 '''
 
 from mininet.examples.cluster import MininetCluster
-from mininet.log import info, setLogLevel
+from mininet.log import setLogLevel
 from mininet.examples.clustercli import ClusterCLI as CLI
 from mininet.topo import SingleSwitchTopo
 

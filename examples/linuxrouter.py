@@ -27,7 +27,6 @@ from mininet.net import Mininet
 from mininet.node import Node
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
-from mininet.util import irange
 
 class LinuxRouter( Node ):
     "A Node with IP forwarding enabled."

@@ -22,11 +22,9 @@ to-do:
 from mininet.net import Mininet
 from mininet.node import OVSSwitch
 from mininet.topo import LinearTopo
-from mininet.util import quietRun
 from mininet.log import output, warn
 
 from random import randint
-from re import findall
 
 
 class MobilitySwitch( OVSSwitch ):

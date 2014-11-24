@@ -37,7 +37,7 @@ class testSwitchDpidAssignmentCommon ( object ):
         name of the switch does not contin a digit. Also verify the 
         exception message."""
         with self.assertRaises( Exception ) as raises_cm:
-            switch = Mininet( Topo(), self.switchClass, Host, Controller ).addSwitch( 'A' )
+            Mininet( Topo(), self.switchClass, Host, Controller ).addSwitch( 'A' )
         self.assertEqual(raises_cm.exception.message, 'Unable to derive '
                          'default datapath ID - please either specify a dpid '
                          'or use a canonical switch name such as s23.')
