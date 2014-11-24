@@ -16,12 +16,16 @@ OpenFlow icon from https://www.opennetworking.org/
 MINIEDIT_VERSION = '2.2.0.1'
 
 from optparse import OptionParser
-from Tkinter import *
+# from Tkinter import *
+from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
+                      Scrollbar, Wm, TclError, StringVar, IntVar,
+                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
+                      RIGHT, LEFT, BOTH, TRUE, FALSE )
 from ttk import Notebook
-from tkMessageBox import showinfo, showerror, showwarning
+from tkMessageBox import showerror
 from subprocess import call
 import tkFont
-import csv
 import tkFileDialog
 import tkSimpleDialog
 import re
@@ -36,18 +40,18 @@ if 'PYTHONPATH' in os.environ:
 
 # someday: from ttk import *
 
-from mininet.log import info, error, debug, output, setLogLevel
+from mininet.log import info, setLogLevel
 from mininet.net import Mininet, VERSION
-from mininet.util import ipStr, netParse, ipAdd, quietRun
+from mininet.util import netParse, ipAdd, quietRun
 from mininet.util import buildTopo
 from mininet.util import custom, customConstructor
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
 from mininet.node import CPULimitedHost, Host, Node
-from mininet.node import OVSKernelSwitch, OVSSwitch, UserSwitch
+from mininet.node import OVSSwitch, UserSwitch
 from mininet.link import TCLink, Intf, Link
 from mininet.cli import CLI
-from mininet.moduledeps import moduleDeps, pathCheck
+from mininet.moduledeps import moduleDeps
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo
 
@@ -1374,7 +1378,6 @@ class MiniEdit( Frame ):
 
     def addNamedNode( self, node, name, x, y):
         "Add a new node to our canvas."
-        c = self.canvas
         icon = self.nodeIcon( node, name )
         item = self.canvas.create_window( x, y, anchor='c', window=icon,
                                           tags=node )
@@ -1675,7 +1678,6 @@ class MiniEdit( Frame ):
             f.write("from subprocess import call\n")
 
             inBandCtrl = False
-            hasLegacySwitch = False
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
@@ -1820,16 +1822,16 @@ class MiniEdit( Frame ):
                 linkopts = linkDetail['linkOpts']
                 srcName, dstName = src[ 'text' ], dst[ 'text' ]
                 bw = ''
-                delay = ''
-                loss = ''
-                max_queue_size = ''
+                # delay = ''
+                # loss = ''
+                # max_queue_size = ''
                 linkOpts = "{"
                 if 'bw' in linkopts:
                     bw =  linkopts['bw']
                     linkOpts = linkOpts + "'bw':"+str(bw)
                     optsExist = True
                 if 'delay' in linkopts:
-                    delay =  linkopts['delay']
+                    # delay =  linkopts['delay']
                     if optsExist:
                         linkOpts = linkOpts + ","
                     linkOpts = linkOpts + "'delay':'"+linkopts['delay']+"'"
@@ -2535,8 +2537,8 @@ class MiniEdit( Frame ):
         link = self.selection
 
         linkDetail =  self.links[link]
-        src = linkDetail['src']
-        dest = linkDetail['dest']
+        # src = linkDetail['src']
+        # dest = linkDetail['dest']
         linkopts = linkDetail['linkOpts']
         linkBox = LinkDialog(self, title='Link Details', linkDefaults=linkopts)
         if linkBox.result is not None:
@@ -2627,7 +2629,7 @@ class MiniEdit( Frame ):
             del source.links[ dest ]
             del dest.links[ source ]
             stags = self.canvas.gettags( self.widgetToItem[ source ] )
-            dtags = self.canvas.gettags( self.widgetToItem[ dest ] )
+            # dtags = self.canvas.gettags( self.widgetToItem[ dest ] )
             ltags = self.canvas.gettags( link )
 
             if 'control' in ltags:
