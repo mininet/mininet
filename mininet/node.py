@@ -1150,7 +1150,7 @@ class OVSSwitch( Switch ):
     @staticmethod
     def patchOpts( intf ):
         "Return OVS patch port options (if any) for intf"
-        if type( intf ) is not OVSIntf:
+        if not isinstance( intf, OVSIntf ):
             # Ignore if it's not a patch link
             return ''
         intf1, intf2 = intf.link.intf1, intf.link.intf2
