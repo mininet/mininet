@@ -19,7 +19,7 @@ def intfOptions():
     h2 = net.addHost( 'h2' )
     s1 = net.addSwitch( 's1' )
     link1 = net.addLink( h1, s1, cls=TCLink )
-    link2 = net.addLink( h2, s1 )
+    net.addLink( h2, s1 )
     net.start()
     
     # flush out latency from reactive forwarding delay
