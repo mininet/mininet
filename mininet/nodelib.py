@@ -5,9 +5,10 @@ This contains additional Node types which you may find to be useful.
 """
 
 from mininet.node import Node, Switch
-from mininet.log import info
+from mininet.log import info, warn
 from mininet.moduledeps import pathCheck
 
+import re
 
 class LinuxBridge( Switch ):
     "Linux Bridge (with optional spanning tree)"
@@ -63,13 +64,13 @@ class LinuxBridge( Switch ):
 class NAT( Node ):
     """NAT: Provides connectivity to external network"""
 
-    def __init__( self, name, inetIntf='eth0', subnet='10.0/8', localIntf=None, **params):
+    def __init__( self, name, inetIntf=None, subnet='10.0/8', localIntf=None, **params):
         super( NAT, self ).__init__( name, **params )
 
         """Start NAT/forwarding between Mininet and external network
         inetIntf: interface for internet access
         subnet: Mininet subnet (default 10.0/8)="""
-        self.inetIntf = inetIntf
+        self.inetIntf = inetIntf if inetIntf else self.getGatewayIntf()
         self.subnet = subnet
         self.localIntf = localIntf
 
@@ -96,7 +97,7 @@ class NAT( Node ):
         self.cmd( 'iptables -I FORWARD -i', self.localIntf, '-d', self.subnet, '-j DROP' )
         self.cmd( 'iptables -A FORWARD -i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
         self.cmd( 'iptables -A FORWARD -i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
-        self.cmd( 'iptables -t nat -A POSTROUTING -o ', self.inetIntf, '-j MASQUERADE' )
+        self.cmd( 'iptables -t nat -A POSTROUTING -o ', self.inetIntf, '-s', self.subnet, '-j MASQUERADE' )
 
         # Instruct the kernel to perform forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
@@ -108,12 +109,21 @@ class NAT( Node ):
         line = '\niface %s inet manual\n' % intf
         config = open( cfile ).read()
         if ( line ) not in config:
-            info( '*** Adding "' + line.strip() + '" to ' + cfile )
+            info( '*** Adding "' + line.strip() + '" to ' + cfile + '\n' )
             with open( cfile, 'a' ) as f:
                 f.write( line )
         # Probably need to restart network-manager to be safe -
         # hopefully this won't disconnect you
         self.cmd( 'service network-manager restart' )
+
+    def getGatewayIntf( self ):
+        routes = self.cmd( 'ip route show' )
+        match = re.search('default via \S+ dev (\S+)', routes )
+        if match:
+            return match.group( 1 )
+        else:
+            warn( 'There is no default route set. Using eth0 as gateway interface...\n' )
+            return 'eth0'
 
     def terminate( self ):
         """Stop NAT/forwarding between Mininet and external network"""
