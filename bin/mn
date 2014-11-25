@@ -332,7 +332,7 @@ class MininetRunner( object ):
                   autoStaticArp=arp, autoPinCpus=pin,
                   listenPort=listenPort )
 
-        if self.options.nat:
+        if self.options.ensure_value( 'nat', False ):
             nat = mn.addNAT( *self.options.nat_args, **self.options.nat_kwargs )
             nat.configDefault()
 
