@@ -74,12 +74,17 @@ several new features, including:
 * Improved OpenFlow 1.3 support
 
 	- `mn --switch ovs,protocols=openflow13` starts OVS in 1.3 mode
-	- `install.sh -w` installs 1.3-compatible Wireshark dissector using
+	- `install.sh -w` installs a 1.3-compatible Wireshark dissector using
 	  Loxigen
-	- `install.sh -y` installs Ryu 1.3-compatible controller
+	- `install.sh -y` installs the Ryu 1.3-compatible controller
 
 * A new `nodelib.py` node library, and new `Node` types including
-  `LinuxBridge`, `OVSBridge`, `LinuxRouter` and `NAT`
+  `LinuxBridge`, `OVSBridge`, `LinuxRouter` (see `examples/`)
+  and `NAT`
+
+* A `--nat` option which connects a Mininet network to your LAN using NAT
+  (For this to work correctly, Mininet's `--ipbase` subnet should not 
+  overlap with any external or internet IP addresses you wish to use)
 
 * An improved MiniEdit GUI (`examples/miniedit.py`) - thanks to
   Gregory Gee
@@ -97,6 +102,10 @@ several new features, including:
 Note that examples contain experimental features which might
 "graduate" into mainline Mininet in the future, but they should 
 not be considered a stable part of the Mininet API!
+
+A number of bugs have also been fixed, most notably multiple link
+support in `Topo()`. See github issues and the release notes on
+the Mininet wiki for additional information.
 
 ### Installation
 
