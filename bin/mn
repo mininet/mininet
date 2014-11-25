@@ -32,7 +32,7 @@ from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo, TorusTopo
-from mininet.util import customConstructor
+from mininet.util import customConstructor, splitArgs
 from mininet.util import buildTopo
 
 from functools import partial
@@ -168,6 +168,17 @@ class MininetRunner( object ):
             # Add or modify global variable or class
             globals()[ name ] = value
 
+    def setNat( self, option, opt_str, value, parser ):
+        parser.values.nat = True
+        if parser.rargs and parser.rargs[ 0 ][ 0 ] != '-': #first arg, first char != '-'
+            value = parser.rargs.pop( 0 )
+            _, args, kwargs = splitArgs( opt_str + ',' + value )
+            parser.values.nat_args = args
+            parser.values.nat_kwargs = kwargs
+        else:
+            parser.values.nat_args = []
+            parser.values.nat_kwargs = {}
+
     def parseArgs( self ):
         """Parse command-line args and return options object.
            returns: opts parse options dict"""
@@ -219,9 +230,12 @@ class MininetRunner( object ):
         opts.add_option( '--pin', action='store_true',
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
-        opts.add_option( '--nat', action='store_true',
-                         default=False, help="adds a NAT to the topology "
-                         "that connects Mininet to the physical network" )
+        opts.add_option( '--nat', action='callback', callback=self.setNat,
+                         help="adds a NAT to the topology that connects Mininet hosts"
+                         " to the physical network."
+                         " Warning: This may route any traffic on the machine that uses Mininet's"
+                         " IP subnet into the Mininet network. If you need to change"
+                         " Mininet's IP subnet, see the --ipbase option." )
         opts.add_option( '--version', action='callback', callback=version,
                          help='prints the version and exits' )
         opts.add_option( '--cluster', type='string', default=None,
@@ -319,7 +333,7 @@ class MininetRunner( object ):
                   listenPort=listenPort )
 
         if self.options.nat:
-            nat = mn.addNAT()
+            nat = mn.addNAT( *self.options.nat_args, **self.options.nat_kwargs )
             nat.configDefault()
 
         if self.options.pre:
