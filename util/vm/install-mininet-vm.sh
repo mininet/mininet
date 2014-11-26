@@ -34,7 +34,9 @@ git clone git://github.com/mininet/mininet
 # Optionally check out branch
 if [ "$1" != "" ]; then
   pushd mininet
-  git checkout -b $1 $1
+  #git checkout -b $1 $1
+  # TODO branch will in detached HEAD state if it is not master
+  git checkout $1
   popd
 fi
 # Install Mininet
