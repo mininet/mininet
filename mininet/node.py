@@ -488,8 +488,8 @@ class Node( object ):
             params = intf
         else:
             params = 'dev %s' % intf
-        self.cmd( 'ip route del default' )
-        return self.cmd( 'ip route add default', params )
+        # Do this in one line in case we're messing with the root namespace
+        self.cmd( 'ip route del default; ip route add default', params )
 
     # Convenience and configuration methods
 
