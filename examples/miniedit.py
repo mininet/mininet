@@ -750,7 +750,7 @@ class SwitchDialog(CustomDialog):
                                  'please either specify a DPID or use a '
                                  'canonical switch name such as s23.' )
 
-            
+
             results = {'externalInterfaces':externalInterfaces,
                        'hostname':self.hostnameEntry.get(),
                        'dpid':dpid,
@@ -784,10 +784,10 @@ class VerticalScrolledTable(LabelFrame):
     * Use the 'interior' attribute to place widgets inside the scrollable frame
     * Construct and pack/place/grid normally
     * This frame only allows vertical scrolling
-    
+
     """
     def __init__(self, parent, rows=2, columns=2, title=None, *args, **kw):
-        LabelFrame.__init__(self, parent, text=title, padx=5, pady=5, *args, **kw)            
+        LabelFrame.__init__(self, parent, text=title, padx=5, pady=5, *args, **kw)
 
         # create a canvas object and a vertical scrollbar for scrolling it
         vscrollbar = Scrollbar(self, orient=VERTICAL)
@@ -1709,7 +1709,7 @@ class MiniEdit( Frame ):
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-    
+
                 if 'Controller' in tags:
                     opts = self.controllers[name]
                     controllerType = opts['controllerType']
@@ -1720,9 +1720,9 @@ class MiniEdit( Frame ):
                     controllerIP = opts['remoteIP']
                     controllerPort = opts['remotePort']
 
-    
+
                     f.write("    "+name+"=net.addController(name='"+name+"',\n")
-        
+
                     if controllerType == 'remote':
                         f.write("                      controller=RemoteController,\n")
                         f.write("                      ip='"+controllerIP+"',\n")
@@ -1733,7 +1733,7 @@ class MiniEdit( Frame ):
                         f.write("                      controller=OVSController,\n")
                     else:
                         f.write("                      controller=Controller,\n")
-        
+
                     f.write("                      protocol='"+controllerProtocol+"',\n")
                     f.write("                      port="+str(controllerPort)+")\n")
                     f.write("\n")
@@ -1943,7 +1943,7 @@ class MiniEdit( Frame ):
                 for widget in self.widgetToItem:
                     name = widget[ 'text' ]
                     tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-    
+
                     if 'Switch' in tags:
                         opts = self.switchOpts[name]
                         if 'netflow' in opts:
@@ -1967,7 +1967,7 @@ class MiniEdit( Frame ):
                 for widget in self.widgetToItem:
                     name = widget[ 'text' ]
                     tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-    
+
                     if 'Switch' in tags:
                         opts = self.switchOpts[name]
                         if 'sflow' in opts:
@@ -2641,7 +2641,7 @@ class MiniEdit( Frame ):
                 else:
                     controllerName = dest[ 'text' ]
                     switchName = source[ 'text' ]
-    
+
                 if controllerName in self.switchOpts[switchName]['controllers']:
                     self.switchOpts[switchName]['controllers'].remove(controllerName)
 
@@ -2662,7 +2662,7 @@ class MiniEdit( Frame ):
                 if 'Switch' in tags:
                     if widget['text'] in self.switchOpts[name]['controllers']:
                         self.switchOpts[name]['controllers'].remove(widget['text'])
-            
+
         for link in widget.links.values():
             # Delete from view and model
             self.deleteItem( link )
@@ -2917,7 +2917,7 @@ class MiniEdit( Frame ):
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-    
+
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
                     if 'netflow' in opts:
@@ -2947,7 +2947,7 @@ class MiniEdit( Frame ):
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-    
+
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
                     if 'sflow' in opts:

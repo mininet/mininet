@@ -14,7 +14,7 @@ natnet.py: Example network with NATs
     |              |
    s1              s2
     |              |
-   h1              h2 
+   h1              h2
 
 """
 
@@ -44,15 +44,15 @@ class InternetTopo(Topo):
             localSubnet = '192.168.%d.0/24' % i
             natParams = { 'ip' : '%s/24' % localIP }
             # add NAT to topology
-            nat = self.addNode('nat%d' % i, cls=NAT, subnet=localSubnet, 
+            nat = self.addNode('nat%d' % i, cls=NAT, subnet=localSubnet,
                                inetIntf=inetIntf, localIntf=localIntf)
             switch = self.addSwitch('s%d' % i)
             # connect NAT to inet and local switches
             self.addLink(nat, inetSwitch, intfName1=inetIntf)
             self.addLink(nat, switch, intfName1=localIntf, params1=natParams)
             # add host and connect to local switch
-            host = self.addHost('h%d' % i, 
-                                ip='192.168.%d.100/24' % i, 
+            host = self.addHost('h%d' % i,
+                                ip='192.168.%d.100/24' % i,
                                 defaultRoute='via %s' % localIP)
             self.addLink(host, switch)
 
@@ -67,4 +67,4 @@ def run():
 if __name__ == '__main__':
     setLogLevel('info')
     run()
-    
+

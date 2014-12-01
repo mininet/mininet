@@ -14,7 +14,7 @@ class testNAT( unittest.TestCase ):
 
     prompt = 'mininet>'
 
-    @unittest.skipIf( '0 received' in quietRun( 'ping -c 1 %s' % destIP ), 
+    @unittest.skipIf( '0 received' in quietRun( 'ping -c 1 %s' % destIP ),
                       'Destination IP is not reachable' )
     def testNAT( self ):
         "Attempt to ping an IP on the Internet and verify 0% packet loss"

@@ -21,7 +21,7 @@ def intfOptions():
     link1 = net.addLink( h1, s1, cls=TCLink )
     net.addLink( h2, s1 )
     net.start()
-    
+
     # flush out latency from reactive forwarding delay
     net.pingAll()
 
@@ -34,12 +34,12 @@ def intfOptions():
     link1.intf1.config( loss=50 )
     info( '\n' )
     net.iperf( ( h1, h2 ), l4Type='UDP' )
-    
+
     info( '\n*** Configuring one intf with delay of 15ms\n' )
     link1.intf1.config( delay='15ms' )
     info( '\n*** Run a ping to confirm delay\n' )
     net.pingPairFull()
-    
+
     info( '\n*** Done testing\n' )
     net.stop()
 

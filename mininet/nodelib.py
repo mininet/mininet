@@ -32,7 +32,7 @@ class LinuxBridge( Switch ):
             return 'forwarding' in self.cmd( 'brctl showstp', self )
         else:
             return True
-    
+
     def start( self, controllers ):
         "Start Linux bridge"
         self.cmd( 'ifconfig', self, 'down' )

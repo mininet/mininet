@@ -9,9 +9,9 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.topo import Topo
-    
+
 def runMultiLink():
-    
+
     topo = simpleMultiLinkTopo( n=2 )
     net = Mininet( topo=topo )
     net.start()
@@ -25,7 +25,7 @@ class simpleMultiLinkTopo( Topo ):
 
         h1, h2 = self.addHost( 'h1' ), self.addHost( 'h2' )
         s1 = self.addSwitch( 's1' )
-        
+
         for _ in range( n ):
             self.addLink( s1, h1 )
             self.addLink( s1, h2 )

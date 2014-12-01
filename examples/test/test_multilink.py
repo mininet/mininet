@@ -22,14 +22,14 @@ class testMultiLink( unittest.TestCase ):
         hostToIntfs = intfsOutput.split( '\r\n' )[ 1:3 ]
         intfList = []
         for hostToIntf in hostToIntfs:
-            intfList += [ intf for intf in 
+            intfList += [ intf for intf in
                           hostToIntf.split()[1].split(',') ]
 
         # get interfaces from system by running ifconfig on every host
         sysIntfList = []
         opts = [ 'h(\d)-eth(\d)', self.prompt ]
         p.expect( self.prompt )
-        
+
         p.sendline( 'h1 ifconfig' )
         while True:
             p.expect( opts )

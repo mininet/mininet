@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Create a network with 5 hosts, numbered 1-4 and 9. 
+Create a network with 5 hosts, numbered 1-4 and 9.
 Validate that the port numbers match to the interface name,
 and that the ovs ports match the mininet ports.
 """
@@ -54,13 +54,13 @@ def net():
     info( '\n*** printing and validating the ports running on each interface\n' )
     for intfs in s1.intfList():
         if not intfs.name == "lo":
-            info( intfs, ': ', s1.ports[intfs], 
+            info( intfs, ': ', s1.ports[intfs],
             '\n' )
             info ( 'Validating that', intfs, 'is actually on port', s1.ports[intfs], '... ' )
             if validatePort( s1, intfs ):
                 info( 'Validated.\n' )
     print '\n'
-        
+
     # test the network with pingall
     net.pingAll()
     print '\n'

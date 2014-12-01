@@ -12,7 +12,7 @@ from mininet.topo import SingleSwitchTopo
 def clusterSanity():
     "Sanity check for cluster mode"
     topo = SingleSwitchTopo()
-    net = MininetCluster( topo=topo ) 
+    net = MininetCluster( topo=topo )
     net.start()
     CLI( net )
     net.stop()

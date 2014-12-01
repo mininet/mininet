@@ -101,7 +101,7 @@ class Topo( object ):
     "Data center network representation for structured multi-trees."
 
     def __init__( self, *args, **params ):
-        """Topo object. 
+        """Topo object.
            Optional named parameters:
            hinfo: default host options
            sopts: default switch options
@@ -256,7 +256,7 @@ class Topo( object ):
         if key is None:
             key = min( entry )
         return entry, key
-    
+
     def linkInfo( self, src, dst, key=None ):
         "Return link metadata dict"
         entry, key = self._linkEntry( src, dst, key )

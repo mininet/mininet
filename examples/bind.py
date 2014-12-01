@@ -22,7 +22,7 @@ to temporary private directories. To do this, simply create a list of
 directories to be made private. A tmpfs will then be mounted on them.
 
 You may use both temporary and persistent directories at the same
-time. In the following privateDirs string, each host will have a 
+time. In the following privateDirs string, each host will have a
 persistent directory in the root filesystem at
 "/tmp/(hostname)/var/run" mounted on "/var/run". Each host will also
 have a temporary private directory mounted on "/var/log".
@@ -48,8 +48,8 @@ from functools import partial
 def testHostWithPrivateDirs():
     "Test bind mounts"
     topo = SingleSwitchTopo( 10 )
-    privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ), 
-                    ( '/var/run', '/tmp/%(name)s/var/run' ), 
+    privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ),
+                    ( '/var/run', '/tmp/%(name)s/var/run' ),
                       '/var/mn' ]
     host = partial( Host,
                     privateDirs=privateDirs )
@@ -65,5 +65,3 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
     testHostWithPrivateDirs()
     info( 'Done.\n')
-
-

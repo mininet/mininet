@@ -692,7 +692,7 @@ class CPULimitedHost( Host ):
         retry( retries=3, delaySecs=1, fn=self.cgroupDel )
 
     _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
-    
+
     @classmethod
     def checkRtGroupSched( cls ):
         "Check (Ubuntu,Debian) kernel config for CONFIG_RT_GROUP_SCHED for RT"
@@ -749,7 +749,7 @@ class CPULimitedHost( Host ):
         """Set overall CPU fraction for this host
            f: CPU bandwidth limit (positive fraction, or -1 for cfs unlimited)
            sched: 'rt' or 'cfs'
-           Note 'cfs' requires CONFIG_CFS_BANDWIDTH, 
+           Note 'cfs' requires CONFIG_CFS_BANDWIDTH,
            and 'rt' requires CONFIG_RT_GROUP_SCHED"""
         if not sched:
             sched = self.sched
@@ -1199,11 +1199,11 @@ OVSKernelSwitch = OVSSwitch
 
 class OVSBridge( OVSSwitch ):
     "OVSBridge is an OVSSwitch in standalone/bridge mode"
-    
+
     def __init__( self, args, **kwargs ):
         kwargs.update( failMode='standalone' )
         OVSSwitch.__init__( self, args, **kwargs )
-    
+
     def start( self, controllers ):
         OVSSwitch.start( self, controllers=[] )
 

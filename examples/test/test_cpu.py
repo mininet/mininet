@@ -6,7 +6,7 @@ Test for cpu.py
 results format:
 
     sched   cpu client MB/s
-    
+
     cfs 45.00%  13254.669841
     cfs 40.00%  11822.441399
     cfs 30.00%  5112.963009
@@ -28,13 +28,13 @@ class testCPU( unittest.TestCase ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
         p = pexpect.spawn( 'python -m mininet.examples.cpu' )
         # matches each line from results( shown above )
-        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', 
+        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)',
                  pexpect.EOF ]
         scheds = []
         while True:
             index = p.expect( opts, timeout=600 )
             if index == 0:
-                sched = p.match.group( 1 ) 
+                sched = p.match.group( 1 )
                 cpu = float( p.match.group( 2 ) )
                 bw = float( p.match.group( 3 ) )
                 if sched not in scheds:

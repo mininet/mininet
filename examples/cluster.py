@@ -346,7 +346,7 @@ class RemoteLink( Link ):
                       ' not successfully moved to ' + node.name + '\n' )
             return False
         return True
-    
+
     def makeTunnel( self, node1, node2, intfname1, intfname2,
                     addr1=None, addr2=None ):
         "Make a tunnel across switches on different servers"
@@ -380,7 +380,7 @@ class RemoteLink( Link ):
         if ch != '@':
             error( 'makeTunnel:\n',
                    'Tunnel setup failed for',
-                   '%s:%s' % ( node1, node1.dest ), 'to', 
+                   '%s:%s' % ( node1, node1.dest ), 'to',
                    '%s:%s\n' % ( node2, node2.dest ),
                   'command was:', cmd, '\n' )
             tunnel.terminate()
@@ -421,7 +421,7 @@ class RemoteLink( Link ):
 
 class Placer( object ):
     "Node placement algorithm for MininetCluster"
-    
+
     def __init__( self, servers=None, nodes=None, hosts=None,
                  switches=None, controllers=None, links=None ):
         """Initialize placement object
@@ -459,7 +459,7 @@ class RoundRobinPlacer( Placer ):
     """Round-robin placement
        Note this will usually result in cross-server links between
        hosts and switches"""
-    
+
     def __init__( self, *args, **kwargs ):
         Placer.__init__( self, *args, **kwargs )
         self.next = 0
@@ -560,7 +560,7 @@ class HostSwitchBinPlacer( Placer ):
         self.sset = frozenset( self.switches )
         self.cset = frozenset( self.controllers )
         self.hind, self.sind, self.cind = 0, 0, 0
-    
+
     def place( self, nodename ):
         """Simple placement algorithm:
             place nodes into evenly sized bins"""

@@ -145,7 +145,7 @@ class MininetRunner( object ):
         else:
             # Accept a comma-separated list of filenames
             files += value.split(',')
-        
+
         for fileName in files:
             customs = {}
             if os.path.isfile( fileName ):
@@ -289,7 +289,7 @@ class MininetRunner( object ):
                 else:
                     raise Exception( "Could not find a default controller for switch %s" %
                                      self.options.switch )
-        
+
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customConstructor( SWITCHES, self.options.switch )
         host = customConstructor( HOSTS, self.options.host )

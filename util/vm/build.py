@@ -881,7 +881,7 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None, 
+def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
                 runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run

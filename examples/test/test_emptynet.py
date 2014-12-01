@@ -19,7 +19,7 @@ class testEmptyNet( unittest.TestCase ):
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )
         percent = int( p.match.group( 1 ) ) if p.match else -1
-        self.assertEqual( percent, 0 ) 
+        self.assertEqual( percent, 0 )
         p.expect( self.prompt )
         # iperf test
         p.sendline( 'iperf' )

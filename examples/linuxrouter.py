@@ -2,7 +2,7 @@
 
 """
 linuxrouter.py: Example network with Linux IP router
- 
+
 This example converts a Node into a router using IP forwarding
 already built into Linux.
 
@@ -16,7 +16,7 @@ The topology contains a router with three IP subnets:
  - h2 (IP: 172.16.0.100)
  - h3 (IP: 10.0.0.100)
 
- Routing entries can be added to the routing tables of the 
+ Routing entries can be added to the routing tables of the
  hosts or router using the "ip route add" or "route add" command.
  See the man pages for more details.
 

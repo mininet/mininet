@@ -36,7 +36,7 @@ class testBareSSHD( unittest.TestCase ):
                 '-o StrictModes=no' )
         p = pexpect.spawn( cmd )
         runOpts = [ 'You may now ssh into h1 at 10.0.0.1',
-                    'after 5 seconds, h1 is not listening on port 22', 
+                    'after 5 seconds, h1 is not listening on port 22',
                     pexpect.EOF, pexpect.TIMEOUT ]
         while True:
             index = p.expect( runOpts )

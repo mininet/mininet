@@ -40,7 +40,7 @@ class VLANHost( Host ):
         intf = self.defaultIntf()
         # remove IP from default, "physical" interface
         self.cmd( 'ifconfig %s inet 0' % intf )
-        # create VLAN interface 
+        # create VLAN interface
         self.cmd( 'vconfig add %s %d' % ( intf, vlan ) )
         # assign the host's IP to the VLAN interface
         self.cmd( 'ifconfig %s.%d inet %s' % ( intf, vlan, params['ip'] ) )

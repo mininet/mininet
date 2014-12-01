@@ -43,7 +43,7 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
-        
+
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
         if self.name == 'lo':

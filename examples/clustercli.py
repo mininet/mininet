@@ -22,7 +22,7 @@ class ClusterCLI( CLI ):
         colors = colors * reps
         colors = colors[ 0 : slen ]
         return colors
-    
+
     def do_plot( self, line ):
         "Plot topology colored by node placement"
         # Import networkx if needed
