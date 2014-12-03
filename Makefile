@@ -13,6 +13,7 @@ DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
 CFLAGS += -Wall -Wextra
+PLFMT = --msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 all: codecheck test
 
@@ -23,7 +24,7 @@ codecheck: $(PYSRC)
 	-echo "Running code check"
 	util/versioncheck.py
 	pyflakes $(PYSRC)
-	pylint --rcfile=.pylint $(PYSRC)
+	pylint $(PLFMT) --rcfile=.pylint $(PYSRC)
 	pep8 --repeat --ignore=$(P8IGN) $(PYSRC)
 
 errcheck: $(PYSRC)
@@ -58,7 +59,7 @@ mn.1: $(MN)
 
 mnexec.1: mnexec
 	help2man -N -n "execution utility for Mininet." \
-	-h "-h" -v "-v" --no-discard-stderr ./$< -o $@ 
+	-h "-h" -v "-v" --no-discard-stderr ./$< -o $@
 
 .PHONY: doc
 
