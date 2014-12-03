@@ -189,6 +189,8 @@ class Node( object ):
         """Internal method: spawn and return a process
             cmd: command to run (list)
             params: parameters to Popen()"""
+        # Leave this is as an instance method for now
+        assert self
         return Popen( cmd, **params )
 
     def cleanup( self ):
@@ -240,8 +242,11 @@ class Node( object ):
                 os.killpg( self.shell.pid, signal.SIGHUP )
         self.cleanup()
 
-    def stop( self ):
-        "Stop node."
+    def stop( self, deleteIntfs=False ):
+        """Stop node.
+           deleteIntfs: delete interfaces? (False)"""
+        if deleteIntfs:
+            self.deleteIntfs()
         self.terminate()
 
     def waitReadable( self, timeoutms=None ):
@@ -324,7 +329,7 @@ class Node( object ):
         log = info if verbose else debug
         output = ''
         while self.waiting:
-            data = self.monitor()
+            data = self.monitor( findPid=findPid )
             output += data
             log( data )
         return output
@@ -421,7 +426,7 @@ class Node( object ):
             warn( '*** defaultIntf: warning:', self.name,
                   'has no interfaces\n' )
 
-    def intf( self, intf='' ):
+    def intf( self, intf=None ):
         """Return our interface object with given string name,
            default intf if name is falsy (None, empty string, etc).
            or the input intf arg.
@@ -682,8 +687,8 @@ class CPULimitedHost( Host ):
             if int( self.cgroupGet( 'rt_runtime_us', 'cpu' ) ) <= 0:
                 mncmd += [ '-r', str( self.rtprio ) ]
             else:
-                debug( '*** error: not enough cpu time available for %s.' % self.name,
-                      'Using cfs scheduler for subprocess\n' )
+                debug( '*** error: not enough cpu time available for %s.' %
+                       self.name, 'Using cfs scheduler for subprocess\n' )
         return Host.popen( self, *args, mncmd=mncmd, **kwargs )
 
     def cleanup( self ):
@@ -698,9 +703,11 @@ class CPULimitedHost( Host ):
         "Check (Ubuntu,Debian) kernel config for CONFIG_RT_GROUP_SCHED for RT"
         if not cls._rtGroupSched:
             release = quietRun( 'uname -r' ).strip('\r\n')
-            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' %
+                               release )
             if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
-                error( '\n*** error: please enable RT_GROUP_SCHED in your kernel\n' )
+                error( '\n*** error: please enable RT_GROUP_SCHED'
+                       'in your kernel\n' )
                 exit( 1 )
             cls._rtGroupSched = True
 
@@ -755,8 +762,8 @@ class CPULimitedHost( Host ):
             sched = self.sched
         if sched == 'rt':
             if not f or f < 0:
-                raise Exception( 'Please set a positive CPU fraction for sched=rt\n' )
-                return
+                raise Exception( 'Please set a positive CPU fraction'
+                                 ' for sched=rt\n' )
             pstr, qstr, period, quota = self.rtInfo( f )
         elif sched == 'cfs':
             pstr, qstr, period, quota = self.cfsInfo( f )
@@ -881,7 +888,8 @@ class Switch( Node ):
 
     def connected( self ):
         "Is the switch connected to a controller? (override this method)"
-        return False and self  # satisfy pylint
+        raise NotImplementedError( "connected() needs to be implemented in"
+                                   " Switch subclass %s" % self.__class__ )
 
     def __repr__( self ):
         "More informative string representation"
@@ -889,6 +897,7 @@ class Switch( Node ):
                               for i in self.intfList() ] ) )
         return '<%s %s: %s pid=%s> ' % (
             self.__class__.__name__, self.name, intfs, self.pid )
+
 
 class UserSwitch( Switch ):
     "User-space switch."
@@ -982,7 +991,8 @@ class UserSwitch( Switch ):
                     self.TCReapply( intf )
 
     def stop( self, deleteIntfs=True ):
-        "Stop OpenFlow reference user datapath."
+        """Stop OpenFlow reference user datapath.
+           deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
         if deleteIntfs:
@@ -1033,7 +1043,8 @@ class OVSLegacyKernelSwitch( Switch ):
         self.execed = False
 
     def stop( self, deleteIntfs=True ):
-        "Terminate kernel datapath."
+        """Terminate kernel datapath."
+           deleteIntfs: delete interfaces? (True)"""
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
         if deleteIntfs:
@@ -1075,11 +1086,12 @@ class OVSSwitch( Switch ):
                    'You may wish to try '
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
-        info = quietRun( 'ovs-vsctl --version' )
-        cls.OVSVersion =  findall( '\d+\.\d+', info )[ 0 ]
+        version = quietRun( 'ovs-vsctl --version' )
+        cls.OVSVersion =  findall( r'\d+\.\d+', version )[ 0 ]
 
     @classmethod
     def isOldOVS( cls ):
+        "Is OVS ersion < 1.10?"
         return ( StrictVersion( cls.OVSVersion ) <
              StrictVersion( '1.10' ) )
 
@@ -1186,7 +1198,8 @@ class OVSSwitch( Switch ):
 
 
     def stop( self, deleteIntfs=True ):
-        "Terminate OVS switch."
+        """Terminate OVS switch.
+           deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'ovs-vsctl del-br', self )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
@@ -1255,7 +1268,8 @@ class IVSSwitch( Switch ):
         self.cmd( ' '.join(args) + ' >' + logfile + ' 2>&1 </dev/null &' )
 
     def stop( self, deleteIntfs=True ):
-        "Terminate IVS switch."
+        """Terminate IVS switch.
+           deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'kill %ivs' )
         self.cmd( 'wait' )
         if deleteIntfs:
@@ -1275,6 +1289,10 @@ class IVSSwitch( Switch ):
             return "can't run dpctl without passive listening port"
         return self.cmd( 'ovs-ofctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
+
+    def connected( self ):
+        "For now, return True since we can't tell if we're connected"
+        return True
 
 
 class Controller( Node ):
@@ -1323,11 +1341,11 @@ class Controller( Node ):
                   ' 1>' + cout + ' 2>' + cout + ' &' )
         self.execed = False
 
-    def stop( self ):
+    def stop( self, *args, **kwargs ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
         self.cmd( 'wait %' + self.command )
-        self.terminate()
+        super( Controller, self ).stop( *args, **kwargs )
 
     def IP( self, intf=None ):
         "Return IP address of the Controller"
@@ -1343,7 +1361,8 @@ class Controller( Node ):
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
     @classmethod
-    def isAvailable( self ):
+    def isAvailable( cls ):
+        "Is controller available?"
         return quietRun( 'which controller' )
 
 class OVSController( Controller ):
@@ -1353,8 +1372,9 @@ class OVSController( Controller ):
             command = 'test-controller'
         Controller.__init__( self, name, command=command, **kwargs )
     @classmethod
-    def isAvailable( self ):
-        return quietRun( 'which ovs-controller' ) or quietRun( 'which test-controller' )
+    def isAvailable( cls ):
+        return ( quietRun( 'which ovs-controller' ) or
+                 quietRun( 'which test-controller' ) )
 
 class NOX( Controller ):
     "Controller to run a NOX application."
@@ -1432,7 +1452,7 @@ class RemoteController( Controller ):
                   " at %s:%d\n" % ( self.ip, self.port ) )
 
 
-DefaultControllers = [ Controller, OVSController ]
+DefaultControllers = ( Controller, OVSController )
 
 def findController( controllers=DefaultControllers ):
     "Return first available controller from list, if any"
@@ -1446,4 +1466,3 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     if not controller:
         raise Exception( 'Could not find a default OpenFlow controller' )
     return controller( name, **kwargs )
-

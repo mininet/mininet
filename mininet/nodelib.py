@@ -33,7 +33,7 @@ class LinuxBridge( Switch ):
         else:
             return True
 
-    def start( self, controllers ):
+    def start( self, _controllers ):
         "Start Linux bridge"
         self.cmd( 'ifconfig', self, 'down' )
         self.cmd( 'brctl delbr', self )
@@ -62,21 +62,22 @@ class LinuxBridge( Switch ):
 
 
 class NAT( Node ):
-    """NAT: Provides connectivity to external network"""
+    "NAT: Provides connectivity to external network"
 
-    def __init__( self, name, inetIntf=None, subnet='10.0/8', localIntf=None, **params):
+    def __init__( self, name, inetIntf=None, subnet='10.0/8',
+                  localIntf=None, **params):
+        """Start NAT/forwarding between Mininet and external network
+           inetIntf: interface for internet access
+           subnet: Mininet subnet (default 10.0/8)="""
         super( NAT, self ).__init__( name, **params )
 
-        """Start NAT/forwarding between Mininet and external network
-        inetIntf: interface for internet access
-        subnet: Mininet subnet (default 10.0/8)="""
         self.inetIntf = inetIntf if inetIntf else self.getGatewayIntf()
         self.subnet = subnet
         self.localIntf = localIntf
 
     def config( self, **params ):
-        super( NAT, self).config( **params )
         """Configure the NAT and iptables"""
+        super( NAT, self).config( **params )
 
         if not self.localIntf:
             self.localIntf =  self.defaultIntf()
@@ -94,10 +95,14 @@ class NAT( Node ):
         self.cmd( 'iptables -P FORWARD DROP' )
 
         # Configure NAT
-        self.cmd( 'iptables -I FORWARD -i', self.localIntf, '-d', self.subnet, '-j DROP' )
-        self.cmd( 'iptables -A FORWARD -i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
-        self.cmd( 'iptables -A FORWARD -i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
-        self.cmd( 'iptables -t nat -A POSTROUTING -o ', self.inetIntf, '-s', self.subnet, '-j MASQUERADE' )
+        self.cmd( 'iptables -I FORWARD',
+                  '-i', self.localIntf, '-d', self.subnet, '-j DROP' )
+        self.cmd( 'iptables -A FORWARD',
+                  '-i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
+        self.cmd( 'iptables -A FORWARD',
+                  '-i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
+        self.cmd( 'iptables -t nat -A POSTROUTING',
+                  '-o', self.inetIntf, '-s', self.subnet, '-j MASQUERADE' )
 
         # Instruct the kernel to perform forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
@@ -116,14 +121,17 @@ class NAT( Node ):
         # hopefully this won't disconnect you
         self.cmd( 'service network-manager restart' )
 
-    def getGatewayIntf( self ):
+    def getGatewayIntf( self, fallback='eth0' ):
+        """Return gateway interface name
+           fallback: default device to fall back to"""
         routes = self.cmd( 'ip route show' )
-        match = re.search('default via \S+ dev (\S+)', routes )
+        match = re.search( r'default via \S+ dev (\S+)', routes )
         if match:
             return match.group( 1 )
         else:
-            warn( 'There is no default route set. Using eth0 as gateway interface...\n' )
-            return 'eth0'
+            warn( 'There is no default route set.',
+                  'Using', fallback, 'as gateway interface...\n' )
+            return fallback
 
     def terminate( self ):
         """Stop NAT/forwarding between Mininet and external network"""
@@ -136,4 +144,3 @@ class NAT( Node ):
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 
         super( NAT, self ).terminate()
-

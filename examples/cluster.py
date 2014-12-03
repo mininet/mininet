@@ -87,7 +87,7 @@ from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
 import os
 from random import randrange
-from sys import exit
+import sys
 import re
 
 from distutils.version import StrictVersion
@@ -282,7 +282,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         cls = type( self )
         if self.server not in cls.OVSVersions:
             vers = self.cmd( 'ovs-vsctl --version' )
-            cls.OVSVersions[ self.server ] = re.findall( '\d+\.\d+', vers )[ 0 ]
+            cls.OVSVersions[ self.server ] = re.findall( r'\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                 StrictVersion( '1.10' ) )
 
@@ -387,7 +387,7 @@ class RemoteLink( Link ):
             tunnel.wait()
             error( ch + tunnel.stdout.read() )
             error( tunnel.stderr.read() )
-            exit( 1 )
+            sys.exit( 1 )
         # 3. Move interfaces if necessary
         for node in node1, node2:
             if node.inNamespace:
@@ -643,7 +643,7 @@ class MininetCluster( Mininet ):
         for server in self.servers:
             ip = self.serverIP[ server ]
             if not server or server == 'localhost':
-                 continue
+                continue
             info( server, '' )
             dest = '%s@%s' % ( self.user, ip )
             cmd = [ 'sudo', '-E', '-u', self.user ]
@@ -660,7 +660,7 @@ class MininetCluster( Mininet ):
                    '*** Make sure that the above ssh command works correctly.\n'
                    '*** You may also need to run mn -c on all nodes, and/or\n'
                    '*** use sudo -E.\n' )
-            exit( 1 )
+            sys.exit( 1 )
         info( '\n' )
 
     def modifiedaddHost( self, *args, **kwargs ):
@@ -703,7 +703,7 @@ class MininetCluster( Mininet ):
         if ( isinstance( controller, Controller)
              and controller.IP() == '127.0.0.1'
              and ' eth0:' in controller.cmd( 'ip link show' ) ):
-             Intf( 'eth0', node=controller ).updateIP()
+            Intf( 'eth0', node=controller ).updateIP()
         return controller
 
     def buildFromTopo( self, *args, **kwargs ):

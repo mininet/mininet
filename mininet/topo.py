@@ -111,7 +111,8 @@ class Topo( object ):
         self.hopts = params.pop( 'hopts', {} )
         self.sopts = params.pop( 'sopts', {} )
         self.lopts = params.pop( 'lopts', {} )
-        self.ports = {}  # ports[src][dst][sport] is port on dst that connects to src
+        # ports[src][dst][sport] is port on dst that connects to src
+        self.ports = {}
         self.build( *args, **params )
 
     def build( self, *args, **params ):
@@ -187,7 +188,7 @@ class Topo( object ):
            withKeys: return link keys
            withInfo: return link info
            returns: list of ( src, dst [,key, info ] )"""
-        for src, dst, key, info in self.g.edges_iter( data=True, keys=True ):
+        for _src, _dst, key, info in self.g.edges_iter( data=True, keys=True ):
             node1, node2 = info[ 'node1' ], info[ 'node2' ]
             if withKeys:
                 if withInfo:
@@ -207,7 +208,7 @@ class Topo( object ):
            withInfo: return link info
            returns: list of ( src, dst [,key, info ] )"""
         links = list( self.iterLinks( withKeys, withInfo ) )
-        if not sorted:
+        if not sort:
             return links
         # Ignore info when sorting
         tupleSize = 3 if withKeys else 2
@@ -287,10 +288,13 @@ class Topo( object ):
         return sorted( items, key=natural )
 
 
+# Our idiom defines additional parameters in build(param...)
+# pylint: disable=arguments-differ, attribute-defined-outside-init
+
 class SingleSwitchTopo( Topo ):
     "Single switch connected to k hosts."
 
-    def build( self, k=2, **opts ):
+    def build( self, k=2, **_opts ):
         "k: number of hosts"
         self.k = k
         switch = self.addSwitch( 's1' )
@@ -317,7 +321,7 @@ class SingleSwitchReversedTopo( Topo ):
 class LinearTopo( Topo ):
     "Linear topology of k switches, with n hosts per switch."
 
-    def build( self, k=2, n=1, **opts):
+    def build( self, k=2, n=1, **_opts):
         """k: number of switches
            n: number of hosts per switch"""
         self.k = k
@@ -340,3 +344,5 @@ class LinearTopo( Topo ):
             if lastSwitch:
                 self.addLink( switch, lastSwitch )
             lastSwitch = switch
+
+# pylint: enable=arguments-differ, attribute-defined-outside-init

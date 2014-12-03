@@ -98,7 +98,8 @@ from math import ceil
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
+from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
+                          Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
@@ -264,14 +265,24 @@ class Mininet( object ):
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    def addNAT( self, name='nat0', connect=True, inNamespace=False, **params ):
+    def addNAT( self, name='nat0', connect=True, inNamespace=False,
+                **params):
+        """Add a NAT to the Mininet network
+           name: name of NAT node
+           connect: switch to connect to | True (s1) | None
+           inNamespace: create in a network namespace
+           params: other NAT node params, notably:
+               ip: used as default gateway address"""
         nat = self.addHost( name, cls=NAT, inNamespace=inNamespace,
                             subnet=self.ipBase, **params )
         # find first switch and create link
         if connect:
-            # connect the nat to the first switch
+            if not isinstance( connect, Node ):
+                # Use first switch if not specified
+                connect = self.switches[ 0 ]
+            # Connect the nat to the switch
             self.addLink( nat, self.switches[ 0 ] )
-            # set the default route on hosts
+            # Set the default route on hosts
             natIP = nat.params[ 'ip' ].split('/')[ 0 ]
             for host in self.hosts:
                 if host.inNamespace:
@@ -486,7 +497,8 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        for swclass, switches in groupby( sorted( self.switches, key=type ), type ):
+        for swclass, switches in groupby(
+                sorted( self.switches, key=type ), type ):
             if hasattr( swclass, 'batchShutdown' ):
                 swclass.batchShutdown( switches )
         for switch in self.switches:
@@ -521,13 +533,13 @@ class Mininet( object ):
         if hosts is None:
             hosts = self.hosts
         poller = select.poll()
-        Node = hosts[ 0 ]  # so we can call class method fdToNode
+        h1 = hosts[ 0 ]  # so we can call class method fdToNode
         for host in hosts:
             poller.register( host.stdout )
         while True:
             ready = poller.poll( timeoutms )
             for fd, event in ready:
-                host = Node.fdToNode( fd )
+                host = h1.fdToNode( fd )
                 if event & select.POLLIN:
                     line = host.readline()
                     if line is not None:
@@ -574,7 +586,8 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
+                        result = node.cmd( 'ping -c1 %s %s' %
+                                           (opts, dest.IP()) )
                         sent, received = self._parsePing( result )
                     else:
                         sent, received = 0, 0
@@ -699,13 +712,13 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None,
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', fmt=None,
                seconds=5):
         """Run iperf between two hosts.
-           hosts: list of hosts; if None, uses opposite hosts
+           hosts: list of hosts; if None, uses first and last hosts
            l4Type: string, one of [ TCP, UDP ]
            udpBw: bandwidth target for UDP test
-           format: iperf format argument if any
+           fmt: iperf format argument if any
            seconds: iperf time to transmit
            returns: two-element array of [ server, client ] speeds
            note: send() is buffered, so client rate can be much higher than
@@ -729,8 +742,8 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
-        if format:
-          iperfArgs += '-f %s ' %format
+        if fmt:
+            iperfArgs += '-f %s ' % fmt
         server.sendCmd( iperfArgs + '-s', printPid=True )
         servout = ''
         while server.lastPid is None:
@@ -755,7 +768,7 @@ class Mininet( object ):
     def runCpuLimitTest( self, cpu, duration=5 ):
         """run CPU limit test with 'while true' processes.
         cpu: desired CPU fraction of each host
-        duration: test duration in seconds
+        duration: test duration in seconds (integer)
         returns a single list of measured CPU fractions as floats.
         """
         cores = int( quietRun( 'nproc' ) )
@@ -776,12 +789,14 @@ class Mininet( object ):
         # get the initial cpu time for each host
         for host in hosts:
             outputs[ host ] = []
-            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+                       host, 'r' ) as f:
                 time[ host ] = float( f.read() )
-        for _ in range( 5 ):
+        for _ in range( duration ):
             sleep( 1 )
             for host in hosts:
-                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+                           host, 'r' ) as f:
                     readTime = float( f.read() )
                 outputs[ host ].append( ( ( readTime - time[ host ] )
                                         / 1000000000 ) / cores * 100 )

@@ -3,6 +3,9 @@
 from mininet.topo import Topo
 from mininet.net import Mininet
 
+# The build() method is expected to do both of these things:
+# pylint: disable=attribute-defined-outside-init, arguments-differ
+
 class TreeTopo( Topo ):
     "Topology for a tree network with a given depth and fanout."
 
@@ -53,7 +56,8 @@ class TorusTopo( Topo ):
                 loc = '%dx%d' % ( i + 1, j + 1 )
                 # dpid cannot be zero for OVS
                 dpid = ( i + 1 ) * 256 + ( j + 1 )
-                switch = switches[ i, j ] = self.addSwitch( 's' + loc, dpid='%016x' % dpid )
+                switch = switches[ i, j ] = self.addSwitch(
+                    's' + loc, dpid='%016x' % dpid )
                 host = hosts[ i, j ] = self.addHost( 'h' + loc )
                 self.addLink( host, switch )
         # Connect switches
@@ -65,5 +69,4 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
 
-
-
+# pylint: enable=attribute-defined-outside-init, arguments-differ

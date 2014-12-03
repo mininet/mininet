@@ -33,7 +33,7 @@ class Intf( object ):
     "Basic interface object that can configure itself."
 
     def __init__( self, name, node=None, port=None, link=None,
-                  mac=None, srcNode=None, **params ):
+                  mac=None, **params ):
         """name: interface name (e.g. h1-eth0)
            node: owning node (where this intf most likely lives)
            link: parent link if we're part of a link
@@ -71,7 +71,8 @@ class Intf( object ):
             return self.ifconfig( ipstr, 'up' )
         else:
             if prefixLen is None:
-                raise Exception( 'No prefix length set for IP address %s' % ( ipstr, ) )
+                raise Exception( 'No prefix length set for IP address %s'
+                                 % ( ipstr, ) )
             self.ip, self.prefixLen = ipstr, prefixLen
             return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
 
@@ -196,7 +197,7 @@ class Intf( object ):
 
     def status( self ):
         "Return intf status as a string"
-        links, err_, result_ = self.node.pexec( 'ip link show' )
+        links, _err, _result = self.node.pexec( 'ip link show' )
         if self.name in links:
             return "OK"
         else:
@@ -419,15 +420,19 @@ class Link( object ):
 
     def intfName( self, node, n ):
         "Construct a canonical interface name node-ethN for interface n."
+        # Leave this as an instance method for now
+        assert self
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( _cls, intfname1, intfname2, addr1=None, addr2=None ):
+    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None ):
         """Create pair of interfaces
            intfname1: name of interface 1
            intfname2: name of interface 2
            (override this method [and possibly delete()]
            to change link type)"""
+        # Leave this as a class method for now
+        assert cls
         return makeIntfPair( intfname1, intfname2, addr1, addr2 )
 
     def delete( self ):

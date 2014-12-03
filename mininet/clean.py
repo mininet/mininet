@@ -10,7 +10,8 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE, check_output as co
+from subprocess import ( Popen, PIPE, check_output as co,
+                         CalledProcessError )
 import time
 
 from mininet.log import info
@@ -28,11 +29,11 @@ def killprocs( pattern ):
     # Make sure they are gone
     while True:
         try:
-            pids = co( 'pgrep -f %s' % pattern )
-        except:
+            pids = co( [ 'pgrep', '-f', pattern ] )
+        except CalledProcessError:
             pids = ''
         if pids:
-            sh( 'pkill -f 9 mininet:' )
+            sh( 'pkill -9 -f %s' % pattern )
             time.sleep( .5 )
         else:
             break

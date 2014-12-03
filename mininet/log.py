@@ -124,7 +124,7 @@ class MininetLogger( Logger, object ):
         self.setLevel( level )
         self.handlers[ 0 ].setLevel( level )
 
-    # pylint: disable-msg=E0202
+    # pylint: disable=E0202
     # "An attribute inherited from mininet.log hide this method"
     # Not sure why this is occurring - this function definitely gets called.
 
@@ -142,7 +142,7 @@ class MininetLogger( Logger, object ):
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
 
-    # pylint: enable-msg=E0202
+    # pylint: enable=E0202
 
 lg = MininetLogger()
 

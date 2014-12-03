@@ -96,7 +96,7 @@ class CLI( Cmd ):
     # Disable pylint "Unused argument: 'arg's'" messages, as well as
     # "method could be a function" warning, since each CLI function
     # must have the same interface
-    # pylint: disable-msg=R0201
+    # pylint: disable=R0201
 
     helpStr = (
         'You may also send a command to a node using:\n'
@@ -128,7 +128,7 @@ class CLI( Cmd ):
         nodes = ' '.join( sorted( self.mn ) )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    def do_ports( self, line ):
+    def do_ports( self, _line ):
         "display ports and interfaces for each switch"
         dumpPorts( self.mn.switches )
 
@@ -142,7 +142,7 @@ class CLI( Cmd ):
         call( line, shell=True )
 
     # do_py() and do_px() need to catch any exception during eval()/exec()
-    # pylint: disable-msg=W0703
+    # pylint: disable=W0703
 
     def do_py( self, line ):
         """Evaluate a Python expression.
@@ -159,7 +159,7 @@ class CLI( Cmd ):
             output( str( e ) + '\n' )
 
     # We are in fact using the exec() pseudo-function
-    # pylint: disable-msg=W0122
+    # pylint: disable=W0122
 
     def do_px( self, line ):
         """Execute a Python statement.
@@ -169,7 +169,7 @@ class CLI( Cmd ):
         except Exception, e:
             output( str( e ) + '\n' )
 
-    # pylint: enable-msg=W0703,W0122
+    # pylint: enable=W0703,W0122
 
     def do_pingall( self, line ):
         "Ping between all hosts."
@@ -346,7 +346,7 @@ class CLI( Cmd ):
         elapsed = time.time() - start
         self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
-    def do_links( self, line ):
+    def do_links( self, _line ):
         "Report on links"
         for link in self.mn.links:
             print link, link.status()
@@ -355,7 +355,8 @@ class CLI( Cmd ):
         "Starts or stops a switch"
         args = line.split()
         if len(args) != 2:
-            error( 'invalid number of args: switch <switch name> {start, stop}\n' )
+            error( 'invalid number of args: switch <switch name>'
+                   '{start, stop}\n' )
             return
         sw = args[ 0 ]
         command = args[ 1 ]
@@ -397,7 +398,7 @@ class CLI( Cmd ):
         else:
             error( '*** Unknown command: %s\n' % line )
 
-    # pylint: enable-msg=R0201
+    # pylint: enable=R0201
 
     def waitForNode( self, node ):
         "Wait for a node to finish, and print its output."
