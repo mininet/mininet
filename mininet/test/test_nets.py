@@ -4,6 +4,7 @@
    Test creation and all-pairs ping for each included mininet topo type."""
 
 import unittest
+import sys
 from functools import partial
 
 from mininet.net import Mininet
@@ -12,6 +13,7 @@ from mininet.node import UserSwitch, OVSSwitch, IVSSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
+from mininet.clean import cleanup
 
 # Tell pylint not to complain about calls to other class
 # pylint: disable=E1101
@@ -20,6 +22,11 @@ class testSingleSwitchCommon( object ):
     "Test ping with single switch topology (common code)."
 
     switchClass = None # overridden in subclasses
+
+    def tearDown( self ):
+        "Clean up if necessary"
+        if sys.exc_info != ( None, None, None ):
+            cleanup()
 
     def testMinimal( self ):
         "Ping test on minimal topology"
