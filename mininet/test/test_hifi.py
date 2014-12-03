@@ -4,6 +4,7 @@
    Test creation and pings for topologies with link and/or CPU options."""
 
 import unittest
+import sys
 from functools import partial
 
 from mininet.net import Mininet
@@ -13,6 +14,7 @@ from mininet.link import TCLink
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
+from mininet.clean import cleanup
 
 # Number of hosts for each test
 N = 2
@@ -39,6 +41,11 @@ class testOptionsTopoCommon( object ):
        (common code)."""
 
     switchClass = None # overridden in subclasses
+
+    def tearDown( self ):
+        "Clean up if necessary"
+        if sys.exc_info != ( None, None, None ):
+            cleanup()
 
     def runOptionsTopoTest( self, n, msg, hopts=None, lopts=None ):
         "Generic topology-with-options test runner."
@@ -96,7 +103,8 @@ class testOptionsTopoCommon( object ):
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
         hostUsage = '\n'.join( 'h%s: %s' %
-                               ( n + 1, results[ ( n - 1 ) * 5: ( n * 5 ) - 1 ] )
+                               ( n + 1,
+                                 results[ (n - 1) * 5 : (n * 5) - 1 ] )
                                for n in range( N ) )
         hoptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in hopts.items() )
@@ -106,7 +114,8 @@ class testOptionsTopoCommon( object ):
                 'hopts = %s\n'
                 'host = CPULimitedHost\n'
                 'Switch = %s\n'
-                % ( CPU_FRACTION * 100, hostUsage, N, hoptsStr, self.switchClass ) )
+                % ( CPU_FRACTION * 100, hostUsage, N, hoptsStr,
+                    self.switchClass ) )
         for pct in results:
             #divide cpu by 100 to convert from percentage to fraction
             self.assertWithinTolerance( pct/100, CPU_FRACTION,
@@ -115,7 +124,8 @@ class testOptionsTopoCommon( object ):
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
         if self.switchClass is UserSwitch:
-            self.skipTest ( 'UserSwitch has very poor performance, so skip for now' )
+            self.skipTest ( 'UserSwitch has very poor performance -'
+                            ' skipping for now' )
         BW = 5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
@@ -124,7 +134,7 @@ class testOptionsTopoCommon( object ):
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass,
                       waitConnected=True )
-        bw_strs = mn.run( mn.iperf, format='m' )
+        bw_strs = mn.run( mn.iperf, fmt='m' )
         loptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in lopts.items() )
         msg = ( '\nTesting link bandwidth limited to %d Mbps per link\n'
@@ -160,12 +170,12 @@ class testOptionsTopoCommon( object ):
         mn.stop()
         test_outputs = ping_delays[0]
         # Ignore unused variables below
-        # pylint: disable-msg=W0612
+        # pylint: disable=W0612
         node, dest, ping_outputs = test_outputs
         sent, received, rttmin, rttavg, rttmax, rttdev = ping_outputs
         pingFailMsg = 'sent %s pings, only received %s' % ( sent, received )
         self.assertEqual( sent, received, msg=pingFailMsg )
-        # pylint: enable-msg=W0612
+        # pylint: enable=W0612
         loptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in lopts.items() )
         msg = ( '\nTesting Link Delay of %s ms\n'
@@ -212,7 +222,8 @@ class testOptionsTopoCommon( object ):
                 'lopts = %s\n'
                 'host = default\n'
                 'switch = %s\n'
-                % ( LOSS_PERCENT, dropped_total, N, loptsStr, self.switchClass ) )
+                % ( LOSS_PERCENT, dropped_total, N, loptsStr,
+                    self.switchClass ) )
 
         self.assertGreater( dropped_total, 0, msg )
 
