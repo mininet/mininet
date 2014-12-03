@@ -6,7 +6,7 @@ Run all mininet core tests
  -quick : skip tests that take more than ~30 seconds
 """
 
-import unittest
+from unittest import defaultTestLoader, TextTestRunner
 import os
 import sys
 from mininet.util import ensureRoot
@@ -19,9 +19,9 @@ def runTests( testDir, verbosity=1 ):
     ensureRoot()
     cleanup()
     # discover all tests in testDir
-    testSuite = unittest.defaultTestLoader.discover( testDir )
+    testSuite = defaultTestLoader.discover( testDir )
     # run tests
-    unittest.TextTestRunner( verbosity=verbosity ).run( testSuite )
+    TextTestRunner( verbosity=verbosity ).run( testSuite )
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )
