@@ -4,6 +4,7 @@
    Regression tests for switch dpid assignment."""
 
 import unittest
+import sys
 from functools import partial
 import re
 
@@ -13,7 +14,7 @@ from mininet.node import UserSwitch, OVSSwitch, OVSLegacyKernelSwitch, IVSSwitch
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
-
+from mininet.clean import cleanup
 
 class testSwitchDpidAssignmentCommon ( object ):
     """Verify Switch dpid assignment."""
