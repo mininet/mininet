@@ -38,6 +38,11 @@ test: $(MININET) $(TEST)
 	mininet/test/test_nets.py
 	mininet/test/test_hifi.py
 
+slowtest: $(MININET)
+	-echo "Running slower tests (walkthrough, examples)"
+	mininet/test/test_walkthrough.py -v
+	mininet/examples/test/runner.py -v
+
 mnexec: mnexec.c $(MN) mininet/net.py
 	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< -o $@
 
