@@ -46,10 +46,12 @@ class LinuxBridge( Switch ):
                 self.cmd( 'brctl addif', self, i )
         self.cmd( 'ifconfig', self, 'up' )
 
-    def stop( self ):
-        "Stop Linux bridge"
+    def stop( self, deleteIntfs=True ):
+        """Stop Linux bridge
+           deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'ifconfig', self, 'down' )
         self.cmd( 'brctl delbr', self )
+        super( LinuxBridge, self ).stop( deleteIntfs )
 
     def dpctl( self, *args ):
         "Run brctl command"

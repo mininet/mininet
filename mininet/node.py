@@ -996,9 +996,7 @@ class UserSwitch( Switch ):
            deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
-        if deleteIntfs:
-            self.deleteIntfs()
-
+        super( UserSwitch, self ).stop( deleteIntfs )
 
 class OVSLegacyKernelSwitch( Switch ):
     """Open VSwitch legacy kernel-space switch using ovs-openflowd.
@@ -1048,8 +1046,7 @@ class OVSLegacyKernelSwitch( Switch ):
            deleteIntfs: delete interfaces? (True)"""
         quietRun( 'ovs-dpctl del-dp ' + self.dp )
         self.cmd( 'kill %ovs-openflowd' )
-        if deleteIntfs:
-            self.deleteIntfs()
+        super( OVSLegacyKernelSwitch, self ).stop( deleteIntfs )
 
 
 class OVSSwitch( Switch ):
@@ -1204,8 +1201,7 @@ class OVSSwitch( Switch ):
         self.cmd( 'ovs-vsctl del-br', self )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
-        if deleteIntfs:
-            self.deleteIntfs()
+        super( OVSSwitch, self ).stop( deleteIntfs )
 
 
 OVSKernelSwitch = OVSSwitch
@@ -1273,8 +1269,7 @@ class IVSSwitch( Switch ):
            deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'kill %ivs' )
         self.cmd( 'wait' )
-        if deleteIntfs:
-            self.deleteIntfs()
+        super( IVSSwitch, self ).stop( deleteIntfs )
 
     def attach( self, intf ):
         "Connect a data port"
