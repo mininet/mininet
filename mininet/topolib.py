@@ -3,8 +3,8 @@
 from mininet.topo import Topo
 from mininet.net import Mininet
 
-# The build() method is expected to do both of these things:
-# pylint: disable=attribute-defined-outside-init, arguments-differ
+# The build() method is expected to do this:
+# pylint: disable=arguments-differ
 
 class TreeTopo( Topo ):
     "Topology for a tree network with a given depth and fanout."
@@ -69,4 +69,4 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
 
-# pylint: enable=attribute-defined-outside-init, arguments-differ
+# pylint: enable=arguments-differ

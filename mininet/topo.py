@@ -289,7 +289,7 @@ class Topo( object ):
 
 
 # Our idiom defines additional parameters in build(param...)
-# pylint: disable=arguments-differ, attribute-defined-outside-init
+# pylint: disable=arguments-differ
 
 class SingleSwitchTopo( Topo ):
     "Single switch connected to k hosts."
@@ -345,4 +345,4 @@ class LinearTopo( Topo ):
                 self.addLink( switch, lastSwitch )
             lastSwitch = switch
 
-# pylint: enable=arguments-differ, attribute-defined-outside-init
+# pylint: enable=arguments-differ

@@ -181,14 +181,13 @@ class RemoteMixin( object ):
         if self.isRemote:
             kwargs.update( mnopts='-c' )
         super( RemoteMixin, self ).startShell( *args, **kwargs )
-        if self.splitInit:
-            self.sendCmd( 'echo $$' )
-        else:
-            self.pid = int( self.cmd( 'echo $$' ) )
+        # Optional split initialization
+        self.sendCmd( 'echo $$' )
+        if not self.splitInit:
+            self.finishInit()
 
     def finishInit( self ):
         "Wait for split initialization to complete"
-        assert self  # please pylint
         self.pid = int( self.waitOutput() )
 
     def rpopen( self, *cmd, **opts ):
@@ -283,7 +282,9 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
         if self.server not in cls.OVSVersions:
+            # pylint: disable=not-callable
             vers = self.cmd( 'ovs-vsctl --version' )
+            # pylint: enable=not-callable
             cls.OVSVersions[ self.server ] = re.findall(
                 r'\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <

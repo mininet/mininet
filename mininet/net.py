@@ -254,9 +254,9 @@ class Mininet( object ):
         if isinstance( name, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
-            # pylint: disable=E1103
+            # pylint: disable=maybe-no-member
             name = controller_new.name
-            # pylint: enable=E1103
+            # pylint: enable=maybe-no-member
         else:
             controller_new = controller( name, **params )
         # Add new controller to net

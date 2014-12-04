@@ -13,7 +13,8 @@ DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
 CFLAGS += -Wall -Wextra
-PLFMT = --msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
+PLFMT =
+# was: --msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 all: codecheck test
 

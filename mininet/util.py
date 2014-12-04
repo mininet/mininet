@@ -25,7 +25,7 @@ def checkRun( cmd ):
     return check_call( cmd.split( ' ' ) )
 
 # pylint doesn't understand explicit type checking
-# pylint: disable=E1103
+# pylint: disable=maybe-no-member
 
 def oldQuietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
@@ -119,8 +119,7 @@ def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
-# pylint: enable=E1103
-# pylint: disable=E1101
+# pylint: enable=maybe-no-member
 
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
@@ -132,8 +131,6 @@ def isShellBuiltin( cmd ):
     return cmd in isShellBuiltin.builtIns
 
 isShellBuiltin.builtIns = None
-
-# pylint: enable=E1101
 
 # Interface management
 #
@@ -431,6 +428,8 @@ def fixLimits():
     except Exception:
         warn( "*** Error setting resource limits. "
               "Mininet's performance may be affected.\n" )
+    # pylint: enable=broad-except
+
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"

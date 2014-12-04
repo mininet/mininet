@@ -93,11 +93,6 @@ class CLI( Cmd ):
         self.locals.update( self.mn )
         return self.locals
 
-    # Disable pylint "Unused argument: 'arg's'" messages, as well as
-    # "method could be a function" warning, since each CLI function
-    # must have the same interface
-    # pylint: disable=R0201
-
     helpStr = (
         'You may also send a command to a node using:\n'
         '  <node> command {args}\n'
@@ -139,10 +134,11 @@ class CLI( Cmd ):
     def do_sh( self, line ):
         """Run an external shell command
            Usage: sh [cmd args]"""
+        assert self  # satisfy pylint and allow override
         call( line, shell=True )
 
     # do_py() and do_px() need to catch any exception during eval()/exec()
-    # pylint: disable=W0703
+    # pylint: disable=broad-except
 
     def do_py( self, line ):
         """Evaluate a Python expression.
@@ -159,7 +155,7 @@ class CLI( Cmd ):
             output( str( e ) + '\n' )
 
     # We are in fact using the exec() pseudo-function
-    # pylint: disable=W0122
+    # pylint: disable=exec-used
 
     def do_px( self, line ):
         """Execute a Python statement.
@@ -169,7 +165,7 @@ class CLI( Cmd ):
         except Exception, e:
             output( str( e ) + '\n' )
 
-    # pylint: enable=W0703,W0122
+    # pylint: enable=broad-except,exec-used
 
     def do_pingall( self, line ):
         "Ping between all hosts."
@@ -284,6 +280,7 @@ class CLI( Cmd ):
 
     def do_exit( self, _line ):
         "Exit"
+        assert self  # satisfy pylint and allow override
         return 'exited by user command'
 
     def do_quit( self, line ):
@@ -397,8 +394,6 @@ class CLI( Cmd ):
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % line )
-
-    # pylint: enable=R0201
 
     def waitForNode( self, node ):
         "Wait for a node to finish, and print its output."
