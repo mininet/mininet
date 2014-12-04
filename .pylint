@@ -267,7 +267,8 @@ int-import-graph=
 max-line-length=80
 
 # Maximum number of lines in a module
-max-module-lines=1500
+# XXX 1500 -> 4000 for miniedit.py
+max-module-lines=4000
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
