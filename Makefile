@@ -13,8 +13,6 @@ DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
 CFLAGS += -Wall -Wextra
-PLFMT =
-# was: --msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 all: codecheck test
 
@@ -25,7 +23,7 @@ codecheck: $(PYSRC)
 	-echo "Running code check"
 	util/versioncheck.py
 	pyflakes $(PYSRC)
-	pylint $(PLFMT) --rcfile=.pylint $(PYSRC)
+	pylint --rcfile=.pylint $(PYSRC)
 	pep8 --repeat --ignore=$(P8IGN) $(PYSRC)
 
 errcheck: $(PYSRC)
