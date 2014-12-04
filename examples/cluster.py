@@ -145,7 +145,7 @@ class RemoteMixin( object ):
             self.sshcmd = []
             self.isRemote = False
         # Satisfy pylint
-        self.shell, self.pid, self.cmd = None, None, None
+        self.shell, self.pid = None, None
         super( RemoteMixin, self ).__init__( name, **kwargs )
 
     @staticmethod
