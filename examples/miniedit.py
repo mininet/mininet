@@ -14,7 +14,7 @@ OpenFlow icon from https://www.opennetworking.org/
 """
 
 # Miniedit needs some work in order to pass pylint...
-# pylint: disable=line-too-long,too-many-lines,too-many-branches
+# pylint: disable=line-too-long,too-many-branches
 # pylint: disable=too-many-statements,attribute-defined-outside-init
 # pylint: disable=missing-docstring
 
@@ -376,7 +376,8 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         else:
             self.result = None
 
-    def getOvsVersion(self):
+    @staticmethod
+    def getOvsVersion():
         "Return OVS version"
         outp = quietRun("ovs-vsctl show")
         r = r'ovs_version: "(.*)"'
@@ -392,7 +393,7 @@ class PrefsDialog(tkSimpleDialog.Dialog):
 class CustomDialog(object):
 
     # TODO: Fix button placement and Title and window focus lock
-    def __init__(self, master, title):
+    def __init__(self, master, _title):
         self.top=Toplevel(master)
 
         self.bodyFrame = Frame(self.top)
@@ -738,8 +739,9 @@ class SwitchDialog(CustomDialog):
     def addInterface( self ):
         self.tableFrame.addRow()
 
-    def defaultDpid( self ,name):
+    def defaultDpid( self, name):
         "Derive dpid from switch name, s1 -> 1"
+        assert self  # satisfy pylint and allow contextual override
         try:
             dpid = int( re.findall( r'\d+', name )[ 0 ] )
             dpid = hex( dpid )[ 2: ]
@@ -823,7 +825,7 @@ class VerticalScrolledTable(LabelFrame):
 
         # track changes to the canvas and frame width and sync them,
         # also updating the scrollbar
-        def _configure_interior(event):
+        def _configure_interior(_event):
         # update the scrollbars to match the size of the inner frame
             size = (interior.winfo_reqwidth(), interior.winfo_reqheight())
             canvas.config(scrollregion="0 0 %s %s" % size)
@@ -832,7 +834,7 @@ class VerticalScrolledTable(LabelFrame):
                 canvas.config(width=interior.winfo_reqwidth())
         interior.bind('<Configure>', _configure_interior)
 
-        def _configure_canvas(event):
+        def _configure_canvas(_event):
             if interior.winfo_reqwidth() != canvas.winfo_width():
                 # update the inner frame's width to fill the canvas
                 canvas.itemconfigure(interior_id, width=canvas.winfo_width())
@@ -1047,7 +1049,7 @@ class ToolTip(object):
         self.text = text
         if self.tipwindow or not self.text:
             return
-        x, y, cx, cy = self.widget.bbox("insert")
+        x, y, _cx, cy = self.widget.bbox("insert")
         x = x + self.widget.winfo_rootx() + 27
         y = y + cy + self.widget.winfo_rooty() +27
         self.tipwindow = tw = Toplevel(self.widget)
@@ -1055,9 +1057,11 @@ class ToolTip(object):
         tw.wm_geometry("+%d+%d" % (x, y))
         try:
             # For Mac OS
+            # pylint: disable=protected-access
             tw.tk.call("::tk::unsupported::MacWindowStyle",
                        "style", tw._w,
                        "help", "noActivates")
+            # pylint: enable=protected-access
         except TclError:
             pass
         label = Label(tw, text=self.text, justify=LEFT,
@@ -1328,11 +1332,12 @@ class MiniEdit( Frame ):
         self.active = toolName
 
 
-    def createToolTip(self, widget, text):
+    @staticmethod
+    def createToolTip(widget, text):
         toolTip = ToolTip(widget)
-        def enter(event):
+        def enter(_event):
             toolTip.showtip(text)
-        def leave(event):
+        def leave(_event):
             toolTip.hidetip()
         widget.bind('<Enter>', enter)
         widget.bind('<Leave>', leave)
@@ -1400,16 +1405,16 @@ class MiniEdit( Frame ):
         self.itemToWidget[ item ] = icon
         icon.links = {}
 
-    def convertJsonUnicode(self, input):
+    def convertJsonUnicode(self, text):
         "Some part of Mininet don't like Unicode"
-        if isinstance(input, dict):
-            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in input.iteritems()}
-        elif isinstance(input, list):
-            return [self.convertJsonUnicode(element) for element in input]
-        elif isinstance(input, unicode):
-            return input.encode('utf-8')
+        if isinstance(text, dict):
+            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.iteritems()}
+        elif isinstance(text, list):
+            return [self.convertJsonUnicode(element) for element in text]
+        elif isinstance(text, unicode):
+            return text.encode('utf-8')
         else:
-            return input
+            return text
 
     def loadTopology( self ):
         "Load command."
@@ -1662,8 +1667,10 @@ class MiniEdit( Frame ):
             try:
                 f = open(fileName, 'wb')
                 f.write(json.dumps(savingDictionary, sort_keys=True, indent=4, separators=(',', ': ')))
+            # pylint: disable=broad-except
             except Exception as er:
                 print er
+            # pylint: enable=broad-except
             finally:
                 f.close()
 
@@ -2401,12 +2408,12 @@ class MiniEdit( Frame ):
             bg = 'white'
             about = Toplevel( bg='white' )
             about.title( 'About' )
-            info = self.appName + ': a simple network editor for MiniNet'
+            desc = self.appName + ': a simple network editor for MiniNet'
             version = 'MiniEdit '+MINIEDIT_VERSION
             author = 'Originally by: Bob Lantz <rlantz@cs>, April 2010'
             enhancements = 'Enhancements by: Gregory Gee, Since July 2013'
             www = 'http://gregorygee.wordpress.com/category/miniedit/'
-            line1 = Label( about, text=info, font='Helvetica 10 bold', bg=bg )
+            line1 = Label( about, text=desc, font='Helvetica 10 bold', bg=bg )
             line2 = Label( about, text=version, font='Helvetica 9', bg=bg )
             line3 = Label( about, text=author, font='Helvetica 9', bg=bg )
             line4 = Label( about, text=enhancements, font='Helvetica 9', bg=bg )
@@ -2428,7 +2435,8 @@ class MiniEdit( Frame ):
     def createToolImages( self ):
         "Create toolbar (and icon) images."
 
-    def checkIntf( self, intf ):
+    @staticmethod
+    def checkIntf( intf ):
         "Make sure intf exists and is not configured."
         if ( ' %s:' % intf ) not in quietRun( 'ip link show' ):
             showerror(title="Error",
@@ -2615,10 +2623,12 @@ class MiniEdit( Frame ):
         if 'Switch' in tags or 'LegacySwitch' in tags:
             call(["xterm -T 'Bridge Details' -sb -sl 2000 -e 'ovs-vsctl list bridge " + name + "; read -p \"Press Enter to close\"' &"], shell=True)
 
-    def ovsShow( self, _ignore=None ):
+    @staticmethod
+    def ovsShow( _ignore=None ):
         call(["xterm -T 'OVS Summary' -sb -sl 2000 -e 'ovs-vsctl show; read -p \"Press Enter to close\"' &"], shell=True)
 
-    def rootTerminal( self, _ignore=None ):
+    @staticmethod
+    def rootTerminal( _ignore=None ):
         call(["xterm -T 'Root Terminal' -sb -sl 2000 &"], shell=True)
 
     # Model interface
@@ -2851,7 +2861,8 @@ class MiniEdit( Frame ):
             else:
                 raise Exception( "Cannot create mystery node: " + name )
 
-    def pathCheck( self, *args, **kwargs ):
+    @staticmethod
+    def pathCheck( *args, **kwargs ):
         "Make sure each program in *args can be found in $PATH."
         moduleName = kwargs.get( 'moduleName', 'it' )
         for arg in args:

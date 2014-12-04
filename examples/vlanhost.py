@@ -70,6 +70,8 @@ def exampleAllHosts( vlan ):
     CLI( net )
     net.stop()
 
+# pylint: disable=arguments-differ
+
 class VLANStarTopo( Topo ):
     """Example topology that uses host in multiple VLANs
 

@@ -27,6 +27,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
                            cpu=cpu )
             try:
                 net = Mininet( topo=topo, host=host )
+            # pylint: disable=bare-except
             except:
                 info( '*** Skipping host %s\n' % sched )
                 break
