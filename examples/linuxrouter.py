@@ -44,16 +44,23 @@ class LinuxRouter( Node ):
 class NetworkTopo( Topo ):
     "A simple topology of a router with three subnets (one host in each)."
 
-    def build( self, n=2, h=1, **opts ):
+    def build( self, **opts ):
         router = self.addNode( 'r0', cls=LinuxRouter, ip='192.168.1.1/24' )
-        h1 = self.addHost( 'h1', ip='192.168.1.100/24', defaultRoute='via 192.168.1.1' )
-        h2 = self.addHost( 'h2', ip='172.16.0.100/12', defaultRoute='via 172.16.0.1' )
-        h3 = self.addHost( 'h3', ip='10.0.0.100/8', defaultRoute='via 10.0.0.1' )
-        self.addLink( h1, router, intfName2='r0-eth1', params2={ 'ip' : '192.168.1.1/24' } )
-        self.addLink( h2, router, intfName2='r0-eth2', params2={ 'ip' : '172.16.0.1/12' } )
-        self.addLink( h3, router, intfName2='r0-eth3', params2={ 'ip' : '10.0.0.1/8' } )
+        h1 = self.addHost( 'h1', ip='192.168.1.100/24',
+                           defaultRoute='via 192.168.1.1' )
+        h2 = self.addHost( 'h2', ip='172.16.0.100/12',
+                           defaultRoute='via 172.16.0.1' )
+        h3 = self.addHost( 'h3', ip='10.0.0.100/8',
+                           defaultRoute='via 10.0.0.1' )
+        self.addLink( h1, router, intfName2='r0-eth1',
+                      params2={ 'ip' : '192.168.1.1/24' } )
+        self.addLink( h2, router, intfName2='r0-eth2',
+                      params2={ 'ip' : '172.16.0.1/12' } )
+        self.addLink( h3, router, intfName2='r0-eth3',
+                      params2={ 'ip' : '10.0.0.1/8' } )
 
 def run():
+    "Test linux router"
     topo = NetworkTopo()
     net = Mininet( topo=topo, controller=None ) # no controller needed
     net.start()

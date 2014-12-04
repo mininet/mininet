@@ -727,10 +727,8 @@ class Mininet( object ):
         if not quietRun( 'which telnet' ):
             error( 'Cannot find telnet in $PATH - required for iperf test' )
             return
-        if not hosts:
-            hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
-        else:
-            assert len( hosts ) == 2
+        hosts = hosts or [ self.hosts[ 0 ], self.hosts[ -1 ] ]
+        assert len( hosts ) == 2
         client, server = hosts
         output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
         output( "%s and %s\n" % ( client.name, server.name ) )

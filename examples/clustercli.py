@@ -5,6 +5,7 @@
 from mininet.cli import CLI
 from mininet.log import output, error
 
+# pylint: disable=global-statement
 nx, graphviz_layout, plt = None, None, None  # Will be imported on demand
 
 
@@ -23,17 +24,19 @@ class ClusterCLI( CLI ):
         colors = colors[ 0 : slen ]
         return colors
 
-    def do_plot( self, line ):
+    def do_plot( self, _line ):
         "Plot topology colored by node placement"
         # Import networkx if needed
         global nx, plt
         if not nx:
             try:
-                import networkx as nx
-                import matplotlib.pyplot as plt
+                import networkx
+                nx = networkx  # satisfy pylint
+                from matplotlib import pyplot
+                plt = pyplot   # satisfiy pylint
                 import pygraphviz
                 assert pygraphviz  # silence pyflakes
-            except:
+            except ImportError:
                 error( 'plot requires networkx, matplotlib and pygraphviz - '
                        'please install them and try again\n' )
                 return
@@ -53,10 +56,13 @@ class ClusterCLI( CLI ):
         pos = nx.graphviz_layout( g )
         opts = { 'ax': None, 'font_weight': 'bold',
 		 'width': 2, 'edge_color': 'darkblue' }
-        hcolors = [ color[ getattr( h, 'server', 'localhost' ) ] for h in hosts ]
-        scolors = [ color[ getattr( s, 'server', 'localhost' ) ] for s in switches ]
-        nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800, label='host',
-                          node_color=hcolors, node_shape='s', **opts )
+        hcolors = [ color[ getattr( h, 'server', 'localhost' ) ]
+                    for h in hosts ]
+        scolors = [ color[ getattr( s, 'server', 'localhost' ) ]
+                    for s in switches ]
+        nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800,
+                          label='host', node_color=hcolors, node_shape='s',
+                          **opts )
         nx.draw_networkx( g, pos=pos, nodelist=switches, node_size=1000,
                           node_color=scolors, node_shape='o', **opts )
         # Get rid of axes, add title, and show
@@ -68,7 +74,7 @@ class ClusterCLI( CLI ):
         plt.title( 'Node Placement', fontweight='bold' )
         plt.show()
 
-    def do_status( self, line ):
+    def do_status( self, _line ):
         "Report on node shell status"
         nodes = self.mn.hosts + self.mn.switches
         for node in nodes:
@@ -83,7 +89,7 @@ class ClusterCLI( CLI ):
             output( 'All nodes are still running.\n' )
 
 
-    def do_placement( self, line ):
+    def do_placement( self, _line ):
         "Describe node placement"
         mn = self.mn
         nodes = mn.hosts + mn.switches + mn.controllers

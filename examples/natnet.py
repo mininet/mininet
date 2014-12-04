@@ -27,7 +27,7 @@ from mininet.util import irange
 
 class InternetTopo(Topo):
     "Single switch connected to n hosts."
-    def __init__(self, n=2, h=1, **opts):
+    def __init__(self, n=2, **opts):
         Topo.__init__(self, **opts)
 
         # set up inet switch
@@ -67,4 +67,3 @@ def run():
 if __name__ == '__main__':
     setLogLevel('info')
     run()
-

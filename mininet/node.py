@@ -888,8 +888,9 @@ class Switch( Node ):
 
     def connected( self ):
         "Is the switch connected to a controller? (override this method)"
-        raise NotImplementedError( "connected() needs to be implemented in"
-                                   " Switch subclass %s" % self.__class__ )
+        warn( "Warning: connected() needs to be implemented in"
+              " Switch subclass %s\n" % self.__class__ )
+        return True
 
     def __repr__( self ):
         "More informative string representation"
@@ -1289,10 +1290,6 @@ class IVSSwitch( Switch ):
             return "can't run dpctl without passive listening port"
         return self.cmd( 'ovs-ofctl ' + ' '.join( args ) +
                          ' tcp:127.0.0.1:%i' % self.listenPort )
-
-    def connected( self ):
-        "For now, return True since we can't tell if we're connected"
-        return True
 
 
 class Controller( Node ):

@@ -123,7 +123,8 @@ class RemoteMixin( object ):
            **kwargs: see Node()"""
         # We connect to servers by IP address
         self.server = server if server else 'localhost'
-        self.serverIP = serverIP if serverIP else self.findServerIP( self.server )
+        self.serverIP = ( serverIP if serverIP
+                          else self.findServerIP( self.server ) )
         self.user = user if user else self.findUser()
         if controlPath is True:
             # Set a default control path for shared SSH connections
@@ -143,21 +144,20 @@ class RemoteMixin( object ):
             self.dest = None
             self.sshcmd = []
             self.isRemote = False
+        # Satisfy pylint
+        self.shell, self.pid, self.cmd = None, None, None
         super( RemoteMixin, self ).__init__( name, **kwargs )
 
     @staticmethod
     def findUser():
         "Try to return logged-in (usually non-root) user"
-        try:
+        return (
             # If we're running sudo
-            return os.environ[ 'SUDO_USER' ]
-        except:
-            try:
-                # Logged-in user (if we have a tty)
-                return quietRun( 'who am i' ).split()[ 0 ]
-            except:
-                # Give up and return effective user
-                return quietRun( 'whoami' )
+            os.environ.get( 'SUDO_USER', False ) or
+            # Logged-in user (if we have a tty)
+            ( quietRun( 'who am i' ).split() or [ False ] )[ 0 ] or
+            # Give up and return effective user
+            quietRun( 'whoami' ) )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
@@ -187,6 +187,8 @@ class RemoteMixin( object ):
             self.pid = int( self.cmd( 'echo $$' ) )
 
     def finishInit( self ):
+        "Wait for split initialization to complete"
+        assert self  # please pylint
         self.pid = int( self.waitOutput() )
 
     def rpopen( self, *cmd, **opts ):
@@ -282,7 +284,8 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         cls = type( self )
         if self.server not in cls.OVSVersions:
             vers = self.cmd( 'ovs-vsctl --version' )
-            cls.OVSVersions[ self.server ] = re.findall( r'\d+\.\d+', vers )[ 0 ]
+            cls.OVSVersions[ self.server ] = re.findall(
+                r'\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                 StrictVersion( '1.10' ) )
 
@@ -301,6 +304,7 @@ class RemoteLink( Link ):
         self.tunnel = None
         kwargs.setdefault( 'params1', {} )
         kwargs.setdefault( 'params2', {} )
+        self.cmd = None  # satisfy pylint
         Link.__init__( self, node1, node2, **kwargs )
 
     def stop( self ):
@@ -324,9 +328,10 @@ class RemoteLink( Link ):
         elif server1 == server2:
             # Remote link on same remote server
             return makeIntfPair( intfname1, intfname2, addr1, addr2,
-                                 run=node1.rcmd )
+                                 runCmd=node1.rcmd )
         # Otherwise, make a tunnel
-        self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2, addr1, addr2 )
+        self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
+                                       addr1, addr2 )
         return self.tunnel
 
     @staticmethod
@@ -340,7 +345,7 @@ class RemoteLink( Link ):
         cmd = 'ip link set %s netns %s' % ( intf, node.pid )
         node.rcmd( cmd )
         links = node.cmd( 'ip link show' )
-        if not ( ' %s:' % intf ) in links:
+        if not ' %s:' % intf in links:
             if printError:
                 error( '*** Error: RemoteLink.moveIntf: ' + intf +
                       ' not successfully moved to ' + node.name + '\n' )
@@ -442,8 +447,9 @@ class Placer( object ):
 
     def place( self, node ):
         "Return server for a given node"
+        assert self, node  # satisfy pylint
         # Default placement: run locally
-        return None
+        return 'localhost'
 
 
 class RandomPlacer( Placer ):
@@ -451,6 +457,7 @@ class RandomPlacer( Placer ):
     def place( self, nodename ):
         """Random placement function
             nodename: node name"""
+        assert nodename  # please pylint
         # This may be slow with lots of servers
         return self.servers[ randrange( 0, len( self.servers ) ) ]
 
@@ -467,6 +474,7 @@ class RoundRobinPlacer( Placer ):
     def place( self, nodename ):
         """Round-robin placement function
             nodename: node name"""
+        assert nodename  # please pylint
         # This may be slow with lots of servers
         server = self.servers[ self.next ]
         self.next = ( self.next + 1 ) % len( self.servers )
@@ -626,6 +634,7 @@ class MininetCluster( Mininet ):
 
     def popen( self, cmd ):
         "Popen() for server connections"
+        assert self  # please pylint
         old = signal( SIGINT, SIG_IGN )
         conn = Popen( cmd, stdin=PIPE, stdout=PIPE, close_fds=True )
         signal( SIGINT, old )
@@ -649,7 +658,7 @@ class MininetCluster( Mininet ):
             cmd = [ 'sudo', '-E', '-u', self.user ]
             cmd += self.sshcmd + [ '-n', dest, 'sudo true' ]
             debug( ' '.join( cmd ), '\n' )
-            out, err, code = errRun( cmd )
+            _out, _err, code = errRun( cmd )
             if code != 0:
                 error( '\nstartConnection: server connection check failed '
                        'to %s using command:\n%s\n'
@@ -665,6 +674,7 @@ class MininetCluster( Mininet ):
 
     def modifiedaddHost( self, *args, **kwargs ):
         "Slightly modify addHost"
+        assert self  # please pylint
         kwargs[ 'splitInit' ] = True
         return Mininet.addHost( *args, **kwargs )
 

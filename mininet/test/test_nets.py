@@ -23,7 +23,8 @@ class testSingleSwitchCommon( object ):
 
     switchClass = None # overridden in subclasses
 
-    def tearDown( self ):
+    @staticmethod
+    def tearDown():
         "Clean up if necessary"
         if sys.exc_info != ( None, None, None ):
             cleanup()
@@ -74,7 +75,8 @@ class testLinearCommon( object ):
 
     def testLinear5( self ):
         "Ping test on a 5-switch topology"
-        mn = Mininet( LinearTopo( k=5 ), self.switchClass, Host, Controller, waitConnected=True )
+        mn = Mininet( LinearTopo( k=5 ), self.switchClass, Host,
+                      Controller, waitConnected=True )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 

@@ -35,7 +35,7 @@ class VLANHost( Host ):
         """Configure VLANHost according to (optional) parameters:
            vlan: VLAN ID for default interface"""
 
-        r = super( Host, self ).config( **params )
+        r = super( VLANHost, self ).config( **params )
 
         intf = self.defaultIntf()
         # remove IP from default, "physical" interface

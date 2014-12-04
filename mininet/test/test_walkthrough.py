@@ -19,6 +19,9 @@ def tsharkVersion():
     versionMatch = re.findall( r'TShark \d+.\d+.\d+', versionStr )[0]
     return versionMatch.split()[ 1 ]
 
+# pylint doesn't understand pexpect.match, unfortunately!
+# pylint:disable=maybe-no-member
+
 class testWalkthrough( unittest.TestCase ):
     "Test Mininet walkthrough"
 
@@ -33,7 +36,7 @@ class testWalkthrough( unittest.TestCase ):
 
     def testWireshark( self ):
         "Use tshark to test the of dissector"
-        # Satisfy pylint:
+        # Satisfy pylint
         assert self
         if StrictVersion( tsharkVersion() ) < StrictVersion( '1.12.0' ):
             tshark = pexpect.spawn( 'tshark -i lo -R of' )
@@ -78,7 +81,8 @@ class testWalkthrough( unittest.TestCase ):
             node = p.match.group( 1 )
             actual.append( node )
             p.expect( '\n' )
-        self.assertEqual( actual.sort(), nodes.sort(), '"nodes" and "dump" differ' )
+        self.assertEqual( actual.sort(), nodes.sort(),
+                          '"nodes" and "dump" differ' )
         p.expect( self.prompt )
         p.sendline( 'exit' )
         p.wait()
@@ -202,7 +206,8 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( self.prompt )
         # test delay
         p.sendline( 'h1 ping -c 4 h2' )
-        p.expect( r'rtt min/avg/max/mdev = ([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms' )
+        p.expect( r'rtt min/avg/max/mdev = '
+                  r'([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms' )
         delay = float( p.match.group( 2 ) )
         self.assertTrue( delay > 40, 'Delay < 40ms' )
         self.assertTrue( delay < 45, 'Delay > 40ms' )
@@ -226,10 +231,13 @@ class testWalkthrough( unittest.TestCase ):
 
     def testCustomTopo( self ):
         "Start Mininet using a custom topo, then run pingall"
+        # Satisfy pylint
+        assert self
         custom = os.path.dirname( os.path.realpath( __file__ ) )
         custom = os.path.join( custom, '../../custom/topo-2sw-2host.py' )
         custom = os.path.normpath( custom )
-        p = pexpect.spawn( 'mn --custom %s --topo mytopo --test pingall' % custom )
+        p = pexpect.spawn(
+            'mn --custom %s --topo mytopo --test pingall' % custom )
         p.expect( '0% dropped' )
         p.expect( pexpect.EOF )
 
@@ -331,11 +339,15 @@ class testWalkthrough( unittest.TestCase ):
                           'Github is not reachable; cannot download Pox' )
     def testRemoteController( self ):
         "Test Mininet using Pox controller"
+        # Satisfy pylint
+        assert self
         if not os.path.exists( '/tmp/pox' ):
-            p = pexpect.spawn( 'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
+            p = pexpect.spawn(
+                'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
             p.expect( pexpect.EOF )
         pox = pexpect.spawn( '/tmp/pox/pox.py forwarding.l2_learning' )
-        net = pexpect.spawn( 'mn --controller=remote,ip=127.0.0.1,port=6633 --test pingall' )
+        net = pexpect.spawn(
+            'mn --controller=remote,ip=127.0.0.1,port=6633 --test pingall' )
         net.expect( '0% dropped' )
         net.expect( pexpect.EOF )
         pox.sendintr()

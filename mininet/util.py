@@ -427,6 +427,7 @@ def fixLimits():
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
         #Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
+    # pylint: disable=broad-except
     except Exception:
         warn( "*** Error setting resource limits. "
               "Mininet's performance may be affected.\n" )
@@ -549,6 +550,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
                 partial( quietRun, shell=True ) )
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
+    # pylint: disable=maybe-no-member
     serverIP = server if isinstance( server, basestring ) else server.IP()
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
            ( serverIP, port ) )

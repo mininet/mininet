@@ -42,7 +42,8 @@ class testOptionsTopoCommon( object ):
 
     switchClass = None # overridden in subclasses
 
-    def tearDown( self ):
+    @staticmethod
+    def tearDown():
         "Clean up if necessary"
         if sys.exc_info != ( None, None, None ):
             cleanup()
@@ -151,7 +152,7 @@ class testOptionsTopoCommon( object ):
         # As long as the kernel doesn't wait a long time before
         # delivering bytes to the iperf server, its reported data rate
         # should be close to the actual receive rate.
-        serverRate, clientRate = bw_strs
+        serverRate, _clientRate = bw_strs
         bw = float( serverRate.split(' ')[0] )
         self.assertWithinTolerance( bw, BW, BW_TOLERANCE, msg )
 

@@ -26,6 +26,6 @@ def runTests( testDir, verbosity=1 ):
 if __name__ == '__main__':
     setLogLevel( 'warning' )
     # get the directory containing example tests
-    testDir = os.path.dirname( os.path.realpath( __file__ ) )
-    verbosity = 2 if '-v' in sys.argv else 1
-    runTests( testDir, verbosity )
+    thisdir = os.path.dirname( os.path.realpath( __file__ ) )
+    vlevel = 2 if '-v' in sys.argv else 1
+    runTests( testDir=thisdir, verbosity=vlevel )
