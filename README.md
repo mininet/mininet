@@ -3,7 +3,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.2.0b2
+Mininet 2.2.0rc1
 
 ### What is Mininet?
 
