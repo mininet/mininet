@@ -888,8 +888,10 @@ class Switch( Node ):
 
     def connected( self ):
         "Is the switch connected to a controller? (override this method)"
-        warn( "Warning: connected() needs to be implemented in"
-              " Switch subclass %s\n" % self.__class__ )
+        # Assume that we are connected by default to whatever we need to
+        # be connected to. This should be overridden by any OpenFlow
+        # switch, but not by a standalone bridge.
+        debug( 'Assuming', repr( self ), 'is connected to a controller\n' )
         return True
 
     def __repr__( self ):
@@ -1219,7 +1221,7 @@ class OVSBridge( OVSSwitch ):
 
 
 class IVSSwitch( Switch ):
-    """IVS virtual switch"""
+    "Indigo Virtual Switch"
 
     def __init__( self, name, verbose=False, **kwargs ):
         Switch.__init__( self, name, **kwargs )
