@@ -706,7 +706,7 @@ class CPULimitedHost( Host ):
             output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' %
                                release )
             if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
-                error( '\n*** error: please enable RT_GROUP_SCHED'
+                error( '\n*** error: please enable RT_GROUP_SCHED '
                        'in your kernel\n' )
                 exit( 1 )
             cls._rtGroupSched = True
