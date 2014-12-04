@@ -44,7 +44,7 @@ class LinuxRouter( Node ):
 class NetworkTopo( Topo ):
     "A simple topology of a router with three subnets (one host in each)."
 
-    def build( self, **opts ):
+    def build( self, **_opts ):
         router = self.addNode( 'r0', cls=LinuxRouter, ip='192.168.1.1/24' )
         h1 = self.addHost( 'h1', ip='192.168.1.100/24',
                            defaultRoute='via 192.168.1.1' )

@@ -25,7 +25,8 @@ from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, debug, warn, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
-                           RYU, NOX, RemoteController, findController, DefaultController,
+                           RYU, NOX, RemoteController, findController,
+                           DefaultController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
@@ -132,7 +133,7 @@ class MininetRunner( object ):
         self.setup()
         self.begin()
 
-    def custom( self, option, opt_str, value, parser ):
+    def custom( self, _option, _opt_str, value, _parser ):
         """Parse custom file and add params.
            option: option e.g. --custom
            opt_str: option string e.g. --custom
@@ -168,9 +169,12 @@ class MininetRunner( object ):
             # Add or modify global variable or class
             globals()[ name ] = value
 
-    def setNat( self, option, opt_str, value, parser ):
+    def setNat( self, _option, opt_str, value, parser ):
+        "Set NAT option(s)"
+        assert self  # satisfy pylint
         parser.values.nat = True
-        if parser.rargs and parser.rargs[ 0 ][ 0 ] != '-': #first arg, first char != '-'
+        # first arg, first char != '-'
+        if parser.rargs and parser.rargs[ 0 ][ 0 ] != '-':
             value = parser.rargs.pop( 0 )
             _, args, kwargs = splitArgs( opt_str + ',' + value )
             parser.values.nat_args = args
@@ -201,7 +205,8 @@ class MininetRunner( object ):
                          default=False, help='clean and exit' )
         opts.add_option( '--custom', action='callback',
                          callback=self.custom,
-                         type='string', help='read custom classes or params from .py file(s)' )
+                         type='string',
+                         help='read custom classes or params from .py file(s)' )
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
                          help='|'.join( TESTS ) )
@@ -231,10 +236,12 @@ class MininetRunner( object ):
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
         opts.add_option( '--nat', action='callback', callback=self.setNat,
-                         help="adds a NAT to the topology that connects Mininet hosts"
-                         " to the physical network."
-                         " Warning: This may route any traffic on the machine that uses Mininet's"
-                         " IP subnet into the Mininet network. If you need to change"
+                         help="adds a NAT to the topology that"
+                         " connects Mininet hosts to the physical network."
+                         " Warning: This may route any traffic on the machine"
+                         " that uses Mininet's"
+                         " IP subnet into the Mininet network."
+                         " If you need to change"
                          " Mininet's IP subnet, see the --ipbase option." )
         opts.add_option( '--version', action='callback', callback=version,
                          help='prints the version and exits' )
@@ -265,6 +272,9 @@ class MininetRunner( object ):
                     % self.options.verbosity )
         lg.setLogLevel( self.options.verbosity )
 
+    # Maybe we'll reorganize this someday...
+    # pylint: disable=too-many-branches,too-many-statements
+
     def begin( self ):
         "Create and run mininet."
 
@@ -279,15 +289,16 @@ class MininetRunner( object ):
             CONTROLLERS[ 'default' ] = findController()
             if CONTROLLERS[ 'default' ] is None:
                 if self.options.switch == 'default':
-                    # Fall back to OVS Bridge, which does not use an OF controller
-                    info( '*** No default OpenFlow controller found for default switch!\n' )
+                    info( '*** No default OpenFlow controller found '
+                          'for default switch!\n' )
                     info( '*** Falling back to OVS Bridge\n' )
                     self.options.switch = 'ovsbr'
                     self.options.controller = 'none'
                 elif self.options.switch in ( 'ovsbr', 'lxbr' ):
                     self.options.controller = 'none'
                 else:
-                    raise Exception( "Could not find a default controller for switch %s" %
+                    raise Exception( "Could not find a default controller "
+                                     "for switch %s" %
                                      self.options.switch )
 
         topo = buildTopo( TOPOS, self.options.topo )

@@ -13,8 +13,10 @@ Controller icon from http://semlabs.co.uk/
 OpenFlow icon from https://www.opennetworking.org/
 """
 
-# For now, tolerate long lines and long module
-# pylint: disable=line-too-long,too-many-lines
+# Miniedit needs some work in order to pass pylint...
+# pylint: disable=line-too-long,too-many-lines,too-many-branches
+# pylint: disable=too-many-statements,attribute-defined-outside-init
+# pylint: disable=missing-docstring
 
 MINIEDIT_VERSION = '2.2.0.1'
 
@@ -1573,7 +1575,7 @@ class MiniEdit( Frame ):
             self.createDataLinkBindings()
             self.link = self.linkWidget = None
 
-        f.close
+        f.close()
 
     def findWidgetByName( self, name ):
         for widget in self.widgetToItem:
@@ -2624,8 +2626,10 @@ class MiniEdit( Frame ):
     # Ultimately we will either want to use a topo or
     # mininet object here, probably.
 
-    def addLink( self, source, dest, linktype='data', linkopts={} ):
+    def addLink( self, source, dest, linktype='data', linkopts=None ):
         "Add link to model."
+        if linkopts is None:
+            linkopts = {}
         source.links[ dest ] = self.link
         dest.links[ source ] = self.link
         self.links[ self.link ] = {'type' :linktype,
@@ -3142,7 +3146,7 @@ class MiniEdit( Frame ):
             return
         self.net.nameToNode[ name ].cmd( 'iperf -s -p 5001 &' )
 
-    """ BELOW HERE IS THE TOPOLOGY IMPORT CODE """
+    ### BELOW HERE IS THE TOPOLOGY IMPORT CODE ###
 
     def parseArgs( self ):
         """Parse command-line args and return options object.
@@ -3562,7 +3566,7 @@ def addDictOption( opts, choicesDict, default, name, helpStr=None ):
 if __name__ == '__main__':
     setLogLevel( 'info' )
     app = MiniEdit()
-    """ import topology if specified """
+    ### import topology if specified ###
     app.parseArgs()
     app.importTopo()
 

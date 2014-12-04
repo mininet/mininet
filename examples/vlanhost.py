@@ -30,8 +30,9 @@ from mininet.util import quietRun
 from mininet.log import error
 
 class VLANHost( Host ):
+    "Host connected to VLAN interface"
 
-   def config( self, vlan=100, **params ):
+    def config( self, vlan=100, **params ):
         """Configure VLANHost according to (optional) parameters:
            vlan: VLAN ID for default interface"""
 
@@ -90,7 +91,7 @@ class VLANStarTopo( Topo ):
             self.addLink( h, s1 )
 
 
-def exampleCustomTags( vlan ):
+def exampleCustomTags():
     """Simple example that exercises VLANStarTopo"""
 
     net = Mininet( topo=VLANStarTopo() )
@@ -110,16 +111,12 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
 
     if not quietRun( 'which vconfig' ):
-        error( "Cannot find command 'vconfig'\nThe packge",
+        error( "Cannot find command 'vconfig'\nThe package",
                "'vlan' is required in Ubuntu or Debian,",
                "or 'vconfig' in Fedora\n" )
         exit()
-    try:
-        vlan = int( sys.argv[ 1 ] )
-    except Exception:
-        vlan = None
 
-    if vlan:
-        exampleAllHosts( vlan )
+    if len( sys.argv ) >= 2:
+        exampleAllHosts( vlan=int( sys.argv[ 1 ] ) )
     else:
-        exampleCustomTags( vlan )
+        exampleCustomTags()
