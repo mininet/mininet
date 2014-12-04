@@ -554,7 +554,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
            ( serverIP, port ) )
     time = 0
-    while 'Connected' not in run( cmd ):
+    while 'Connected' not in runCmd( cmd ):
         if timeout:
             print time
             if time >= timeout:
