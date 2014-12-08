@@ -24,7 +24,8 @@ codecheck: $(PYSRC)
 	util/versioncheck.py
 	pyflakes $(PYSRC)
 	pylint --rcfile=.pylint $(PYSRC)
-	pep8 --repeat --ignore=$(P8IGN) $(PYSRC)
+#	Exclude miniedit from pep8 checking for now
+	pep8 --repeat --ignore=$(P8IGN) `ls $(PYSRC) | grep -v miniedit.py`
 
 errcheck: $(PYSRC)
 	-echo "Running check for errors only"
@@ -50,7 +51,7 @@ install: $(MNEXEC) $(MANPAGES)
 	python setup.py install
 
 develop: $(MNEXEC) $(MANPAGES)
-	# Perhaps we should link these as well
+# 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
 	python setup.py develop
