@@ -140,7 +140,7 @@ class customOvs(OVSSwitch):
     "Customized OVS switch"
 
     def __init__( self, name, failMode='secure', datapath='kernel', **params ):
-        OVSSwitch.__init__( self, name, failMode=failMode, datapath=datapath, **params )
+        OVSSwitch.__init__( self, name, failMode=failMode, datapath=datapath,**params )
         self.switchIP = None
 
     def getSwitchIP(self):

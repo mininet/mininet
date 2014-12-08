@@ -59,7 +59,7 @@ class MobilitySwitch( OVSSwitch ):
     def validatePort( self, intf ):
         "Validate intf's OF port number"
         ofport = int( self.cmd( 'ovs-vsctl get Interface', intf,
-                              'ofport' ) )
+                                'ofport' ) )
         if ofport != self.ports[ intf ]:
             warn( 'WARNING: ofport for', intf, 'is actually', ofport,
                   '\n' )

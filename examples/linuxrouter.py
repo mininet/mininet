@@ -62,7 +62,7 @@ class NetworkTopo( Topo ):
 def run():
     "Test linux router"
     topo = NetworkTopo()
-    net = Mininet( topo=topo, controller=None ) # no controller needed
+    net = Mininet( topo=topo, controller=None )  # no controller needed
     net.start()
     info( '*** Routing Table on Router\n' )
     print net[ 'r0' ].cmd( 'route' )

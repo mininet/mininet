@@ -254,8 +254,10 @@ class RemoteMixin( object ):
 
     def addIntf( self, *args, **kwargs ):
         "Override: use RemoteLink.moveIntf"
-        return super( RemoteMixin, self).addIntf( *args,
-                        moveIntfFn=RemoteLink.moveIntf, **kwargs )
+        return super( RemoteMixin,
+                      self).addIntf( *args,
+                                     moveIntfFn=RemoteLink.moveIntf,
+                                     **kwargs )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -277,7 +279,9 @@ class RemoteHost( RemoteNode ):
 
 class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     "Remote instance of Open vSwitch"
+
     OVSVersions = {}
+
     def isOldOVS( self ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
@@ -288,12 +292,10 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
             cls.OVSVersions[ self.server ] = re.findall(
                 r'\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
-                StrictVersion( '1.10' ) )
-
+                 StrictVersion( '1.10' ) )
 
 
 class RemoteLink( Link ):
-
     "A RemoteLink is a link between nodes which may be on different servers"
 
     def __init__( self, node1, node2, **kwargs ):
@@ -349,7 +351,7 @@ class RemoteLink( Link ):
         if not ' %s:' % intf in links:
             if printError:
                 error( '*** Error: RemoteLink.moveIntf: ' + intf +
-                      ' not successfully moved to ' + node.name + '\n' )
+                       ' not successfully moved to ' + node.name + '\n' )
             return False
         return True
 
@@ -388,7 +390,7 @@ class RemoteLink( Link ):
                    'Tunnel setup failed for',
                    '%s:%s' % ( node1, node1.dest ), 'to',
                    '%s:%s\n' % ( node2, node2.dest ),
-                  'command was:', cmd, '\n' )
+                   'command was:', cmd, '\n' )
             tunnel.terminate()
             tunnel.wait()
             error( ch + tunnel.stdout.read() )
@@ -400,7 +402,7 @@ class RemoteLink( Link ):
                 retry( 3, .01, RemoteLink.moveIntf, 'tap9', node )
         # 4. Rename tap interfaces to desired names
         for node, intf, addr in ( ( node1, intfname1, addr1 ),
-                            ( node2, intfname2, addr2 ) ):
+                                  ( node2, intfname2, addr2 ) ):
             if not addr:
                 node.cmd( 'ip link set tap9 name', intf )
             else:
@@ -429,7 +431,7 @@ class Placer( object ):
     "Node placement algorithm for MininetCluster"
 
     def __init__( self, servers=None, nodes=None, hosts=None,
-                 switches=None, controllers=None, links=None ):
+                  switches=None, controllers=None, links=None ):
         """Initialize placement object
            servers: list of servers
            nodes: list of all nodes
@@ -494,7 +496,7 @@ class SwitchBinPlacer( Placer ):
         self.sset = frozenset( self.switches )
         self.cset = frozenset( self.controllers )
         # Server and switch placement indices
-        self.placement =  self.calculatePlacement()
+        self.placement = self.calculatePlacement()
 
     @staticmethod
     def bin( nodes, servers ):
@@ -561,7 +563,7 @@ class HostSwitchBinPlacer( Placer ):
         scount = len( self.servers )
         self.hbin = max( int( len( self.hosts ) / scount ), 1 )
         self.sbin = max( int( len( self.switches ) / scount ), 1 )
-        self.cbin = max( int( len( self.controllers ) / scount ) , 1 )
+        self.cbin = max( int( len( self.controllers ) / scount ), 1 )
         info( 'scount:', scount )
         info( 'bins:', self.hbin, self.sbin, self.cbin, '\n' )
         self.servdict = dict( enumerate( self.servers ) )
@@ -587,7 +589,6 @@ class HostSwitchBinPlacer( Placer ):
             info( 'warning: unknown node', nodename )
             server = self.servdict[ 0 ]
         return server
-
 
 
 # The MininetCluster class is not strictly necessary.
@@ -667,7 +668,8 @@ class MininetCluster( Mininet ):
             result |= code
         if result:
             error( '*** Server precheck failed.\n'
-                   '*** Make sure that the above ssh command works correctly.\n'
+                   '*** Make sure that the above ssh command works'
+                   ' correctly.\n'
                    '*** You may also need to run mn -c on all nodes, and/or\n'
                    '*** use sudo -E.\n' )
             sys.exit( 1 )
@@ -678,7 +680,6 @@ class MininetCluster( Mininet ):
         assert self  # please pylint
         kwargs[ 'splitInit' ] = True
         return Mininet.addHost( *args, **kwargs )
-
 
     def placeNodes( self ):
         """Place nodes on servers (if they don't have a server), and
@@ -695,7 +696,7 @@ class MininetCluster( Mininet ):
         for node in nodes:
             config = self.topo.nodeInfo( node )
             # keep local server name consistent accross nodes
-            if 'server' in config.keys() and config[ 'server' ] == None:
+            if 'server' in config.keys() and config[ 'server' ] is None:
                 config[ 'server' ] = 'localhost'
             server = config.setdefault( 'server', placer.place( node ) )
             if server:
@@ -805,7 +806,7 @@ def testRemoteTopo():
     "Test remote Node classes using Mininet()/Topo() API"
     topo = LinearTopo( 2 )
     net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
-                  link=RemoteLink, controller=ClusterController )
+                   link=RemoteLink, controller=ClusterController )
     net.start()
     net.pingAll()
     net.stop()

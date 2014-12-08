@@ -78,7 +78,6 @@ class MultiGraph( object ):
         "Return list of graph edges"
         return list( self.edges_iter( data=data, keys=keys ) )
 
-
     def __getitem__( self, node ):
         "Return link dict for given src node"
         return self.edge[ node ]
@@ -147,7 +146,7 @@ class Topo( object ):
         return result
 
     def addLink( self, node1, node2, port1=None, port2=None,
-                key=None, **opts ):
+                 key=None, **opts ):
         """node1, node2: nodes to link together
            port1, port2: ports (optional)
            opts: link options (optional)
@@ -306,7 +305,8 @@ class SingleSwitchTopo( Topo ):
 class SingleSwitchReversedTopo( Topo ):
     """Single switch connected to k hosts, with reversed ports.
        The lowest-numbered host is connected to the highest-numbered port.
-       Useful to verify that Mininet properly handles custom port numberings."""
+       Useful to verify that Mininet properly handles custom port
+       numberings."""
 
     def build( self, k=2 ):
         "k: number of hosts"

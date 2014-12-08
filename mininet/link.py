@@ -91,7 +91,8 @@ class Intf( object ):
         "Return updated IP address based on ifconfig"
         # use pexec instead of node.cmd so that we dont read
         # backgrounded output from the cli.
-        ifconfig, _err, _exitCode = self.node.pexec( 'ifconfig %s' % self.name )
+        ifconfig, _err, _exitCode = self.node.pexec(
+            'ifconfig %s' % self.name )
         ips = self._ipMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
         return self.ip
@@ -333,8 +334,9 @@ class TCIntf( Intf ):
 
         # Delay/jitter/loss/max_queue_size using netem
         delaycmds, parent = self.delayCmds( delay=delay, jitter=jitter,
-                                loss=loss, max_queue_size=max_queue_size,
-                                parent=parent )
+                                            loss=loss,
+                                            max_queue_size=max_queue_size,
+                                            parent=parent )
         cmds += delaycmds
 
         # Ugly but functional: display configuration info

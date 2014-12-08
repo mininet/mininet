@@ -17,6 +17,6 @@ def clusterSanity():
     CLI( net )
     net.stop()
 
-if __name__  == '__main__':
+if __name__ == '__main__':
     setLogLevel( 'info' )
     clusterSanity()

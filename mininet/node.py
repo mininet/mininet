@@ -129,7 +129,7 @@ class Node( object ):
         # bash -m: enable job control, i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = [ 'mnexec', opts, 'env',  'PS1=' + chr( 127 ),
+        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '-mis', 'mininet:' + self.name ]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
@@ -380,7 +380,7 @@ class Node( object ):
         """Execute a command using popen
            returns: out, err, exitcode"""
         popen = self.popen( *args, stdin=PIPE, stdout=PIPE, stderr=PIPE,
-                           **kwargs )
+                            **kwargs )
         # Warning: this can fail with large numbers of fds!
         out, err = popen.communicate()
         exitcode = popen.wait()
@@ -950,12 +950,12 @@ class UserSwitch( Switch ):
            we re-create the user switch's configuration, but as a
            leaf of the TCIntf-created configuration."""
         if isinstance( intf, TCIntf ):
-            ifspeed = 10000000000 # 10 Gbps
+            ifspeed = 10000000000  # 10 Gbps
             minspeed = ifspeed * 0.001
 
             res = intf.config( **intf.params )
 
-            if res is None: # link may not have TC parameters
+            if res is None:  # link may not have TC parameters
                 return
 
             # Re-add qdisc, root, and default classes user switch created, but
@@ -988,7 +988,7 @@ class UserSwitch( Switch ):
                   ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         if "no-slicing" not in self.dpopts:
             # Only TCReapply if slicing is enable
-            sleep(1) # Allow ofdatapath to start before re-arranging qdisc's
+            sleep(1)  # Allow ofdatapath to start before re-arranging qdisc's
             for intf in self.intfList():
                 if not intf.IP():
                     self.TCReapply( intf )
@@ -1055,7 +1055,7 @@ class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
     def __init__( self, name, failMode='secure', datapath='kernel',
-                 inband=False, protocols=None, **params ):
+                  inband=False, protocols=None, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
@@ -1087,13 +1087,13 @@ class OVSSwitch( Switch ):
                    '"service openvswitch-switch start".\n' )
             exit( 1 )
         version = quietRun( 'ovs-vsctl --version' )
-        cls.OVSVersion =  findall( r'\d+\.\d+', version )[ 0 ]
+        cls.OVSVersion = findall( r'\d+\.\d+', version )[ 0 ]
 
     @classmethod
     def isOldOVS( cls ):
         "Is OVS ersion < 1.10?"
         return ( StrictVersion( cls.OVSVersion ) <
-             StrictVersion( '1.10' ) )
+                 StrictVersion( '1.10' ) )
 
     @classmethod
     def batchShutdown( cls, switches ):
@@ -1128,7 +1128,7 @@ class OVSSwitch( Switch ):
         "Return ovsdb UUIDs for our controllers"
         uuids = []
         controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
-                               'Controller' ).strip()
+                                'Controller' ).strip()
         if controllers.startswith( '[' ) and controllers.endswith( ']' ):
             controllers = controllers[ 1 : -1 ]
             uuids = [ c.strip() for c in controllers.split( ',' ) ]
@@ -1137,7 +1137,7 @@ class OVSSwitch( Switch ):
     def connected( self ):
         "Are we connected to at least one of our controllers?"
         results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
-                                         uuid, 'is_connected' )
+                                        uuid, 'is_connected' )
                     for uuid in self.controllerUUIDs() ]
         return reduce( or_, results, False )
 
@@ -1148,15 +1148,15 @@ class OVSSwitch( Switch ):
                 'OVS kernel switch does not work in a namespace' )
         # Annoyingly, --if-exists option seems not to work
         self.cmd( 'ovs-vsctl del-br', self )
-        int( self.dpid, 16 ) # DPID must be a hex string
+        int( self.dpid, 16 )  # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
                           '-- set Interface %s ' % intf +
                           'ofport_request=%s ' % self.ports[ intf ]
-                         for intf in self.intfList()
-                         if self.ports[ intf ] and not intf.IP() )
+                          for intf in self.intfList()
+                          if self.ports[ intf ] and not intf.IP() )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
-                         for c in controllers )
+                          for c in controllers )
         if self.listenPort:
             clist += ' ptcp:%s' % self.listenPort
         # Construct big ovs-vsctl command for new versions of OVS
@@ -1195,7 +1195,6 @@ class OVSSwitch( Switch ):
         self.cmd( cmd )
         for intf in self.intfList():
             self.TCReapply( intf )
-
 
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
@@ -1354,10 +1353,12 @@ class Controller( Node ):
         return '<%s %s: %s:%s pid=%s> ' % (
             self.__class__.__name__, self.name,
             self.IP(), self.port, self.pid )
+
     @classmethod
     def isAvailable( cls ):
         "Is controller available?"
         return quietRun( 'which controller' )
+
 
 class OVSController( Controller ):
     "Open vSwitch controller"
@@ -1365,6 +1366,7 @@ class OVSController( Controller ):
         if quietRun( 'which test-controller' ):
             command = 'test-controller'
         Controller.__init__( self, name, command=command, **kwargs )
+
     @classmethod
     def isAvailable( cls ):
         return ( quietRun( 'which ovs-controller' ) or
@@ -1411,11 +1413,11 @@ class RYU( Controller ):
             ryuArgs = [ ryuArgs ]
 
         Controller.__init__( self, name,
-                         command='ryu-manager',
-                         cargs='--ofp-tcp-listen-port %s ' +
-                         ' '.join( ryuArgs ),
-                         cdir=ryuCoreDir,
-                         **kwargs )
+                             command='ryu-manager',
+                             cargs='--ofp-tcp-listen-port %s ' +
+                             ' '.join( ryuArgs ),
+                             cdir=ryuCoreDir,
+                             **kwargs )
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."

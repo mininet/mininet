@@ -8,7 +8,8 @@ import sys
 
 from mininet.net import Mininet
 from mininet.node import Host, Controller
-from mininet.node import UserSwitch, OVSSwitch, OVSLegacyKernelSwitch, IVSSwitch
+from mininet.node import ( UserSwitch, OVSSwitch, OVSLegacyKernelSwitch,
+                           IVSSwitch )
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
@@ -18,7 +19,7 @@ from mininet.clean import cleanup
 class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
     "Verify Switch dpid assignment."
 
-    switchClass = OVSSwitch # overridden in subclasses
+    switchClass = OVSSwitch  # overridden in subclasses
 
     def tearDown( self ):
         "Clean up if necessary"
@@ -27,11 +28,12 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         if sys.exc_info != ( None, None, None ):
             cleanup()
 
-    def testDefaultDpid ( self ):
+    def testDefaultDpid( self ):
         """Verify that the default dpid is assigned using a valid provided
         canonical switchname if no dpid is passed in switch creation."""
         switch = Mininet( Topo(),
-                          self.switchClass, Host, Controller ).addSwitch( 's1' )
+                          self.switchClass,
+                          Host, Controller ).addSwitch( 's1' )
         self.assertEqual( switch.defaultDpid(), switch.dpid )
 
     def dpidFrom( self, num ):
@@ -45,7 +47,7 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         dpid = self.dpidFrom( 0xABCD )
         switch = Mininet( Topo(), self.switchClass,
                           Host, Controller ).addSwitch(
-                              's1', dpid=dpid )
+                            's1', dpid=dpid )
         self.assertEqual( switch.dpid, dpid )
 
     def testDefaultDpidAssignmentFailure( self ):

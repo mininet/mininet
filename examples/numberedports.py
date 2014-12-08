@@ -13,7 +13,7 @@ from mininet.log import setLogLevel, info, warn
 def validatePort( switch, intf ):
     "Validate intf's OF port number"
     ofport = int( switch.cmd( 'ovs-vsctl get Interface', intf,
-                          'ofport' ) )
+                              'ofport' ) )
     if ofport != switch.ports[ intf ]:
         warn( 'WARNING: ofport for', intf, 'is actually', ofport, '\n' )
         return 0
@@ -60,8 +60,8 @@ def testPortNumbering():
     for intfs in s1.intfList():
         if not intfs.name == "lo":
             info( intfs, ': ', s1.ports[intfs],
-            '\n' )
-            info ( 'Validating that', intfs,
+                  '\n' )
+            info( 'Validating that', intfs,
                    'is actually on port', s1.ports[intfs], '... ' )
             if validatePort( s1, intfs ):
                 info( 'Validated.\n' )

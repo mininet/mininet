@@ -33,8 +33,8 @@ def perfTest():
     "Create network and run simple performance test"
     topo = SingleSwitchTopo( n=4 )
     net = Mininet( topo=topo,
-                  host=CPULimitedHost, link=TCLink,
-                  autoStaticArp=True )
+                   host=CPULimitedHost, link=TCLink,
+                   autoStaticArp=True )
     net.start()
     print "Dumping host connections"
     dumpNodeConnections(net.hosts)

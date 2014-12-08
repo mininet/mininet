@@ -40,7 +40,7 @@ class testOptionsTopoCommon( object ):
     """Verify ability to create networks with host and link options
        (common code)."""
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
 
     @staticmethod
     def tearDown():
@@ -87,7 +87,7 @@ class testOptionsTopoCommon( object ):
                      upperBound, lowerBound ) )
         msg += info
 
-        self.assertGreaterEqual( float( measured ),lowerBound, msg=msg )
+        self.assertGreaterEqual( float( measured ), lowerBound, msg=msg )
         self.assertLessEqual( float( measured ), upperBound, msg=msg )
 
     def testCPULimits( self ):
@@ -125,8 +125,8 @@ class testOptionsTopoCommon( object ):
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
         if self.switchClass is UserSwitch:
-            self.skipTest ( 'UserSwitch has very poor performance -'
-                            ' skipping for now' )
+            self.skipTest( 'UserSwitch has very poor performance -'
+                           ' skipping for now' )
         BW = 5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
@@ -195,7 +195,6 @@ class testOptionsTopoCommon( object ):
             self.assertWithinTolerance( rttval, DELAY_MS * 4.0,
                                         DELAY_TOLERANCE, msg )
 
-
     def testLinkLoss( self ):
         "Verify that we see packet drops with a high configured loss rate."
         LOSS_PERCENT = 99
@@ -257,9 +256,10 @@ class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
     switchClass = IVSSwitch
 
 @unittest.skipUnless( quietRun( 'which ofprotocol' ),
-                     'Reference user switch is not installed' )
+                      'Reference user switch is not installed' )
 class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (UserSwitch)."
+    """Verify ability to create networks with host and link options
+     (UserSwitch)."""
     longMessage = True
     switchClass = UserSwitch
 

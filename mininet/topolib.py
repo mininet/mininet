@@ -48,7 +48,7 @@ class TorusTopo( Topo ):
     def build( self, x, y ):
         if x < 3 or y < 3:
             raise Exception( 'Please use 3x3 or greater for compatibility '
-                            'with 2.1' )
+                             'with 2.1' )
         hosts, switches, dpid = {}, {}, 0
         # Create and wire interior
         for i in range( 0, x ):

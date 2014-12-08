@@ -16,8 +16,8 @@ class ClusterCLI( CLI ):
     def colorsFor( seq ):
         "Return a list of background colors for a sequence"
         colors = [ 'red', 'lightgreen', 'cyan', 'yellow', 'orange',
-                  'magenta', 'pink', 'grey', 'brown',
-                  'white' ]
+                   'magenta', 'pink', 'grey', 'brown',
+                   'white' ]
         slen, clen = len( seq ), len( colors )
         reps = max( 1, slen / clen )
         colors = colors * reps
@@ -55,7 +55,7 @@ class ClusterCLI( CLI ):
         # Plot it!
         pos = nx.graphviz_layout( g )
         opts = { 'ax': None, 'font_weight': 'bold',
-		 'width': 2, 'edge_color': 'darkblue' }
+                 'width': 2, 'edge_color': 'darkblue' }
         hcolors = [ color[ getattr( h, 'server', 'localhost' ) ]
                     for h in hosts ]
         scolors = [ color[ getattr( s, 'server', 'localhost' ) ]
@@ -87,7 +87,6 @@ class ClusterCLI( CLI ):
                         % ( node, node.shell.returncode ) )
         else:
             output( 'All nodes are still running.\n' )
-
 
     def do_placement( self, _line ):
         "Describe node placement"

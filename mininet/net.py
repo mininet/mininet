@@ -99,7 +99,7 @@ from math import ceil
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
 from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
-                          Controller )
+                           Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
@@ -169,7 +169,6 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
-
 
     def waitConnected( self, timeout=None, delay=.5 ):
         """wait for each switch to connect to a controller,
@@ -260,7 +259,7 @@ class Mininet( object ):
         else:
             controller_new = controller( name, **params )
         # Add new controller to net
-        if controller_new: # allow controller-less setups
+        if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
@@ -335,7 +334,7 @@ class Mininet( object ):
     @staticmethod
     def randMac():
         "Return a random, non-multicast MAC address"
-        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  |
+        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff |
                             0x020000000000 )
 
     def addLink( self, node1, node2, port1=None, port2=None,

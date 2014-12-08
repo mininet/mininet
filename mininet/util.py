@@ -200,7 +200,7 @@ def moveIntfNoRetry( intf, dstNode, printError=False ):
     return True
 
 def moveIntf( intf, dstNode, printError=True,
-             retries=3, delaySecs=0.001 ):
+              retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
        dstNode: destination Node
@@ -546,13 +546,13 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     """Wait until server is listening on port.
        returns True if server is listening"""
     runCmd = ( client.cmd if client else
-                partial( quietRun, shell=True ) )
+               partial( quietRun, shell=True ) )
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
     serverIP = server if isinstance( server, basestring ) else server.IP()
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
-           ( serverIP, port ) )
+            ( serverIP, port ) )
     time = 0
     while 'Connected' not in runCmd( cmd ):
         if timeout:

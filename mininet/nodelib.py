@@ -82,7 +82,7 @@ class NAT( Node ):
         super( NAT, self).config( **params )
 
         if not self.localIntf:
-            self.localIntf =  self.defaultIntf()
+            self.localIntf = self.defaultIntf()
 
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 

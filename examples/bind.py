@@ -57,7 +57,7 @@ def testHostWithPrivateDirs():
     net.start()
     directories = [ directory[ 0 ] if isinstance( directory, tuple )
                     else directory for directory in privateDirs ]
-    info( 'Private Directories:',  directories, '\n' )
+    info( 'Private Directories:', directories, '\n' )
     CLI( net )
     net.stop()
 

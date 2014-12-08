@@ -73,7 +73,7 @@ def cleanup():
     dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
     if dps:
         sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
-                                       for dp in dps if dp ) )
+                                        for dp in dps if dp ) )
     # And in case the above didn't work...
     dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
     for dp in dps:
@@ -89,7 +89,7 @@ def cleanup():
     info( "*** Killing stale mininet node processes\n" )
     killprocs( 'mininet:' )
 
-    info ( "*** Shutting down stale tunnels\n" )
+    info( "*** Shutting down stale tunnels\n" )
     killprocs( 'Tunnel=Ethernet' )
     killprocs( '.ssh/mn')
     sh( 'rm -f ~/.ssh/mn/*' )

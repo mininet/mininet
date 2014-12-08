@@ -57,7 +57,7 @@ TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
 
 SWITCHDEF = 'default'
 SWITCHES = { 'user': UserSwitch,
-             'ovs':  OVSSwitch,
+             'ovs': OVSSwitch,
              'ovsbr' : OVSBridge,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
@@ -206,7 +206,9 @@ class MininetRunner( object ):
         opts.add_option( '--custom', action='callback',
                          callback=self.custom,
                          type='string',
-                         help='read custom classes or params from .py file(s)' )
+                         help='read custom classes or params from .py file(s)'
+                         )
+
         opts.add_option( '--test', type='choice', choices=TESTS,
                          default=TESTS[ 0 ],
                          help='|'.join( TESTS ) )
@@ -329,7 +331,7 @@ class MininetRunner( object ):
         cli = ClusterCLI if cluster else CLI
         if cluster:
             warn( '*** WARNING: Experimental cluster mode!\n'
-              '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
+                  '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
             host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
             Net = partial( MininetCluster, servers=cluster.split( ',' ),
                            placement=PLACEMENT[ self.options.placement ] )
@@ -344,7 +346,8 @@ class MininetRunner( object ):
                   listenPort=listenPort )
 
         if self.options.ensure_value( 'nat', False ):
-            nat = mn.addNAT( *self.options.nat_args, **self.options.nat_kwargs )
+            nat = mn.addNAT( *self.options.nat_args,
+                             **self.options.nat_kwargs )
             nat.configDefault()
 
         if self.options.pre:

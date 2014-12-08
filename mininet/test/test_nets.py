@@ -21,7 +21,7 @@ from mininet.clean import cleanup
 class testSingleSwitchCommon( object ):
     "Test ping with single switch topology (common code)."
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
 
     @staticmethod
     def tearDown():
@@ -59,7 +59,7 @@ class testSingleSwitchIVS( testSingleSwitchCommon, unittest.TestCase ):
     switchClass = IVSSwitch
 
 @unittest.skipUnless( quietRun( 'which ofprotocol' ),
-                     'Reference user switch is not installed' )
+                      'Reference user switch is not installed' )
 class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (Userspace switch)."
     switchClass = UserSwitch
@@ -71,7 +71,7 @@ class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
 class testLinearCommon( object ):
     "Test all-pairs ping with LinearNet (common code)."
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
 
     def testLinear5( self ):
         "Ping test on a 5-switch topology"

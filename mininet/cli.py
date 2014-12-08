@@ -37,7 +37,7 @@ import atexit
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
 from mininet.util import ( quietRun, dumpNodeConnections,
-                         dumpPorts )
+                           dumpPorts )
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -357,7 +357,7 @@ class CLI( Cmd ):
             return
         sw = args[ 0 ]
         command = args[ 1 ]
-        if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches :
+        if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches:
             error( 'invalid switch: %s\n' % args[ 1 ] )
         else:
             sw = args[ 0 ]
@@ -367,7 +367,8 @@ class CLI( Cmd ):
             elif command == 'stop':
                 self.mn.get( sw ).stop( deleteIntfs=False )
             else:
-                error( 'invalid command: switch <switch name> {start, stop}\n' )
+                error( 'invalid command: '
+                       'switch <switch name> {start, stop}\n' )
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
