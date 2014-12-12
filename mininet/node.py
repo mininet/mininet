@@ -1066,6 +1066,7 @@ class OVSSwitch( Switch ):
         self.datapath = datapath
         self.inband = inband
         self.protocols = protocols
+        self._uuids = []  # controller UUIDs
 
     @classmethod
     def setup( cls ):
@@ -1124,22 +1125,25 @@ class OVSSwitch( Switch ):
         "Disconnect a data port"
         self.cmd( 'ovs-vsctl del-port', self, intf )
 
-    def controllerUUIDs( self ):
-        "Return ovsdb UUIDs for our controllers"
-        uuids = []
-        controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
-                                'Controller' ).strip()
-        if controllers.startswith( '[' ) and controllers.endswith( ']' ):
-            controllers = controllers[ 1 : -1 ]
-            uuids = [ c.strip() for c in controllers.split( ',' ) ]
-        return uuids
+    def controllerUUIDs( self, update=False ):
+        """Return ovsdb UUIDs for our controllers
+           update: update cached value"""
+        if not self._uuids or update:
+            controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+                                   'Controller' ).strip()
+            if controllers.startswith( '[' ) and controllers.endswith( ']' ):
+                controllers = controllers[ 1 : -1 ]
+                if controllers:
+                    self._uuids = [ c.strip() for c in controllers.split( ',' ) ]
+        return self._uuids
 
     def connected( self ):
         "Are we connected to at least one of our controllers?"
-        results = [ 'true' in self.cmd( 'ovs-vsctl -- get Controller',
-                                        uuid, 'is_connected' )
-                    for uuid in self.controllerUUIDs() ]
-        return reduce( or_, results, False )
+        for uuid in self.controllerUUIDs():
+            if 'true' in self.cmd( 'ovs-vsctl -- get Controller',
+                                            uuid, 'is_connected' ):
+                return True
+        return self.failMode == 'standalone'
 
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
@@ -1184,15 +1188,14 @@ class OVSSwitch( Switch ):
             cmd += '-- set bridge %s datapath_type=netdev ' % self
         if self.protocols:
             cmd += '-- set bridge %s protocols=%s' % ( self, self.protocols )
-        # Reconnect quickly to controllers (1s vs. 15s max_backoff)
-        for uuid in self.controllerUUIDs():
-            if uuid.count( '-' ) != 4:
-                # Doesn't look like a UUID
-                continue
-            uuid = uuid.strip()
-            cmd += '-- set Controller %smax_backoff=1000 ' % uuid
         # Do it!!
         self.cmd( cmd )
+        # Reconnect quickly to controllers (1s vs. 15s max_backoff)
+        uuids = [ '-- set Controller %s max_backoff=1000' % uuid
+                  for uuid in self.controllerUUIDs() ]
+        if uuids:
+            self.cmd( 'ovs-vsctl', *uuids )
+        # If necessary, restore TC config overwritten by OVS
         for intf in self.intfList():
             self.TCReapply( intf )
 
