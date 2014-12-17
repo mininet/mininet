@@ -11,7 +11,8 @@ sudo sed -i -e 's/Default/#Default/' /etc/sudoers
 echo mininet-vm | sudo tee /etc/hostname > /dev/null
 sudo sed -i -e 's/ubuntu/mininet-vm/g' /etc/hosts
 sudo hostname `cat /etc/hostname`
-sudo sed -i -e 's/quiet splash/text/' /etc/default/grub
+sudo sed -i -e 's/splash//' /etc/default/grub
+sudo sed -i -e 's/quiet/text/' /etc/default/grub
 sudo update-grub
 # Update from official archive
 sudo apt-get update
