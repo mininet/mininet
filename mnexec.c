@@ -99,6 +99,7 @@ int main(int argc, char *argv[])
     char path[PATH_MAX];
     int nsid;
     int pid;
+    char *cwd = get_current_dir_name();
 
     static struct sched_param sp;
     while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
@@ -157,18 +158,17 @@ int main(int argc, char *argv[])
             sprintf(path, "/proc/%d/ns/mnt", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0 || setns(nsid, 0) != 0) {
-                char *cwd = get_current_dir_name();
                 /* Plan B: chroot/chdir into pid's root file system */
                 sprintf(path, "/proc/%d/root", pid);
                 if (chroot(path) < 0) {
                     perror(path);
                     return 1;
                 }
-                /* need to chdir to correct working directory */
-                if (chdir(cwd) != 0) {
-                    perror(cwd);
-                    return 1;
-                }
+            }
+            /* chdir to correct working directory */
+            if (chdir(cwd) != 0) {
+                perror(cwd);
+                return 1;
             }
             break;
         case 'g':

@@ -22,11 +22,9 @@ to-do:
 from mininet.net import Mininet
 from mininet.node import OVSSwitch
 from mininet.topo import LinearTopo
-from mininet.util import quietRun
 from mininet.log import output, warn
 
 from random import randint
-from re import findall
 
 
 class MobilitySwitch( OVSSwitch ):
@@ -61,7 +59,7 @@ class MobilitySwitch( OVSSwitch ):
     def validatePort( self, intf ):
         "Validate intf's OF port number"
         ofport = int( self.cmd( 'ovs-vsctl get Interface', intf,
-                              'ofport' ) )
+                                'ofport' ) )
         if ofport != self.ports[ intf ]:
             warn( 'WARNING: ofport for', intf, 'is actually', ofport,
                   '\n' )

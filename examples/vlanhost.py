@@ -30,17 +30,18 @@ from mininet.util import quietRun
 from mininet.log import error
 
 class VLANHost( Host ):
+    "Host connected to VLAN interface"
 
-   def config( self, vlan=100, **params ):
+    def config( self, vlan=100, **params ):
         """Configure VLANHost according to (optional) parameters:
            vlan: VLAN ID for default interface"""
 
-        r = super( Host, self ).config( **params )
+        r = super( VLANHost, self ).config( **params )
 
         intf = self.defaultIntf()
         # remove IP from default, "physical" interface
         self.cmd( 'ifconfig %s inet 0' % intf )
-        # create VLAN interface 
+        # create VLAN interface
         self.cmd( 'vconfig add %s %d' % ( intf, vlan ) )
         # assign the host's IP to the VLAN interface
         self.cmd( 'ifconfig %s.%d inet %s' % ( intf, vlan, params['ip'] ) )
@@ -69,6 +70,8 @@ def exampleAllHosts( vlan ):
     CLI( net )
     net.stop()
 
+# pylint: disable=arguments-differ
+
 class VLANStarTopo( Topo ):
     """Example topology that uses host in multiple VLANs
 
@@ -90,7 +93,7 @@ class VLANStarTopo( Topo ):
             self.addLink( h, s1 )
 
 
-def exampleCustomTags( vlan ):
+def exampleCustomTags():
     """Simple example that exercises VLANStarTopo"""
 
     net = Mininet( topo=VLANStarTopo() )
@@ -110,16 +113,12 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
 
     if not quietRun( 'which vconfig' ):
-        error( "Cannot find command 'vconfig'\nThe packge",
+        error( "Cannot find command 'vconfig'\nThe package",
                "'vlan' is required in Ubuntu or Debian,",
                "or 'vconfig' in Fedora\n" )
         exit()
-    try:
-        vlan = int( sys.argv[ 1 ] )
-    except Exception:
-        vlan = None
 
-    if vlan:
-        exampleAllHosts( vlan )
+    if len( sys.argv ) >= 2:
+        exampleAllHosts( vlan=int( sys.argv[ 1 ] ) )
     else:
-        exampleCustomTags( vlan )
+        exampleCustomTags()

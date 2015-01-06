@@ -22,7 +22,7 @@ to temporary private directories. To do this, simply create a list of
 directories to be made private. A tmpfs will then be mounted on them.
 
 You may use both temporary and persistent directories at the same
-time. In the following privateDirs string, each host will have a 
+time. In the following privateDirs string, each host will have a
 persistent directory in the root filesystem at
 "/tmp/(hostname)/var/run" mounted on "/var/run". Each host will also
 have a temporary private directory mounted on "/var/log".
@@ -35,10 +35,10 @@ on '/var/mn'
 """
 
 from mininet.net import Mininet
-from mininet.node import Host, HostWithPrivateDirs
+from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import SingleSwitchTopo
-from mininet.log import setLogLevel, info, debug
+from mininet.log import setLogLevel, info
 
 from functools import partial
 
@@ -48,19 +48,16 @@ from functools import partial
 def testHostWithPrivateDirs():
     "Test bind mounts"
     topo = SingleSwitchTopo( 10 )
-    privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ), 
-                    ( '/var/run', '/tmp/%(name)s/var/run' ), 
+    privateDirs = [ ( '/var/log', '/tmp/%(name)s/var/log' ),
+                    ( '/var/run', '/tmp/%(name)s/var/run' ),
                       '/var/mn' ]
-    host = partial( HostWithPrivateDirs,
+    host = partial( Host,
                     privateDirs=privateDirs )
     net = Mininet( topo=topo, host=host )
     net.start()
-    directories = []
-    for directory in privateDirs:
-        directories.append( directory[ 0 ]
-                            if isinstance( directory, tuple )
-                            else directory )
-    info( 'Private Directories:',  directories, '\n' )
+    directories = [ directory[ 0 ] if isinstance( directory, tuple )
+                    else directory for directory in privateDirs ]
+    info( 'Private Directories:', directories, '\n' )
     CLI( net )
     net.stop()
 
@@ -68,5 +65,3 @@ if __name__ == '__main__':
     setLogLevel( 'info' )
     testHostWithPrivateDirs()
     info( 'Done.\n')
-
-

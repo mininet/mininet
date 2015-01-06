@@ -36,8 +36,8 @@ import atexit
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
-from mininet.util import ( quietRun, isShellBuiltin, dumpNodeConnections,
-                         dumpPorts )
+from mininet.util import ( quietRun, dumpNodeConnections,
+                           dumpPorts )
 
 class CLI( Cmd ):
     "Simple command-line interface to talk to nodes."
@@ -93,11 +93,6 @@ class CLI( Cmd ):
         self.locals.update( self.mn )
         return self.locals
 
-    # Disable pylint "Unused argument: 'arg's'" messages, as well as
-    # "method could be a function" warning, since each CLI function
-    # must have the same interface
-    # pylint: disable-msg=R0201
-
     helpStr = (
         'You may also send a command to a node using:\n'
         '  <node> command {args}\n'
@@ -128,7 +123,7 @@ class CLI( Cmd ):
         nodes = ' '.join( sorted( self.mn ) )
         output( 'available nodes are: \n%s\n' % nodes )
 
-    def do_ports( self, line ):
+    def do_ports( self, _line ):
         "display ports and interfaces for each switch"
         dumpPorts( self.mn.switches )
 
@@ -139,10 +134,11 @@ class CLI( Cmd ):
     def do_sh( self, line ):
         """Run an external shell command
            Usage: sh [cmd args]"""
+        assert self  # satisfy pylint and allow override
         call( line, shell=True )
 
     # do_py() and do_px() need to catch any exception during eval()/exec()
-    # pylint: disable-msg=W0703
+    # pylint: disable=broad-except
 
     def do_py( self, line ):
         """Evaluate a Python expression.
@@ -159,7 +155,7 @@ class CLI( Cmd ):
             output( str( e ) + '\n' )
 
     # We are in fact using the exec() pseudo-function
-    # pylint: disable-msg=W0122
+    # pylint: disable=exec-used
 
     def do_px( self, line ):
         """Execute a Python statement.
@@ -169,7 +165,7 @@ class CLI( Cmd ):
         except Exception, e:
             output( str( e ) + '\n' )
 
-    # pylint: enable-msg=W0703,W0122
+    # pylint: enable=broad-except,exec-used
 
     def do_pingall( self, line ):
         "Ping between all hosts."
@@ -284,6 +280,7 @@ class CLI( Cmd ):
 
     def do_exit( self, _line ):
         "Exit"
+        assert self  # satisfy pylint and allow override
         return 'exited by user command'
 
     def do_quit( self, line ):
@@ -346,10 +343,32 @@ class CLI( Cmd ):
         elapsed = time.time() - start
         self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
-    def do_links( self, line ):
+    def do_links( self, _line ):
         "Report on links"
         for link in self.mn.links:
             print link, link.status()
+
+    def do_switch( self, line ):
+        "Starts or stops a switch"
+        args = line.split()
+        if len(args) != 2:
+            error( 'invalid number of args: switch <switch name>'
+                   '{start, stop}\n' )
+            return
+        sw = args[ 0 ]
+        command = args[ 1 ]
+        if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches:
+            error( 'invalid switch: %s\n' % args[ 1 ] )
+        else:
+            sw = args[ 0 ]
+            command = args[ 1 ]
+            if command == 'start':
+                self.mn.get( sw ).start( self.mn.controllers )
+            elif command == 'stop':
+                self.mn.get( sw ).stop( deleteIntfs=False )
+            else:
+                error( 'invalid command: '
+                       'switch <switch name> {start, stop}\n' )
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
@@ -376,8 +395,6 @@ class CLI( Cmd ):
             self.waitForNode( node )
         else:
             error( '*** Unknown command: %s\n' % line )
-
-    # pylint: enable-msg=R0201
 
     def waitForNode( self, node ):
         "Wait for a node to finish, and print its output."

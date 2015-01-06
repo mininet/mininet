@@ -41,16 +41,19 @@ load-plugins=
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=W0704,C0103,W0231,E1102,W0511,W0142,R0902,R0903,R0904,R0913,R0914,R0801,I0011
-
+disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
+        too-many-instance-attributes, too-few-public-methods, too-many-arguments,
+        too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
+        locally-disabled
 
 [REPORTS]
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
 output-format=colorized
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
-# Include message's id in outpu
+# Include message's id in output
 include-ids=yes
 
 # Put messages in a separate file for each module / package specified on the
@@ -191,7 +194,7 @@ additional-builtins=
 ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
-defining-attr-methods=__init__,__new__,setUp
+defining-attr-methods=__init__,__new__,setUp,build
 
 
 # checks for sign of poor/misdesign:
@@ -264,7 +267,8 @@ int-import-graph=
 max-line-length=80
 
 # Maximum number of lines in a module
-max-module-lines=1500
+# XXX 1500 -> 4000 for miniedit.py
+max-module-lines=4000
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).

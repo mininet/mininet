@@ -27,9 +27,11 @@ def limit( bw=10, cpu=.1 ):
         info( '*** Testing with', sched, 'bandwidth limiting\n' )
         if sched == 'rt':
             release = quietRun( 'uname -r' ).strip('\r\n')
-            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s' % release )
+            output = quietRun( 'grep CONFIG_RT_GROUP_SCHED /boot/config-%s'
+                               % release )
             if output == '# CONFIG_RT_GROUP_SCHED is not set\n':
-                info( '*** RT Scheduler is not enabled in your kernel. Skipping this test\n' )
+                info( '*** RT Scheduler is not enabled in your kernel. '
+                      'Skipping this test\n' )
                 continue
         host = custom( CPULimitedHost, sched=sched, cpu=cpu )
         net = Mininet( topo=myTopo, intf=intf, host=host )

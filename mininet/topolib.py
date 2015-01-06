@@ -3,6 +3,9 @@
 from mininet.topo import Topo
 from mininet.net import Mininet
 
+# The build() method is expected to do this:
+# pylint: disable=arguments-differ
+
 class TreeTopo( Topo ):
     "Topology for a tree network with a given depth and fanout."
 
@@ -41,11 +44,11 @@ class TorusTopo( Topo ):
        with the default controller or any Ethernet bridge
        without STP turned on! It can be used with STP, e.g.:
        # mn --topo torus,3,3 --switch lxbr,stp=1 --test pingall"""
-    
+
     def build( self, x, y ):
         if x < 3 or y < 3:
             raise Exception( 'Please use 3x3 or greater for compatibility '
-                            'with 2.1' )
+                             'with 2.1' )
         hosts, switches, dpid = {}, {}, 0
         # Create and wire interior
         for i in range( 0, x ):
@@ -53,7 +56,8 @@ class TorusTopo( Topo ):
                 loc = '%dx%d' % ( i + 1, j + 1 )
                 # dpid cannot be zero for OVS
                 dpid = ( i + 1 ) * 256 + ( j + 1 )
-                switch = switches[ i, j ] = self.addSwitch( 's' + loc, dpid='%016x' % dpid )
+                switch = switches[ i, j ] = self.addSwitch(
+                    's' + loc, dpid='%016x' % dpid )
                 host = hosts[ i, j ] = self.addHost( 'h' + loc )
                 self.addLink( host, switch )
         # Connect switches
@@ -65,5 +69,4 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
 
-    
-
+# pylint: enable=arguments-differ

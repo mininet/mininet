@@ -10,11 +10,13 @@ It may also get rid of 'false positives', but hopefully
 nothing irreplaceable!
 """
 
-from subprocess import Popen, PIPE, check_output as co
+from subprocess import ( Popen, PIPE, check_output as co,
+                         CalledProcessError )
 import time
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
+
 
 def sh( cmd ):
     "Print a command and send it to the shell"
@@ -27,12 +29,12 @@ def killprocs( pattern ):
     # Make sure they are gone
     while True:
         try:
-            pids = co( 'pgrep -f %s' % pattern )
-        except:
+            pids = co( [ 'pgrep', '-f', pattern ] )
+        except CalledProcessError:
             pids = ''
         if pids:
-            sh( 'pkill -f 9 mininet:' )
-            sleep( .5 )
+            sh( 'pkill -9 -f %s' % pattern )
+            time.sleep( .5 )
         else:
             break
 
@@ -49,7 +51,7 @@ def cleanup():
     # you can't connect to them either, so they're mostly harmless.
     # Send SIGTERM first to give processes a chance to shutdown cleanly.
     sh( 'killall ' + zombies + ' 2> /dev/null' )
-    time.sleep(1)
+    time.sleep( 1 )
     sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
     # And kill off sudo mnexec
@@ -71,7 +73,7 @@ def cleanup():
     dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
     if dps:
         sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
-                                       for dp in dps if dp ) )
+                                        for dp in dps if dp ) )
     # And in case the above didn't work...
     dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
     for dp in dps:
@@ -87,9 +89,9 @@ def cleanup():
     info( "*** Killing stale mininet node processes\n" )
     killprocs( 'mininet:' )
 
-    info ( "*** Shutting down stale tunnels\n" )
+    info( "*** Shutting down stale tunnels\n" )
     killprocs( 'Tunnel=Ethernet' )
     killprocs( '.ssh/mn')
     sh( 'rm -f ~/.ssh/mn/*' )
-    
+
     info( "*** Cleanup complete.\n" )

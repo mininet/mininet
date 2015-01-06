@@ -140,6 +140,9 @@ function mn_deps {
 function mn_dev {
     echo "Installing Mininet developer dependencies"
     $install doxygen doxypy texlive-fonts-recommended
+    if ! $install doxygen-latex; then
+        echo "doxygen-latex not needed"
+    fi
 }
 
 # The following will cause a full OF install, covering:
@@ -551,15 +554,22 @@ function vm_other {
     #    BLACKLIST=/etc/modprobe.d/blacklist
     #fi
     #sudo sh -c "echo 'blacklist net-pf-10\nblacklist ipv6' >> $BLACKLIST"
-
+    echo "Disabling IPv6"
     # Disable IPv6
-    if ! grep 'disable IPv6' /etc/sysctl.conf; then
+    if ! grep 'disable_ipv6' /etc/sysctl.conf; then
         echo 'Disabling IPv6'
         echo '
 # Mininet: disable IPv6
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
+    fi
+    # Since the above doesn't disable neighbor discovery, also do this:
+    if ! grep 'ipv6.disable' /etc/default/grub; then
+        sudo sed -i -e \
+        's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1/' \
+        /etc/default/grub
+        sudo update-grub
     fi
     # Disabling IPv6 breaks X11 forwarding via ssh
     line='AddressFamily inet'

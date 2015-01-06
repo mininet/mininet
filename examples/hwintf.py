@@ -5,7 +5,8 @@ This example shows how to add an interface (for example a real
 hardware interface) to a network after the network is created.
 """
 
-import re, sys
+import re
+import sys
 
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info, error

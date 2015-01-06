@@ -81,6 +81,6 @@ if __name__ == '__main__':
     net = TreeNet( depth=1, fanout=4 )
     # get sshd args from the command line or use default args
     # useDNS=no -u0 to avoid reverse DNS lookup timeout
-    opts = ' '.join( sys.argv[ 1: ] ) if len( sys.argv ) > 1 else (
+    argvopts = ' '.join( sys.argv[ 1: ] ) if len( sys.argv ) > 1 else (
         '-D -o UseDNS=no -u0' )
-    sshd( net, opts=opts )
+    sshd( net, opts=argvopts )

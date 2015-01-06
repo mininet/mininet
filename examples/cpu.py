@@ -8,9 +8,8 @@ from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
 from mininet.util import custom, waitListening
-from mininet.log import setLogLevel, output, info
+from mininet.log import setLogLevel, info
 
-from time import sleep
 
 def bwtest( cpuLimits, period_us=100000, seconds=5 ):
     """Example/test of link and CPU bandwidth limits
@@ -28,6 +27,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=5 ):
                            cpu=cpu )
             try:
                 net = Mininet( topo=topo, host=host )
+            # pylint: disable=bare-except
             except:
                 info( '*** Skipping host %s\n' % sched )
                 break

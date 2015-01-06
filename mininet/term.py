@@ -32,7 +32,7 @@ def tunnelX11( node, display=None):
         port = 6000 + int( float( screen ) )
         connection = r'TCP\:%s\:%s' % ( host, port )
         cmd = [ "socat", "TCP-LISTEN:%d,fork,reuseaddr" % port,
-               "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
+                "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
     return 'localhost:' + screen, node.popen( cmd )
 
 def makeTerm( node, title='Node', term='xterm', display=None ):
@@ -41,7 +41,7 @@ def makeTerm( node, title='Node', term='xterm', display=None ):
        title: base title
        term: 'xterm' or 'gterm'
        returns: two Popen objects, tunnel and terminal"""
-    title += ': ' + node.name
+    title = '"%s: %s"' % ( title, node.name )
     if not node.inNamespace:
         title += ' (root)'
     cmds = {

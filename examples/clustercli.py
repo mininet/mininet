@@ -5,34 +5,38 @@
 from mininet.cli import CLI
 from mininet.log import output, error
 
+# pylint: disable=global-statement
 nx, graphviz_layout, plt = None, None, None  # Will be imported on demand
 
 
-class DemoCLI( CLI ):
+class ClusterCLI( CLI ):
     "CLI with additional commands for Cluster Edition demo"
 
     @staticmethod
     def colorsFor( seq ):
         "Return a list of background colors for a sequence"
         colors = [ 'red', 'lightgreen', 'cyan', 'yellow', 'orange',
-                  'magenta', 'pink', 'grey', 'brown',
-                  'white' ]
+                   'magenta', 'pink', 'grey', 'brown',
+                   'white' ]
         slen, clen = len( seq ), len( colors )
         reps = max( 1, slen / clen )
         colors = colors * reps
         colors = colors[ 0 : slen ]
         return colors
-    
-    def do_plot( self, line ):
+
+    def do_plot( self, _line ):
         "Plot topology colored by node placement"
         # Import networkx if needed
         global nx, plt
         if not nx:
             try:
-                import networkx as nx
-                import matplotlib.pyplot as plt
+                import networkx
+                nx = networkx  # satisfy pylint
+                from matplotlib import pyplot
+                plt = pyplot   # satisfiy pylint
                 import pygraphviz
-            except:
+                assert pygraphviz  # silence pyflakes
+            except ImportError:
                 error( 'plot requires networkx, matplotlib and pygraphviz - '
                        'please install them and try again\n' )
                 return
@@ -40,7 +44,6 @@ class DemoCLI( CLI ):
         g = nx.Graph()
         mn = self.mn
         servers, hosts, switches = mn.servers, mn.hosts, mn.switches
-        hlen, slen = len( hosts ), len( switches )
         nodes = hosts + switches
         g.add_nodes_from( nodes )
         links = [ ( link.intf1.node, link.intf2.node )
@@ -52,11 +55,14 @@ class DemoCLI( CLI ):
         # Plot it!
         pos = nx.graphviz_layout( g )
         opts = { 'ax': None, 'font_weight': 'bold',
-		 'width': 2, 'edge_color': 'darkblue' }
-        hcolors = [ color[ h.server ] for h in hosts ]
-        scolors = [ color[ s.server ] for s in switches ]
-        nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800, label='host',
-                          node_color=hcolors, node_shape='s', **opts )
+                 'width': 2, 'edge_color': 'darkblue' }
+        hcolors = [ color[ getattr( h, 'server', 'localhost' ) ]
+                    for h in hosts ]
+        scolors = [ color[ getattr( s, 'server', 'localhost' ) ]
+                    for s in switches ]
+        nx.draw_networkx( g, pos=pos, nodelist=hosts, node_size=800,
+                          label='host', node_color=hcolors, node_shape='s',
+                          **opts )
         nx.draw_networkx( g, pos=pos, nodelist=switches, node_size=1000,
                           node_color=scolors, node_shape='o', **opts )
         # Get rid of axes, add title, and show
@@ -68,7 +74,7 @@ class DemoCLI( CLI ):
         plt.title( 'Node Placement', fontweight='bold' )
         plt.show()
 
-    def do_status( self, line ):
+    def do_status( self, _line ):
         "Report on node shell status"
         nodes = self.mn.hosts + self.mn.switches
         for node in nodes:
@@ -82,8 +88,7 @@ class DemoCLI( CLI ):
         else:
             output( 'All nodes are still running.\n' )
 
-
-    def do_placement( self, line ):
+    def do_placement( self, _line ):
         "Describe node placement"
         mn = self.mn
         nodes = mn.hosts + mn.switches + mn.controllers

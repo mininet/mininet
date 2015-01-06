@@ -83,11 +83,11 @@ from mininet.util import quietRun, makeIntfPair, errRun, retry
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 
-from signal import signal, SIGINT, SIGHUP, SIG_IGN
+from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
 import os
 from random import randrange
-from sys import exit
+import sys
 import re
 
 from distutils.version import StrictVersion
@@ -112,68 +112,65 @@ class RemoteMixin( object ):
                 '-o', 'BatchMode=yes',
                 '-o', 'ForwardAgent=yes', '-tt' ]
 
-    def __init__( self, name, server=None, user=None, serverIP=None,
-                  controlPath='/tmp/mn-%r@%h:%p', splitInit=False, **kwargs):
+    def __init__( self, name, server='localhost', user=None, serverIP=None,
+                  controlPath=False, splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
            server: remote server (optional)
            user: user on remote server (optional)
-           controlPath: ssh control path template (optional)
+           controlPath: specify shared ssh control path (optional)
            splitInit: split initialization?
            **kwargs: see Node()"""
         # We connect to servers by IP address
-        if server == 'localhost':
-            server = None
-        self.server = server
-        self.serverIP = serverIP if serverIP else self.findServerIP( server )
+        self.server = server if server else 'localhost'
+        self.serverIP = ( serverIP if serverIP
+                          else self.findServerIP( self.server ) )
         self.user = user if user else self.findUser()
-        if self.user and self.server:
-            self.dest = '%s@%s' % ( self.user, self.serverIP )
-        else:
-            self.dest = None
+        if controlPath is True:
+            # Set a default control path for shared SSH connections
+            controlPath = '/tmp/mn-%r@%h:%p'
         self.controlPath = controlPath
-        self.sshcmd = []
-        if self.dest:
+        self.splitInit = splitInit
+        if self.user and self.server != 'localhost':
+            self.dest = '%s@%s' % ( self.user, self.serverIP )
             self.sshcmd = [ 'sudo', '-E', '-u', self.user ] + self.sshbase
             if self.controlPath:
                 self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
-                                               '-o', 'ControlMaster=auto' ]
+                                 '-o', 'ControlMaster=auto',
+                                 '-o', 'ControlPersist=' + '1' ]
             self.sshcmd = self.sshcmd + [ self.dest ]
-        self.splitInit = splitInit
+            self.isRemote = True
+        else:
+            self.dest = None
+            self.sshcmd = []
+            self.isRemote = False
+        # Satisfy pylint
+        self.shell, self.pid = None, None
         super( RemoteMixin, self ).__init__( name, **kwargs )
 
     @staticmethod
     def findUser():
         "Try to return logged-in (usually non-root) user"
-        try:
+        return (
             # If we're running sudo
-            return os.environ[ 'SUDO_USER' ]
-        except:
-            try:
-                # Logged-in user (if we have a tty)
-                return quietRun( 'who am i' ).split()[ 0 ]
-            except:
-                # Give up and return effective user
-                return quietRun( 'whoami' )
+            os.environ.get( 'SUDO_USER', False ) or
+            # Logged-in user (if we have a tty)
+            ( quietRun( 'who am i' ).split() or [ False ] )[ 0 ] or
+            # Give up and return effective user
+            quietRun( 'whoami' ) )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
 
     @classmethod
-    def findServerIP( cls, server, intf='eth0' ):
+    def findServerIP( cls, server ):
         "Return our server's IP address"
-        # Check for this server
-        if not server:
-            output = quietRun( 'ifconfig %s' % intf  )
-        # Otherwise, handle remote server
-        else:
-            # First, check for an IP address
-            if server:
-                ipmatch = cls._ipMatchRegex.findall( server )
-                if ipmatch:
-                    return ipmatch[ 0 ]
-            # Otherwise, look up remote server
-            output = quietRun( 'getent ahostsv4 %s' % server )
+        # First, check for an IP address
+        ipmatch = cls._ipMatchRegex.findall( server )
+        if ipmatch:
+            return ipmatch[ 0 ]
+        # Otherwise, look up remote server
+        output = quietRun( 'getent ahostsv4 %s' % server )
         ips = cls._ipMatchRegex.findall( output )
         ip = ips[ 0 ] if ips else None
         return ip
@@ -181,15 +178,16 @@ class RemoteMixin( object ):
     # Command support via shell process in namespace
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
-        if self.dest:
+        if self.isRemote:
             kwargs.update( mnopts='-c' )
         super( RemoteMixin, self ).startShell( *args, **kwargs )
-        if self.splitInit:
-            self.sendCmd( 'echo $$' )
-        else:
-            self.pid = int( self.cmd( 'echo $$' ) )
+        # Optional split initialization
+        self.sendCmd( 'echo $$' )
+        if not self.splitInit:
+            self.finishInit()
 
     def finishInit( self ):
+        "Wait for split initialization to complete"
         self.pid = int( self.waitOutput() )
 
     def rpopen( self, *cmd, **opts ):
@@ -231,7 +229,7 @@ class RemoteMixin( object ):
             returns: Popen() object"""
         if type( cmd ) is str:
             cmd = cmd.split()
-        if self.dest:
+        if self.isRemote:
             if sudo:
                 cmd = [ 'sudo', '-E' ] + cmd
             if tt:
@@ -256,9 +254,18 @@ class RemoteMixin( object ):
 
     def addIntf( self, *args, **kwargs ):
         "Override: use RemoteLink.moveIntf"
-        return super( RemoteMixin, self).addIntf( *args,
-                        moveIntfFn=RemoteLink.moveIntf, **kwargs )
+        return super( RemoteMixin,
+                      self).addIntf( *args,
+                                     moveIntfFn=RemoteLink.moveIntf,
+                                     **kwargs )
 
+    def cleanup( self ):
+        "Help python collect its garbage."
+        # Intfs may end up in root NS
+        for intfName in self.intfNames():
+            if self.name in intfName:
+                self.rcmd( 'ip link del ' + intfName )
+        self.shell = None
 
 class RemoteNode( RemoteMixin, Node ):
     "A node on a remote server"
@@ -272,20 +279,23 @@ class RemoteHost( RemoteNode ):
 
 class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     "Remote instance of Open vSwitch"
+
     OVSVersions = {}
+
     def isOldOVS( self ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
         if self.server not in cls.OVSVersions:
+            # pylint: disable=not-callable
             vers = self.cmd( 'ovs-vsctl --version' )
-            cls.OVSVersions[ self.server ] = re.findall( '\d+\.\d+', vers )[ 0 ]
+            # pylint: enable=not-callable
+            cls.OVSVersions[ self.server ] = re.findall(
+                r'\d+\.\d+', vers )[ 0 ]
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
-                StrictVersion( '1.10' ) )
-
+                 StrictVersion( '1.10' ) )
 
 
 class RemoteLink( Link ):
-
     "A RemoteLink is a link between nodes which may be on different servers"
 
     def __init__( self, node1, node2, **kwargs ):
@@ -297,6 +307,7 @@ class RemoteLink( Link ):
         self.tunnel = None
         kwargs.setdefault( 'params1', {} )
         kwargs.setdefault( 'params2', {} )
+        self.cmd = None  # satisfy pylint
         Link.__init__( self, node1, node2, **kwargs )
 
     def stop( self ):
@@ -312,17 +323,18 @@ class RemoteLink( Link ):
             (override this method [and possibly delete()]
             to change link type)"""
         node1, node2 = self.node1, self.node2
-        server1 = getattr( node1, 'server', None )
-        server2 = getattr( node2, 'server', None )
-        if not server1 and not server2:
+        server1 = getattr( node1, 'server', 'localhost' )
+        server2 = getattr( node2, 'server', 'localhost' )
+        if server1 == 'localhost' and server2 == 'localhost':
             # Local link
             return makeIntfPair( intfname1, intfname2, addr1, addr2 )
         elif server1 == server2:
             # Remote link on same remote server
             return makeIntfPair( intfname1, intfname2, addr1, addr2,
-                                 run=node1.rcmd )
+                                 runCmd=node1.rcmd )
         # Otherwise, make a tunnel
-        self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2, addr1, addr2 )
+        self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
+                                       addr1, addr2 )
         return self.tunnel
 
     @staticmethod
@@ -336,16 +348,23 @@ class RemoteLink( Link ):
         cmd = 'ip link set %s netns %s' % ( intf, node.pid )
         node.rcmd( cmd )
         links = node.cmd( 'ip link show' )
-        if not ( ' %s:' % intf ) in links:
+        if not ' %s:' % intf in links:
             if printError:
                 error( '*** Error: RemoteLink.moveIntf: ' + intf +
-                      ' not successfully moved to ' + node.name + '\n' )
+                       ' not successfully moved to ' + node.name + '\n' )
             return False
         return True
-    
+
     def makeTunnel( self, node1, node2, intfname1, intfname2,
                     addr1=None, addr2=None ):
         "Make a tunnel across switches on different servers"
+        # We should never try to create a tunnel to ourselves!
+        assert node1.server != 'localhost' or node2.server != 'localhost'
+        # And we can't ssh into this server remotely as 'localhost',
+        # so try again swappping node1 and node2
+        if node2.server == 'localhost':
+            return self.makeTunnel( node2, node1, intfname2, intfname1,
+                                    addr2, addr1 )
         # 1. Create tap interfaces
         for node in node1, node2:
             # For now we are hard-wiring tap9, which we will rename
@@ -369,21 +388,21 @@ class RemoteLink( Link ):
         if ch != '@':
             error( 'makeTunnel:\n',
                    'Tunnel setup failed for',
-                   '%s:%s' % ( node1, node1.dest ), 'to', 
+                   '%s:%s' % ( node1, node1.dest ), 'to',
                    '%s:%s\n' % ( node2, node2.dest ),
-                  'command was:', cmd, '\n' )
+                   'command was:', cmd, '\n' )
             tunnel.terminate()
             tunnel.wait()
             error( ch + tunnel.stdout.read() )
             error( tunnel.stderr.read() )
-            exit( 1 )
+            sys.exit( 1 )
         # 3. Move interfaces if necessary
         for node in node1, node2:
             if node.inNamespace:
                 retry( 3, .01, RemoteLink.moveIntf, 'tap9', node )
         # 4. Rename tap interfaces to desired names
         for node, intf, addr in ( ( node1, intfname1, addr1 ),
-                            ( node2, intfname2, addr2 ) ):
+                                  ( node2, intfname2, addr2 ) ):
             if not addr:
                 node.cmd( 'ip link set tap9 name', intf )
             else:
@@ -410,9 +429,9 @@ class RemoteLink( Link ):
 
 class Placer( object ):
     "Node placement algorithm for MininetCluster"
-    
+
     def __init__( self, servers=None, nodes=None, hosts=None,
-                 switches=None, controllers=None, links=None ):
+                  switches=None, controllers=None, links=None ):
         """Initialize placement object
            servers: list of servers
            nodes: list of all nodes
@@ -431,8 +450,9 @@ class Placer( object ):
 
     def place( self, node ):
         "Return server for a given node"
+        assert self, node  # satisfy pylint
         # Default placement: run locally
-        return None
+        return 'localhost'
 
 
 class RandomPlacer( Placer ):
@@ -440,6 +460,7 @@ class RandomPlacer( Placer ):
     def place( self, nodename ):
         """Random placement function
             nodename: node name"""
+        assert nodename  # please pylint
         # This may be slow with lots of servers
         return self.servers[ randrange( 0, len( self.servers ) ) ]
 
@@ -448,7 +469,7 @@ class RoundRobinPlacer( Placer ):
     """Round-robin placement
        Note this will usually result in cross-server links between
        hosts and switches"""
-    
+
     def __init__( self, *args, **kwargs ):
         Placer.__init__( self, *args, **kwargs )
         self.next = 0
@@ -456,6 +477,7 @@ class RoundRobinPlacer( Placer ):
     def place( self, nodename ):
         """Round-robin placement function
             nodename: node name"""
+        assert nodename  # please pylint
         # This may be slow with lots of servers
         server = self.servers[ self.next ]
         self.next = ( self.next + 1 ) % len( self.servers )
@@ -474,7 +496,7 @@ class SwitchBinPlacer( Placer ):
         self.sset = frozenset( self.switches )
         self.cset = frozenset( self.controllers )
         # Server and switch placement indices
-        self.placement =  self.calculatePlacement()
+        self.placement = self.calculatePlacement()
 
     @staticmethod
     def bin( nodes, servers ):
@@ -541,7 +563,7 @@ class HostSwitchBinPlacer( Placer ):
         scount = len( self.servers )
         self.hbin = max( int( len( self.hosts ) / scount ), 1 )
         self.sbin = max( int( len( self.switches ) / scount ), 1 )
-        self.cbin = max( int( len( self.controllers ) / scount ) , 1 )
+        self.cbin = max( int( len( self.controllers ) / scount ), 1 )
         info( 'scount:', scount )
         info( 'bins:', self.hbin, self.sbin, self.cbin, '\n' )
         self.servdict = dict( enumerate( self.servers ) )
@@ -549,7 +571,7 @@ class HostSwitchBinPlacer( Placer ):
         self.sset = frozenset( self.switches )
         self.cset = frozenset( self.controllers )
         self.hind, self.sind, self.cind = 0, 0, 0
-    
+
     def place( self, nodename ):
         """Simple placement algorithm:
             place nodes into evenly sized bins"""
@@ -567,7 +589,6 @@ class HostSwitchBinPlacer( Placer ):
             info( 'warning: unknown node', nodename )
             server = self.servdict[ 0 ]
         return server
-
 
 
 # The MininetCluster class is not strictly necessary.
@@ -596,8 +617,8 @@ class MininetCluster( Mininet ):
                    'link': RemoteLink,
                    'precheck': True }
         params.update( kwargs )
-        servers = params.pop( 'servers', [ None ] )
-        servers = [ s if s != 'localhost' else None for s in servers ]
+        servers = params.pop( 'servers', [ 'localhost' ] )
+        servers = [ s if s else 'localhost' for s in servers ]
         self.servers = servers
         self.serverIP = params.pop( 'serverIP', {} )
         if not self.serverIP:
@@ -615,6 +636,7 @@ class MininetCluster( Mininet ):
 
     def popen( self, cmd ):
         "Popen() for server connections"
+        assert self  # please pylint
         old = signal( SIGINT, SIG_IGN )
         conn = Popen( cmd, stdin=PIPE, stdout=PIPE, close_fds=True )
         signal( SIGINT, old )
@@ -632,13 +654,13 @@ class MininetCluster( Mininet ):
         for server in self.servers:
             ip = self.serverIP[ server ]
             if not server or server == 'localhost':
-                 continue
+                continue
             info( server, '' )
             dest = '%s@%s' % ( self.user, ip )
             cmd = [ 'sudo', '-E', '-u', self.user ]
             cmd += self.sshcmd + [ '-n', dest, 'sudo true' ]
             debug( ' '.join( cmd ), '\n' )
-            out, err, code = errRun( cmd )
+            _out, _err, code = errRun( cmd )
             if code != 0:
                 error( '\nstartConnection: server connection check failed '
                        'to %s using command:\n%s\n'
@@ -646,17 +668,18 @@ class MininetCluster( Mininet ):
             result |= code
         if result:
             error( '*** Server precheck failed.\n'
-                   '*** Make sure that the above ssh command works correctly.\n'
+                   '*** Make sure that the above ssh command works'
+                   ' correctly.\n'
                    '*** You may also need to run mn -c on all nodes, and/or\n'
                    '*** use sudo -E.\n' )
-            exit( 1 )
+            sys.exit( 1 )
         info( '\n' )
 
     def modifiedaddHost( self, *args, **kwargs ):
         "Slightly modify addHost"
+        assert self  # please pylint
         kwargs[ 'splitInit' ] = True
         return Mininet.addHost( *args, **kwargs )
-
 
     def placeNodes( self ):
         """Place nodes on servers (if they don't have a server), and
@@ -671,7 +694,10 @@ class MininetCluster( Mininet ):
                                  switches=self.topo.switches(),
                                  links=self.topo.links() )
         for node in nodes:
-            config = self.topo.node_info[ node ]
+            config = self.topo.nodeInfo( node )
+            # keep local server name consistent accross nodes
+            if 'server' in config.keys() and config[ 'server' ] is None:
+                config[ 'server' ] = 'localhost'
             server = config.setdefault( 'server', placer.place( node ) )
             if server:
                 config.setdefault( 'serverIP', self.serverIP[ server ] )
@@ -689,7 +715,7 @@ class MininetCluster( Mininet ):
         if ( isinstance( controller, Controller)
              and controller.IP() == '127.0.0.1'
              and ' eth0:' in controller.cmd( 'ip link show' ) ):
-             Intf( 'eth0', node=controller ).updateIP()
+            Intf( 'eth0', node=controller ).updateIP()
         return controller
 
     def buildFromTopo( self, *args, **kwargs ):
@@ -780,7 +806,7 @@ def testRemoteTopo():
     "Test remote Node classes using Mininet()/Topo() API"
     topo = LinearTopo( 2 )
     net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
-                  link=RemoteLink, controller=ClusterController )
+                   link=RemoteLink, controller=ClusterController )
     net.start()
     net.pingAll()
     net.stop()

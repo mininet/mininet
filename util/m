@@ -9,7 +9,7 @@ else
   host=$1
 fi
 
-pid=`ps ax | grep "mininet:$host$" | grep bash | awk '{print $1};'`
+pid=`ps ax | grep "mininet:$host$" | grep bash | grep -v mnexec | awk '{print $1};'`
 
 if echo $pid | grep -q ' '; then
   echo "Error: found multiple mininet:$host processes"

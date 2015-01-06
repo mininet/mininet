@@ -14,7 +14,7 @@ class testSSHD( unittest.TestCase ):
 
     def connected( self, ip ):
         "Log into ssh server, check banner, then exit"
-        # Note: this test will fail if "Welcome" is not in the sshd banner 
+        # Note: this test will fail if "Welcome" is not in the sshd banner
         # and '#'' or '$'' are not in the prompt
         p = pexpect.spawn( 'ssh -i /tmp/ssh/test_rsa %s' % ip, timeout=10 )
         while True:
@@ -26,7 +26,7 @@ class testSSHD( unittest.TestCase ):
                 return False
             elif index == 2:
                 p.sendline( 'exit' )
-                p.wait()    
+                p.wait()
                 return True
             else:
                 return False

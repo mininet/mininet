@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """
-Create a network with 5 hosts, numbered 1-4 and 9. 
+Create a network with 5 hosts, numbered 1-4 and 9.
 Validate that the port numbers match to the interface name,
 and that the ovs ports match the mininet ports.
 """
@@ -9,21 +9,23 @@ and that the ovs ports match the mininet ports.
 from mininet.net import Mininet
 from mininet.node import Controller
 from mininet.log import setLogLevel, info, warn
-from mininet.node import Node
 
 def validatePort( switch, intf ):
     "Validate intf's OF port number"
     ofport = int( switch.cmd( 'ovs-vsctl get Interface', intf,
-                          'ofport' ) )
+                              'ofport' ) )
     if ofport != switch.ports[ intf ]:
         warn( 'WARNING: ofport for', intf, 'is actually', ofport, '\n' )
         return 0
     else:
         return 1
 
-def net():
+def testPortNumbering():
 
-    "Create a network with 5 hosts."
+    """Test port numbering:
+       Create a network with 5 hosts (using Mininet's
+       mid-level API) and check that implicit and
+       explicit port numbering works as expected."""
 
     net = Mininet( controller=Controller )
 
@@ -46,23 +48,25 @@ def net():
     net.addLink( h2, s1 )
     net.addLink( h3, s1 )
     net.addLink( h4, s1 )
-    net.addLink( h5, s1, port1 = 1, port2 = 9 ) # specify a different port to connect host 5 to on the switch.
+    # specify a different port to connect host 5 to on the switch.
+    net.addLink( h5, s1, port1=1, port2= 9)
 
-    root = Node( 'root', inNamespace=False )
     info( '*** Starting network\n' )
     net.start()
 
     # print the interfaces and their port numbers
-    info( '\n*** printing and validating the ports running on each interface\n' )
+    info( '\n*** printing and validating the ports '
+          'running on each interface\n' )
     for intfs in s1.intfList():
         if not intfs.name == "lo":
-            info( intfs, ': ', s1.ports[intfs], 
-            '\n' )
-            info ( 'Validating that', intfs, 'is actually on port', s1.ports[intfs], '... ' )
+            info( intfs, ': ', s1.ports[intfs],
+                  '\n' )
+            info( 'Validating that', intfs,
+                   'is actually on port', s1.ports[intfs], '... ' )
             if validatePort( s1, intfs ):
                 info( 'Validated.\n' )
     print '\n'
-        
+
     # test the network with pingall
     net.pingAll()
     print '\n'
@@ -72,5 +76,4 @@ def net():
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    net()
-
+    testPortNumbering()

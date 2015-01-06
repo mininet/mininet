@@ -91,14 +91,15 @@ import re
 import select
 import signal
 import random
-import copy
+
 from time import sleep
 from itertools import chain, groupby
 from math import ceil
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import Host, OVSKernelSwitch, DefaultController, Controller
+from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
+                           Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
@@ -106,7 +107,7 @@ from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.1.0+"
+VERSION = "2.2.0"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -168,7 +169,6 @@ class Mininet( object ):
         self.built = False
         if topo and build:
             self.build()
-
 
     def waitConnected( self, timeout=None, delay=.5 ):
         """wait for each switch to connect to a controller,
@@ -253,25 +253,35 @@ class Mininet( object ):
         if isinstance( name, Controller ):
             controller_new = name
             # Pylint thinks controller is a str()
-            # pylint: disable=E1103
+            # pylint: disable=maybe-no-member
             name = controller_new.name
-            # pylint: enable=E1103
+            # pylint: enable=maybe-no-member
         else:
             controller_new = controller( name, **params )
         # Add new controller to net
-        if controller_new: # allow controller-less setups
+        if controller_new:  # allow controller-less setups
             self.controllers.append( controller_new )
             self.nameToNode[ name ] = controller_new
         return controller_new
 
-    def addNAT( self, name='nat0', connect=True, inNamespace=False, **params ):
-        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace, 
+    def addNAT( self, name='nat0', connect=True, inNamespace=False,
+                **params):
+        """Add a NAT to the Mininet network
+           name: name of NAT node
+           connect: switch to connect to | True (s1) | None
+           inNamespace: create in a network namespace
+           params: other NAT node params, notably:
+               ip: used as default gateway address"""
+        nat = self.addHost( name, cls=NAT, inNamespace=inNamespace,
                             subnet=self.ipBase, **params )
         # find first switch and create link
         if connect:
-            # connect the nat to the first switch
+            if not isinstance( connect, Node ):
+                # Use first switch if not specified
+                connect = self.switches[ 0 ]
+            # Connect the nat to the switch
             self.addLink( nat, self.switches[ 0 ] )
-            # set the default route on hosts
+            # Set the default route on hosts
             natIP = nat.params[ 'ip' ].split('/')[ 0 ]
             for host in self.hosts:
                 if host.inNamespace:
@@ -321,25 +331,36 @@ class Mininet( object ):
         "return (key,value) tuple list for every node in net"
         return zip( self.keys(), self.values() )
 
+    @staticmethod
+    def randMac():
+        "Return a random, non-multicast MAC address"
+        return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff |
+                            0x020000000000 )
+
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):
         """"Add a link from node1 to node2
-            node1: source node
-            node2: dest node
-            port1: source port
-            port2: dest port
+            node1: source node (or name)
+            node2: dest node (or name)
+            port1: source port (optional)
+            port2: dest port (optional)
+            cls: link class (optional)
+            params: additional link params (optional)
             returns: link object"""
-        mac1 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
-        mac2 = macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff  | 0x020000000000 )
-        defaults = { 'port1': port1,
-                     'port2': port2,
-                     'addr1': mac1,
-                     'addr2': mac2,
-                     'intf': self.intf }
-        defaults.update( params )
-        if not cls:
-            cls = self.link
-        link = cls( node1, node2, **defaults )
+        # Accept node objects or names
+        node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
+        node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
+        options = dict( params )
+        # Port is optional
+        if port1 is not None:
+            options.setdefault( 'port1', port1 )
+        if port2 is not None:
+            options.setdefault( 'port2', port2 )
+        # Set default MAC - this should probably be in Link
+        options.setdefault( 'addr1', self.randMac() )
+        options.setdefault( 'addr2', self.randMac() )
+        cls = self.link if cls is None else cls
+        link = cls( node1, node2, **options )
         self.links.append( link )
         return link
 
@@ -377,7 +398,7 @@ class Mininet( object ):
             # Add a default controller
             info( '*** Adding controller\n' )
             classes = self.controller
-            if type( classes ) is not list:
+            if not isinstance( classes, list ):
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
                 # Allow Controller objects because nobody understands currying
@@ -397,12 +418,10 @@ class Mininet( object ):
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
-        for srcName, dstName in topo.links(sort=True):
-            src, dst = self.nameToNode[ srcName ], self.nameToNode[ dstName ]
-            params = topo.linkInfo( srcName, dstName )
-            srcPort, dstPort = topo.port( srcName, dstName )
-            self.addLink( src, dst, srcPort, dstPort, **params )
-            info( '(%s, %s) ' % ( src.name, dst.name ) )
+        for srcName, dstName, params in topo.links(
+                sort=True, withInfo=True ):
+            self.addLink( **params )
+            info( '(%s, %s) ' % ( srcName, dstName ) )
 
         info( '\n' )
 
@@ -455,7 +474,9 @@ class Mininet( object ):
             self.build()
         info( '*** Starting controller\n' )
         for controller in self.controllers:
+            info( controller.name + ' ')
             controller.start()
+        info( '\n' )
         info( '*** Starting %s switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ')
@@ -475,7 +496,8 @@ class Mininet( object ):
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        for swclass, switches in groupby( sorted( self.switches, key=type ), type ):
+        for swclass, switches in groupby(
+                sorted( self.switches, key=type ), type ):
             if hasattr( swclass, 'batchShutdown' ):
                 swclass.batchShutdown( switches )
         for switch in self.switches:
@@ -510,13 +532,13 @@ class Mininet( object ):
         if hosts is None:
             hosts = self.hosts
         poller = select.poll()
-        Node = hosts[ 0 ]  # so we can call class method fdToNode
+        h1 = hosts[ 0 ]  # so we can call class method fdToNode
         for host in hosts:
             poller.register( host.stdout )
         while True:
             ready = poller.poll( timeoutms )
             for fd, event in ready:
-                host = Node.fdToNode( fd )
+                host = h1.fdToNode( fd )
                 if event & select.POLLIN:
                     line = host.readline()
                     if line is not None:
@@ -563,7 +585,8 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
+                        result = node.cmd( 'ping -c1 %s %s' %
+                                           (opts, dest.IP()) )
                         sent, received = self._parsePing( result )
                     else:
                         sent, received = 0, 0
@@ -688,21 +711,23 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
-    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', format=None ):
+    def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', fmt=None,
+               seconds=5):
         """Run iperf between two hosts.
-           hosts: list of hosts; if None, uses opposite hosts
+           hosts: list of hosts; if None, uses first and last hosts
            l4Type: string, one of [ TCP, UDP ]
-           returns: results two-element array of [ server, client ] speeds
+           udpBw: bandwidth target for UDP test
+           fmt: iperf format argument if any
+           seconds: iperf time to transmit
+           returns: two-element array of [ server, client ] speeds
            note: send() is buffered, so client rate can be much higher than
            the actual transmission rate; on an unloaded system, server
            rate should be much closer to the actual receive rate"""
         if not quietRun( 'which telnet' ):
             error( 'Cannot find telnet in $PATH - required for iperf test' )
             return
-        if not hosts:
-            hosts = [ self.hosts[ 0 ], self.hosts[ -1 ] ]
-        else:
-            assert len( hosts ) == 2
+        hosts = hosts or [ self.hosts[ 0 ], self.hosts[ -1 ] ]
+        assert len( hosts ) == 2
         client, server = hosts
         output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
         output( "%s and %s\n" % ( client.name, server.name ) )
@@ -714,8 +739,8 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
-        if format:
-          iperfArgs += '-f %s ' %format
+        if fmt:
+            iperfArgs += '-f %s ' % fmt
         server.sendCmd( iperfArgs + '-s', printPid=True )
         servout = ''
         while server.lastPid is None:
@@ -725,8 +750,8 @@ class Mininet( object ):
                     'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
                 info( 'Waiting for iperf to start up...' )
                 sleep(.5)
-        cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
-                             bwArgs )
+        cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
+                             server.IP() + ' ' + bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
         servout += server.waitOutput()
@@ -740,7 +765,7 @@ class Mininet( object ):
     def runCpuLimitTest( self, cpu, duration=5 ):
         """run CPU limit test with 'while true' processes.
         cpu: desired CPU fraction of each host
-        duration: test duration in seconds
+        duration: test duration in seconds (integer)
         returns a single list of measured CPU fractions as floats.
         """
         cores = int( quietRun( 'nproc' ) )
@@ -761,12 +786,14 @@ class Mininet( object ):
         # get the initial cpu time for each host
         for host in hosts:
             outputs[ host ] = []
-            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+                       host, 'r' ) as f:
                 time[ host ] = float( f.read() )
-        for _ in range( 5 ):
+        for _ in range( duration ):
             sleep( 1 )
             for host in hosts:
-                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host, 'r' ) as f:
+                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
+                           host, 'r' ) as f:
                     readTime = float( f.read() )
                 outputs[ host ].append( ( ( readTime - time[ host ] )
                                         / 1000000000 ) / cores * 100 )
@@ -793,9 +820,9 @@ class Mininet( object ):
         elif dst not in self.nameToNode:
             error( 'dst not in network: %s\n' % dst )
         else:
-            if type( src ) is str:
+            if isinstance( src, basestring ):
                 src = self.nameToNode[ src ]
-            if type( dst ) is str:
+            if isinstance( dst, basestring ):
                 dst = self.nameToNode[ dst ]
             connections = src.connectionsTo( dst )
             if len( connections ) == 0:

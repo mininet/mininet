@@ -12,7 +12,7 @@ class testIntfOptions( unittest.TestCase ):
 
     def testIntfOptions( self ):
         "verify that intf.config is correctly limiting traffic"
-        p = pexpect.spawn( 'python -m mininet.examples.intfOptions ' )
+        p = pexpect.spawn( 'python -m mininet.examples.intfoptions ' )
         tolerance = .8
         opts = [ "Results: \['([\d\.]+) .bits/sec",
                  "Results: \['10M', '([\d\.]+) .bits/sec",

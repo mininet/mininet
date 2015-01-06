@@ -3,7 +3,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.1.0+
+Mininet 2.2.0
 
 ### What is Mininet?
 
@@ -66,32 +66,46 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.1.0+
+### New features in this release
 
-Mininet 2.1.0+ provides a number of bug fixes as well as
+This release provides a number of bug fixes as well as
 several new features, including:
 
-* Convenient access to `Mininet()` as a dict of nodes
-* X11 tunneling (wireshark in Mininet hosts, finally!)
-* Accurate reflection of the `Mininet()` object in the CLI
-* Automatically detecting and adjusting resource limits
-* Automatic cleanup on failure of the `mn` command
-* Preliminary support for running OVS in user space mode
-* Preliminary support (`IVSSwitch()`) for the Indigo Virtual Switch
-* support for installing the OpenFlow 1.3 versions of the reference
-  user switch and NOX from CPqD
-* The ability to import modules from `mininet.examples`
+* Improved OpenFlow 1.3 support
 
-We have provided several new examples (which can easily be
-imported to provide useful functionality) including:
+	- `mn --switch ovs,protocols=openflow13` starts OVS in 1.3 mode
+	- `install.sh -w` installs a 1.3-compatible Wireshark dissector using
+	  Loxigen
+	- `install.sh -y` installs the Ryu 1.3-compatible controller
 
-* Modeling separate control and data networks: `mininet.examples.controlnet`
-* Connecting Mininet hosts the internet (or a LAN) using NAT: `mininet.examples.nat`
-* Creating per-host custom directories using bind mounts: `mininet.examples.bind`
+* A new `nodelib.py` node library, and new `Node` types including
+  `LinuxBridge`, `OVSBridge`, `LinuxRouter` (see `examples/`)
+  and `NAT`
+
+* A `--nat` option which connects a Mininet network to your LAN using NAT
+  (For this to work correctly, Mininet's `--ipbase` subnet should not 
+  overlap with any external or internet IP addresses you wish to use)
+
+* An improved MiniEdit GUI (`examples/miniedit.py`) - thanks to
+  Gregory Gee
+
+* Support for multiple `--custom` arguments to `mn`
+
+* Experimental cluster support - consult the 
+  [documentation](http://docs.mininet.org) for details -
+  as well as `examples/cluster.py` and an experimental `--cluster`
+  option for topologies built with the default `Host` and `OVSSwitch`
+  classes:
+
+  `mn --cluster localhost,server1,server2`
 
 Note that examples contain experimental features which might
 "graduate" into mainline Mininet in the future, but they should 
 not be considered a stable part of the Mininet API!
+
+A number of bugs have also been fixed, most notably multiple link
+support in `Topo()`. See github issues and the release notes on
+the Mininet wiki for additional information.
 
 ### Installation
 
@@ -113,21 +127,27 @@ Mininet mailing list, `mininet-discuss` at:
 
 <https://mailman.stanford.edu/mailman/listinfo/mininet-discuss>
 
-### Contributing
+### Join Us
 
 Mininet is an open source project and is currently hosted
 at <https://github.com/mininet>.  You are encouraged to download
 the code, examine it, modify it, and submit bug reports, bug fixes,
 feature requests, new features and other issues and pull requests.
-Thanks to everyone who has contributed to the project
-(see CONTRIBUTORS for more info!)
+Thanks to everyone who has contributed code to the Mininet project
+(see CONTRIBUTORS for more info!) It is because of everyone's
+hard work that Mininet continues to grow and improve.
+
+### Enjoy Mininet
 
 Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
-### Credits
-
-The Mininet 2.1.0+ Team:
+The Mininet Core Team:
 
 * Bob Lantz
 * Brian O'Connor
+* Cody Burkard
+
+Thanks again to all of the Mininet contributors, particularly Gregory
+Gee for his work on MiniEdit.
+

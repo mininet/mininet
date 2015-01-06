@@ -25,7 +25,7 @@ def checkRun( cmd ):
     return check_call( cmd.split( ' ' ) )
 
 # pylint doesn't understand explicit type checking
-# pylint: disable-msg=E1103
+# pylint: disable=maybe-no-member
 
 def oldQuietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
@@ -119,8 +119,7 @@ def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
-# pylint: enable-msg=E1103
-# pylint: disable-msg=E1101
+# pylint: enable=maybe-no-member
 
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
@@ -132,8 +131,6 @@ def isShellBuiltin( cmd ):
     return cmd in isShellBuiltin.builtIns
 
 isShellBuiltin.builtIns = None
-
-# pylint: enable-msg=E1101
 
 # Interface management
 #
@@ -148,22 +145,22 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2, addr1=None, addr2=None, run=quietRun ):
+def makeIntfPair( intf1, intf2, addr1=None, addr2=None, runCmd=quietRun ):
     """Make a veth pair connecting intf1 and intf2.
        intf1: string, interface
        intf2: string, interface
-       node: node to run on or None (default)
+       runCmd: function to run shell commands (quietRun)
        returns: ip link add result"""
     # Delete any old interfaces with the same names
-    run( 'ip link del ' + intf1 )
-    run( 'ip link del ' + intf2 )
+    runCmd( 'ip link del ' + intf1 )
+    runCmd( 'ip link del ' + intf2 )
     # Create new pair
     if addr1 is None and addr2 is None:
         cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
     else:
         cmd = ( 'ip link add name ' + intf1 + ' address ' + addr1 +
                 ' type veth peer name ' + intf2 + ' address ' + addr2 )
-    cmdOutput = run( cmd )
+    cmdOutput = runCmd( cmd )
     if cmdOutput == '':
         return True
     else:
@@ -202,8 +199,8 @@ def moveIntfNoRetry( intf, dstNode, printError=False ):
         return False
     return True
 
-def moveIntf( intf, dstNode, srcNode=None, printError=True,
-             retries=3, delaySecs=0.001 ):
+def moveIntf( intf, dstNode, printError=True,
+              retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
        dstNode: destination Node
@@ -296,7 +293,7 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
-    while ( len(args) < 4 ):
+    while len(args) < 4:
         args.append( 0 )
     return ipNum( *args )
 
@@ -388,7 +385,7 @@ def sysctlTestAndSet( name, limit ):
     #read limit
     with open( name, 'r' ) as readFile:
         oldLimit = readFile.readline()
-        if type( limit ) is int:
+        if isinstance( limit, int ):
             #compare integer limits before overriding
             if int( oldLimit ) < limit:
                 with open( name, 'w' ) as writeFile:
@@ -427,9 +424,12 @@ def fixLimits():
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
         #Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
-    except:
+    # pylint: disable=broad-except
+    except Exception:
         warn( "*** Error setting resource limits. "
               "Mininet's performance may be affected.\n" )
+    # pylint: enable=broad-except
+
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
@@ -448,7 +448,7 @@ def natural( text ):
     def num( s ):
         "Convert text segment to int if necessary"
         return int( s ) if s.isdigit() else s
-    return [  num( s ) for s in re.split( r'(\d+)', text ) ]
+    return [  num( s ) for s in re.split( r'(\d+)', str( text ) ) ]
 
 def naturalSeq( t ):
     "Natural sort key function for sequences"
@@ -545,15 +545,16 @@ def ensureRoot():
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     """Wait until server is listening on port.
        returns True if server is listening"""
-    run = ( client.cmd if client else
-                partial( quietRun, shell=True ) )
-    if not run( 'which telnet' ):
+    runCmd = ( client.cmd if client else
+               partial( quietRun, shell=True ) )
+    if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
-    serverIP = server if type( server ) is str else server.IP()
+    # pylint: disable=maybe-no-member
+    serverIP = server if isinstance( server, basestring ) else server.IP()
     cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
-           ( serverIP, port ) )
+            ( serverIP, port ) )
     time = 0
-    while 'Connected' not in run( cmd ):
+    while 'Connected' not in runCmd( cmd ):
         if timeout:
             print time
             if time >= timeout:

@@ -4,6 +4,7 @@
    Test creation and pings for topologies with link and/or CPU options."""
 
 import unittest
+import sys
 from functools import partial
 
 from mininet.net import Mininet
@@ -13,6 +14,7 @@ from mininet.link import TCLink
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
+from mininet.clean import cleanup
 
 # Number of hosts for each test
 N = 2
@@ -38,7 +40,13 @@ class testOptionsTopoCommon( object ):
     """Verify ability to create networks with host and link options
        (common code)."""
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
+
+    @staticmethod
+    def tearDown():
+        "Clean up if necessary"
+        if sys.exc_info != ( None, None, None ):
+            cleanup()
 
     def runOptionsTopoTest( self, n, msg, hopts=None, lopts=None ):
         "Generic topology-with-options test runner."
@@ -79,7 +87,7 @@ class testOptionsTopoCommon( object ):
                      upperBound, lowerBound ) )
         msg += info
 
-        self.assertGreaterEqual( float( measured ),lowerBound, msg=msg )
+        self.assertGreaterEqual( float( measured ), lowerBound, msg=msg )
         self.assertLessEqual( float( measured ), upperBound, msg=msg )
 
     def testCPULimits( self ):
@@ -96,7 +104,8 @@ class testOptionsTopoCommon( object ):
         results = mn.runCpuLimitTest( cpu=CPU_FRACTION )
         mn.stop()
         hostUsage = '\n'.join( 'h%s: %s' %
-                               ( n + 1, results[ ( n - 1 ) * 5: ( n * 5 ) - 1 ] )
+                               ( n + 1,
+                                 results[ (n - 1) * 5 : (n * 5) - 1 ] )
                                for n in range( N ) )
         hoptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in hopts.items() )
@@ -106,7 +115,8 @@ class testOptionsTopoCommon( object ):
                 'hopts = %s\n'
                 'host = CPULimitedHost\n'
                 'Switch = %s\n'
-                % ( CPU_FRACTION * 100, hostUsage, N, hoptsStr, self.switchClass ) )
+                % ( CPU_FRACTION * 100, hostUsage, N, hoptsStr,
+                    self.switchClass ) )
         for pct in results:
             #divide cpu by 100 to convert from percentage to fraction
             self.assertWithinTolerance( pct/100, CPU_FRACTION,
@@ -115,7 +125,8 @@ class testOptionsTopoCommon( object ):
     def testLinkBandwidth( self ):
         "Verify that link bandwidths are accurate within a bound."
         if self.switchClass is UserSwitch:
-            self.skipTest ( 'UserSwitch has very poor performance, so skip for now' )
+            self.skipTest( 'UserSwitch has very poor performance -'
+                           ' skipping for now' )
         BW = 5  # Mbps
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
@@ -124,7 +135,7 @@ class testOptionsTopoCommon( object ):
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass,
                       waitConnected=True )
-        bw_strs = mn.run( mn.iperf, format='m' )
+        bw_strs = mn.run( mn.iperf, fmt='m' )
         loptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in lopts.items() )
         msg = ( '\nTesting link bandwidth limited to %d Mbps per link\n'
@@ -141,7 +152,7 @@ class testOptionsTopoCommon( object ):
         # As long as the kernel doesn't wait a long time before
         # delivering bytes to the iperf server, its reported data rate
         # should be close to the actual receive rate.
-        serverRate, clientRate = bw_strs
+        serverRate, _clientRate = bw_strs
         bw = float( serverRate.split(' ')[0] )
         self.assertWithinTolerance( bw, BW, BW_TOLERANCE, msg )
 
@@ -160,12 +171,12 @@ class testOptionsTopoCommon( object ):
         mn.stop()
         test_outputs = ping_delays[0]
         # Ignore unused variables below
-        # pylint: disable-msg=W0612
+        # pylint: disable=W0612
         node, dest, ping_outputs = test_outputs
         sent, received, rttmin, rttavg, rttmax, rttdev = ping_outputs
         pingFailMsg = 'sent %s pings, only received %s' % ( sent, received )
         self.assertEqual( sent, received, msg=pingFailMsg )
-        # pylint: enable-msg=W0612
+        # pylint: enable=W0612
         loptsStr = ', '.join( '%s: %s' % ( opt, value )
                               for opt, value in lopts.items() )
         msg = ( '\nTesting Link Delay of %s ms\n'
@@ -181,9 +192,8 @@ class testOptionsTopoCommon( object ):
 
         for rttval in [rttmin, rttavg, rttmax]:
             # Multiply delay by 4 to cover there & back on two links
-            self.assertWithinTolerance( rttval, DELAY_MS * 4.0, 
+            self.assertWithinTolerance( rttval, DELAY_MS * 4.0,
                                         DELAY_TOLERANCE, msg )
-
 
     def testLinkLoss( self ):
         "Verify that we see packet drops with a high configured loss rate."
@@ -212,7 +222,8 @@ class testOptionsTopoCommon( object ):
                 'lopts = %s\n'
                 'host = default\n'
                 'switch = %s\n'
-                % ( LOSS_PERCENT, dropped_total, N, loptsStr, self.switchClass ) )
+                % ( LOSS_PERCENT, dropped_total, N, loptsStr,
+                    self.switchClass ) )
 
         self.assertGreater( dropped_total, 0, msg )
 
@@ -245,9 +256,10 @@ class testOptionsTopoIVS( testOptionsTopoCommon, unittest.TestCase ):
     switchClass = IVSSwitch
 
 @unittest.skipUnless( quietRun( 'which ofprotocol' ),
-                     'Reference user switch is not installed' )
+                      'Reference user switch is not installed' )
 class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
-    "Verify ability to create networks with host and link options (UserSwitch)."
+    """Verify ability to create networks with host and link options
+     (UserSwitch)."""
     longMessage = True
     switchClass = UserSwitch
 

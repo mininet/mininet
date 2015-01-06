@@ -6,7 +6,7 @@ Run all mininet core tests
  -quick : skip tests that take more than ~30 seconds
 """
 
-import unittest
+from unittest import defaultTestLoader, TextTestRunner
 import os
 import sys
 from mininet.util import ensureRoot
@@ -19,13 +19,13 @@ def runTests( testDir, verbosity=1 ):
     ensureRoot()
     cleanup()
     # discover all tests in testDir
-    testSuite = unittest.defaultTestLoader.discover( testDir )
+    testSuite = defaultTestLoader.discover( testDir )
     # run tests
-    unittest.TextTestRunner( verbosity=verbosity ).run( testSuite )
+    TextTestRunner( verbosity=verbosity ).run( testSuite )
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )
     # get the directory containing example tests
-    testDir = os.path.dirname( os.path.realpath( __file__ ) )
-    verbosity = 2 if '-v' in sys.argv else 1
-    runTests( testDir, verbosity )
+    thisdir = os.path.dirname( os.path.realpath( __file__ ) )
+    vlevel = 2 if '-v' in sys.argv else 1
+    runTests( testDir=thisdir, verbosity=vlevel )

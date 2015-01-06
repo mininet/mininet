@@ -28,9 +28,9 @@ def moduleDeps( subtract=None, add=None ):
        add: string or list of module names to add, if not already loaded"""
     subtract = subtract if subtract is not None else []
     add = add if add is not None else []
-    if type( subtract ) is str:
+    if isinstance( subtract, basestring ):
         subtract = [ subtract ]
-    if type( add ) is str:
+    if isinstance( add, basestring ):
         add = [ add ]
     for mod in subtract:
         if mod in lsmod():

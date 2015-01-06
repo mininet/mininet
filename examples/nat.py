@@ -22,7 +22,7 @@ def startNAT( root, inetIntf='eth0', subnet='10.0/8' ):
     subnet: Mininet subnet (default 10.0/8)="""
 
     # Identify the interface connecting to the mininet network
-    localIntf =  root.defaultIntf()
+    localIntf = root.defaultIntf()
 
     # Flush any currently active rules
     root.cmd( 'iptables -F' )

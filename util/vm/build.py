@@ -162,8 +162,8 @@ def srun( cmd, **kwargs ):
 def depend():
     "Install package dependencies"
     log( '* Installing package dependencies' )
-    run( 'sudo apt-get -y update' )
-    run( 'sudo apt-get install -y'
+    run( 'sudo apt-get -qy update' )
+    run( 'sudo apt-get -qy install'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs dnsmasq curl'
          ' python-setuptools mtools zip' )
@@ -333,9 +333,11 @@ skipx
 
 # Tell the Ubuntu/Debian installer to stop asking stupid questions
 
-PreseedText = """
-d-i mirror/country string manual
-d-i mirror/http/hostname string mirrors.kernel.org
+PreseedText = ( """
+"""
+#d-i mirror/country string manual
+#d-i mirror/http/hostname string mirrors.kernel.org
+"""
 d-i mirror/http/directory string /ubuntu
 d-i mirror/http/proxy string
 d-i partman/confirm_write_new_label boolean true
@@ -345,7 +347,7 @@ d-i partman/confirm_nooverwrite boolean true
 d-i user-setup/allow-password-weak boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
-"""
+""" )
 
 def makeKickstartFloppy():
     "Create and return kickstart floppy, kickstart, preseed"
@@ -487,22 +489,24 @@ def login( vm, user='mininet', password='mininet' ):
     log( '* Waiting for login...' )
 
 
-def disableNtpd( vm, prompt=Prompt ):
-    "Turn off ntpd and set clock immediately"
-    log( '* Turning off ntpd' )
-    vm.sendline( 'sudo -n service ntp stop' )
+def removeNtpd( vm, prompt=Prompt, ntpPackage='ntp' ):
+    "Remove ntpd and set clock immediately"
+    log( '* Removing ntpd' )
+    vm.sendline( 'sudo -n apt-get -qy remove ' + ntpPackage )
     vm.expect( prompt )
-    log( '* Setting clock' )
-    # -gq: set and quit immediately
-    vm.sendline( 'sudo -n ntpd -gq' )
+    # Try to make sure that it isn't still running
+    vm.sendline( 'sudo -n pkill ntpd' )
     vm.expect( prompt )
-    log( '* Waiting one second and running date command' )
-    vm.sendline( 'sleep 1 && date ' )
+    log( '* Getting seconds since epoch from this server' )
+    # Note r'date +%s' specifies a format for 'date', not python!
+    seconds = int( run( r'date +%s' ) )
+    log( '* Setting VM clock' )
+    vm.sendline( 'sudo -n date -s @%d' % seconds )
 
 
 def sanityTest( vm ):
     "Run Mininet sanity test (pingall) in vm"
-    vm.sendline( 'sudo mn --test pingall' )
+    vm.sendline( 'sudo -n mn --test pingall' )
     if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
         log( '* Sanity check OK' )
     else:
@@ -514,9 +518,9 @@ def sanityTest( vm ):
 def coreTest( vm, prompt=Prompt ):
     "Run core tests (make test) in VM"
     log( '* Making sure cgroups are mounted' )
-    vm.sendline( 'sudo service cgroup-lite restart' )
+    vm.sendline( 'sudo -n service cgroup-lite restart' )
     vm.expect( prompt )
-    vm.sendline( 'sudo cgroups-mount' )
+    vm.sendline( 'sudo -n cgroups-mount' )
     vm.expect( prompt )
     log( '* Running make test' )
     vm.sendline( 'cd ~/mininet; sudo make test' )
@@ -532,29 +536,35 @@ def coreTest( vm, prompt=Prompt ):
             log( '* Test', test, 'output:' )
             log( vm.before )
 
-def noneTest( vm ):
+
+def installPexpect( vm, prompt=Prompt ):
+    "install pexpect"
+    vm.sendline( 'sudo -n apt-get -qy install python-pexpect' )
+    vm.expect( prompt )
+
+
+def noneTest( vm, prompt=Prompt ):
     "This test does nothing"
+    installPexpect( vm, prompt )
     vm.sendline( 'echo' )
+
 
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v -quick' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v -quick' )
 
 
 def examplesfullTest( vm, prompt=Prompt ):
     "Full (slow) test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v' )
 
 
 def walkthroughTest( vm, prompt=Prompt ):
     "Test mininet walkthrough"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
 
 def useTest( vm, prompt=Prompt ):
@@ -580,7 +590,7 @@ def checkOutBranch( vm, branch, prompt=Prompt ):
     vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
                  + branch + '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
-    vm.sendline( 'sudo make install' )
+    vm.sendline( 'sudo -n make install' )
 
 
 def interact( vm, tests, pre='', post='', prompt=Prompt ):
@@ -599,7 +609,7 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
                  'install-mininet-vm.sh' % branch )
     vm.expect( prompt )
     log( '* Running VM install script' )
-    installcmd = 'bash install-mininet-vm.sh'
+    installcmd = 'bash -v install-mininet-vm.sh'
     if Branch:
         installcmd += ' ' + Branch
     vm.sendline( installcmd )
@@ -830,12 +840,14 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     os.chdir( '..' )
 
 
-def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
+def runTests( vm, tests=None, pre='', post='', prompt=Prompt, uninstallNtpd=False ):
     "Run tests (list) in vm (pexpect object)"
-    # We disable ntpd and set the time so that it won't be
-    # messing with the time during tests
-    disableNtpd( vm )
-    vm.expect( prompt )
+    # We disable ntpd and set the time so that ntpd won't be
+    # messing with the time during tests. Set to true for a COW
+    # disk and False for a non-COW disk.
+    if uninstallNtpd:
+        removeNtpd( vm )
+        vm.expect( prompt )
     if Branch:
         checkOutBranch( vm, branch=Branch )
         vm.expect( prompt )
@@ -869,7 +881,7 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None, 
+def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
                 runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run
@@ -902,7 +914,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
     if runFunction:
         runFunction( vm, **runArgs )
     log( '* Shutting down' )
-    vm.sendline( 'sudo shutdown -h now ' )
+    vm.sendline( 'sudo -n shutdown -h now ' )
     log( '* Waiting for shutdown' )
     vm.wait()
     if outputFile:
@@ -1011,7 +1023,8 @@ def parseArgs():
             exit( 1 )
     for image in args.image:
         bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,
-                    post=args.post, memory=args.memory, outputFile=args.out )
+                    post=args.post, memory=args.memory, outputFile=args.out,
+                    uninstallNtpd=True  )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()
