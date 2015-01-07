@@ -30,12 +30,14 @@ class ClusterCLI( CLI ):
         global nx, plt
         if not nx:
             try:
+                # pylint: disable=import-error
                 import networkx
                 nx = networkx  # satisfy pylint
                 from matplotlib import pyplot
                 plt = pyplot   # satisfiy pylint
                 import pygraphviz
                 assert pygraphviz  # silence pyflakes
+                # pylint: enable=import-error
             except ImportError:
                 error( 'plot requires networkx, matplotlib and pygraphviz - '
                        'please install them and try again\n' )

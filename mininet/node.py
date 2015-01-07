@@ -52,7 +52,6 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE
-from operator import or_
 from time import sleep
 
 from mininet.log import info, error, warn, debug
@@ -1130,11 +1129,12 @@ class OVSSwitch( Switch ):
            update: update cached value"""
         if not self._uuids or update:
             controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
-                                   'Controller' ).strip()
+                                    'Controller' ).strip()
             if controllers.startswith( '[' ) and controllers.endswith( ']' ):
                 controllers = controllers[ 1 : -1 ]
                 if controllers:
-                    self._uuids = [ c.strip() for c in controllers.split( ',' ) ]
+                    self._uuids = [ c.strip()
+                                    for c in controllers.split( ',' ) ]
         return self._uuids
 
     def connected( self ):
