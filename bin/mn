@@ -30,7 +30,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            OVSLegacyKernelSwitch, IVSSwitch )
 from mininet.nodelib import LinuxBridge
-from mininet.link import Link, TCLink
+from mininet.link import Link, TCLink, OVSLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
 from mininet.topolib import TreeTopo, TorusTopo
 from mininet.util import customConstructor, splitArgs
@@ -82,7 +82,8 @@ CONTROLLERS = { 'ref': Controller,
 
 LINKDEF = 'default'
 LINKS = { 'default': Link,
-          'tc': TCLink }
+          'tc': TCLink,
+          'ovs': OVSLink }
 
 
 # optional tests to run
