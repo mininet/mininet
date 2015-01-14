@@ -1054,14 +1054,14 @@ class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
     def __init__( self, name, failMode='secure', datapath='kernel',
-                  inband=False, protocols='OpenFlow10,OpenFlow13', **params ):
+                  inband=False, protocols=None, **params ):
         """Init.
            name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)
            inband: use in-band control (False)
-           protocols: use specific OpenFlow version(s)
-           Unspecified (or old OVS version) uses default (OpenFlow 1.0)"""
+           protocols: use specific OpenFlow version(s) (e.g. OpenFlow13)
+           Unspecified (or old OVS version) uses OVS default"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
