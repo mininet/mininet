@@ -507,7 +507,7 @@ class Mininet( object ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchShutdown' ):
                 swclass.batchShutdown( switches )
-            stopped.update( { s: s for s in switches } )
+                stopped.update( { s: s for s in switches } )
         for switch in self.switches:
             info( switch.name + ' ' )
             if switch not in stopped:
