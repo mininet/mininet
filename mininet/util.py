@@ -145,22 +145,38 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2, addr1=None, addr2=None, runCmd=quietRun ):
-    """Make a veth pair connecting intf1 and intf2.
-       intf1: string, interface
-       intf2: string, interface
+def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
+                  deleteIntfs=True, runCmd=None ):
+    """Make a veth pair connnecting new interfaces intf1 and intf2
+       intf1: name for interface 1
+       intf2: name for interface 2
+       addr1: MAC address for interface 1 (optional)
+       addr2: MAC address for interface 2 (optional)
+       node1: home node for interface 1 (optional)
+       node2: home node for interface 2 (optional)
+       deleteIntfs: delete intfs before creating them
        runCmd: function to run shell commands (quietRun)
        returns: ip link add result"""
-    # Delete any old interfaces with the same names
-    runCmd( 'ip link del ' + intf1 )
-    runCmd( 'ip link del ' + intf2 )
+    if not runCmd:
+        runCmd = quietRun if not node1 else node1.cmd
+        runCmd2 = quietRun if not node2 else node2.cmd
+    if deleteIntfs:
+        # Delete any old interfaces with the same names
+        runCmd( 'ip link del ' + intf1 )
+        runCmd2( 'ip link del ' + intf2 )
     # Create new pair
+    netns = 1 if not node2 else node2.pid
     if addr1 is None and addr2 is None:
-        cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
+        cmdOutput = runCmd( 'ip link add name %s '
+                            'type veth peer name %s '
+                            'netns %s' % ( intf1, intf2, netns ) )
     else:
-        cmd = ( 'ip link add name ' + intf1 + ' address ' + addr1 +
-                ' type veth peer name ' + intf2 + ' address ' + addr2 )
-    cmdOutput = runCmd( cmd )
+        cmdOutput = runCmd( 'ip link add name %s '
+                            'address %s '
+                            'type veth peer name %s '
+                            'address %s '
+                            'netns %s' %
+                            (  intf1, addr1, intf2, addr2, netns ) )
     if cmdOutput == '':
         return True
     else:

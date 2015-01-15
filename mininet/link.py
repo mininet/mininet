@@ -415,8 +415,8 @@ class Link( object ):
         if fast:
             params1.setdefault( 'moveIntfFn', self._ignore )
             params2.setdefault( 'moveIntfFn', self._ignore )
-            self.fastIntfPair( intfName1, intfName2, addr1, addr2,
-                               node1=node1, node2=node2)
+            self.makeIntfPair( intfName1, intfName2, addr1, addr2,
+                               node1, node2, deleteIntfs=False )
         else:
             self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
 
@@ -446,35 +446,21 @@ class Link( object ):
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None ):
+    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
+                      node1=None, node2=None, deleteIntfs=True ):
         """Create pair of interfaces
-           intfname1: name of interface 1
-           intfname2: name of interface 2
+           intfname1: name for interface 1
+           intfname2: name for interface 2
+           addr1: MAC address for interface 1 (optional)
+           addr2: MAC address for interface 2 (optional)
+           node1: home node for interface 1 (optional)
+           node2: home node for interface 2 (optional)
            (override this method [and possibly delete()]
            to change link type)"""
         # Leave this as a class method for now
         assert cls
-        return makeIntfPair( intfname1, intfname2, addr1, addr2 )
-
-    @classmethod
-    def fastIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
-                      node1=None, node2=None ):
-        """Create pair of interfaces
-           'fast' version: no checking, only works with Nodes.
-           intf1: name of interface 1
-           intf2: name of interface 2
-           (override this class method [and possibly delete()]
-           to change link type)"""
-        if addr1 is None and addr2 is None:
-            return node1.cmd( 'ip link add name', intfname1,
-                              'type veth peer name',
-                              intfname2, 'netns', node2.pid )
-        else:
-            return node1.cmd( 'ip link add name', intfname1,
-                              'address', addr1,
-                              'type veth peer name', intfname2,
-                              'address', addr2,
-                              'netns', node2.pid )
+        return makeIntfPair( intfname1, intfname2, addr1, addr2, node1, node2,
+                             deleteIntfs=deleteIntfs )
 
     def delete( self ):
         "Delete this link"
@@ -519,12 +505,10 @@ class OVSLink( Link ):
             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
         Link.__init__( self, node1, node2, **kwargs )
 
-    def fastIntfPair( self, *args, **kwargs ):
+    def makeIntfPair( self, *args, **kwargs ):
         "Usually delegated to OVSSwitch"
         if self.isPatchLink:
             return None, None
-        elif self.fast:
-            return Link.fastIntfPair( *args, **kwargs )
         else:
             return Link.makeIntfPair( *args, **kwargs )
 
