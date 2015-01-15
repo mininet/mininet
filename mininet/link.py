@@ -390,6 +390,7 @@ class Link( object ):
         # This is a bit awkward; it seems that having everything in
         # params is more orthogonal, but being able to specify
         # in-line arguments is more convenient! So we support both.
+        # pylint: disable=too-many-branches
         if params1 is None:
             params1 = {}
         if params2 is None:
@@ -417,13 +418,13 @@ class Link( object ):
             self.fastIntfPair( intfName1, intfName2, addr1, addr2,
                                node1=node1, node2=node2)
         else:
-            self.makeIntfPair( intfName1, intfName2, addr1, addr2,
-                               node1=node1, node2=node2)
+            self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
 
         if not cls1:
             cls1 = intf
         if not cls2:
             cls2 = intf
+        # pylint: enable=too-many-branches
 
         intf1 = cls1( name=intfName1, node=node1,
                       link=self, mac=addr1, **params1  )
@@ -445,8 +446,7 @@ class Link( object ):
         return node.name + '-eth' + repr( n )
 
     @classmethod
-    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
-                      node1=None, node2=None ):
+    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None ):
         """Create pair of interfaces
            intfname1: name of interface 1
            intfname2: name of interface 2
@@ -458,15 +458,23 @@ class Link( object ):
 
     @classmethod
     def fastIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
-                     node1=None, node2=None ):
+                      node1=None, node2=None ):
         """Create pair of interfaces
-            'fast' version: no checking, only works with Nodes.
-            intf1: name of interface 1
-            intf2: name of interface 2
-            (override this class method [and possibly delete()]
-            to change link type)"""
-        return node1.cmd( 'ip link add', intfname1, 'type veth '
-                         'peer name', intfname2, 'netns', node2.pid )
+           'fast' version: no checking, only works with Nodes.
+           intf1: name of interface 1
+           intf2: name of interface 2
+           (override this class method [and possibly delete()]
+           to change link type)"""
+        if addr1 is None and addr2 is None:
+            return node1.cmd( 'ip link add name', intfname1,
+                              'type veth peer name',
+                              intfname2, 'netns', node2.pid )
+        else:
+            return node1.cmd( 'ip link add name', intfname1,
+                              'address', addr1,
+                              'type veth peer name', intfname2,
+                              'address', addr2,
+                              'netns', node2.pid )
 
     def delete( self ):
         "Delete this link"
@@ -488,9 +496,10 @@ class Link( object ):
 class OVSIntf( Intf ):
     "Patch interface on an OVSSwitch"
 
-    def ifconfig( self, cmd ):
+    def ifconfig( self, *args ):
+        cmd = ' '.join( args )
         if cmd == 'up':
-            "OVSIntf is always up"
+            # OVSIntf is always up
             return
         else:
             raise Exception( 'OVSIntf cannot do ifconfig ' + cmd )
@@ -506,8 +515,8 @@ class OVSLink( Link ):
         self.isPatchLink = False
         if ( type( node1 ) is mininet.node.OVSSwitch and
              type( node2 ) is mininet.node.OVSSwitch ):
-             self.isPatchLink = True
-             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
+            self.isPatchLink = True
+            kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
         Link.__init__( self, node1, node2, **kwargs )
 
     def fastIntfPair( self, *args, **kwargs ):
