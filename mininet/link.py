@@ -497,7 +497,9 @@ class OVSIntf( Intf ):
 
 
 class OVSLink( Link ):
-    "Link that makes patch links between OVSSwitches"
+    """Link that makes patch links between OVSSwitches
+       Warning: in testing we have found that no more
+       than ~64 OVS patch links should be used in row."""
 
     def __init__( self, node1, node2, **kwargs ):
         "See Link.__init__() for options"
