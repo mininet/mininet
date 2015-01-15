@@ -254,10 +254,8 @@ class RemoteMixin( object ):
 
     def addIntf( self, *args, **kwargs ):
         "Override: use RemoteLink.moveIntf"
-        return super( RemoteMixin,
-                      self).addIntf( *args,
-                                     moveIntfFn=RemoteLink.moveIntf,
-                                     **kwargs )
+        kwargs.update( moveIntfFn=RemoteLink.moveIntf )
+        return super( RemoteMixin, self).addIntf( *args, **kwargs )
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -316,22 +314,21 @@ class RemoteLink( Link ):
             self.tunnel.terminate()
         self.tunnel = None
 
-    def makeIntfPair( self, intfname1, intfname2, addr1=None, addr2=None ):
+    def makeIntfPair( self, intfname1, intfname2, addr1=None, addr2=None,
+                      node1=None, node2=None, deleteIntfs=True   ):
         """Create pair of interfaces
             intfname1: name of interface 1
             intfname2: name of interface 2
             (override this method [and possibly delete()]
             to change link type)"""
-        node1, node2 = self.node1, self.node2
+        node1 = self.node1 if node1 is None else node1
+        node2 = self.node2 if node2 is None else node2
         server1 = getattr( node1, 'server', 'localhost' )
         server2 = getattr( node2, 'server', 'localhost' )
-        if server1 == 'localhost' and server2 == 'localhost':
-            # Local link
-            return makeIntfPair( intfname1, intfname2, addr1, addr2 )
-        elif server1 == server2:
-            # Remote link on same remote server
-            return makeIntfPair( intfname1, intfname2, addr1, addr2,
-                                 runCmd=node1.rcmd )
+        if server1 == server2:
+            # Link within same server
+            return Link.makeIntfPair( intfname1, intfname2, addr1, addr2,
+                                      node1, node2, deleteIntfs=deleteIntfs )
         # Otherwise, make a tunnel
         self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
                                        addr1, addr2 )
