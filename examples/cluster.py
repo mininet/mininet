@@ -292,6 +292,11 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                  StrictVersion( '1.10' ) )
 
+    @classmethod
+    def batchShutdown( cls, *args, **kwargs ):
+        "Not implemented yet"
+        return False
+
 
 class RemoteLink( Link ):
     "A RemoteLink is a link between nodes which may be on different servers"

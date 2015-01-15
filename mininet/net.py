@@ -505,8 +505,8 @@ class Mininet( object ):
         for swclass, switches in groupby(
                 sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
-            if hasattr( swclass, 'batchShutdown' ):
-                swclass.batchShutdown( switches )
+            if ( hasattr( swclass, 'batchShutdown' ) and
+                 swclass.batchShutdown( switches ) ):
                 stopped.update( { s: s for s in switches } )
         for switch in self.switches:
             info( switch.name + ' ' )

@@ -1103,6 +1103,7 @@ class OVSSwitch( Switch ):
         quietRun( 'ovs-vsctl ' +
                   ' -- '.join( '--if-exists del-br %s' % s
                                for s in switches ) )
+        return True
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
