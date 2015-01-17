@@ -20,9 +20,11 @@ a single switch:
     r0-eth3 - s3-eth1 - h3-eth0 (IP: 10.0.0.100)
 
 The example relies on default routing entries that are
-automatically created for each interface. Additional
-routes may be added to the router or hosts by executing
-'ip route' or 'route' commands on the router or hosts.
+automatically created for each router interface, as well
+as 'defaultRoute' parameters for the host interfaces.
+
+Additional routes may be added to the router or hosts by
+executing 'ip route' or 'route' commands on the router or hosts.
 """
 
 from mininet.topo import Topo
@@ -49,7 +51,7 @@ class NetworkTopo( Topo ):
 
     def build( self, **_opts ):
 
-        defaultIP='192.168.1.1/24'  # IP address for r0-eth1
+        defaultIP = '192.168.1.1/24'  # IP address for r0-eth1
         router = self.addNode( 'r0', cls=LinuxRouter, ip=defaultIP )
 
         s1, s2, s3 = [ self.addSwitch( s ) for s in 's1', 's2', 's3' ]
@@ -68,7 +70,7 @@ class NetworkTopo( Topo ):
         h3 = self.addHost( 'h3', ip='10.0.0.100/8',
                            defaultRoute='via 10.0.0.1' )
 
-        for h, s in [ (h1,s1), (h2,s2), (h3,s3) ]:
+        for h, s in [ (h1, s1), (h2, s2), (h3, s3) ]:
             self.addLink( h, s )
 
 
