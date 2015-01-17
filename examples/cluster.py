@@ -79,7 +79,7 @@ from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
-from mininet.util import quietRun, makeIntfPair, errRun, retry
+from mininet.util import quietRun, errRun, retry
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 
@@ -293,7 +293,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
                  StrictVersion( '1.10' ) )
 
     @classmethod
-    def batchShutdown( cls, *args, **kwargs ):
+    def batchShutdown( cls, *_args, **_kwargs ):
         "Not implemented yet"
         return False
 

@@ -462,7 +462,6 @@ class Link( object ):
         return makeIntfPair( intfname1, intfname2, addr1, addr2, node1, node2,
                              deleteIntfs=deleteIntfs )
 
-
     def delete( self ):
         "Delete this link"
         self.intf1.delete()
