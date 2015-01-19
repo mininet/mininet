@@ -1054,19 +1054,21 @@ class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
     def __init__( self, name, failMode='secure', datapath='kernel',
-                  inband=False, protocols=None, **params ):
-        """Init.
-           name: name for switch
+                  inband=False, protocols=None,
+                  reconnectms=1000, **params ):
+        """name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)
            inband: use in-band control (False)
            protocols: use specific OpenFlow version(s) (e.g. OpenFlow13)
-           Unspecified (or old OVS version) uses OVS default"""
+                      Unspecified (or old OVS version) uses OVS default
+           reconnectms: max reconnect timeout in ms (0/None for default)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
         self.inband = inband
         self.protocols = protocols
+        self.reconnectms = reconnectms
         self._uuids = []  # controller UUIDs
 
     @classmethod
@@ -1165,8 +1167,6 @@ class OVSSwitch( Switch ):
         if self.inNamespace:
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
-        # Annoyingly, --if-exists option seems not to work
-        self.cmd( 'ovs-vsctl del-br', self )
         int( self.dpid, 16 )  # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
@@ -1181,7 +1181,8 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         # Construct big ovs-vsctl command for new versions of OVS
         if not self.isOldOVS():
-            cmd = ( 'ovs-vsctl add-br %s ' % self +
+            cmd = ( 'ovs-vsctl --if-exists del-br %s ' % self +
+                    '-- add-br %s ' % self +
                     '-- set Bridge %s ' % self +
                     'other_config:datapath-id=%s ' % self.dpid +
                     '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
@@ -1189,6 +1190,8 @@ class OVSSwitch( Switch ):
                     '-- set-controller %s %s ' % ( self, clist ) )
         # Construct ovs-vsctl commands for old versions of OVS
         else:
+            # Annoyingly, --if-exists option seems not to work
+            self.cmd( 'ovs-vsctl del-br', self )
             self.cmd( 'ovs-vsctl add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
@@ -1207,10 +1210,12 @@ class OVSSwitch( Switch ):
         # Do it!!
         self.cmd( cmd )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
-        uuids = [ '-- set Controller %s max_backoff=1000' % uuid
-                  for uuid in self.controllerUUIDs() ]
-        if uuids:
-            self.cmd( 'ovs-vsctl', *uuids )
+        if self.reconnectms:
+            uuids = [ '-- set Controller %s max_backoff=%d' %
+                      ( uuid, self.reconnectms )
+                      for uuid in self.controllerUUIDs() ]
+            if uuids:
+                self.cmd( 'ovs-vsctl', *uuids )
         # If necessary, restore TC config overwritten by OVS
         for intf in self.intfList():
             self.TCReapply( intf )
