@@ -1055,20 +1055,22 @@ class OVSSwitch( Switch ):
 
     def __init__( self, name, failMode='secure', datapath='kernel',
                   inband=False, protocols=None,
-                  reconnectms=1000, **params ):
+                  reconnectms=1000, stp=False, **params ):
         """name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)
            inband: use in-band control (False)
            protocols: use specific OpenFlow version(s) (e.g. OpenFlow13)
                       Unspecified (or old OVS version) uses OVS default
-           reconnectms: max reconnect timeout in ms (0/None for default)"""
+           reconnectms: max reconnect timeout in ms (0/None for default)
+           stp: enable STP (False, requires failMode=standalone)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
         self.inband = inband
         self.protocols = protocols
         self.reconnectms = reconnectms
+        self.stp = stp
         self._uuids = []  # controller UUIDs
 
     @classmethod
@@ -1206,7 +1208,9 @@ class OVSSwitch( Switch ):
         if self.datapath == 'user':
             cmd += '-- set bridge %s datapath_type=netdev ' % self
         if self.protocols and not self.isOldOVS():
-            cmd += '-- set bridge %s protocols=%s' % ( self, self.protocols )
+            cmd += '-- set bridge %s protocols=%s ' % ( self, self.protocols )
+        if self.stp and self.failMode == 'standalone':
+            cmd += '-- set bridge %s stp_enable=true ' % self
         # Do it!!
         self.cmd( cmd )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
@@ -1241,6 +1245,14 @@ class OVSBridge( OVSSwitch ):
 
     def start( self, controllers ):
         OVSSwitch.start( self, controllers=[] )
+
+    def connected( self ):
+        "Are we forwarding yet?"
+        if self.stp:
+            status = self.dpctl( 'show' )
+            return 'STP_FORWARD' in status and not 'STP_LEARN' in status
+        else:
+            return True
 
 
 class IVSSwitch( Switch ):
