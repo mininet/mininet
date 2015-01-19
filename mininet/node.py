@@ -1164,6 +1164,7 @@ class OVSSwitch( Switch ):
                  '-- set Interface %s options:peer=%s ' %
                  ( intf, intf, peer ) )
 
+    # pylint: disable=too-many-branches
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
@@ -1223,6 +1224,7 @@ class OVSSwitch( Switch ):
         # If necessary, restore TC config overwritten by OVS
         for intf in self.intfList():
             self.TCReapply( intf )
+    # pylint: enable=too-many-branches
 
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
