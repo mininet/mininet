@@ -107,7 +107,7 @@ from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.2.0"
+VERSION = "2.2.0+"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
