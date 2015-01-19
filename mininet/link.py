@@ -501,8 +501,8 @@ class OVSLink( Link ):
     def __init__( self, node1, node2, **kwargs ):
         "See Link.__init__() for options"
         self.isPatchLink = False
-        if ( type( node1 ) is mininet.node.OVSSwitch and
-             type( node2 ) is mininet.node.OVSSwitch ):
+        if ( isinstance( node1, mininet.node.OVSSwitch ) and
+             isinstance( node2, mininet.node.OVSSwitch ) ):
             self.isPatchLink = True
             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
         Link.__init__( self, node1, node2, **kwargs )
