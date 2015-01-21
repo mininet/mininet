@@ -77,6 +77,7 @@ def errRun( *cmd, **kwargs ):
         cmd = [ str( arg ) for arg in cmd ]
     elif isinstance( cmd, list ) and shell:
         cmd = " ".join( arg for arg in cmd )
+    debug( '*** errRun:', cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
