@@ -481,6 +481,13 @@ class Mininet( object ):
         for switch in self.switches:
             info( switch.name + ' ')
             switch.start( self.controllers )
+        started = {}
+        for swclass, switches in groupby(
+            sorted( self.switches, key=type ), type ):
+            switches = tuple( switches )
+            if ( hasattr( swclass, 'batchStartup' ) and
+                swclass.batchStartup( switches ) ):
+                started.update( { s: s for s in switches } )
         info( '\n' )
         if self.waitConn:
             self.waitConnected()

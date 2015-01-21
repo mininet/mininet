@@ -1106,15 +1106,25 @@ class OVSSwitch( Switch ):
 
     @classmethod
     def batchShutdown( cls, switches ):
-        "Call ovs-vsctl del-br on all OVSSwitches in a list"
+        "Shut down a list of OVS switches"
+        # First, delete them all from ovsdb
         quietRun( 'ovs-vsctl ' +
                   ' -- '.join( '--if-exists del-br %s' % s
                                for s in switches ) )
+        # Next, shut down all of the processes
+        pids = ' '.join( str( switch.pid ) for switch in switches )
+        quietRun( 'kill -HUP ' + pids )
+        for switch in switches:
+            switch.shell = None
         return True
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
         return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
+
+    def vsctl( self, *args, **kwargs ):
+        "Run ovs-vsctl command"
+        return self.cmd( 'ovs-vsctl', *args, **kwargs )
 
     @staticmethod
     def TCReapply( intf ):
@@ -1126,19 +1136,19 @@ class OVSSwitch( Switch ):
 
     def attach( self, intf ):
         "Connect a data port"
-        self.cmd( 'ovs-vsctl add-port', self, intf )
+        self.vsctl( 'add-port', self, intf )
         self.cmd( 'ifconfig', intf, 'up' )
         self.TCReapply( intf )
 
     def detach( self, intf ):
         "Disconnect a data port"
-        self.cmd( 'ovs-vsctl del-port', self, intf )
+        self.vsctl( 'del-port', self, intf )
 
     def controllerUUIDs( self, update=False ):
         """Return ovsdb UUIDs for our controllers
            update: update cached value"""
         if not self._uuids or update:
-            controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+            controllers = self.vsctl( '-- get Bridge', self,
                                     'Controller' ).strip()
             if controllers.startswith( '[' ) and controllers.endswith( ']' ):
                 controllers = controllers[ 1 : -1 ]
@@ -1150,8 +1160,8 @@ class OVSSwitch( Switch ):
     def connected( self ):
         "Are we connected to at least one of our controllers?"
         for uuid in self.controllerUUIDs():
-            if 'true' in self.cmd( 'ovs-vsctl -- get Controller',
-                                            uuid, 'is_connected' ):
+            if 'true' in self.vsctl( '-- get Controller',
+                                     uuid, 'is_connected' ):
                 return True
         return self.failMode == 'standalone'
 
@@ -1163,8 +1173,8 @@ class OVSSwitch( Switch ):
             return ''
         intf1, intf2 = intf.link.intf1, intf.link.intf2
         peer = intf1 if intf1 != intf else intf2
-        return ( '-- set Interface %s type=patch '
-                 '-- set Interface %s options:peer=%s ' %
+        return ( ' -- set Interface %s type=patch'
+                 ' -- set Interface %s options:peer=%s ' %
                  ( intf, intf, peer ) )
 
     # pylint: disable=too-many-branches
@@ -1177,7 +1187,7 @@ class OVSSwitch( Switch ):
         # Interfaces and controllers
         intfs = ' '.join( '-- add-port %s %s ' % ( self, intf ) +
                           '-- set Interface %s ' % intf +
-                          'ofport_request=%s ' % self.ports[ intf ]
+                          'ofport_request=%s' % self.ports[ intf ]
                           + self.patchOpts( intf )
                           for intf in self.intfList()
                           if self.ports[ intf ] and not intf.IP() )
@@ -1187,43 +1197,43 @@ class OVSSwitch( Switch ):
             clist += ' ptcp:%s' % self.listenPort
         # Construct big ovs-vsctl command for new versions of OVS
         if not self.isOldOVS():
-            cmd = ( 'ovs-vsctl --if-exists del-br %s ' % self +
-                    '-- add-br %s ' % self +
-                    '-- set Bridge %s ' % self +
-                    'other_config:datapath-id=%s ' % self.dpid +
-                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
+            cmd = ( '-- --if-exists del-br %s' % self +
+                    ' -- add-br %s' % self +
+                    ' -- set Bridge %s' % self +
+                    ' other_config:datapath-id=%s' % self.dpid +
+                    ' -- set-fail-mode %s %s ' % ( self, self.failMode ) +
                     intfs +
-                    '-- set-controller %s %s ' % ( self, clist ) )
+                    ' -- set-controller %s %s' % ( self, clist ) )
         # Construct ovs-vsctl commands for old versions of OVS
         else:
             # Annoyingly, --if-exists option seems not to work
-            self.cmd( 'ovs-vsctl del-br', self )
-            self.cmd( 'ovs-vsctl add-br', self )
+            self.vsctl( 'del-br', self )
+            self.vsctl( 'add-br', self )
             for intf in self.intfList():
                 if not intf.IP():
-                    self.cmd( 'ovs-vsctl add-port', self, intf )
-            cmd = ( 'ovs-vsctl set Bridge %s ' % self +
-                    'other_config:datapath-id=%s ' % self.dpid +
-                    '-- set-fail-mode %s %s ' % ( self, self.failMode ) +
-                    '-- set-controller %s %s ' % ( self, clist ) )
+                    self.vsctl( 'add-port', self, intf )
+            cmd = ( 'set Bridge %s' % self +
+                    ' other_config:datapath-id=%s' % self.dpid +
+                    ' -- set-fail-mode %s %s ' % ( self, self.failMode ) +
+                    ' -- set-controller %s %s ' % ( self, clist ) )
         if not self.inband:
-            cmd += ( '-- set bridge %s '
-                     'other-config:disable-in-band=true ' % self )
+            cmd += ( ' -- set bridge %s '
+                     'other-config:disable-in-band=true' % self )
         if self.datapath == 'user':
-            cmd += '-- set bridge %s datapath_type=netdev ' % self
+            cmd += ' -- set bridge %s datapath_type=netdev' % self
         if self.protocols and not self.isOldOVS():
-            cmd += '-- set bridge %s protocols=%s ' % ( self, self.protocols )
+            cmd += ' -- set bridge %s protocols=%s' % ( self, self.protocols )
         if self.stp and self.failMode == 'standalone':
-            cmd += '-- set bridge %s stp_enable=true ' % self
+            cmd += ' -- set bridge %s stp_enable=true' % self
         # Do it!!
-        self.cmd( cmd )
+        self.vsctl( cmd )
         # Reconnect quickly to controllers (1s vs. 15s max_backoff)
         if self.reconnectms:
             uuids = [ '-- set Controller %s max_backoff=%d' %
                       ( uuid, self.reconnectms )
                       for uuid in self.controllerUUIDs() ]
             if uuids:
-                self.cmd( 'ovs-vsctl', *uuids )
+                self.vsctl( *uuids )
         # If necessary, restore TC config overwritten by OVS
         for intf in self.intfList():
             self.TCReapply( intf )
@@ -1259,6 +1269,45 @@ class OVSBridge( OVSSwitch ):
         else:
             return True
 
+
+class OVSBatch( OVSSwitch ):
+    "Experiment: batch startup of OVS switches"
+
+    def __init__( self, *args, **kwargs ):
+        kwargs.update( reconnectms=None )
+        self.commands = []
+        self.started = False
+        super( OVSBatch, self ).__init__( *args, **kwargs )
+
+    @classmethod
+    def batchStartup( cls, switches ):
+        "Batch startup for OVS"
+        if cls.isOldOVS():
+            return False
+        info( '...' )
+        cmds = ''
+        for switch in switches:
+            for cmd in switch.commands:
+                cmds += ' ' + cmd.strip()
+                # Split into 1 MB blocks
+                if len( cmds ) > 1000000:
+                    print quietRun( 'ovs-vsctl' + cmds )
+                    cmds = ''
+                switch.started = True
+        if cmds:
+            quietRun( 'ovs-vsctl' + cmds )
+        return True
+
+    def vsctl( self, *args, **kwargs ):
+        "Append ovs-vsctl command to list for later execution"
+        if self.started:
+            return OVSSwitch.vsctl( self, *args, **kwargs )
+        cmd = ' '.join( str( arg ) for arg in args ).strip()
+        self.commands.append( cmd )
+
+    def cleanup( self):
+        "Don't bother to clean up"
+        return
 
 class IVSSwitch( Switch ):
     "Indigo Virtual Switch"
