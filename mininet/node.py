@@ -194,10 +194,11 @@ class Node( object ):
 
     def cleanup( self ):
         "Help python collect its garbage."
+        # We used to do this, but it slows us down:
         # Intfs may end up in root NS
-        for intfName in self.intfNames():
-            if self.name in intfName:
-                quietRun( 'ip link del ' + intfName )
+        # for intfName in self.intfNames():
+        # if self.name in intfName:
+        # quietRun( 'ip link del ' + intfName )
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -1311,10 +1312,6 @@ class OVSBatch( OVSSwitch ):
         super( OVSBatch, self ).stop( *args, **kwargs )
         self.started = False
          
-    def cleanup( self):
-        "Don't bother to clean up"
-        return
-
 
 class IVSSwitch( Switch ):
     "Indigo Virtual Switch"
