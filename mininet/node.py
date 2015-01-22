@@ -1280,7 +1280,7 @@ class OVSBatch( OVSSwitch ):
     def batchStartup( cls, switches ):
         "Batch startup for OVS"
         info( '...' )
-        cmds = 'ovs-vsctl '
+        cmds = 'ovs-vsctl'
         for switch in switches:
             if cls.isOldOVS():
                 quietRun( 'ovs-vsctl del-br %s' % switch )
