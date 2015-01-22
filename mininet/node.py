@@ -259,7 +259,7 @@ class Node( object ):
            and return without waiting for the command to complete.
            args: command and arguments, or string
            printPid: print command's PID?"""
-        assert not self.waiting
+        assert self.shell and not self.waiting
         printPid = kwargs.get( 'printPid', True )
         # Allow sendCmd( [ list ] )
         if len( args ) == 1 and isinstance( args[ 0 ], list ):
@@ -339,8 +339,11 @@ class Node( object ):
         verbose = kwargs.get( 'verbose', False )
         log = info if verbose else debug
         log( '*** %s : %s\n' % ( self.name, args ) )
-        self.sendCmd( *args, **kwargs )
-        return self.waitOutput( verbose )
+        if self.shell:
+            self.sendCmd( *args, **kwargs )
+            return self.waitOutput( verbose )
+        else:
+            warn( '(%s exited - ignoring cmd%s)\n' % ( self, args ) )
 
     def cmdPrint( self, *args):
         """Call cmd and printing its output
