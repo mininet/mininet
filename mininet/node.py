@@ -1299,7 +1299,7 @@ class OVSBatch( OVSSwitch ):
     def vsctl( self, *args, **kwargs ):
         "Append ovs-vsctl command to list for later execution"
         if self.started:
-            return super( OVSBridge, self).vsctl( *args, **kwargs )
+            return super( OVSBatch, self).vsctl( *args, **kwargs )
         cmd = ' '.join( str( arg ).strip() for arg in args )
         self.commands.append( cmd )
 
