@@ -1273,8 +1273,6 @@ class OVSBridge( OVSSwitch ):
 class OVSBatch( OVSSwitch ):
     "Experiment: batch startup of OVS switches"
 
-    reconnectms = 1000  # shared for all switches
-    
     # This should be ~ int( quietRun( 'getconf ARG_MAX' ) ),
     # but the real limit seems to be much lower
     argmax = 128000
@@ -1282,11 +1280,6 @@ class OVSBatch( OVSSwitch ):
     def __init__( self, *args, **kwargs ):
         self.commands = []
         self.started = False
-        # Use global rather than local reconnectms
-        reconnectms = kwargs.pop( 'reconnectms', 1000 )
-        self.__class__.reconnectms = max( reconnectms,
-                                          self.__class__.reconnectms )
-        kwargs.update( reconnectms=None )
         super( OVSBatch, self ).__init__( *args, **kwargs )
 
     @classmethod
@@ -1316,6 +1309,14 @@ class OVSBatch( OVSSwitch ):
         cmd = ' '.join( str( arg ).strip() for arg in args )
         self.commands.append( cmd )
 
+    def start( self, *args, **kwargs ):
+        super( OVSBatch, self ).start( *args, **kwargs )
+        self.started = True
+ 
+    def stop( self, *args, **kwargs ):
+        super( OVSBatch, self ).stop( *args, **kwargs )
+        self.started = False
+         
     def cleanup( self):
         "Don't bother to clean up"
         return
