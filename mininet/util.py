@@ -114,6 +114,7 @@ def errRun( *cmd, **kwargs ):
                 poller.unregister( fd )
 
     returncode = popen.wait()
+    debug( out, err, returncode )
     return out, err, returncode
 
 def errFail( *cmd, **kwargs ):
