@@ -1150,7 +1150,7 @@ class OVSSwitch( Switch ):
         """Return ovsdb UUIDs for our controllers
            update: update cached value"""
         if not self._uuids or update:
-            controllers = self.vsctl( '-- get Bridge', self,
+            controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
                                     'Controller' ).strip()
             if controllers.startswith( '[' ) and controllers.endswith( ']' ):
                 controllers = controllers[ 1 : -1 ]
@@ -1171,7 +1171,7 @@ class OVSSwitch( Switch ):
         "Return OVS interface options for intf"
         opts = ''
         if not self.isOldOVS():
-            # ofport_request is not supported
+            # ofport_request is not supported on old OVS
             opts += ' ofport_request=%s' % self.ports[ intf ]
             # Patch ports don't work well with old OVS
             if isinstance( intf, OVSIntf ):
@@ -1182,7 +1182,8 @@ class OVSSwitch( Switch ):
 
     def bridgeOpts( self ):
         "Return OVS bridge options"
-        opts = ''
+        opts = ( ' other_config:datapath-id=%s' % self.dpid +
+                 ' fail_mode=%s' % self.failMode )
         if not self.inband:
             opts += ' other-config:disable-in-band=true'
         if self.datapath == 'user':
@@ -1193,19 +1194,18 @@ class OVSSwitch( Switch ):
             opts += ' stp_enable=true' % self
         return opts
 
-    # pylint: disable=too-many-branches
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
         int( self.dpid, 16 )  # DPID must be a hex string
-        # Interfaces and controllers
+        # Command to add interfaces
         intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
                          self.intfOpts( intf )
                          for intf in self.intfList()
                          if self.ports[ intf ] and not intf.IP() )
-        # Construct big ovs-vsctl command
+        # Command to create controller entries
         clist = [ ( self.name + c.name, '%s:%s:%d' %
                   ( c.protocol, c.IP(), c.port ) )
                   for c in controllers ]
@@ -1217,27 +1217,21 @@ class OVSSwitch( Switch ):
             ccmd += ' max_backoff=%d' % self.reconnectms
         cargs = ' '.join( ccmd % ( name, target )
                          for name, target in clist )
+        # Controller ID list
         cids = ','.join( '@%s' % name for name, _target in clist )
+        # Try to delete any existing bridges with the same name
         if not self.isOldOVS():
             cargs += ' -- --if-exists del-br %s' % self
-        cmd = ( cargs +
-                ' -- add-br %s' % self +
-                ' -- set bridge %s controller=[%s]' % ( self, cids  ) +
-                self.bridgeOpts() +
-                intfs )
-        # Do it!!
-        self.vsctl( cmd )
-        # Reconnect quickly to controllers (1s vs. 15s max_backoff)
-        if self.isOldOVS() and self.reconnectms:
-            uuids = [ '-- set Controller %s max_backoff=%d' %
-                      ( uuid, self.reconnectms )
-                      for uuid in self.controllerUUIDs() ]
-            if uuids:
-                self.vsctl( *uuids )
+        # One ovs-vsctl command to rule them all!
+        self.vsctl( cargs +
+                    ' -- add-br %s' % self +
+                    ' -- set bridge %s controller=[%s]' % ( self, cids  ) +
+                    self.bridgeOpts() +
+                    intfs )
+        # XXX BROKEN - need to fix this!!
         # If necessary, restore TC config overwritten by OVS
-        for intf in self.intfList():
-            self.TCReapply( intf )
-    # pylint: enable=too-many-branches
+        # for intf in self.intfList():
+        # self.TCReapply( intf )
 
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
@@ -1305,7 +1299,7 @@ class OVSBatch( OVSSwitch ):
     def vsctl( self, *args, **kwargs ):
         "Append ovs-vsctl command to list for later execution"
         if self.started:
-            return OVSSwitch.vsctl( self, *args, **kwargs )
+            return super( OVSBridge, self).vsctl( *args, **kwargs )
         cmd = ' '.join( str( arg ).strip() for arg in args )
         self.commands.append( cmd )
 
