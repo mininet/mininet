@@ -91,19 +91,27 @@ def errRun( *cmd, **kwargs ):
         errDone = False
     while not outDone or not errDone:
         readable = poller.poll()
-        for fd, _event in readable:
+        for fd, event in readable:
             f = fdtofile[ fd ]
-            data = f.read( 1024 )
-            if echo:
-                output( data )
-            if f == popen.stdout:
-                out += data
-                if data == '':
+            if event & POLLIN:
+                data = f.read( 1024 )
+                if echo:
+                    output( data )
+                if f == popen.stdout:
+                    out += data
+                    if data == '':
+                        outDone = True
+                elif f == popen.stderr:
+                    err += data
+                    if data == '':
+                        errDone = True
+            elif event & POLLHUP:
+                if f == popen.stdout:
                     outDone = True
-            elif f == popen.stderr:
-                err += data
-                if data == '':
+                elif f == popen.stderr:
                     errDone = True
+                poller.unregister( fd )
+
     returncode = popen.wait()
     return out, err, returncode
 
