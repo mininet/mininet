@@ -674,7 +674,7 @@ class CPULimitedHost( Host ):
         "Clean up our cgroup"
         # info( '*** deleting cgroup', self.cgroup, '\n' )
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
-        return exitcode != 0
+        return exitcode == 0  # success condition
 
     def popen( self, *args, **kwargs ):
         """Return a Popen() object in node's namespace
