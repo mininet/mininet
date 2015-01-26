@@ -221,15 +221,19 @@ class TCIntf( Intf ):
        Allows specification of bandwidth limits (various methods)
        as well as delay, loss and max queue length"""
 
+    # The parameters we use seem to work reasonably up to 1 Gb/sec
+    # For higher data rates, we will probably need to change them.
+    bwParamMax = 1000
+
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False ):
         "Return tc commands to set bandwidth"
 
         cmds, parent = [], ' root '
 
-        if bw and ( bw < 0 or bw > 1000 ):
-            error( 'Bandwidth', bw, 'is outside range 0..1000 Mbps\n' )
-
+        if bw and ( bw < 0 or bw > self.bwParamMax ):
+            error( 'Bandwidth limit', bw, 'is outside supported range 0..%d'
+                   % self.bwParamMax, '- ignoring\n' )
         elif bw is not None:
             # BL: this seems a bit brittle...
             if ( speedup > 0 and
