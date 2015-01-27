@@ -190,7 +190,8 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
     if cmdOutput == '':
         return True
     else:
-        error( "Error creating interface pair: %s " % cmdOutput )
+        raise Exception( "Error creating interface pair (%s,%s): %s " %
+                         ( intf1, intf2, cmdOutput ) )
         return False
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
