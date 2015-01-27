@@ -486,9 +486,7 @@ class Mininet( object ):
             sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchStartup' ):
-                print "STARTING", switches
                 success = swclass.batchStartup( switches )
-                print "STARTED", success
                 started.update( { s: s for s in success } )
         info( '\n' )
         if self.waitConn:
