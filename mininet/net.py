@@ -485,9 +485,11 @@ class Mininet( object ):
         for swclass, switches in groupby(
             sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
-            if ( hasattr( swclass, 'batchStartup' ) and
-                swclass.batchStartup( switches ) ):
-                started.update( { s: s for s in switches } )
+            if hasattr( swclass, 'batchStartup' ):
+                print "STARTING", switches
+                success = swclass.batchStartup( switches )
+                print "STARTED", success
+                started.update( { s: s for s in success } )
         info( '\n' )
         if self.waitConn:
             self.waitConnected()
@@ -512,9 +514,9 @@ class Mininet( object ):
         for swclass, switches in groupby(
                 sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
-            if ( hasattr( swclass, 'batchShutdown' ) and
-                 swclass.batchShutdown( switches ) ):
-                stopped.update( { s: s for s in switches } )
+            if hasattr( swclass, 'batchShutdown' ):
+                success = swclass.batchShutdown( switches )
+                stopped.update( { s: s for s in success } )
         for switch in self.switches:
             info( switch.name + ' ' )
             if switch not in stopped:

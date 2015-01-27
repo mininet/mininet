@@ -1059,7 +1059,7 @@ class OVSSwitch( Switch ):
 
     def __init__( self, name, failMode='secure', datapath='kernel',
                   inband=False, protocols=None,
-                  reconnectms=1000, stp=False, **params ):
+                  reconnectms=1000, stp=False, batch=True, **params ):
         """name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)
@@ -1067,7 +1067,8 @@ class OVSSwitch( Switch ):
            protocols: use specific OpenFlow version(s) (e.g. OpenFlow13)
                       Unspecified (or old OVS version) uses OVS default
            reconnectms: max reconnect timeout in ms (0/None for default)
-           stp: enable STP (False, requires failMode=standalone)"""
+           stp: enable STP (False, requires failMode=standalone)
+           batch: enable batch startup (True)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath
@@ -1076,6 +1077,8 @@ class OVSSwitch( Switch ):
         self.reconnectms = reconnectms
         self.stp = stp
         self._uuids = []  # controller UUIDs
+        self.batch = batch
+        self.commands = []  # saved commands for batch startup
 
     @classmethod
     def setup( cls ):
@@ -1105,29 +1108,17 @@ class OVSSwitch( Switch ):
         return ( StrictVersion( cls.OVSVersion ) <
                  StrictVersion( '1.10' ) )
 
-    @classmethod
-    def batchShutdown( cls, switches ):
-        "Shut down a list of OVS switches"
-        delcmd = 'del-br %s'
-        if not cls.isOldOVS():
-            delcmd = '--if-exists ' + delcmd
-        # First, delete them all from ovsdb
-        quietRun( 'ovs-vsctl ' +
-                  ' -- '.join( delcmd % s for s in switches ) )
-        # Next, shut down all of the processes
-        pids = ' '.join( str( switch.pid ) for switch in switches )
-        quietRun( 'kill -HUP ' + pids )
-        for switch in switches:
-            switch.shell = None
-        return True
-
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
         return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
 
     def vsctl( self, *args, **kwargs ):
-        "Run ovs-vsctl command"
-        return self.cmd( 'ovs-vsctl', *args, **kwargs )
+        "Run ovs-vsctl command (or queue for later execution)"
+        if self.batch:
+            cmd = ' '.join( str( arg ).strip() for arg in args )
+            self.commands.append( cmd )
+        else:
+            return self.cmd( 'ovs-vsctl', *args, **kwargs )
 
     @staticmethod
     def TCReapply( intf ):
@@ -1217,7 +1208,7 @@ class OVSSwitch( Switch ):
         if self.reconnectms:
             ccmd += ' max_backoff=%d' % self.reconnectms
         cargs = ' '.join( ccmd % ( name, target )
-                         for name, target in clist )
+                          for name, target in clist )
         # Controller ID list
         cids = ','.join( '@%s' % name for name, _target in clist )
         # Try to delete any existing bridges with the same name
@@ -1229,10 +1220,43 @@ class OVSSwitch( Switch ):
                     ' -- set bridge %s controller=[%s]' % ( self, cids  ) +
                     self.bridgeOpts() +
                     intfs )
-        # XXX BROKEN - need to fix this!!
         # If necessary, restore TC config overwritten by OVS
-        # for intf in self.intfList():
-        # self.TCReapply( intf )
+        if not self.batch:
+            for intf in self.intfList():
+                self.TCReapply( intf )
+
+    # This should be ~ int( quietRun( 'getconf ARG_MAX' ) ),
+    # but the real limit seems to be much lower
+    argmax = 128000
+
+    @classmethod
+    def batchStartup( cls, switches, run=errRun ):
+        """Batch startup for OVS
+           switches: switches to start up
+           run: function to run commands (errRun)"""
+        info( '...' )
+        cmds = 'ovs-vsctl'
+        for switch in switches:
+            if switch.isOldOVS():
+                # Ideally we'd optimize this also
+                run( 'ovs-vsctl del-br %s' % switch )
+            for cmd in switch.commands:
+                cmd = cmd.strip()
+                # Don't exceed ARG_MAX
+                if len( cmds ) + len( cmd ) >= cls.argmax:
+                    run( cmds, shell=True )
+                    cmds = 'ovs-vsctl'
+                cmds += ' ' + cmd
+                switch.cmds = []
+                switch.batch = False
+        if cmds:
+            run( cmds, shell=True )
+        # Reapply link config if necessary...
+        for switch in switches:
+            for intf in switch.intfs.itervalues():
+                if isinstance( intf, TCIntf ):
+                    intf.config( **intf.params )
+        return switches
 
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
@@ -1241,6 +1265,22 @@ class OVSSwitch( Switch ):
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
         super( OVSSwitch, self ).stop( deleteIntfs )
+
+    @classmethod
+    def batchShutdown( cls, switches, run=errRun ):
+        "Shut down a list of OVS switches"
+        delcmd = 'del-br %s'
+        if not cls.isOldOVS():
+            delcmd = '--if-exists ' + delcmd
+        # First, delete them all from ovsdb
+        run( 'ovs-vsctl ' +
+             ' -- '.join( delcmd % s for s in switches ) )
+        # Next, shut down all of the processes
+        pids = ' '.join( str( switch.pid ) for switch in switches )
+        run( 'kill -HUP ' + pids )
+        for switch in switches:
+            switch.shell = None
+        return switches
 
 
 OVSKernelSwitch = OVSSwitch
@@ -1264,54 +1304,6 @@ class OVSBridge( OVSSwitch ):
         else:
             return True
 
-
-class OVSBatch( OVSSwitch ):
-    "Experiment: batch startup of OVS switches"
-
-    # This should be ~ int( quietRun( 'getconf ARG_MAX' ) ),
-    # but the real limit seems to be much lower
-    argmax = 128000
-    
-    def __init__( self, *args, **kwargs ):
-        self.commands = []
-        self.started = False
-        super( OVSBatch, self ).__init__( *args, **kwargs )
-
-    @classmethod
-    def batchStartup( cls, switches ):
-        "Batch startup for OVS"
-        info( '...' )
-        cmds = 'ovs-vsctl'
-        for switch in switches:
-            if cls.isOldOVS():
-                quietRun( 'ovs-vsctl del-br %s' % switch )
-            for cmd in switch.commands:
-                cmd = cmd.strip()
-                # Don't exceed ARG_MAX
-                if len( cmds ) + len( cmd ) >= cls.argmax:
-                    errRun( cmds, shell=True )
-                    cmds = 'ovs-vsctl'
-                cmds += ' ' + cmd
-                switch.started = True
-        if cmds:
-            errRun( cmds, shell=True )
-        return True
-
-    def vsctl( self, *args, **kwargs ):
-        "Append ovs-vsctl command to list for later execution"
-        if self.started:
-            return super( OVSBatch, self).vsctl( *args, **kwargs )
-        cmd = ' '.join( str( arg ).strip() for arg in args )
-        self.commands.append( cmd )
-
-    def start( self, *args, **kwargs ):
-        super( OVSBatch, self ).start( *args, **kwargs )
-        self.started = True
- 
-    def stop( self, *args, **kwargs ):
-        super( OVSBatch, self ).stop( *args, **kwargs )
-        self.started = False
-         
 
 class IVSSwitch( Switch ):
     "Indigo Virtual Switch"
@@ -1338,6 +1330,7 @@ class IVSSwitch( Switch ):
         "Kill each IVS switch, to be waited on later in stop()"
         for switch in switches:
             switch.cmd( 'kill %ivs' )
+        return switches
 
     def start( self, controllers ):
         "Start up a new IVS switch"
@@ -1556,4 +1549,4 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     controller = findController( controllers )
     if not controller:
         raise Exception( 'Could not find a default OpenFlow controller' )
-    return controller( name, **kwargs )
+    return contr

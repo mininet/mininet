@@ -280,6 +280,11 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
 
     OVSVersions = {}
 
+    def __init__( self, *args, **kwargs ):
+        # No batch startup yet
+        kwargs.update( batch=False )
+        super( RemoteOVSSwitch, self ).__init__( *args, **kwargs )
+
     def isOldOVS( self ):
         "Is remote switch using an old OVS version?"
         cls = type( self )
@@ -293,9 +298,14 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
                  StrictVersion( '1.10' ) )
 
     @classmethod
+    def batchStartup( cls, *_args, **_kwargs ):
+        "Not implemented yet"
+        return []  # no switches started
+
+    @classmethod
     def batchShutdown( cls, *_args, **_kwargs ):
         "Not implemented yet"
-        return False
+        return []  # no switchest stopped
 
 
 class RemoteLink( Link ):
