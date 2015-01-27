@@ -82,6 +82,7 @@ from mininet.topolib import TreeTopo
 from mininet.util import quietRun, errRun, retry
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
+from mininet.clean import addCleanupCallback
 
 from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE, STDOUT
@@ -89,8 +90,50 @@ import os
 from random import randrange
 import sys
 import re
-
+from itertools import groupby
+from operator import attrgetter
 from distutils.version import StrictVersion
+
+
+def findUser():
+    "Try to return logged-in (usually non-root) user"
+    return (
+            # If we're running sudo
+            os.environ.get( 'SUDO_USER', False ) or
+            # Logged-in user (if we have a tty)
+            ( quietRun( 'who am i' ).split() or [ False ] )[ 0 ] or
+            # Give up and return effective user
+            quietRun( 'whoami' ) )
+
+
+class ClusterCleanup( object ):
+    "Cleanup callback"
+
+    inited = False
+    serveruser = {}
+    
+    @classmethod
+    def add( cls, server, user='' ):
+        "Add an entry to server: user dict"
+        if not cls.inited:
+            addCleanupCallback( cls.cleanup )
+        if not user:
+            user = findUser()
+        cls.serveruser[ server ] = user
+    
+    @classmethod
+    def cleanup( cls ):
+        "Clean up"
+        info( '*** Cleaning up cluster\n' )
+        for server, user in cls.serveruser.iteritems():
+            if server == 'localhost':
+                # Handled by mininet.clean.cleanup()
+                continue
+            else:
+                cmd = [ 'su', user, '-c',
+                        'ssh %s@%s sudo mn -c' % ( user, server ) ]
+                info( cmd, '\n' )
+                info( quietRun( cmd ) )
 
 # BL note: so little code is required for remote nodes,
 # we will probably just want to update the main Node()
@@ -125,7 +168,8 @@ class RemoteMixin( object ):
         self.server = server if server else 'localhost'
         self.serverIP = ( serverIP if serverIP
                           else self.findServerIP( self.server ) )
-        self.user = user if user else self.findUser()
+        self.user = user if user else findUser()
+        ClusterCleanup.add( server=server, user=user )
         if controlPath is True:
             # Set a default control path for shared SSH connections
             controlPath = '/tmp/mn-%r@%h:%p'
@@ -147,17 +191,6 @@ class RemoteMixin( object ):
         # Satisfy pylint
         self.shell, self.pid = None, None
         super( RemoteMixin, self ).__init__( name, **kwargs )
-
-    @staticmethod
-    def findUser():
-        "Try to return logged-in (usually non-root) user"
-        return (
-            # If we're running sudo
-            os.environ.get( 'SUDO_USER', False ) or
-            # Logged-in user (if we have a tty)
-            ( quietRun( 'who am i' ).split() or [ False ] )[ 0 ] or
-            # Give up and return effective user
-            quietRun( 'whoami' ) )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
@@ -244,7 +277,7 @@ class RemoteMixin( object ):
                 # Drop privileges
                 cmd = [ 'sudo', '-E', '-u', self.user ] + cmd
         params.update( preexec_fn=self._ignoreSignal )
-        debug( '_popen', ' '.join(cmd), params )
+        debug( '_popen', cmd, '\n' )
         popen = super( RemoteMixin, self )._popen( cmd, **params )
         return popen
 
@@ -257,13 +290,6 @@ class RemoteMixin( object ):
         kwargs.update( moveIntfFn=RemoteLink.moveIntf )
         return super( RemoteMixin, self).addIntf( *args, **kwargs )
 
-    def cleanup( self ):
-        "Help python collect its garbage."
-        # Intfs may end up in root NS
-        for intfName in self.intfNames():
-            if self.name in intfName:
-                self.rcmd( 'ip link del ' + intfName )
-        self.shell = None
 
 class RemoteNode( RemoteMixin, Node ):
     "A node on a remote server"
@@ -282,7 +308,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
 
     def __init__( self, *args, **kwargs ):
         # No batch startup yet
-        kwargs.update( batch=False )
+        kwargs.update( batch=True )
         super( RemoteOVSSwitch, self ).__init__( *args, **kwargs )
 
     def isOldOVS( self ):
@@ -298,14 +324,24 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
                  StrictVersion( '1.10' ) )
 
     @classmethod
-    def batchStartup( cls, *_args, **_kwargs ):
-        "Not implemented yet"
-        return []  # no switches started
-
+    def batchStartup( cls, switches, **_kwargs ):
+        "Start up switches in per-server batches"
+        for server, switchGroup in groupby( switches, attrgetter( 'server' ) ):
+            info( '(%s)' % server )
+            group = tuple( switchGroup )
+            switch = group[ 0 ]
+            OVSSwitch.batchStartup( group, run=switch.cmd )
+        return switches
+    
     @classmethod
-    def batchShutdown( cls, *_args, **_kwargs ):
-        "Not implemented yet"
-        return []  # no switchest stopped
+    def batchShutdown( cls, switches, **_kwargs ):
+        "Stop switches in per-server batches"
+        for server, switchGroup in groupby( switches, attrgetter( 'server' ) ):
+            info( '(%s)' % server )
+            group = tuple( switchGroup )
+            switch = group[ 0 ]
+            OVSSwitch.batchShutdown( group, run=switch.rcmd )
+        return switches
 
 
 class RemoteLink( Link ):
@@ -325,6 +361,7 @@ class RemoteLink( Link ):
 
     def stop( self ):
         "Stop this link"
+        Link.stop( self )
         if self.tunnel:
             self.tunnel.terminate()
         self.tunnel = None
@@ -636,7 +673,7 @@ class MininetCluster( Mininet ):
         if not self.serverIP:
             self.serverIP = { server: RemoteMixin.findServerIP( server )
                               for server in self.servers }
-        self.user = params.pop( 'user', RemoteMixin.findUser() )
+        self.user = params.pop( 'user', findUser() )
         if params.pop( 'precheck' ):
             self.precheck()
         self.connections = {}

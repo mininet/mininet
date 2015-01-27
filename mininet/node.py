@@ -157,8 +157,7 @@ class Node( object ):
                 break
             self.pollOut.poll()
         self.waiting = False
-        self.cmd( 'stty -echo' )
-        self.cmd( 'set +m' )
+        self.cmd( 'stty -echo; set +m' )
 
     def mountPrivateDirs( self ):
         "mount private directories"
@@ -1270,7 +1269,7 @@ class OVSSwitch( Switch ):
     def batchShutdown( cls, switches, run=errRun ):
         "Shut down a list of OVS switches"
         delcmd = 'del-br %s'
-        if not cls.isOldOVS():
+        if switches and not switches[ 0 ].isOldOVS():
             delcmd = '--if-exists ' + delcmd
         # First, delete them all from ovsdb
         run( 'ovs-vsctl ' +
@@ -1549,4 +1548,4 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     controller = findController( controllers )
     if not controller:
         raise Exception( 'Could not find a default OpenFlow controller' )
-    return contr
+    return controller( name, **kwargs )
