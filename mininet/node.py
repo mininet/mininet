@@ -1058,7 +1058,7 @@ class OVSSwitch( Switch ):
 
     def __init__( self, name, failMode='secure', datapath='kernel',
                   inband=False, protocols=None,
-                  reconnectms=1000, stp=False, batch=True, **params ):
+                  reconnectms=1000, stp=False, batch=False, **params ):
         """name: name for switch
            failMode: controller loss behavior (secure|open)
            datapath: userspace or kernel mode (kernel|user)
@@ -1067,7 +1067,7 @@ class OVSSwitch( Switch ):
                       Unspecified (or old OVS version) uses OVS default
            reconnectms: max reconnect timeout in ms (0/None for default)
            stp: enable STP (False, requires failMode=standalone)
-           batch: enable batch startup (True)"""
+           batch: enable batch startup (False)"""
         Switch.__init__( self, name, **params )
         self.failMode = failMode
         self.datapath = datapath

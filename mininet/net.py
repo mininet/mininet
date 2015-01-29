@@ -414,7 +414,12 @@ class Mininet( object ):
 
         info( '\n*** Adding switches:\n' )
         for switchName in topo.switches():
-            self.addSwitch( switchName, **topo.nodeInfo( switchName) )
+            # A bit ugly: add batch parameter if appropriate
+            params = topo.nodeInfo( switchName)
+            cls = params.get( 'cls', self.switch )
+            if hasattr( cls, 'batchStartup' ):
+                params.setdefault( 'batch', True )
+            self.addSwitch( switchName, **params )
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
