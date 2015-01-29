@@ -1178,7 +1178,7 @@ class OVSSwitch( Switch ):
         if not self.inband:
             opts += ' other-config:disable-in-band=true'
         if self.datapath == 'user':
-            opts += ' datapath_type=netdev' % self
+            opts += ' datapath_type=netdev'
         if self.protocols and not self.isOldOVS():
             opts += ' protocols=%s' % ( self, self.protocols )
         if self.stp and self.failMode == 'standalone':
