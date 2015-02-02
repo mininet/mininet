@@ -91,27 +91,19 @@ def errRun( *cmd, **kwargs ):
         errDone = False
     while not outDone or not errDone:
         readable = poller.poll()
-        for fd, event in readable:
+        for fd, _event in readable:
             f = fdtofile[ fd ]
-            if event & POLLIN:
-                data = f.read( 1024 )
-                if echo:
-                    output( data )
-                if f == popen.stdout:
-                    out += data
-                    if data == '':
-                        outDone = True
-                elif f == popen.stderr:
-                    err += data
-                    if data == '':
-                        errDone = True
-            else:  # POLLHUP or something unexpected
-                if f == popen.stdout:
+            data = f.read( 1024 )
+            if echo:
+                output( data )
+            if f == popen.stdout:
+                out += data
+                if data == '':
                     outDone = True
-                elif f == popen.stderr:
+            elif f == popen.stderr:
+                err += data
+                if data == '':
                     errDone = True
-                poller.unregister( fd )
-
     returncode = popen.wait()
     return out, err, returncode
 
@@ -153,38 +145,24 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
-                  deleteIntfs=True, runCmd=None ):
-    """Make a veth pair connnecting new interfaces intf1 and intf2
-       intf1: name for interface 1
-       intf2: name for interface 2
-       addr1: MAC address for interface 1 (optional)
-       addr2: MAC address for interface 2 (optional)
-       node1: home node for interface 1 (optional)
-       node2: home node for interface 2 (optional)
-       deleteIntfs: delete intfs before creating them
+def makeIntfPair( intf1,node1, intf2,node2, addr1=None, addr2=None, runCmd=quietRun ):
+    """Make a veth pair connecting intf1 and intf2.
+       intf1: string, interface
+       intf2: string, interface
        runCmd: function to run shell commands (quietRun)
        returns: ip link add result"""
-    if not runCmd:
-        runCmd = quietRun if not node1 else node1.cmd
-        runCmd2 = quietRun if not node2 else node2.cmd
-    if deleteIntfs:
-        # Delete any old interfaces with the same names
-        runCmd( 'ip link del ' + intf1 )
-        runCmd2( 'ip link del ' + intf2 )
+    # Delete any old interfaces with the same names
+    print "Making interface pair!!\n"
+    runCmd( 'ip link del ' + str(node1) + '-' + str(intf1) )
+    runCmd( 'ip link del ' + str(node2) + '-' + str(intf2) )
     # Create new pair
-    netns = 1 if not node2 else node2.pid
     if addr1 is None and addr2 is None:
-        cmdOutput = runCmd( 'ip link add name %s '
-                            'type veth peer name %s '
-                            'netns %s' % ( intf1, intf2, netns ) )
+        cmd = 'ip link add name ' + str(node1) + '-' + str(intf1) + ' type veth peer name ' + str(node2) + '-' + str(intf2)
     else:
-        cmdOutput = runCmd( 'ip link add name %s '
-                            'address %s '
-                            'type veth peer name %s '
-                            'address %s '
-                            'netns %s' %
-                            (  intf1, addr1, intf2, addr2, netns ) )
+        cmd = ( 'ip link add name ' + str(node1) + '-' + str(intf1) + ' address ' + addr1 +
+                ' type veth peer name ' + str(node2) + '-' + str(intf2) + ' address ' + addr2 )
+    print "Running command " + cmd + "\n"
+    cmdOutput = runCmd( cmd )
     if cmdOutput == '':
         return True
     else:
@@ -205,31 +183,31 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
-def moveIntfNoRetry( intf, dstNode, printError=False ):
+def moveIntfNoRetry( intf, node, dstNode, printError=False ):
     """Move interface to node, without retrying.
        intf: string, interface
         dstNode: destination Node
         printError: if true, print error"""
     intf = str( intf )
-    cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
+    cmd = 'ip link set %s netns %s' % ( str(node) + '-' + str(intf), dstNode.pid )
     cmdOutput = quietRun( cmd )
     # If ip link set does not produce any output, then we can assume
     # that the link has been moved successfully.
     if cmdOutput:
         if printError:
-            error( '*** Error: moveIntf: ' + intf +
+            error( '*** Error: moveIntf: ' + str(node) +'-'+ str(intf) +
                    ' not successfully moved to ' + dstNode.name + ':\n',
                    cmdOutput )
         return False
     return True
 
-def moveIntf( intf, dstNode, printError=True,
+def moveIntf( intf,node, dstNode, printError=True,
               retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
        dstNode: destination Node
        printError: if true, print error"""
-    retry( retries, delaySecs, moveIntfNoRetry, intf, dstNode,
+    retry( retries, delaySecs, moveIntfNoRetry, intf,node, dstNode,
            printError=printError )
 
 # Support for dumping network

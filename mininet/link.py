@@ -26,7 +26,6 @@ Link: basic link class for creating veth pairs
 
 from mininet.log import info, error, debug
 from mininet.util import makeIntfPair, quietRun
-import mininet.node
 import re
 
 class Intf( object ):
@@ -44,17 +43,13 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
-
+        self.port = port
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
         if self.name == 'lo':
             self.ip = '127.0.0.1'
         # Add to node (and move ourselves if necessary )
-        moveIntfFn = params.pop( 'moveIntfFn', None )
-        if moveIntfFn:
-            node.addIntf( self, port=port, moveIntfFn=moveIntfFn )
-        else:
-            node.addIntf( self, port=port )
+        node.addIntf( self, port=port )
         # Save params for future reference
         self.params = params
         self.config( **params )
@@ -65,7 +60,7 @@ class Intf( object ):
 
     def ifconfig( self, *args ):
         "Configure ourselves using ifconfig"
-        return self.cmd( 'ifconfig', self.name, *args )
+        return self.cmd( 'ifconfig', str(self.node.id) + "-" + str(self.port), *args )
 
     def setIP( self, ipstr, prefixLen=None ):
         """Set our IP address"""
@@ -146,10 +141,11 @@ class Intf( object ):
     def rename( self, newname ):
         "Rename interface"
         self.ifconfig( 'down' )
-        result = self.cmd( 'ip link set', self.name, 'name', newname )
+        #result = self.cmd( 'ip link set', self.node.id +'-' + self.port, 'name', self.node.id + '-' + newname )
         self.name = newname
         self.ifconfig( 'up' )
-        return result
+        return True
+        #return result
 
     # The reason why we configure things in this way is so
     # That the parameters can be listed and documented in
@@ -196,15 +192,16 @@ class Intf( object ):
 
     def delete( self ):
         "Delete interface"
-        self.cmd( 'ip link del ' + self.name )
+        self.cmd( 'ip link del ' + str(self.node.id) + '-' + str(self.port) )
         if self.node.inNamespace:
             # Link may have been dumped into root NS
-            quietRun( 'ip link del ' + self.name )
+            quietRun( 'ip link del ' + str(self.node.id) + '-' + str(self.port) )
 
     def status( self ):
         "Return intf status as a string"
         links, _err, _result = self.node.pexec( 'ip link show' )
-        if self.name in links:
+        intName = str(self.node.id) + "-" + str(self.port)
+        if intName in links:
             return "OK"
         else:
             return "MISSING"
@@ -221,19 +218,15 @@ class TCIntf( Intf ):
        Allows specification of bandwidth limits (various methods)
        as well as delay, loss and max queue length"""
 
-    # The parameters we use seem to work reasonably up to 1 Gb/sec
-    # For higher data rates, we will probably need to change them.
-    bwParamMax = 1000
-
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False ):
         "Return tc commands to set bandwidth"
 
         cmds, parent = [], ' root '
 
-        if bw and ( bw < 0 or bw > self.bwParamMax ):
-            error( 'Bandwidth limit', bw, 'is outside supported range 0..%d'
-                   % self.bwParamMax, '- ignoring\n' )
+        if bw and ( bw < 0 or bw > 1000 ):
+            error( 'Bandwidth', bw, 'is outside range 0..1000 Mbps\n' )
+
         elif bw is not None:
             # BL: this seems a bit brittle...
             if ( speedup > 0 and
@@ -379,7 +372,7 @@ class Link( object ):
     def __init__( self, node1, node2, port1=None, port2=None,
                   intfName1=None, intfName2=None, addr1=None, addr2=None,
                   intf=Intf, cls1=None, cls2=None, params1=None,
-                  params2=None, fast=True ):
+                  params2=None ):
         """Create veth link to another node, making two new interfaces.
            node1: first node
            node2: second node
@@ -394,7 +387,7 @@ class Link( object ):
         # This is a bit awkward; it seems that having everything in
         # params is more orthogonal, but being able to specify
         # in-line arguments is more convenient! So we support both.
-        # pylint: disable=too-many-branches
+
         if params1 is None:
             params1 = {}
         if params2 is None:
@@ -415,20 +408,15 @@ class Link( object ):
         if not intfName2:
             intfName2 = self.intfName( node2, params2[ 'port' ] )
 
-        self.fast = fast
-        if fast:
-            params1.setdefault( 'moveIntfFn', self._ignore )
-            params2.setdefault( 'moveIntfFn', self._ignore )
-            self.makeIntfPair( intfName1, intfName2, addr1, addr2,
-                               node1, node2, deleteIntfs=False )
-        else:
-            self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
+        self.node1 = node1
+        self.node2 = node2
+
+        self.makeIntfPair( params1['port'], params2['port'], addr1, addr2 )
 
         if not cls1:
             cls1 = intf
         if not cls2:
             cls2 = intf
-        # pylint: enable=too-many-branches
 
         intf1 = cls1( name=intfName1, node=node1,
                       link=self, mac=addr1, **params1  )
@@ -438,44 +426,31 @@ class Link( object ):
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
 
-    @staticmethod
-    def _ignore( *args, **kwargs ):
-        "Ignore any arguments"
-        pass
-
     def intfName( self, node, n ):
         "Construct a canonical interface name node-ethN for interface n."
         # Leave this as an instance method for now
         assert self
         return node.name + '-eth' + repr( n )
 
-    @classmethod
-    def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
-                      node1=None, node2=None, deleteIntfs=True ):
+    
+    def makeIntfPair( self, intfname1,  intfname2, addr1=None, addr2=None ):
         """Create pair of interfaces
-           intfname1: name for interface 1
-           intfname2: name for interface 2
-           addr1: MAC address for interface 1 (optional)
-           addr2: MAC address for interface 2 (optional)
-           node1: home node for interface 1 (optional)
-           node2: home node for interface 2 (optional)
+           intfname1: name of interface 1
+           intfname2: name of interface 2
            (override this method [and possibly delete()]
            to change link type)"""
         # Leave this as a class method for now
-        assert cls
-        return makeIntfPair( intfname1, intfname2, addr1, addr2, node1, node2,
-                             deleteIntfs=deleteIntfs )
+        #assert cls
+        return makeIntfPair( intfname1, self.node1.id, intfname2,self.node2.id, addr1, addr2 )
 
     def delete( self ):
         "Delete this link"
         self.intf1.delete()
-        # We only need to delete one side, though this doesn't seem to
-        # cost us much and might help subclasses.
-        # self.intf2.delete()
+        self.intf2.delete()
 
     def stop( self ):
         "Override to stop and clean up link as needed"
-        self.delete()
+        pass
 
     def status( self ):
         "Return link status as a string"
@@ -483,41 +458,6 @@ class Link( object ):
 
     def __str__( self ):
         return '%s<->%s' % ( self.intf1, self.intf2 )
-
-
-class OVSIntf( Intf ):
-    "Patch interface on an OVSSwitch"
-
-    def ifconfig( self, *args ):
-        cmd = ' '.join( args )
-        if cmd == 'up':
-            # OVSIntf is always up
-            return
-        else:
-            raise Exception( 'OVSIntf cannot do ifconfig ' + cmd )
-
-
-class OVSLink( Link ):
-    """Link that makes patch links between OVSSwitches
-       Warning: in testing we have found that no more
-       than ~64 OVS patch links should be used in row."""
-
-    def __init__( self, node1, node2, **kwargs ):
-        "See Link.__init__() for options"
-        self.isPatchLink = False
-        if ( isinstance( node1, mininet.node.OVSSwitch ) and
-             isinstance( node2, mininet.node.OVSSwitch ) ):
-            self.isPatchLink = True
-            kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
-        Link.__init__( self, node1, node2, **kwargs )
-
-    def makeIntfPair( self, *args, **kwargs ):
-        "Usually delegated to OVSSwitch"
-        if self.isPatchLink:
-            return None, None
-        else:
-            return Link.makeIntfPair( *args, **kwargs )
-
 
 class TCLink( Link ):
     "Link with symmetric TC interfaces configured via opts"

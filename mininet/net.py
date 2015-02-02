@@ -107,7 +107,7 @@ from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.2.0+"
+VERSION = "2.2.0"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -210,7 +210,8 @@ class Mininet( object ):
         defaults = { 'ip': ipAdd( self.nextIP,
                                   ipBaseNum=self.ipBaseNum,
                                   prefixLen=self.prefixLen ) +
-                                  '/%s' % self.prefixLen }
+                                  '/%s' % self.prefixLen,
+                     'id': len(self.hosts) + len(self.switches) + 1}
         if self.autoSetMacs:
             defaults[ 'mac' ] = macColonHex( self.nextIP )
         if self.autoPinCpus:
@@ -232,7 +233,8 @@ class Mininet( object ):
            returns: added switch
            side effect: increments listenPort ivar ."""
         defaults = { 'listenPort': self.listenPort,
-                     'inNamespace': self.inNamespace }
+                     'inNamespace': self.inNamespace,
+                     'id': len(self.switches) + len(self.hosts) +1}
         defaults.update( params )
         if not cls:
             cls = self.switch
@@ -348,6 +350,7 @@ class Mininet( object ):
             params: additional link params (optional)
             returns: link object"""
         # Accept node objects or names
+        print 'ADDING A LINK\n'
         node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
         node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
         options = dict( params )
@@ -495,24 +498,19 @@ class Mininet( object ):
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
-        info( '*** Stopping %i links\n' % len( self.links ) )
-        for link in self.links:
-            info( '.' )
-            link.stop()
-        info( '\n' )
         info( '*** Stopping %i switches\n' % len( self.switches ) )
-        stopped = {}
         for swclass, switches in groupby(
                 sorted( self.switches, key=type ), type ):
-            switches = tuple( switches )
-            if ( hasattr( swclass, 'batchShutdown' ) and
-                 swclass.batchShutdown( switches ) ):
-                stopped.update( { s: s for s in switches } )
+            if hasattr( swclass, 'batchShutdown' ):
+                swclass.batchShutdown( switches )
         for switch in self.switches:
             info( switch.name + ' ' )
-            if switch not in stopped:
-                switch.stop()
+            switch.stop()
             switch.terminate()
+        info( '\n' )
+        info( '*** Stopping %i links\n' % len( self.links ) )
+        for link in self.links:
+            link.stop()
         info( '\n' )
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
