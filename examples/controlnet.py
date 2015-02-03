@@ -27,10 +27,16 @@ from mininet.log import setLogLevel, info
 
 class DataController( Controller ):
     """Data Network Controller.
-       patched to avoid checkListening error"""
+       patched to avoid checkListening error and to delete intfs"""
+    
     def checkListening( self ):
         "Ignore spurious error"
         pass
+
+    def stop( self, *args, **kwargs ):
+        "Make sure intfs are deleted"
+        kwargs.update( deleteIntfs=True )
+        super( Controller, self ).stop( *args, **kwargs )
 
 class MininetFacade( object ):
     """Mininet object facade that allows a single CLI to
