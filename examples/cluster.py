@@ -182,7 +182,7 @@ class RemoteMixin( object ):
                 self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
                                  '-o', 'ControlMaster=auto',
                                  '-o', 'ControlPersist=' + '1' ]
-            self.sshcmd = self.sshcmd + [ self.dest ]
+            self.sshcmd += [ self.dest ]
             self.isRemote = True
         else:
             self.dest = None
@@ -361,9 +361,12 @@ class RemoteLink( Link ):
 
     def stop( self ):
         "Stop this link"
-        Link.stop( self )
         if self.tunnel:
             self.tunnel.terminate()
+            self.intf1.delete()
+            self.intf2.delete()
+        else:
+            Link.stop( self )
         self.tunnel = None
 
     def makeIntfPair( self, intfname1, intfname2, addr1=None, addr2=None,
@@ -417,12 +420,11 @@ class RemoteLink( Link ):
         # 1. Create tap interfaces
         for node in node1, node2:
             # For now we are hard-wiring tap9, which we will rename
-            node.rcmd( 'ip link delete tap9', stderr=PIPE )
             cmd = 'ip tuntap add dev tap9 mode tap user ' + node.user
-            node.rcmd( cmd )
-            links = node.rcmd( 'ip link show' )
-            # print 'after add, links =', links
-            assert 'tap9' in links
+            result = node.rcmd( cmd )
+            if result:
+                raise Exception( 'error creating tap9 on %s: %s' %
+                                 ( node, result ) )
         # 2. Create ssh tunnel between tap interfaces
         # -n: close stdin
         dest = '%s@%s' % ( node2.user, node2.serverIP )
@@ -435,29 +437,24 @@ class RemoteLink( Link ):
         debug( 'Waiting for tunnel to come up...\n' )
         ch = tunnel.stdout.read( 1 )
         if ch != '@':
-            error( 'makeTunnel:\n',
-                   'Tunnel setup failed for',
-                   '%s:%s' % ( node1, node1.dest ), 'to',
-                   '%s:%s\n' % ( node2, node2.dest ),
-                   'command was:', cmd, '\n' )
-            tunnel.terminate()
-            tunnel.wait()
-            error( ch + tunnel.stdout.read() )
-            error( tunnel.stderr.read() )
-            sys.exit( 1 )
+            raise Exception( 'makeTunnel:\n',
+                             'Tunnel setup failed for',
+                             '%s:%s' % ( node1, node1.dest ), 'to',
+                             '%s:%s\n' % ( node2, node2.dest ),
+                             'command was:', cmd, '\n' )
         # 3. Move interfaces if necessary
         for node in node1, node2:
-            if node.inNamespace:
-                retry( 3, .01, RemoteLink.moveIntf, 'tap9', node )
+            if not self.moveIntf( 'tap9', node ):
+                raise Exception( 'interface move failed on node %s' % node )
         # 4. Rename tap interfaces to desired names
         for node, intf, addr in ( ( node1, intfname1, addr1 ),
                                   ( node2, intfname2, addr2 ) ):
             if not addr:
-                node.cmd( 'ip link set tap9 name', intf )
+                result = node.cmd( 'ip link set tap9 name', intf )
             else:
-                node.cmd( 'ip link set tap9 name', intf, 'address', addr )
-        for node, intf in ( ( node1, intfname1 ), ( node2, intfname2 ) ):
-            assert intf in node.cmd( 'ip link show' )
+                result = node.cmd( 'ip link set tap9 name', intf, 'address', addr )
+            if result:
+                raise Exception( 'error renaming %s: %s' % ( intf, result ) )
         return tunnel
 
     def status( self ):
