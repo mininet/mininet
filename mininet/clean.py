@@ -75,13 +75,13 @@ class Cleanup( object ):
             if dp:
                 sh( 'dpctl deldp ' + dp )
 
-        info( "***  Removing OVS datapaths" )
+        info( "***  Removing OVS datapaths\n" )
         dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
         if dps:
             sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
                                             for dp in dps if dp ) )
         # And in case the above didn't work...
-        dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
+        dps = sh( "ovs-vsctl --timeout=1 list-br" ).strip().splitlines()
         for dp in dps:
             sh( 'ovs-vsctl del-br ' + dp )
 
@@ -89,9 +89,12 @@ class Cleanup( object ):
         links = sh( "ip link show | "
                     "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'"
                     ).splitlines()
-        for link in links:
-            if link:
-                sh( "ip link del " + link )
+        # Delete blocks of links
+        n = 1000  # chunk size
+        for i in xrange( 0, len( links ), n ):
+            cmd = ';'.join( 'ip link del %s' % link
+                             for link in links[ i : i + n ] )
+            sh( '( %s ) 2> /dev/null' % cmd )
 
         if 'tap9' in sh( 'ip link show' ):
             info( "*** Removing tap9 - assuming it's from cluster edition\n" )
