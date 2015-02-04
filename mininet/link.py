@@ -25,7 +25,7 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair, quietRun
+from mininet.util import makeIntfPair
 import mininet.node
 import re
 
