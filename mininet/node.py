@@ -1181,7 +1181,7 @@ class OVSSwitch( Switch ):
         if self.datapath == 'user':
             opts += ' datapath_type=netdev'
         if self.protocols and not self.isOldOVS():
-            opts += ' protocols=%s' % ( self, self.protocols )
+            opts += ' protocols=%s' % self.protocols
         if self.stp and self.failMode == 'standalone':
             opts += ' stp_enable=true' % self
         return opts
