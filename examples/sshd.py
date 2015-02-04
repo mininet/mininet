@@ -39,7 +39,7 @@ def connectToRootNS( network, switch, ip, routes ):
       routes: host networks to route to"""
     # Create a node in root namespace and link to switch 0
     root = Node( 'root', inNamespace=False )
-    intf = Link( root, switch ).intf1
+    intf = network.addLink( root, switch ).intf1
     root.setIP( ip, intf=intf )
     # Start network that now includes link to root namespace
     network.start()
