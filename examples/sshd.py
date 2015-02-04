@@ -23,7 +23,6 @@ from mininet.cli import CLI
 from mininet.log import lg
 from mininet.node import Node
 from mininet.topolib import TreeTopo
-from mininet.link import Link
 from mininet.util import waitListening
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
