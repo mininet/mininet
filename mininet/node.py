@@ -258,9 +258,9 @@ class Node( object ):
         """Send a command, followed by a command to echo a sentinel,
            and return without waiting for the command to complete.
            args: command and arguments, or string
-           printPid: print command's PID?"""
+           printPid: print command's PID? (False)"""
         assert self.shell and not self.waiting
-        printPid = kwargs.get( 'printPid', True )
+        printPid = kwargs.get( 'printPid', False )
         # Allow sendCmd( [ list ] )
         if len( args ) == 1 and isinstance( args[ 0 ], list ):
             cmd = args[ 0 ]
