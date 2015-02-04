@@ -102,8 +102,9 @@ from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
                            Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
-from mininet.util import quietRun, fixLimits, numCores, ensureRoot
-from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
+from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
+                           macColonHex, ipStr, ipParse, netParse, ipAdd,
+                           waitListening )
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
@@ -729,27 +730,25 @@ class Mininet( object ):
     # XXX This should be cleaned up
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', fmt=None,
-               seconds=5):
+               seconds=5, port=5001):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses first and last hosts
            l4Type: string, one of [ TCP, UDP ]
            udpBw: bandwidth target for UDP test
            fmt: iperf format argument if any
            seconds: iperf time to transmit
+           port: iperf port
            returns: two-element array of [ server, client ] speeds
            note: send() is buffered, so client rate can be much higher than
            the actual transmission rate; on an unloaded system, server
            rate should be much closer to the actual receive rate"""
-        if not quietRun( 'which telnet' ):
-            error( 'Cannot find telnet in $PATH - required for iperf test' )
-            return
         hosts = hosts or [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         assert len( hosts ) == 2
         client, server = hosts
-        output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
-        output( "%s and %s\n" % ( client.name, server.name ) )
+        output( '*** Iperf: testing', l4Type, 'bandwidth between',
+                client, 'and', server, '\n' )
         server.cmd( 'killall -9 iperf' )
-        iperfArgs = 'iperf '
+        iperfArgs = 'iperf -p %d ' % port
         bwArgs = ''
         if l4Type == 'UDP':
             iperfArgs += '-u '
@@ -758,20 +757,16 @@ class Mininet( object ):
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
         if fmt:
             iperfArgs += '-f %s ' % fmt
-        server.sendCmd( iperfArgs + '-s', printPid=True )
-        servout = ''
-        while server.lastPid is None:
-            servout += server.monitor()
+        server.sendCmd( iperfArgs + '-s' )
         if l4Type == 'TCP':
-            while 'Connected' not in client.cmd(
-                    'sh -c "echo A | telnet -e A %s 5001"' % server.IP()):
-                info( 'Waiting for iperf to start up...' )
-                sleep(.5)
+            if not waitListening( client, server.IP(), port ):
+                raise Exception( 'Could not connect to iperf on port %d'
+                                 % port )
         cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
                              server.IP() + ' ' + bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
-        servout += server.waitOutput()
+        servout = server.waitOutput()
         debug( 'Server output: %s\n' % servout )
         result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':

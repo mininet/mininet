@@ -587,18 +587,20 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
     serverIP = server if isinstance( server, basestring ) else server.IP()
-    cmd = ( 'sh -c "echo A | telnet -e A %s %s"' %
-            ( serverIP, port ) )
+    cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
-    while 'Connected' not in runCmd( cmd ):
-        if timeout:
-            print time
-            if time >= timeout:
-                error( 'could not connect to %s on port %d\n'
-                       % ( server, port ) )
-                return False
-        output('waiting for', server,
-               'to listen on port', port, '\n')
+    result = runCmd( cmd )
+    while 'Connected' not in result:
+        if 'No route' in result:
+            rtable = runCmd( 'route' )
+            error( 'no route to %s:\n%s' % ( server, rtable ) )
+            return False
+        if timeout and time >= timeout:
+            error( 'could not connect to %s on port %d\n' % ( server, port ) )
+            return False
+        debug( 'waiting for', server, 'to listen on port', port, '\n' )
+        info( '.' )
         sleep( .5 )
         time += .5
+        result = runCmd( cmd )
     return True
