@@ -1385,6 +1385,10 @@ class Controller( Node ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
+        # Accept 'ip:port' syntax as shorthand
+        if ':' in ip:
+            ip, port = ip.split( ':' )
+            port = int( port )
         self.ip = ip
         self.port = port
         self.protocol = protocol
