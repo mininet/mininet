@@ -551,10 +551,11 @@ def customConstructor( constructors, argStr ):
             params.update( kwargs )
             if not newargs:
                 cls.__init__( self, name, *args, **params )
+                return
             if args:
                 warn( 'warning: %s replacing %s with %s\n' %
                       ( constructor, args, newargs ) )
-                cls.__init__( self, name, *newargs, **params )
+            cls.__init__( self, name, *newargs, **params )
 
     CustomClass.__name__ = '%s%s' % ( cls.__name__, kwargs )
     return CustomClass
