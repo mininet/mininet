@@ -48,8 +48,8 @@ class Cleanup( object ):
         """Clean up junk which might be left over from old runs;
            do fast stuff before slow dp and link removal!"""
 
-        info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
-             "\n")
+        info( "*** Removing excess controllers/ofprotocols/ofdatapaths/"
+              "pings/noxes\n" )
         zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
         zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs'
         # Note: real zombie processes can't actually be killed, since they
@@ -87,7 +87,8 @@ class Cleanup( object ):
 
         info( "*** Removing all links of the pattern foo-ethX\n" )
         links = sh( "ip link show | "
-                    "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'" ).splitlines()
+                    "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'"
+                    ).splitlines()
         for link in links:
             if link:
                 sh( "ip link del " + link )
@@ -95,7 +96,7 @@ class Cleanup( object ):
         if 'tap9' in sh( 'ip link show' ):
             info( "*** Removing tap9 - assuming it's from cluster edition\n" )
             sh( 'ip link del tap9' )
-        
+
         info( "*** Killing stale mininet node processes\n" )
         killprocs( 'mininet:' )
 
