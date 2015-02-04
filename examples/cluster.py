@@ -79,7 +79,7 @@ from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
-from mininet.util import quietRun, errRun, retry
+from mininet.util import quietRun, errRun
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 from mininet.clean import addCleanupCallback
@@ -326,7 +326,8 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     @classmethod
     def batchStartup( cls, switches, **_kwargs ):
         "Start up switches in per-server batches"
-        for server, switchGroup in groupby( switches, attrgetter( 'server' ) ):
+        key = attrgetter( 'server' )
+        for server, switchGroup in groupby( sorted( switches, key=key ), key ):
             info( '(%s)' % server )
             group = tuple( switchGroup )
             switch = group[ 0 ]
@@ -336,7 +337,8 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     @classmethod
     def batchShutdown( cls, switches, **_kwargs ):
         "Stop switches in per-server batches"
-        for server, switchGroup in groupby( switches, attrgetter( 'server' ) ):
+        key = attrgetter( 'server' )
+        for server, switchGroup in groupby( sorted( switches, key=key ), key ):
             info( '(%s)' % server )
             group = tuple( switchGroup )
             switch = group[ 0 ]
