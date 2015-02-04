@@ -70,7 +70,8 @@ class Cleanup( object ):
         cleanUpScreens()
 
         info( "*** Removing excess kernel datapaths\n" )
-        dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).splitlines()
+        dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'"
+                  ).splitlines()
         for dp in dps:
             if dp:
                 sh( 'dpctl deldp ' + dp )

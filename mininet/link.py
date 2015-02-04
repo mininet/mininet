@@ -377,6 +377,7 @@ class Link( object ):
     """A basic link is just a veth pair.
        Other types of links could be tunnels, link emulators, etc.."""
 
+    # pylint: disable=too-many-branches
     def __init__( self, node1, node2, port1=None, port2=None,
                   intfName1=None, intfName2=None, addr1=None, addr2=None,
                   intf=Intf, cls1=None, cls2=None, params1=None,
@@ -395,7 +396,6 @@ class Link( object ):
         # This is a bit awkward; it seems that having everything in
         # params is more orthogonal, but being able to specify
         # in-line arguments is more convenient! So we support both.
-        # pylint: disable=too-many-branches
         if params1 is None:
             params1 = {}
         if params2 is None:
@@ -429,7 +429,6 @@ class Link( object ):
             cls1 = intf
         if not cls2:
             cls2 = intf
-        # pylint: enable=too-many-branches
 
         intf1 = cls1( name=intfName1, node=node1,
                       link=self, mac=addr1, **params1  )
@@ -438,6 +437,7 @@ class Link( object ):
 
         # All we are is dust in the wind, and our two interfaces
         self.intf1, self.intf2 = intf1, intf2
+    # pylint: enable=too-many-branches
 
     @staticmethod
     def _ignore( *args, **kwargs ):

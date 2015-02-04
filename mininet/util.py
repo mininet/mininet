@@ -543,6 +543,7 @@ def customConstructor( constructors, argStr ):
 
     # Return a customized subclass
     cls = constructor
+
     class CustomClass( cls ):
         "Customized subclass, useful for Node, Link, and other classes"
         def __init__( self, name, *args, **params ):
