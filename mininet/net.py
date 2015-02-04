@@ -489,7 +489,7 @@ class Mininet( object ):
             switch.start( self.controllers )
         started = {}
         for swclass, switches in groupby(
-            sorted( self.switches, key=type ), type ):
+                sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchStartup' ):
                 success = swclass.batchStartup( switches )
