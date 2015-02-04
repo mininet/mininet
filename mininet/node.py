@@ -1425,7 +1425,6 @@ class Controller( Node ):
         "Stop controller."
         self.cmd( 'kill %' + self.command )
         self.cmd( 'wait %' + self.command )
-        kwargs.update( deleteIntfs=False )
         super( Controller, self ).stop( *args, **kwargs )
 
     def IP( self, intf=None ):
