@@ -111,7 +111,7 @@ class ClusterCleanup( object ):
 
     inited = False
     serveruser = {}
-    
+
     @classmethod
     def add( cls, server, user='' ):
         "Add an entry to server: user dict"
@@ -120,7 +120,7 @@ class ClusterCleanup( object ):
         if not user:
             user = findUser()
         cls.serveruser[ server ] = user
-    
+
     @classmethod
     def cleanup( cls ):
         "Clean up"
@@ -333,7 +333,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
             switch = group[ 0 ]
             OVSSwitch.batchStartup( group, run=switch.cmd )
         return switches
-    
+
     @classmethod
     def batchShutdown( cls, switches, **_kwargs ):
         "Stop switches in per-server batches"
@@ -454,7 +454,8 @@ class RemoteLink( Link ):
             if not addr:
                 result = node.cmd( 'ip link set tap9 name', intf )
             else:
-                result = node.cmd( 'ip link set tap9 name', intf, 'address', addr )
+                result = node.cmd( 'ip link set tap9 name', intf,
+                                   'address', addr )
             if result:
                 raise Exception( 'error renaming %s: %s' % ( intf, result ) )
         return tunnel
