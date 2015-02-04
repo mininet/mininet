@@ -92,6 +92,10 @@ class Cleanup( object ):
             if link:
                 sh( "ip link del " + link )
 
+        if 'tap9' in sh( 'ip link show' ):
+            info( "*** Removing tap9 - assuming it's from cluster edition\n" )
+            sh( 'ip link del tap9' )
+        
         info( "*** Killing stale mininet node processes\n" )
         killprocs( 'mininet:' )
 
