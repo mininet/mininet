@@ -56,6 +56,7 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
+# pylint: disable=too-many-branches
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
@@ -116,6 +117,7 @@ def errRun( *cmd, **kwargs ):
     returncode = popen.wait()
     debug( out, err, returncode )
     return out, err, returncode
+# pylint: enable=too-many-branches
 
 def errFail( *cmd, **kwargs ):
     "Run a command using errRun and raise exception on nonzero exit"
@@ -166,7 +168,7 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
        node2: home node for interface 2 (optional)
        deleteIntfs: delete intfs before creating them
        runCmd: function to run shell commands (quietRun)
-       returns: ip link add result"""
+       raises Exception on failure"""
     if not runCmd:
         runCmd = quietRun if not node1 else node1.cmd
         runCmd2 = quietRun if not node2 else node2.cmd
@@ -187,12 +189,9 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
                             'address %s '
                             'netns %s' %
                             (  intf1, addr1, intf2, addr2, netns ) )
-    if cmdOutput == '':
-        return True
-    else:
+    if cmdOutput:
         raise Exception( "Error creating interface pair (%s,%s): %s " %
                          ( intf1, intf2, cmdOutput ) )
-        return False
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.
@@ -550,11 +549,11 @@ def customConstructor( constructors, argStr ):
             params = params.copy()
             params.update( kwargs )
             if not newargs:
-                return cls.__init__( self, name, *args, **params )
+                cls.__init__( self, name, *args, **params )
             if args:
                 warn( 'warning: %s replacing %s with %s\n' %
                       ( constructor, args, newargs ) )
-                return cls.__init__( self, name, *newargs, **params )
+                cls.__init__( self, name, *newargs, **params )
 
     CustomClass.__name__ = '%s%s' % ( cls.__name__, kwargs )
     return CustomClass
