@@ -38,60 +38,80 @@ def killprocs( pattern ):
         else:
             break
 
-def cleanup():
-    """Clean up junk which might be left over from old runs;
-       do fast stuff before slow dp and link removal!"""
+class Cleanup( object ):
+    "Wrapper for cleanup()"
 
-    info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
-         "\n")
-    zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-    zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs'
-    # Note: real zombie processes can't actually be killed, since they
-    # are already (un)dead. Then again,
-    # you can't connect to them either, so they're mostly harmless.
-    # Send SIGTERM first to give processes a chance to shutdown cleanly.
-    sh( 'killall ' + zombies + ' 2> /dev/null' )
-    time.sleep( 1 )
-    sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
+    callbacks = []
 
-    # And kill off sudo mnexec
-    sh( 'pkill -9 -f "sudo mnexec"')
+    @classmethod
+    def cleanup( cls):
+        """Clean up junk which might be left over from old runs;
+           do fast stuff before slow dp and link removal!"""
 
-    info( "*** Removing junk from /tmp\n" )
-    sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
+        info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
+             "\n")
+        zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
+        zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs'
+        # Note: real zombie processes can't actually be killed, since they
+        # are already (un)dead. Then again,
+        # you can't connect to them either, so they're mostly harmless.
+        # Send SIGTERM first to give processes a chance to shutdown cleanly.
+        sh( 'killall ' + zombies + ' 2> /dev/null' )
+        time.sleep( 1 )
+        sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
-    info( "*** Removing old X11 tunnels\n" )
-    cleanUpScreens()
+        # And kill off sudo mnexec
+        sh( 'pkill -9 -f "sudo mnexec"')
 
-    info( "*** Removing excess kernel datapaths\n" )
-    dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).splitlines()
-    for dp in dps:
-        if dp:
-            sh( 'dpctl deldp ' + dp )
+        info( "*** Removing junk from /tmp\n" )
+        sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
 
-    info( "***  Removing OVS datapaths" )
-    dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
-    if dps:
-        sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
-                                        for dp in dps if dp ) )
-    # And in case the above didn't work...
-    dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
-    for dp in dps:
-        sh( 'ovs-vsctl del-br ' + dp )
+        info( "*** Removing old X11 tunnels\n" )
+        cleanUpScreens()
 
-    info( "*** Removing all links of the pattern foo-ethX\n" )
-    links = sh( "ip link show | "
-                "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'" ).splitlines()
-    for link in links:
-        if link:
-            sh( "ip link del " + link )
+        info( "*** Removing excess kernel datapaths\n" )
+        dps = sh( "ps ax | egrep -o 'dp[0-9]+' | sed 's/dp/nl:/'" ).splitlines()
+        for dp in dps:
+            if dp:
+                sh( 'dpctl deldp ' + dp )
 
-    info( "*** Killing stale mininet node processes\n" )
-    killprocs( 'mininet:' )
+        info( "***  Removing OVS datapaths" )
+        dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
+        if dps:
+            sh( "ovs-vsctl " + " -- ".join( "--if-exists del-br " + dp
+                                            for dp in dps if dp ) )
+        # And in case the above didn't work...
+        dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
+        for dp in dps:
+            sh( 'ovs-vsctl del-br ' + dp )
 
-    info( "*** Shutting down stale tunnels\n" )
-    killprocs( 'Tunnel=Ethernet' )
-    killprocs( '.ssh/mn')
-    sh( 'rm -f ~/.ssh/mn/*' )
+        info( "*** Removing all links of the pattern foo-ethX\n" )
+        links = sh( "ip link show | "
+                    "egrep -o '([-_.[:alnum:]]+-eth[[:digit:]]+)'" ).splitlines()
+        for link in links:
+            if link:
+                sh( "ip link del " + link )
 
-    info( "*** Cleanup complete.\n" )
+        info( "*** Killing stale mininet node processes\n" )
+        killprocs( 'mininet:' )
+
+        info( "*** Shutting down stale tunnels\n" )
+        killprocs( 'Tunnel=Ethernet' )
+        killprocs( '.ssh/mn')
+        sh( 'rm -f ~/.ssh/mn/*' )
+
+        # Call any additional cleanup code if necessary
+        for callback in cls.callbacks:
+            callback()
+
+        info( "*** Cleanup complete.\n" )
+
+    @classmethod
+    def addCleanupCallback( cls, callback ):
+        "Add cleanup callback"
+        if callback not in cls.callbacks:
+            cls.callbacks.append( callback )
+
+
+cleanup = Cleanup.cleanup
+addCleanupCallback = Cleanup.addCleanupCallback

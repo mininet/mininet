@@ -197,9 +197,10 @@ class Intf( object ):
     def delete( self ):
         "Delete interface"
         self.cmd( 'ip link del ' + self.name )
-        if self.node.inNamespace:
-            # Link may have been dumped into root NS
-            quietRun( 'ip link del ' + self.name )
+        # We used to do this, but it slows us down:
+        # if self.node.inNamespace:
+        # Link may have been dumped into root NS
+        # quietRun( 'ip link del ' + self.name )
 
     def status( self ):
         "Return intf status as a string"

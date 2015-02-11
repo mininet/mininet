@@ -77,6 +77,7 @@ def errRun( *cmd, **kwargs ):
         cmd = [ str( arg ) for arg in cmd ]
     elif isinstance( cmd, list ) and shell:
         cmd = " ".join( arg for arg in cmd )
+    debug( '*** errRun:', cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
@@ -113,6 +114,7 @@ def errRun( *cmd, **kwargs ):
                 poller.unregister( fd )
 
     returncode = popen.wait()
+    debug( out, err, returncode )
     return out, err, returncode
 
 def errFail( *cmd, **kwargs ):
@@ -188,7 +190,8 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
     if cmdOutput == '':
         return True
     else:
-        error( "Error creating interface pair: %s " % cmdOutput )
+        raise Exception( "Error creating interface pair (%s,%s): %s " %
+                         ( intf1, intf2, cmdOutput ) )
         return False
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
@@ -533,19 +536,28 @@ def customConstructor( constructors, argStr ):
         raise Exception( "error: %s is unknown - please specify one of %s" %
                          ( cname, constructors.keys() ) )
 
-    def customized( name, *args, **params ):
-        "Customized constructor, useful for Node, Link, and other classes"
-        params = params.copy()
-        params.update( kwargs )
-        if not newargs:
-            return constructor( name, *args, **params )
-        if args:
-            warn( 'warning: %s replacing %s with %s\n' % (
-                  constructor, args, newargs ) )
-        return constructor( name, *newargs, **params )
+    if not newargs and not kwargs:
+        return constructor
 
-    customized.__name__ = 'customConstructor(%s)' % argStr
-    return customized
+    if not isinstance( constructor, type ):
+        raise Exception( "error: invalid arguments %s" % argStr )
+
+    # Return a customized subclass
+    cls = constructor
+    class CustomClass( cls ):
+        "Customized subclass, useful for Node, Link, and other classes"
+        def __init__( self, name, *args, **params ):
+            params = params.copy()
+            params.update( kwargs )
+            if not newargs:
+                return cls.__init__( self, name, *args, **params )
+            if args:
+                warn( 'warning: %s replacing %s with %s\n' %
+                      ( constructor, args, newargs ) )
+                return cls.__init__( self, name, *newargs, **params )
+
+    CustomClass.__name__ = '%s%s' % ( cls.__name__, kwargs )
+    return CustomClass
 
 def buildTopo( topos, topoStr ):
     """Create topology from string with format (object, arg1, arg2,...).

@@ -414,7 +414,12 @@ class Mininet( object ):
 
         info( '\n*** Adding switches:\n' )
         for switchName in topo.switches():
-            self.addSwitch( switchName, **topo.nodeInfo( switchName) )
+            # A bit ugly: add batch parameter if appropriate
+            params = topo.nodeInfo( switchName)
+            cls = params.get( 'cls', self.switch )
+            if hasattr( cls, 'batchStartup' ):
+                params.setdefault( 'batch', True )
+            self.addSwitch( switchName, **params )
             info( switchName + ' ' )
 
         info( '\n*** Adding links:\n' )
@@ -481,6 +486,13 @@ class Mininet( object ):
         for switch in self.switches:
             info( switch.name + ' ')
             switch.start( self.controllers )
+        started = {}
+        for swclass, switches in groupby(
+            sorted( self.switches, key=type ), type ):
+            switches = tuple( switches )
+            if hasattr( swclass, 'batchStartup' ):
+                success = swclass.batchStartup( switches )
+                started.update( { s: s for s in success } )
         info( '\n' )
         if self.waitConn:
             self.waitConnected()
@@ -505,9 +517,9 @@ class Mininet( object ):
         for swclass, switches in groupby(
                 sorted( self.switches, key=type ), type ):
             switches = tuple( switches )
-            if ( hasattr( swclass, 'batchShutdown' ) and
-                 swclass.batchShutdown( switches ) ):
-                stopped.update( { s: s for s in switches } )
+            if hasattr( swclass, 'batchShutdown' ):
+                success = swclass.batchShutdown( switches )
+                stopped.update( { s: s for s in success } )
         for switch in self.switches:
             info( switch.name + ' ' )
             if switch not in stopped:

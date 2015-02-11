@@ -41,7 +41,8 @@ from functools import partial
 # Experimental! cluster edition prototype
 from mininet.examples.cluster import ( MininetCluster, RemoteHost,
                                        RemoteOVSSwitch, RemoteLink,
-                                       SwitchBinPlacer, RandomPlacer )
+                                       SwitchBinPlacer, RandomPlacer,
+                                       ClusterCleanup )
 from mininet.examples.clustercli import ClusterCLI
 
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
@@ -281,6 +282,11 @@ class MininetRunner( object ):
     def begin( self ):
         "Create and run mininet."
 
+        if self.options.cluster:
+            servers = self.options.cluster.split( ',' )
+            for server in servers:
+                ClusterCleanup.add( server )
+
         if self.options.clean:
             cleanup()
             exit()
@@ -334,7 +340,7 @@ class MininetRunner( object ):
             warn( '*** WARNING: Experimental cluster mode!\n'
                   '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
             host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
-            Net = partial( MininetCluster, servers=cluster.split( ',' ),
+            Net = partial( MininetCluster, servers=servers,
                            placement=PLACEMENT[ self.options.placement ] )
 
         mn = Net( topo=topo,
