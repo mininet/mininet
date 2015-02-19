@@ -56,20 +56,12 @@ class CLI( Cmd ):
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
 
-        # Set up history if readline is available
-        try:
-            import readline
-        except ImportError:
-            pass
-        else:
-            history_path = os.path.expanduser('~/.mininet_history')
-            if os.path.isfile(history_path):
-                readline.read_history_file(history_path)
-            atexit.register(lambda: readline.write_history_file(history_path))
-
         if self.inputFile:
             self.do_source( self.inputFile )
             return
+
+        self.setup_readline()
+
         while True:
             try:
                 # Make sure no nodes are still waiting
@@ -83,6 +75,26 @@ class CLI( Cmd ):
                 break
             except KeyboardInterrupt:
                 output( '\nInterrupt\n' )
+
+    has_setup_readline = False
+    @classmethod
+    def setup_readline( cls ):
+        "Set up history if readline is available"
+
+        # Only set up readline once to prevent multiplying the history file
+        if cls.has_setup_readline:
+            return
+        cls.has_setup_readline = True
+
+        try:
+            import readline
+        except ImportError:
+            pass
+        else:
+            history_path = os.path.expanduser('~/.mininet_history')
+            if os.path.isfile(history_path):
+                readline.read_history_file(history_path)
+            atexit.register(lambda: readline.write_history_file(history_path))
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
