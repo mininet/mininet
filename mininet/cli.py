@@ -45,6 +45,10 @@ class CLI( Cmd ):
     prompt = 'mininet> '
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
+        """Start and run interactive or batch mode CLI
+           mininet: Mininet network object
+           stdin: standard input for CLI
+           script: script to run in batch mode"""
         self.mn = mininet
         # Local variable bindings for py command
         self.locals = { 'net': mininet }
@@ -56,7 +60,21 @@ class CLI( Cmd ):
         Cmd.__init__( self )
         info( '*** Starting CLI:\n' )
 
-        # Set up history if readline is available
+        if self.inputFile:
+            self.do_source( self.inputFile )
+            return
+
+        self.initReadline()
+        self.run()
+
+    readlineInited = False
+    @classmethod
+    def initReadline( cls ):
+        "Set up history if readline is available"
+        # Only set up readline once to prevent multiplying the history file
+        if cls.readlineInited:
+            return
+        cls.readlineInited = True
         try:
             import readline
         except ImportError:
@@ -67,22 +85,26 @@ class CLI( Cmd ):
                 readline.read_history_file(history_path)
             atexit.register(lambda: readline.write_history_file(history_path))
 
-        if self.inputFile:
-            self.do_source( self.inputFile )
-            return
+    def run( self ):
+        "Run our cmdloop(), catching KeyboardInterrupt"
         while True:
             try:
                 # Make sure no nodes are still waiting
                 for node in self.mn.values():
                     while node.waiting:
+                        info( 'stopping', node, '\n' )
                         node.sendInt()
                         node.waitOutput()
                 if self.isatty():
-                    quietRun( 'stty echo sane intr "^C"' )
+                    quietRun( 'stty echo sane intr ^C' )
                 self.cmdloop()
                 break
             except KeyboardInterrupt:
-                output( '\nInterrupt\n' )
+                # Output a message - unless it's also interrupted
+                try:
+                    output( '\nInterrupt\n' )
+                except:
+                    pass
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
