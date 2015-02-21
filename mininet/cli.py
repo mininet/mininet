@@ -45,6 +45,10 @@ class CLI( Cmd ):
     prompt = 'mininet> '
 
     def __init__( self, mininet, stdin=sys.stdin, script=None ):
+        """Start and run interactive or batch mode CLI
+           mininet: Mininet network object
+           stdin: standard input for CLI
+           script: script to run in batch mode"""
         self.mn = mininet
         # Local variable bindings for py command
         self.locals = { 'net': mininet }
@@ -60,32 +64,17 @@ class CLI( Cmd ):
             self.do_source( self.inputFile )
             return
 
-        self.setup_readline()
+        self.initReadline()
+        self.run()
 
-        while True:
-            try:
-                # Make sure no nodes are still waiting
-                for node in self.mn.values():
-                    while node.waiting:
-                        node.sendInt()
-                        node.waitOutput()
-                if self.isatty():
-                    quietRun( 'stty echo sane intr "^C"' )
-                self.cmdloop()
-                break
-            except KeyboardInterrupt:
-                output( '\nInterrupt\n' )
-
-    has_setup_readline = False
+    readlineInited = False
     @classmethod
-    def setup_readline( cls ):
+    def initReadline( cls ):
         "Set up history if readline is available"
-
         # Only set up readline once to prevent multiplying the history file
-        if cls.has_setup_readline:
+        if cls.readlineInited:
             return
-        cls.has_setup_readline = True
-
+        cls.readlineInited = True
         try:
             import readline
         except ImportError:
@@ -95,6 +84,27 @@ class CLI( Cmd ):
             if os.path.isfile(history_path):
                 readline.read_history_file(history_path)
             atexit.register(lambda: readline.write_history_file(history_path))
+
+    def run( self ):
+        "Run our cmdloop(), catching KeyboardInterrupt"
+        while True:
+            try:
+                # Make sure no nodes are still waiting
+                for node in self.mn.values():
+                    while node.waiting:
+                        info( 'stopping', node, '\n' )
+                        node.sendInt()
+                        node.waitOutput()
+                if self.isatty():
+                    quietRun( 'stty echo sane intr ^C' )
+                self.cmdloop()
+                break
+            except KeyboardInterrupt:
+                # Output a message - unless it's also interrupted
+                try:
+                    output( '\nInterrupt\n' )
+                except:
+                    pass
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
