@@ -214,6 +214,10 @@ class LINCSwitch( OpticalSwitch ):
         '''
         start the existing LINC switch
         '''
+	#FIXME: When we stop the logical LINC switch its delete the tap interface
+	#that is connected to it. If we start that switch again it creates new tap
+	#interface but packet switch not connected to tap. So we need save the 
+	#corresponding tap we stoping the swtich and connect it to new tap on startup.
         cmd = "linc:start_switch({}).\r\n".format(self.lincId)
         self.write_to_cli(cmd)
 
@@ -259,7 +263,7 @@ class LINCLink( Link ):
         params1 = { 'speed': speed1 }
         params2 = { 'speed': speed2 }
         
-        if isinstance( node1, :LINCSwitch ):
+        if isinstance( node1, LINCSwitch ):
             cls1 = LINCIntf
         else:
             cls1 = Intf

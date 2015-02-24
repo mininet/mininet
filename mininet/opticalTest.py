@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from opticalUtils2 import MininetOE, LINCSwitch, LINCLink
+from opticalUtils import MininetOE, LINCSwitch, LINCLink
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.node import RemoteController
