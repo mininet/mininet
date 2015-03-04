@@ -98,18 +98,41 @@ class LINCSwitch(OpticalSwitch):
     writePipe = "/tmp/home/{}/linc-oe/rel/linc/erlang.pipe.1.w".format(user)
     ### sys.config path ###
     sysConfig = "/home/{}/linc-oe/rel/linc/releases/1.0/sys.config".format(user)
+    @staticmethod
+    def findDir(directory, userName):
+        "finds and returns the path of any directory in the user's home directory"
+        homeDir = '/home/' + userName
+        Dir = quietRun('find %s -maxdepth 1 -name %s -type d' % (homeDir, directory)).strip('\n')
+        DirList = Dir.split('\n')
+        if not Dir:
+            return None
+        elif len(DirList) > 1 :
+            warn('***WARNING: Found multiple instances of %s; using %s\n'
+                     % (directory, DirList[ 0 ]))
+            return DirList[ 0 ]
+        else:
+            return Dir
     ### ONOS Directory ###
     try:
         onosDir = os.environ[ 'ONOS_ROOT' ]
     except:
-        onosDir = LINCSwitch.findDir('onos')
+        onosDir = findDir('onos', user)
         if not onosDir:
             error('Please set ONOS_ROOT environment variable!\n')
         else:
             os.environ[ 'ONOS_ROOT' ] = onosDir
-
+    ### LINC-directory
+    lincDir = findDir.__func__('linc-oe', user)
+    if not lincDir:
+        error("***ERROR: Could not find linc-oe in user's home directory\n")
+    ### LINC config generator directory###
+    configGen = findDir.__func__('LINC-config-generator', user)
+    if not configGen:
+        error("***ERROR: Could not find LINC-config-generator in user's home directory\n")
+    # list of all the controllers
+    controllers = None
     def __init__(self, name, dpid=None, allowed=True,
-                  switchType='ROADM', topo=None, annotations={}, **params):
+                  switchType='ROADM', topo=None, annotations={}, controller=None, **params):
         params[ 'inNamespace' ] = False
         Switch.__init__(self, name, dpid=dpid, **params)
         self.name = name
@@ -119,6 +142,7 @@ class LINCSwitch(OpticalSwitch):
         self.configDict = {}  # dictionary that holds all of the JSON configuration data
         self.crossConnects = []
         self.deletedCrossConnects = []
+        self.controller = controller
         self.lincId = self._get_linc_id()  # use to communicate with LINC
         self.lincStarted = False
 
@@ -156,7 +180,6 @@ class LINCSwitch(OpticalSwitch):
     def dpctl( self, *args ):
         "Run dpctl command: ignore for now"
         pass
-
 
     def write_to_cli(self, command):
         '''
@@ -228,13 +251,10 @@ class LINCSwitch(OpticalSwitch):
         '''
         start the existing LINC switch
         '''
-        # FIXME: When we stop the logical LINC switch, it deletes the tap 
-        # interfaces that are connected to that switch. If we start that switch
-        # again it creates new tap interfaces but packet switch now will not be
-        # connected to taps. So we need save the corresponding taps when we are
-        # stoping swtiches and connect the to new taps on startup.
+        #starting Switch
         cmd = "linc:start_switch({}).\r\n".format(self.lincId)
         self.write_to_cli(cmd)
+        #hanlding taps interfaces related to the switch
         crossConnectJSON = {}
         linkConfig = []
         for i in range(0,len(self.deletedCrossConnects)):
@@ -252,11 +272,12 @@ class LINCSwitch(OpticalSwitch):
                 intf.node.attach(tap)
             self.crossConnects.append(crossConnect)
             linkConfig.append(crossConnect.json())
+        #Sending crossConnect info to the ONOS.
         crossConnectJSON['links'] = linkConfig
-        with open("crossConnect.json", 'w') as output:
-            json.dump(crossConnectJSON, output, indent=4, separators=(',', ': '))
-
-
+        with open("crossConnect.json", 'w') as fd:
+            json.dump(crossConnectJSON, fd, indent=4, separators=(',', ': '))
+        info('*** Pushing crossConnect.json to ONOS\n')
+        output = quietRun('%s/tools/test/bin/onos-topo-cfg %s Topology.json' % (self.onosDir, self.controllers[ 0 ].ip), shell=True)
     #--------------------------------------------------------------------------
     # LINC CLI commands
     #-------------------------------------------------------------------------- 
@@ -266,8 +287,7 @@ class LINCSwitch(OpticalSwitch):
         '''
         cmd = "linc:stop_switch({}).\r\n".format(self.lincId)
         self.write_to_cli(cmd)
-
-        
+        #handling taps if any
         for i in range(0, len(self.crossConnects)):
             crossConnect = self.crossConnects.pop()
             if isinstance(crossConnect.intf1.node, LINCSwitch):
@@ -326,7 +346,9 @@ class LINCSwitch(OpticalSwitch):
         opticalJSON = {}
         linkConfig = []
         devices = []
-        
+        #setting up the controllers for LINCSwitch class
+        LINCSwitch.controllers = net.controllers
+
         for switch in net.switches:
             if isinstance(switch, OpticalSwitch):
                 devices.append(switch.json())
@@ -350,12 +372,8 @@ class LINCSwitch(OpticalSwitch):
             return False
 
         info('*** Creating sys.config...\n')
-        configGen = LINCSwitch.findDir('LINC-config-generator')
-        if not configGen:
-            error("***ERROR: Could not find LINC-config-generator in user's home directory\n")
-            return False
         output = quietRun('%s/config_generator TopoConfig.json %s/sys.config.template %s %s'
-                        % (configGen, configGen, net.controllers[ 0 ].ip, net.controllers[ 0 ].port), shell=True)
+                        % (LINCSwitch.configGen, LINCSwitch.configGen, LINCSwitch.controllers[ 0 ].ip, LINCSwitch.controllers[ 0 ].port), shell=True)
         if output:
             error('***ERROR: Error creating sys.config file: %s\n' % output)
             return False
@@ -363,31 +381,27 @@ class LINCSwitch(OpticalSwitch):
         info ('*** Setting multiple controllers in sys.config...\n')
         searchStr = '\[{"Switch.*$'
         ctrlStr = ''
-        for index in range(len(net.controllers)):
+        for index in range(len(LINCSwitch.controllers)):
             ctrlStr += '{"Switch%d-Controller","%s",%d,tcp},' % (index, net.controllers[index].ip, net.controllers[index].port)
         replaceStr = '[%s]},' % ctrlStr[:-1]  # Cut off last comma
         sedCmd = 'sed -i \'s/%s/%s/\' sys.config' % (searchStr, replaceStr)
         output = quietRun(sedCmd, shell=True)
 
         info('*** Copying sys.config to linc-oe directory: ', output + '\n')
-        lincDir = LINCSwitch.findDir('linc-oe')
-        if not lincDir:
-            error("***ERROR: Could not find linc-oe in user's home directory\n")
-            return False
-        output = quietRun('cp -v sys.config %s/rel/linc/releases/1.0/' % lincDir, shell=True).strip('\n')
+        output = quietRun('cp -v sys.config %s/rel/linc/releases/1.0/' % LINCSwitch.lincDir, shell=True).strip('\n')
         info(output + '\n')
 
-        info('*** Adding taps and bring them up...\n')
+        info('*** Adding taps and bringing them up...\n')
         LINCSwitch.setupInts(LINCSwitch.getTaps())
 
         info('*** removing pipes if any \n')
-        quietRun('rm /tmp/home/%s/linc-oe/rel/linc/*' % os.getlogin(), shell=True)
+        quietRun('rm /tmp/home/%s/linc-oe/rel/linc/*' % LINCSwitch.user, shell=True)
 
         info('*** Starting linc OE...\n')
-        output = quietRun('%s/rel/linc/bin/linc start' % lincDir, shell=True)
+        output = quietRun('%s/rel/linc/bin/linc start' % LINCSwitch.lincDir, shell=True)
         if output:
             error('***ERROR: LINC-OE: %s' % output + '\n')
-            quietRun('%s/rel/linc/bin/linc stop' % lincDir, shell=True)
+            quietRun('%s/rel/linc/bin/linc stop' % LINCSwitch.lincDir, shell=True)
             return False
 
         info('*** Waiting for linc-oe to start...\n')
@@ -407,7 +421,7 @@ class LINCSwitch(OpticalSwitch):
         info('*** Press ENTER to push Topology.json to onos...\n')
         raw_input()  # FIXME... we should eventually remove this
         info('*** Pushing Topology.json to ONOS\n')
-        output = quietRun('%s/tools/test/bin/onos-topo-cfg %s Topology.json' % (LINCSwitch.onosDir, net.controllers[ 0 ].ip), shell=True)
+        output = quietRun('%s/tools/test/bin/onos-topo-cfg %s Topology.json' % (LINCSwitch.onosDir, LINCSwitch.controllers[ 0 ].ip), shell=True)
         # successful output contains the two characters '{}'
         # if there is more output than this, there is an issue
         if output.strip('{}'):
@@ -437,8 +451,7 @@ class LINCSwitch(OpticalSwitch):
     def shutdownOE():
         "stop the optical emulator"
         info('*** Stopping linc OE...\n')
-        lincDir = LINCSwitch.findDir('linc-oe')
-        quietRun('%s/rel/linc/bin/linc stop' % lincDir, shell=True)
+        quietRun('%s/rel/linc/bin/linc stop' % LINCSwitch.lincDir, shell=True)
 
     @staticmethod
     def setupInts(intfs):
@@ -456,11 +469,7 @@ class LINCSwitch(OpticalSwitch):
         return list of all the tops in sys.config
         '''
         if path is None:
-            lincDir = LINCSwitch.findDir('linc-oe')
-            if not lincDir:
-                error('***ERROR: Could not find linc-oe in users home directory\n')
-                return None
-            path = '%s/rel/linc/releases/1.0/sys.config' % lincDir
+            path = '%s/rel/linc/releases/1.0/sys.config' % LINCSwitch.lincDir
         fd = open(path, 'r', 0)
         sys_data = fd.read()
         taps = re.findall('tap\d+', sys_data)
@@ -481,21 +490,6 @@ class LINCSwitch(OpticalSwitch):
                 # Give up and return effective user
                 return quietRun('whoami')
 
-    @staticmethod
-    def findDir(directory):
-        "finds and returns the path of any directory in the user's home directory"
-        user = LINCSwitch.findUser()
-        homeDir = '/home/' + user
-        Dir = quietRun('find %s -maxdepth 1 -name %s -type d' % (homeDir, directory)).strip('\n')
-        DirList = Dir.split('\n')
-        if not Dir:
-            return None
-        elif len(DirList) > 1 :
-            warn('***WARNING: Found multiple instances of %s; using %s\n'
-                     % (directory, DirList[ 0 ]))
-            return DirList[ 0 ]
-        else:
-            return Dir
 
     @staticmethod
     def findTap(node, port, path=None):
@@ -506,11 +500,7 @@ class LINCSwitch(OpticalSwitch):
         intfLines = []
 
         if path is None:
-            lincDir = LINCSwitch.findDir('linc-oe')
-            if not lincDir:
-                error('***ERROR: Could not find linc-Ce in users home directory\n')
-                return None
-            path = '%s/rel/linc/releases/1.0/sys.config' % lincDir
+            path = '%s/rel/linc/releases/1.0/sys.config' % LINCSwitch.lincDir
 
         with open(path) as f:
             for line in f:
