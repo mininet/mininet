@@ -523,42 +523,55 @@ def splitArgs( argstr ):
         kwargs[ key ] = makeNumeric( val )
     return fn, args, kwargs
 
-def customConstructor( constructors, argStr ):
-    """Return custom constructor based on argStr
-    The args and key/val pairs in argsStr will be automatically applied
-    when the generated constructor is later used.
+def customClass( classes, argStr ):
+    """Return customized class based on argStr
+    The args and key/val pairs in argStr will be automatically applied
+    when the generated class is later used.
     """
-    cname, newargs, kwargs = splitArgs( argStr )
-    constructor = constructors.get( cname, None )
+    cname, args, kwargs = splitArgs( argStr )
+    cls = classes.get( cname, None )
 
-    if not constructor:
+    if not cname:
         raise Exception( "error: %s is unknown - please specify one of %s" %
                          ( cname, constructors.keys() ) )
+    if not args and not kwargs:
+        return cls
 
-    if not newargs and not kwargs:
-        return constructor
+    return specialClass( cls, append=args, defaults=kwargs )
 
-    if not isinstance( constructor, type ):
-        raise Exception( "error: invalid arguments %s" % argStr )
+def specialClass( cls, prepend=None, append=None,
+                  defaults=None, override=None ):
+    """Like functools.partial, but it returns a class
+       prepend: arguments to prepend to argument list
+       append: arguments to append to argument list
+       defaults: default values for keyword arguments
+       override: keyword arguments to override"""
 
-    # Return a customized subclass
-    cls = constructor
+    if prepend is None:
+        prepend = []
+
+    if append is None:
+        append = []
+
+    if defaults is None:
+        defaults = {}
+
+    if override is None:
+        override = {}
 
     class CustomClass( cls ):
-        "Customized subclass, useful for Node, Link, and other classes"
-        def __init__( self, name, *args, **params ):
-            params = params.copy()
-            params.update( kwargs )
-            if not newargs:
-                cls.__init__( self, name, *args, **params )
-                return
-            if args:
-                warn( 'warning: %s replacing %s with %s\n' %
-                      ( constructor, args, newargs ) )
-            cls.__init__( self, name, *newargs, **params )
+        "Customized subclass with preset args/params"
+        def __init__( self, *args, **params ):
+            newparams = defaults.copy()
+            newparams.update( params )
+            newparams.update( override )
+            cls.__init__( self, *( list( prepend ) + list( args ) +
+                                   list( append ) ),
+                          **newparams )
 
-    CustomClass.__name__ = '%s%s' % ( cls.__name__, kwargs )
+    CustomClass.__name__ = '%s%s' % ( cls.__name__, defaults )
     return CustomClass
+
 
 def buildTopo( topos, topoStr ):
     """Create topology from string with format (object, arg1, arg2,...).
