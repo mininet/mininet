@@ -189,17 +189,18 @@ function of13 {
     fi
 
     # Install netbee
-    NBEESRC="nbeesrc-jan-10-2013"
+    NBEESRC="nbeesrc-feb-24-2015"
     NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
     wget -nc ${NBEEURL}${NBEESRC}.zip
     unzip ${NBEESRC}.zip
-    cd ${NBEESRC}/src
+    NBEEDIR=netbee
+    cd ${NBEEDIR}/src
     cmake .
     make
     cd $BUILD_DIR/
-    sudo cp ${NBEESRC}/bin/libn*.so /usr/local/lib
+    sudo cp ${NBEEDIR}/bin/libn*.so /usr/local/lib
     sudo ldconfig
-    sudo cp -R ${NBEESRC}/include/ /usr/
+    sudo cp -R ${NBEEDIR}/include/ /usr/
 
     # Resume the install:
     cd $BUILD_DIR/ofsoftswitch13
