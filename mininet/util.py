@@ -530,8 +530,7 @@ def customClass( classes, argStr ):
     """
     cname, args, kwargs = splitArgs( argStr )
     cls = classes.get( cname, None )
-
-    if not cname:
+    if not cls:
         raise Exception( "error: %s is unknown - please specify one of %s" %
                          ( cname, classes.keys() ) )
     if not args and not kwargs:
