@@ -3,7 +3,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.2.1d1
+Mininet 2.2.1d2
 
 ### What is Mininet?
 
@@ -68,44 +68,23 @@ Mininet includes:
 
 ### New features in this release
 
-This release provides a number of bug fixes as well as
-several new features, including:
+This is primarily a performance improvement and bug fix release.
 
-* Improved OpenFlow 1.3 support
+- Batch startup has been implemented for Open vSwitch, improving
+  startup performance.
 
-	- `mn --switch ovs,protocols=openflow13` starts OVS in 1.3 mode
-	- `install.sh -w` installs a 1.3-compatible Wireshark dissector using
-	  Loxigen
-	- `install.sh -y` installs the Ryu 1.3-compatible controller
+- OVS patch links have been implemented via OVSLink and --link ovs
 
-* A new `nodelib.py` node library, and new `Node` types including
-  `LinuxBridge`, `OVSBridge`, `LinuxRouter` (see `examples/`)
-  and `NAT`
+  Warning! These links have *serious limitations* compared to
+  virtual Ethernet pairs: they are not attached to real Linux
+  interfaces so you cannot use tcpdump or wireshark with them;
+  they also cannot be used in long chains - we don't recommend more
+  than 64 OVSLinks, for example --linear,64. However, they can offer
+  significantly better performance than veth pairs, for certain
+  configurations.
 
-* A `--nat` option which connects a Mininet network to your LAN using NAT
-  (For this to work correctly, Mininet's `--ipbase` subnet should not 
-  overlap with any external or internet IP addresses you wish to use)
-
-* An improved MiniEdit GUI (`examples/miniedit.py`) - thanks to
-  Gregory Gee
-
-* Support for multiple `--custom` arguments to `mn`
-
-* Experimental cluster support - consult the 
-  [documentation](http://docs.mininet.org) for details -
-  as well as `examples/cluster.py` and an experimental `--cluster`
-  option for topologies built with the default `Host` and `OVSSwitch`
-  classes:
-
-  `mn --cluster localhost,server1,server2`
-
-Note that examples contain experimental features which might
-"graduate" into mainline Mininet in the future, but they should 
-not be considered a stable part of the Mininet API!
-
-A number of bugs have also been fixed, most notably multiple link
-support in `Topo()`. See github issues and the release notes on
-the Mininet wiki for additional information.
+- Additional information for this release and previous releases
+  may be found in the release notes on docs.mininet.org
 
 ### Installation
 
