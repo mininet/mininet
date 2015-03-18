@@ -49,7 +49,7 @@ from mininet.log import info, setLogLevel
 from mininet.net import Mininet, VERSION
 from mininet.util import netParse, ipAdd, quietRun
 from mininet.util import buildTopo
-from mininet.util import custom, customConstructor
+from mininet.util import custom, customClass
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
 from mininet.node import CPULimitedHost, Host, Node
@@ -3222,7 +3222,7 @@ class MiniEdit( Frame ):
             return
         self.newTopology()
         topo = buildTopo( TOPOS, self.options.topo )
-        link = customConstructor( LINKS, self.options.link )
+        link = customClass( LINKS, self.options.link )
         importNet = Mininet(topo=topo, build=False, link=link)
         importNet.build()
 
