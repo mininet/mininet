@@ -189,11 +189,17 @@ function of13 {
     fi
 
     # Install netbee
-    NBEESRC="nbeesrc-feb-24-2015"
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 14.04; then
+        NBEESRC="nbeesrc-feb-24-2015"
+        NBEEDIR="netbee"
+    else
+        NBEESRC="nbeesrc-jan-10-2013"
+        NBEEDIR="nbeesrc-jan-10-2013"
+    fi
+
     NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
     wget -nc ${NBEEURL}${NBEESRC}.zip
     unzip ${NBEESRC}.zip
-    NBEEDIR=netbee
     cd ${NBEEDIR}/src
     cmake .
     make
