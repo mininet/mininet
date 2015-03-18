@@ -28,7 +28,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            RYU, NOX, RemoteController, findController,
                            DefaultController,
                            UserSwitch, OVSSwitch, OVSBridge,
-                           OVSLegacyKernelSwitch, IVSSwitch )
+                           IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink, OVSLink
 from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
@@ -62,7 +62,6 @@ SWITCHES = { 'user': UserSwitch,
              'ovsbr' : OVSBridge,
              # Keep ovsk for compatibility with 2.0
              'ovsk': OVSSwitch,
-             'ovsl': OVSLegacyKernelSwitch,
              'ivs': IVSSwitch,
              'lxbr': LinuxBridge,
              'default': OVSSwitch }

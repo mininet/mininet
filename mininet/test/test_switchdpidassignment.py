@@ -8,8 +8,7 @@ import sys
 
 from mininet.net import Mininet
 from mininet.node import Host, Controller
-from mininet.node import ( UserSwitch, OVSSwitch, OVSLegacyKernelSwitch,
-                           IVSSwitch )
+from mininet.node import ( UserSwitch, OVSSwitch, IVSSwitch )
 from mininet.topo import Topo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
@@ -80,12 +79,6 @@ class OVSUser( OVSSwitch):
 class testSwitchOVSUser( TestSwitchDpidAssignmentOVS ):
     "Test dpid assignnment of OVS User Switch."
     switchClass = OVSUser
-
-@unittest.skipUnless( quietRun( 'which ovs-openflowd' ),
-                      'OVS Legacy Kernel switch is not installed' )
-class testSwitchOVSLegacyKernel( TestSwitchDpidAssignmentOVS ):
-    "Test dpid assignnment of OVS Legacy Kernel Switch."
-    switchClass = OVSLegacyKernelSwitch
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ),
                       'IVS switch is not installed' )

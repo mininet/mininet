@@ -23,20 +23,26 @@ Switch: superclass for switch nodes.
 UserSwitch: a switch using the user-space switch from the OpenFlow
     reference implementation.
 
-KernelSwitch: a switch using the kernel switch from the OpenFlow reference
-    implementation.
-
-OVSSwitch: a switch using the OpenVSwitch OpenFlow-compatible switch
+OVSSwitch: a switch using the Open vSwitch OpenFlow-compatible switch
     implementation (openvswitch.org).
+
+OVSBridge: an Ethernet bridge implemented using Open vSwitch.
+    Supports STP.
+
+IVSSwitch: OpenFlow switch using the Indigo Virtual Switch.
 
 Controller: superclass for OpenFlow controllers. The default controller
     is controller(8) from the reference implementation.
 
+OVSController: The test controller from Open vSwitch.
+
 NOXController: a controller node using NOX (noxrepo.org).
+
+RYU: The Ryu controller.
 
 RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
-    created or managed by mininet.
+    created or managed by Mininet.
 
 Future enhancements:
 
@@ -57,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
-from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
+from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
@@ -1003,56 +1009,6 @@ class UserSwitch( Switch ):
         self.cmd( 'kill %ofprotocol' )
         super( UserSwitch, self ).stop( deleteIntfs )
 
-class OVSLegacyKernelSwitch( Switch ):
-    """Open VSwitch legacy kernel-space switch using ovs-openflowd.
-       Currently only works in the root namespace."""
-
-    def __init__( self, name, dp=None, **kwargs ):
-        """Init.
-           name: name for switch
-           dp: netlink id (0, 1, 2, ...)
-           defaultMAC: default MAC as unsigned int; random value if None"""
-        Switch.__init__( self, name, **kwargs )
-        self.dp = dp if dp else self.name
-        self.intf = self.dp
-        if self.inNamespace:
-            error( "OVSKernelSwitch currently only works"
-                   " in the root namespace.\n" )
-            exit( 1 )
-
-    @classmethod
-    def setup( cls ):
-        "Ensure any dependencies are loaded; if not, try to load them."
-        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
-                   moduleName='Open vSwitch (openvswitch.org)')
-        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
-
-    def start( self, controllers ):
-        "Start up kernel datapath."
-        ofplog = '/tmp/' + self.name + '-ofp.log'
-        # Delete local datapath if it exists;
-        # then create a new one monitoring the given interfaces
-        self.cmd( 'ovs-dpctl del-dp ' + self.dp )
-        self.cmd( 'ovs-dpctl add-dp ' + self.dp )
-        intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
-        self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
-        # Run protocol daemon
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
-        self.cmd( 'ovs-openflowd ' + self.dp +
-                  ' ' + clist +
-                  ' --fail=secure ' + self.opts +
-                  ' --datapath-id=' + self.dpid +
-                  ' 1>' + ofplog + ' 2>' + ofplog + '&' )
-        self.execed = False
-
-    def stop( self, deleteIntfs=True ):
-        """Terminate kernel datapath."
-           deleteIntfs: delete interfaces? (True)"""
-        quietRun( 'ovs-dpctl del-dp ' + self.dp )
-        self.cmd( 'kill %ovs-openflowd' )
-        super( OVSLegacyKernelSwitch, self ).stop( deleteIntfs )
-
 
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
@@ -1289,11 +1245,14 @@ OVSKernelSwitch = OVSSwitch
 class OVSBridge( OVSSwitch ):
     "OVSBridge is an OVSSwitch in standalone/bridge mode"
 
-    def __init__( self, args, **kwargs ):
+    def __init__( self, *args, **kwargs ):
+        """stp: enable Spanning Tree Protocol (False)
+           see OVSSwitch for other options"""
         kwargs.update( failMode='standalone' )
-        OVSSwitch.__init__( self, args, **kwargs )
+        OVSSwitch.__init__( self, *args, **kwargs )
 
     def start( self, controllers ):
+        "Start bridge, ignoring controllers argument"
         OVSSwitch.start( self, controllers=[] )
 
     def connected( self ):
@@ -1509,6 +1468,7 @@ class RYU( Controller ):
                              ' '.join( ryuArgs ),
                              cdir=ryuCoreDir,
                              **kwargs )
+
 
 class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
