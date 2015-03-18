@@ -77,14 +77,14 @@ class CLI( Cmd ):
             return
         cls.readlineInited = True
         try:
-            import readline
+            from readline import read_history_file, write_history_file
         except ImportError:
             pass
         else:
-            history_path = os.path.expanduser('~/.mininet_history')
-            if os.path.isfile(history_path):
-                readline.read_history_file(history_path)
-            atexit.register(lambda: readline.write_history_file(history_path))
+            history_path = os.path.expanduser( '~/.mininet_history' )
+            if os.path.isfile( history_path ):
+                read_history_file( history_path )
+            atexit.register( lambda: write_history_file( history_path ) )
 
     def run( self ):
         "Run our cmdloop(), catching KeyboardInterrupt"
