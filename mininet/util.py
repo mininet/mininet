@@ -533,7 +533,7 @@ def customClass( classes, argStr ):
 
     if not cname:
         raise Exception( "error: %s is unknown - please specify one of %s" %
-                         ( cname, constructors.keys() ) )
+                         ( cname, classes.keys() ) )
     if not args and not kwargs:
         return cls
 
