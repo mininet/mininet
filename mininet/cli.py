@@ -68,6 +68,7 @@ class CLI( Cmd ):
         self.run()
 
     readlineInited = False
+
     @classmethod
     def initReadline( cls ):
         "Set up history if readline is available"
@@ -101,10 +102,12 @@ class CLI( Cmd ):
                 break
             except KeyboardInterrupt:
                 # Output a message - unless it's also interrupted
+                # pylint: disable=broad-except
                 try:
                     output( '\nInterrupt\n' )
-                except:
+                except Exception:
                     pass
+                # pylint: enable=broad-except
 
     def emptyline( self ):
         "Don't repeat last command when you hit return."
