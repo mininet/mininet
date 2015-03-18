@@ -25,7 +25,7 @@ from mininet.cli import CLI
 from mininet.log import lg, LEVELS, info, debug, warn, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
-                           RYU, NOX, RemoteController, findController,
+                           Ryu, NOX, RemoteController, findController,
                            DefaultController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
@@ -76,7 +76,7 @@ CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
-                'ryu': RYU,
+                'ryu': Ryu,
                 'default': DefaultController,  # Note: replaced below
                 'none': lambda name: None }
 

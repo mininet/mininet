@@ -38,7 +38,7 @@ OVSController: The test controller from Open vSwitch.
 
 NOXController: a controller node using NOX (noxrepo.org).
 
-RYU: The Ryu controller.
+Ryu: The Ryu controller (https://osrg.github.io/ryu/)
 
 RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
@@ -1447,7 +1447,7 @@ class NOX( Controller ):
                              cdir=noxCoreDir,
                              **kwargs )
 
-class RYU( Controller ):
+class Ryu( Controller ):
     "Controller to run Ryu application"
     def __init__( self, name, *ryuArgs, **kwargs ):
         """Init.
