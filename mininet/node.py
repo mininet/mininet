@@ -342,8 +342,10 @@ class Node( object ):
            cmd: string"""
         verbose = kwargs.get( 'verbose', False )
         log = info if verbose else debug
-        log( '*** %s : %s\n' % ( self.name, args ) )
-        print "CMD *** %s : %s" % (self.name, args)
+#        log( '*** %s : %s\n' % ( self.name, args ) )
+#        print "CMD *** %s : %s" % (self.name, args)
+        log( '*** %s : %s\n' % ( self.br_name, args ) )
+        print "CMD *** %s : %s" % (self.br_name, args)
         self.sendCmd( *args, **kwargs )
         return self.waitOutput( verbose )
 
@@ -932,10 +934,10 @@ class UserSwitch( Switch ):
             moduleDeps( add=TUN )
 
     def dpctl( self, *args ):
-        "Run dpctl command"
         listenAddr = None
         if not self.listenPort:
-            listenAddr = 'unix:/tmp/%s.listen' % self.name
+            #listenAddr = 'unix:/tmp/%s.listen' % self.name
+            listenAddr = 'unix:/tmp/%s.listen' % self.br_name
         else:
             listenAddr = 'tcp:127.0.0.1:%i' % self.listenPort
         return self.cmd( 'dpctl ' + ' '.join( args ) +
@@ -1108,7 +1110,11 @@ class OVSSwitch( Switch ):
 
     def dpctl( self, *args ):
         "Run ovs-ofctl command"
-        return self.cmd( 'ovs-ofctl', args[ 0 ], self, *args[ 1: ] )
+        print "args[ 0 ]: {0}".format(args[0])
+        print "self {0}".format(self)
+        print "args[ 1: ]: {0}".format(args[1:])
+        print "br_name: {0}".format(self.br_name)
+        return self.cmd( 'ovs-ofctl', args[ 0 ], self.br_name, *args[ 1: ] )
 
     @staticmethod
     def TCReapply( intf ):
@@ -1120,9 +1126,12 @@ class OVSSwitch( Switch ):
 
     def attach( self, intf ):
         "Connect a data port"
-        self.cmd( 'ovs-vsctl -- --id=@intName create Interface name="' + self.id + '-' + intf.port + " -- add-port", self, intf.name,"Interface=@intName")
-        self.cmd( 'ifconfig', self.id + "-" + intf.port, 'up' )
-        self.TCReapply( intf )
+        if(intf.name == 'lo'):
+            pass
+        else:
+            self.cmd( 'ovs-vsctl -- --id=@intName create Interface name="' + self.id + '-' + intf.port + " -- add-port", self, intf.name,"Interface=@intName")
+            self.cmd( 'ifconfig', self.id + "-" + intf.port, 'up' )
+            self.TCReapply( intf )
 
     def detach( self, intf ):
         "Disconnect a data port"
@@ -1151,7 +1160,8 @@ class OVSSwitch( Switch ):
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
         # Annoyingly, --if-exists option seems not to work
-        self.cmd( 'ovs-vsctl del-br', self )
+        #self.cmd( 'ovs-vsctl del-br', self )
+        self.cmd( 'ovs-vsctl del-br', self.br_name )
         int( self.dpid, 16 )  # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( "-- --id=@intName%s create Interface name=%s-%s " % (self.ports[ intf ],str(self.id) ,str(self.ports[intf])) + 
@@ -1159,7 +1169,7 @@ class OVSSwitch( Switch ):
                           '-- set Interface %s-%s ' % (str(self.id), str(self.ports[ intf ])) +
                           'ofport_request=%s ' % self.ports[ intf ]
                           for intf in self.intfList()
-                          if self.ports[ intf ] and not intf.IP() )
+                          if self.ports[ intf ] and not intf.IP() and not intf.port == 65534 )
         clist = ' '.join( '%s:%s:%d' % ( c.protocol, c.IP(), c.port )
                           for c in controllers )
         if self.listenPort:
