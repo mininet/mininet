@@ -319,14 +319,17 @@ function ovs {
         return
     fi
 
-    # Manually installing openvswitch-datapath may be necessary
-    # for manually built kernel .debs using Debian's defective kernel
-    # packaging, which doesn't yield usable headers.
-    if ! dpkg --get-selections | grep openvswitch-datapath; then
-        # If you've already installed a datapath, assume you
-        # know what you're doing and don't need dkms datapath.
-        # Otherwise, install it.
-        $install openvswitch-datapath-dkms
+    if [ "$DIST" = "Ubuntu" ] && ! version_ge $RELEASE 14.04; then
+        # Older Ubuntu versions need openvswitch-datapath/-dkms
+        # Manually installing openvswitch-datapath may be necessary
+        # for manually built kernel .debs using Debian's defective kernel
+        # packaging, which doesn't yield usable headers.
+        if ! dpkg --get-selections | grep openvswitch-datapath; then
+            # If you've already installed a datapath, assume you
+            # know what you're doing and don't need dkms datapath.
+            # Otherwise, install it.
+            $install openvswitch-datapath-dkms
+        fi
     fi
 
     $install openvswitch-switch
@@ -343,7 +346,7 @@ function ovs {
     else
         echo "Attempting to install openvswitch-testcontroller"
         if ! $install openvswitch-testcontroller; then
-            echo "Failed - giving up"
+            echo "Failed - skipping openvswitch-testcontroller"
         fi
     fi
 
