@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Mininet install script for Ubuntu (and Debian Lenny)
+# Mininet install script for Ubuntu (and Debian Wheezy+)
 # Brandon Heller (brandonh@stanford.edu)
 
 # Fail on error
@@ -261,53 +261,63 @@ function ubuntuOvs {
     OVS_SRC=$BUILD_DIR/openvswitch
     OVS_TARBALL_LOC=http://openvswitch.org/releases
 
-    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
-        rm -rf $OVS_SRC
-        mkdir -p $OVS_SRC
-        cd $OVS_SRC
+    if ! echo "$DIST" | egrep "Ubuntu|Debian" > /dev/null; then
+        echo "OS must be Ubuntu or Debian"
+        $cd BUILD_DIR
+        return
+    fi
+    if [ "$DIST" = "Ubuntu" ] && ! version_ge $RELEASE 12.04; then
+        echo "Ubuntu version must be >= 12.04"
+        cd $BUILD_DIR
+        return
+    fi
+    if [ "$DIST" = "Debian" ] && ! version_ge $RELEASE 7.0; then
+        echo "Debian version must be >= 7.0"
+        cd $BUILD_DIR
+        return
+    fi
 
-        if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
-            tar xzf openvswitch-$OVS_RELEASE.tar.gz
-        else
-            echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
-            cd $BUILD_DIR
-            return
-        fi
+    rm -rf $OVS_SRC
+    mkdir -p $OVS_SRC
+    cd $OVS_SRC
 
-        # Remove any old packages
-        $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
-                openvswitch-pki openvswitch-switch
-
-        # Get build deps
-        $install build-essential fakeroot debhelper autoconf automake libssl-dev \
-                 pkg-config bzip2 openssl python-all procps python-qt4 \
-                 python-zopeinterface python-twisted-conch dkms
-
-        # Build OVS
-        cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
-                DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
-        cd ..
-        $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
-                 openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
-        if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
-            echo "Ignoring error installing openvswitch-controller"
-        fi
-
-        modinfo openvswitch
-        sudo ovs-vsctl show
-        # Switch can run on its own, but
-        # Mininet should control the controller
-        # This appears to only be an issue on Ubuntu/Debian
-        if sudo service openvswitch-controller stop; then
-            echo "Stopped running controller"
-        fi
-        if [ -e /etc/init.d/openvswitch-controller ]; then
-            sudo update-rc.d openvswitch-controller disable
-        fi
+    if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
+        tar xzf openvswitch-$OVS_RELEASE.tar.gz
     else
-        echo "Failed to install Open vSwitch.  OS must be Ubuntu >= 12.04"
-            cd $BUILD_DIR
-            return
+        echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
+        cd $BUILD_DIR
+        return
+    fi
+
+    # Remove any old packages
+    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
+            openvswitch-pki openvswitch-switch
+
+    # Get build deps
+    $install build-essential fakeroot debhelper autoconf automake libssl-dev \
+             pkg-config bzip2 openssl python-all procps python-qt4 \
+             python-zopeinterface python-twisted-conch dkms
+
+    # Build OVS
+    cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
+            DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+    cd ..
+    $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
+             openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
+    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+        echo "Ignoring error installing openvswitch-controller"
+    fi
+
+    modinfo openvswitch
+    sudo ovs-vsctl show
+    # Switch can run on its own, but
+    # Mininet should control the controller
+    # This appears to only be an issue on Ubuntu/Debian
+    if sudo service openvswitch-controller stop; then
+        echo "Stopped running controller"
+    fi
+    if [ -e /etc/init.d/openvswitch-controller ]; then
+        sudo update-rc.d openvswitch-controller disable
     fi
 }
 
