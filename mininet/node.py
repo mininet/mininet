@@ -518,10 +518,7 @@ class Node( object ):
            intf: intf or intf name
            ip: IP address as a string
            prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
-        # This should probably be rethought
-        if '/' not in ip:
-            ip = '%s/%s' % ( ip, prefixLen )
-        return self.intf( intf ).setIP( ip )
+        return self.intf( intf ).setIP( ip, prefixLen )
 
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
