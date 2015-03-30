@@ -583,7 +583,7 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     # Since the above doesn't disable neighbor discovery, also do this:
     if ! grep 'ipv6.disable' /etc/default/grub; then
         sudo sed -i -e \
-        's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1/' \
+        's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 /' \
         /etc/default/grub
         sudo update-grub
     fi
