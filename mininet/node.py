@@ -513,12 +513,13 @@ class Node( object ):
            mac: MAC address as string"""
         return self.intf( intf ).setMAC( mac )
 
-    def setIP( self, ip, prefixLen=8, intf=None ):
+    def setIP( self, ip, prefixLen=8, intf=None, **kwargs ):
         """Set the IP address for an interface.
            intf: intf or intf name
            ip: IP address as a string
-           prefixLen: prefix length, e.g. 8 for /8 or 16M addrs"""
-        return self.intf( intf ).setIP( ip, prefixLen )
+           prefixLen: prefix length, e.g. 8 for /8 or 16M addrs
+           kwargs: any additional arguments for intf.setIP"""
+        return self.intf( intf ).setIP( ip, prefixLen, **kwargs )
 
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
