@@ -402,7 +402,7 @@ class Mininet( object ):
             if not isinstance( classes, list ):
                 classes = [ classes ]
             for i, cls in enumerate( classes ):
-                # Allow Controller objects because nobody understands currying
+                # Allow Controller objects because nobody understands partial()
                 if isinstance( cls, Controller ):
                     self.addController( cls )
                 else:

@@ -96,24 +96,20 @@ ALTSPELLING = { 'pingall': 'pingAll',
                 'iperfUDP': 'iperfUdp' }
 
 
-def addDictOption( opts, choicesDict, default, name, helpStr=None ):
+def addDictOption( opts, choicesDict, default, name, helpStr=None, **kwargs ):
     """Convenience function to add choices dicts to OptionParser.
        opts: OptionParser instance
        choicesDict: dictionary of valid choices, must include default
        default: default choice key
        name: long option name
-       help: string"""
-    if default not in choicesDict:
-        raise Exception( 'Invalid  default %s for choices dict: %s' %
-                         ( default, name ) )
+       helpStr: help string
+       kwargs: additional arguments to add_option"""
     if not helpStr:
         helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
                     '[,param=value...]' )
-    opts.add_option( '--' + name,
-                     type='string',
-                     default = default,
-                     help = helpStr )
-
+    params = dict( type='string', default=default, help=helpStr )
+    params.update( **kwargs )
+    opts.add_option( '--' + name, **params )
 
 def version( *_args ):
     "Print Mininet version and exit"
@@ -198,7 +194,7 @@ class MininetRunner( object ):
         opts = OptionParser( description=desc, usage=usage )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
-        addDictOption( opts, CONTROLLERS, CONTROLLERDEF, 'controller' )
+        addDictOption( opts, CONTROLLERS, [], 'controller', action='append' )
         addDictOption( opts, LINKS, LINKDEF, 'link' )
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
 
@@ -292,19 +288,18 @@ class MininetRunner( object ):
 
         start = time.time()
 
-        if self.options.controller == 'default':
+        if not self.options.controller:
             # Update default based on available controllers
             CONTROLLERS[ 'default' ] = findController()
-            if CONTROLLERS[ 'default' ] is None:
+            self.options.controller = [ 'default' ]
+            if not CONTROLLERS[ 'default' ]:
+                self.options.controller = [ 'none' ]
                 if self.options.switch == 'default':
                     info( '*** No default OpenFlow controller found '
                           'for default switch!\n' )
                     info( '*** Falling back to OVS Bridge\n' )
                     self.options.switch = 'ovsbr'
-                    self.options.controller = 'none'
-                elif self.options.switch in ( 'ovsbr', 'lxbr' ):
-                    self.options.controller = 'none'
-                else:
+                elif self.options.switch not in ( 'ovsbr', 'lxbr' ):
                     raise Exception( "Could not find a default controller "
                                      "for switch %s" %
                                      self.options.switch )
@@ -312,7 +307,8 @@ class MininetRunner( object ):
         topo = buildTopo( TOPOS, self.options.topo )
         switch = customClass( SWITCHES, self.options.switch )
         host = customClass( HOSTS, self.options.host )
-        controller = customClass( CONTROLLERS, self.options.controller )
+        controller = [ customClass( CONTROLLERS, c )
+                       for c in self.options.controller ]
         link = customClass( LINKS, self.options.link )
 
         if self.validate:
