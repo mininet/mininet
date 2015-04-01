@@ -151,7 +151,7 @@ class Intf( object ):
             cmdOutput = self.ifconfig()
             result = "UP" in cmdOutput
             self.enabled = result
-            return result 
+            return result
 
     def rename( self, newname ):
         "Rename interface"

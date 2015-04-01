@@ -463,9 +463,10 @@ class CLI( Cmd ):
             line = line.split( '#' )[ 0 ]
         return line
 
-    def do_update( self, line ):
+    def do_update( self ):
         '''
-        updates the address and status for each host and switch interfac in the network
+        Updates the address and status for each host and switch
+        interface in the network
         usage: update
         '''
         self.mn.update()
@@ -516,8 +517,8 @@ class CLI( Cmd ):
         "usage: addhost hostname [ switch ]"
         args = line.split()
         if len( args ) < 1 or len( args ) > 2:
-           error( 'usage: addhost hostname [ switch ]\n' )
-           return
+            error( 'usage: addhost hostname [ switch ]\n' )
+            return
         if len( args ) == 2:
             connectSwitch = True
         else:
@@ -553,7 +554,7 @@ class CLI( Cmd ):
         if len( args ) == 2:
             dpid = args[ 1 ]
             switch = self.mn.addSwitch( switchname, dpid=dpid )
-        else:        
+        else:
             switch = self.mn.addSwitch( switchname )
         switch.start( self.mn.controllers )
 

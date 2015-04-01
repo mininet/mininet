@@ -293,21 +293,19 @@ class Mininet( object ):
         """Get all of the links attached to a node.
            node: node name
            returns: dictionary of interfaces to connected nodes"""
-        interfaces = []
         nodeLinks = {}
         for intf in node.intfList():
             if intf.link:
                 intfs = [ intf.link.intf1, intf.link.intf2 ]
                 intfs.remove( intf )
-                interfaces += intfs
-                nodeLinks[ intfs[ 0 ] ] = intfs[ 0 ].node 
+                nodeLinks[ intfs[ 0 ] ] = intfs[ 0 ].node
         return nodeLinks
 
     def delNode( self, node ):
         """remove a node from a running network
            returns True if successful"""
         if node not in self.hosts + self.switches:
-            #NOTE: what if node is a controller?
+            # NOTE: what if node is a controller?
             error( '%s doesnt exist!\n' % node )
             return 0
         node.stop()
@@ -336,9 +334,11 @@ class Mininet( object ):
                 intfs.remove( intf )
                 intf2 = intfs[0]
                 if intf2 in node2.intfList():
-                    #remove the link from the list of links, maybe should be in link.delete()?
+                    # remove the link from the list of links,
+                    # maybe should be in link.delete()?
                     self.links.remove( intf.link )
-                    intf.link.delete() # this deletes the interfaces on both ends of the link
+                    # this deletes the interfaces on both ends of the link
+                    intf.link.delete()
                     intf.link = None
                     intf2.link = None
                     port1 = node1.ports[ intf1 ]
