@@ -431,6 +431,15 @@ class Node( object ):
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
             moveIntfFn( intf.name, self  )
 
+    def delIntf( self, intf ):
+        """Remove interface from Node's known interfaces
+           Note: to fully delete interface, call intf.delete() instead"""
+        port = self.ports.get( intf )
+        if port is not None:
+            del self.intfs[ port ]
+            del self.ports[ intf ]
+            del self.nameToIntf[ intf.name ]
+
     def defaultIntf( self ):
         "Return interface for lowest port"
         ports = self.intfs.keys()
