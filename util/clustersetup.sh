@@ -80,22 +80,22 @@ tempSetup() {
     sudo mount --bind $SSHDIR /home/$user/.ssh
     cp $SSHDIR/id_rsa.pub $SSHDIR/authorized_keys
 
-for host in $hosts; do
-    echo "***copying public key to $host"
-    ssh-copy-id $user@$host &> /dev/null
-    echo "***mounting remote temporary ssh directory for $host"
-    ssh -o ForwardAgent=yes  $user@$host "
-    mkdir -p /tmp/mn/ssh
-    cp /home/$user/.ssh/authorized_keys $SSHDIR/authorized_keys
-    sudo mount --bind $SSHDIR /home/$user/.ssh"
-    echo "***copying key pair to $host"
-    scp $SSHDIR/{id_rsa,id_rsa.pub} $user@$host:$SSHDIR
-done
+    for host in $hosts; do
+        echo "***copying public key to $host"
+        ssh-copy-id $user@$host &> /dev/null
+        echo "***mounting remote temporary ssh directory for $host"
+        ssh -o ForwardAgent=yes  $user@$host "
+        mkdir -p /tmp/mn/ssh
+        cp /home/$user/.ssh/authorized_keys $SSHDIR/authorized_keys
+        sudo mount --bind $SSHDIR /home/$user/.ssh"
+        echo "***copying key pair to $host"
+        scp $SSHDIR/{id_rsa,id_rsa.pub} $user@$host:$SSHDIR
+    done
 
-for host in $hosts; do
-    echo "***copying known_hosts to $host"
-    scp $SSHDIR/known_hosts $user@$host:$SSHDIR
-done
+    for host in $hosts; do
+        echo "***copying known_hosts to $host"
+        scp $SSHDIR/known_hosts $user@$host:$SSHDIR
+    done
 }
 
 cleanup() {
