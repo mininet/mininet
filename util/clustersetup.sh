@@ -26,19 +26,19 @@ declare -a hosts=()
 user=$(whoami)
 SSHDIR=/tmp/mn/ssh
 USERDIR=$HOME/.ssh
-usage=$'./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
+usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
         Authenticate yourself and other cluster nodes to each other
         via ssh for mininet cluster edition. By default, we use a
         temporary ssh setup. An ssh directory is mounted over
-        /home/user/.ssh on each machine in the cluster.
+        $USERDIR on each machine in the cluster.
         
                 -h: display this help
                 -p: create a persistent ssh setup. This will add
                     new ssh keys and known_hosts to each nodes
-                    /home/user/.ssh directory
+                    $USERDIR directory
                 -c: method to clean up a temporary ssh setup.
                     Any hosts taken as arguments will be cleaned
-        '
+        "
 
 persistentSetup() {
     echo "***creating key pair"
