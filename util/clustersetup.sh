@@ -31,7 +31,7 @@ usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
         via ssh for mininet cluster edition. By default, we use a
         temporary ssh setup. An ssh directory is mounted over
         $USERDIR on each machine in the cluster.
-        
+
                 -h: display this help
                 -p: create a persistent ssh setup. This will add
                     new ssh keys and known_hosts to each nodes
@@ -41,79 +41,103 @@ usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
         "
 
 persistentSetup() {
-    echo "***creating key pair"
-    ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $USERDIR/cluster_key -N '' &> /dev/null
-    cat $USERDIR/cluster_key.pub >> $USERDIR/authorized_keys
-    echo "***configuring ssh"
-    echo "IdentityFile $USERDIR/cluster_key" >> $USERDIR/config
-    echo "IdentityFile $USERDIR/id_rsa" >> $USERDIR/config
-
+    if [ ! -f $USERDIR/cluster_key.pub ]; then
+        echo "***creating key pair"
+        ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $USERDIR/cluster_key -N '' &> /dev/null
+        cat $USERDIR/cluster_key.pub >> $USERDIR/authorized_keys
+    fi
+    if [ ! -f $USERDIR/config ]; then
+        echo "***configuring host"
+        echo "IdentityFile $USERDIR/cluster_key" >> $USERDIR/config
+        echo "IdentityFile $USERDIR/id_rsa" >> $USERDIR/config
+    fi
     for host in $hosts; do
         echo "***copying public key to $host"
-        ssh-copy-id  -i $USERDIR/cluster_key.pub $user@$host &> /dev/null
+        ssh-copy-id -i $USERDIR/cluster_key.pub $user@$host &> /dev/null
         echo "***copying key pair to remote host"
-        scp $USERDIR/cluster_key $user@$host:$USERDIR
-        scp $USERDIR/cluster_key.pub $user@$host:$USERDIR
-        echo "***configuring remote host"
-        ssh -o ForwardAgent=yes  $user@$host "
-        echo 'IdentityFile $USERDIR/cluster_key' >> $USERDIR/config
-        echo 'IdentityFile $USERDIR/id_rsa' >> $USERDIR/config"
+        scp $USERDIR/{cluster_key,cluster_key.pub,config} $user@$host:$USERDIR
     done
 
     for host in $hosts; do
         echo "***copying known_hosts to $host"
         scp $USERDIR/known_hosts $user@$host:$USERDIR/cluster_known_hosts
         ssh $user@$host "
-        cat $USERDIR/cluster_known_hosts >> $USERDIR/known_hosts
-        rm $USERDIR/cluster_known_hosts"
+            cat $USERDIR/cluster_known_hosts >> $USERDIR/known_hosts
+            rm $USERDIR/cluster_known_hosts"
     done
+
+    sshdaemonSetup
+
 }
 
 tempSetup() {
-    
+    if grep -qs $USERDIR /proc/mounts; then
+        echo "***$USERDIR is mounted, cleanup first"
+        cleanup
+    fi
     echo "***creating temporary ssh directory"
-    mkdir -p $SSHDIR 
+    mkdir -p $SSHDIR
     echo "***creating key pair"
     ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $SSHDIR/id_rsa -N '' &> /dev/null
-
-    echo "***mounting temporary ssh directory"
-    sudo mount --bind $SSHDIR $USERDIR
+    echo "***copying public key to authorized_keys"
     cp $SSHDIR/id_rsa.pub $SSHDIR/authorized_keys
 
     for host in $hosts; do
-        echo "***copying public key to $host"
-        ssh-copy-id $user@$host &> /dev/null
         echo "***mounting remote temporary ssh directory for $host"
-        ssh -o ForwardAgent=yes  $user@$host "
-        mkdir -p $SSHDIR
-        cp $USERDIR/authorized_keys $SSHDIR/authorized_keys
-        sudo mount --bind $SSHDIR $USERDIR"
+        ssh -o ForwardAgent=yes $user@$host "
+            mkdir -p $SSHDIR
+            sudo mount --bind $SSHDIR $USERDIR"
         echo "***copying key pair to $host"
-        scp $SSHDIR/{id_rsa,id_rsa.pub} $user@$host:$SSHDIR
+        scp $SSHDIR/{id_rsa,id_rsa.pub,authorized_keys} $user@$host:$SSHDIR
     done
 
     for host in $hosts; do
         echo "***copying known_hosts to $host"
         scp $SSHDIR/known_hosts $user@$host:$SSHDIR
     done
+
+    sshdaemonSetup
+
 }
 
 cleanup() {
-    
-    for host in $hosts; do
-    echo "***cleaning up $host"
-    ssh $user@$host "sudo umount $USERDIR
-                          sudo rm -rf $SSHDIR"
-    done
 
-    echo "**unmounting local directories"
-    sudo umount $USERDIR
-    echo "***removing temporary ssh directory"
-    sudo rm -rf $SSHDIR
-    echo "done!"
+    if grep -qs $USERDIR /proc/mounts; then
+        for host in $hosts; do
+            echo "***cleaning up $host"
+            ssh $user@$host "
+                sudo umount $USERDIR
+                sudo rm -rf $SSHDIR"
+        done
+        echo "done!"
+    else
+        echo "***Mount point does not exist in $USERDIR"
+    fi
 
 }
 
+sshdaemonSetup() {
+
+    if ! grep -q "Mininet Cluster Edition" /etc/ssh/sshd_config; then
+        echo "***Setting /etc/ssh/sshd_config"
+        echo -e "# Start Mininet Cluster Edition settings #" \
+                "\nUseDNS no" \
+                "\nPermitTunnel yes" \
+                "\nMaxSessions 1024" \
+                "\nAllowTcpForwarding yes" \
+                "\n# End Mininet Cluster Edition settings #" >> /etc/ssh/sshd_config
+
+        for host in $hosts; do
+            echo "***copying sshd_config to $host"
+            scp /etc/ssh/sshd_config $user@$host:$USERDIR
+            ssh $user@$host "
+                sudo cp $USERDIR/sshd_config /etc/ssh/sshd_config
+                sudo rm -f $USERDIR/sshd_config
+                sudo service ssh restart"
+        done
+    fi
+
+}
 
 if [ $# -eq 0 ]; then
     echo "ERROR: No Arguments"
