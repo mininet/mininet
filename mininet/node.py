@@ -901,6 +901,12 @@ class Switch( Node ):
         debug( 'Assuming', repr( self ), 'is connected to a controller\n' )
         return True
 
+    def stop( self, deleteIntfs=True ):
+        """Stop switch
+           deleteIntfs: delete interfaces? (True)"""
+        if deleteIntfs:
+            self.deleteIntfs()
+    
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
