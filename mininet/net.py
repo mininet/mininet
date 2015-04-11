@@ -367,6 +367,14 @@ class Mininet( object ):
         self.links.append( link )
         return link
 
+    def getLink( self, name=None ):
+        if(name):
+            for link in self.links:
+                if("{0}".format(link) == name):
+                    return link
+            return None
+        return None
+
     def configHosts( self ):
         "Configure a set of hosts."
         for host in self.hosts:
