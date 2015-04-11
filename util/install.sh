@@ -192,17 +192,24 @@ function of13 {
     fi
 
     # Install netbee
-    NBEESRC="nbeesrc-jan-10-2013"
+    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 14.04; then
+        NBEESRC="nbeesrc-feb-24-2015"
+        NBEEDIR="netbee"
+    else
+        NBEESRC="nbeesrc-jan-10-2013"
+        NBEEDIR="nbeesrc-jan-10-2013"
+    fi
+
     NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
     wget -nc ${NBEEURL}${NBEESRC}.zip
     unzip ${NBEESRC}.zip
-    cd ${NBEESRC}/src
+    cd ${NBEEDIR}/src
     cmake .
     make
     cd $BUILD_DIR/
-    sudo cp ${NBEESRC}/bin/libn*.so /usr/local/lib
+    sudo cp ${NBEEDIR}/bin/libn*.so /usr/local/lib
     sudo ldconfig
-    sudo cp -R ${NBEESRC}/include/ /usr/
+    sudo cp -R ${NBEEDIR}/include/ /usr/
 
     # Resume the install:
     cd $BUILD_DIR/ofsoftswitch13
