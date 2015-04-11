@@ -65,6 +65,13 @@ SWITCHES = { 'user': UserSwitch,
              'ivs': IVSSwitch,
              'lxbr': LinuxBridge,
              'default': OVSSwitch }
+SWITCHESHELP = { 'user': 'OpenFlow reference user-space switch.',
+                 'ovs': 'Open vSwitch OpenFlow-compatible switch.',
+                 'ovsbr': 'Open vSwitch as an L2 MAC learning switch.',
+                 'ovsk': 'Same as the ovs type.',
+                 'ivs': 'Indigo Virtual Switch.',
+                 'lxbr': 'Linux Bridge.',
+                 'default': 'Open vSwitch OpenFlow-compatible switch.'}
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
@@ -96,17 +103,20 @@ ALTSPELLING = { 'pingall': 'pingAll',
                 'iperfUDP': 'iperfUdp' }
 
 
-def addDictOption( opts, choicesDict, default, name, helpStr=None, **kwargs ):
-    """Convenience function to add choices dicts to OptionParser.
-       opts: OptionParser instance
-       choicesDict: dictionary of valid choices, must include default
-       default: default choice key
-       name: long option name
-       helpStr: help string
-       kwargs: additional arguments to add_option"""
-    if not helpStr:
-        helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
-                    '[,param=value...]' )
+def addDictOption( opts, choicesDict, default, name, helpDict=None, **kwargs ):
+    """Convenience function to add choices dicts to OptionParser.          
+       opts: OptionParser instance                                         
+       choicesDict: dictionary of valid choices, must include default      
+       default: default choice key                                         
+       name: long option name                                              
+       helpDict: dictionary describing choices
+       kwargs: additional arguments to add_option"""                       
+    helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
+                '[,param=value...]' )
+    if helpDict:
+        helpList = [ k + "=" + helpDict[k] 
+                     for k in sorted( helpDict.keys() ) ]
+        helpStr += " " + ( ' '.join( helpList ) )
     params = dict( type='string', default=default, help=helpStr )
     params.update( **kwargs )
     opts.add_option( '--' + name, **params )
@@ -192,7 +202,7 @@ class MininetRunner( object ):
                   '(type %prog -h for details)' )
 
         opts = OptionParser( description=desc, usage=usage )
-        addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
+        addDictOption( opts, SWITCHES, SWITCHDEF, 'switch', SWITCHESHELP )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
         addDictOption( opts, CONTROLLERS, [], 'controller', action='append' )
         addDictOption( opts, LINKS, LINKDEF, 'link' )
