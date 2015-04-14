@@ -83,6 +83,8 @@ This is primarily a performance improvement and bug fix release.
   significantly better performance than veth pairs, for certain
   configurations.
 
+- You can now easily install Mininet on a Raspberry Pi ;-)
+
 - Additional information for this release and previous releases
   may be found in the release notes on docs.mininet.org
 
