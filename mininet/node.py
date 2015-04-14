@@ -906,7 +906,7 @@ class Switch( Node ):
            deleteIntfs: delete interfaces? (True)"""
         if deleteIntfs:
             self.deleteIntfs()
-    
+
     def __repr__( self ):
         "More informative string representation"
         intfs = ( ','.join( [ '%s:%s' % ( i.name, i.IP() )
@@ -1517,3 +1517,7 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
     if not controller:
         raise Exception( 'Could not find a default OpenFlow controller' )
     return controller( name, **kwargs )
+
+def NullController( *_args, **_kwargs ):
+    "Nonexistent controller - simply returns None"
+    return None

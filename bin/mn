@@ -26,12 +26,13 @@ from mininet.log import lg, LEVELS, info, debug, warn, error
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            Ryu, NOX, RemoteController, findController,
-                           DefaultController,
+                           DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink, OVSLink
-from mininet.topo import SingleSwitchTopo, LinearTopo, SingleSwitchReversedTopo
+from mininet.topo import ( SingleSwitchTopo, LinearTopo,
+                           SingleSwitchReversedTopo, MinimalTopo )
 from mininet.topolib import TreeTopo, TorusTopo
 from mininet.util import customClass, specialClass, splitArgs
 from mininet.util import buildTopo
@@ -49,7 +50,7 @@ PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
 # built in topologies, created only when run
 TOPODEF = 'minimal'
-TOPOS = { 'minimal': lambda: SingleSwitchTopo( k=2 ),
+TOPOS = { 'minimal': MinimalTopo,
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
@@ -72,13 +73,14 @@ HOSTS = { 'proc': Host,
           'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
 
 CONTROLLERDEF = 'default'
+
 CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
                 'ryu': Ryu,
                 'default': DefaultController,  # Note: replaced below
-                'none': lambda name: None }
+                'none': NullController }
 
 LINKDEF = 'default'
 LINKS = { 'default': Link,
@@ -96,17 +98,18 @@ ALTSPELLING = { 'pingall': 'pingAll',
                 'iperfUDP': 'iperfUdp' }
 
 
-def addDictOption( opts, choicesDict, default, name, helpStr=None, **kwargs ):
+def addDictOption( opts, choicesDict, default, name, **kwargs ):
     """Convenience function to add choices dicts to OptionParser.
        opts: OptionParser instance
        choicesDict: dictionary of valid choices, must include default
        default: default choice key
        name: long option name
-       helpStr: help string
        kwargs: additional arguments to add_option"""
-    if not helpStr:
-        helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
-                    '[,param=value...]' )
+    helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
+                '[,param=value...]' )
+    helpList = [ '%s=%s' % ( k, v.__name__ )
+                 for k, v in choicesDict.items() ]
+    helpStr += ' ' + ( ' '.join( helpList ) )
     params = dict( type='string', default=default, help=helpStr )
     params.update( **kwargs )
     opts.add_option( '--' + name, **params )
