@@ -45,7 +45,8 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     fi
 fi
 test -e /etc/fedora-release && DIST="Fedora"
-if [ "$DIST" = "Fedora" ]; then
+test -e /etc/centos-release && DIST="CentOS"
+if [ "$DIST" = "Fedora" ] || [ "$DIST" = "CentOS" ]; then
     install='sudo yum -y install'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
@@ -66,8 +67,8 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora'; then
-    echo "Install.sh currently only supports Ubuntu, Debian and Fedora."
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|CentOS'; then
+    echo "Install.sh currently only supports Ubuntu, Debian, CentOS and Fedora."
     exit 1
 fi
 
@@ -123,10 +124,10 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    if [ "$DIST" = "Fedora" ]; then
+    if [ "$DIST" = "Fedora" ] || [ "$DIST" = "CentOS" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man pyflakes pylint python-pep8
+            ethtool help2man pyflakes pylint python-pep8 net-tools
     else
         $install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
@@ -328,6 +329,56 @@ function ubuntuOvs {
     fi
 }
 
+# Install Open vSwitch specific version CentOS package
+function centosOvs {
+    echo "Creating and Installing Open vSwitch packages..."
+
+    OVS_SRC=$BUILD_DIR/openvswitch
+    OVS_TARBALL_LOC=http://openvswitch.org/releases
+
+    if [ "$DIST" = "CentOS" ] && ! version_ge $RELEASE 7.0; then
+        echo "Debian version must be >= 7.0"
+        cd $BUILD_DIR
+        return
+    fi
+
+    # Download OVS tarball
+    rm -rf $OVS_SRC
+    mkdir -p $OVS_SRC
+    cd $OVS_SRC
+    if wget $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz 2> /dev/null; then
+        tar xzf openvswitch-$OVS_RELEASE.tar.gz
+    else
+        echo "Failed to find OVS at $OVS_TARBALL_LOC/openvswitch-$OVS_RELEASE.tar.gz"
+        cd $BUILD_DIR
+        return
+    fi
+
+    # Get rpm build deps
+    $install rpm-build redhat-rpm-config openssl-devel gcc gcc-c++ make wget
+
+    # Prepare rpmbuild enviroment
+    mkdir -p $OVS_SRC/rpmbuild/SOURCES/ && cd $OVS_SRC/rpmbuild/SOURCES/
+    mv $OVS_SRC/openvswitch-$OVS_RELEASE* $OVS_SRC/rpmbuild/SOURCES/
+
+    # Build OVS
+    cd $OVS_SRC/rpmbuild/SOURCES/openvswitch-$OVS_RELEASE
+    sudo rpmbuild -bb --define "_topdir $OVS_SRC/rpmbuild" --without check rhel/openvswitch.spec
+
+    # Install OVS
+    sudo rpm -ivh --nodeps $OVS_SRC/rpmbuild/RPMS/`uname -m`/openvswitch*.rpm
+
+    # Start OVS
+    if [ -e /etc/rc.d/init.d/openvswitch ]; then
+        if which systemctl &> /dev/null; then
+            sudo systemctl start openvswitch
+            sudo systemctl enable openvswitch
+        elif which service &> /dev/null; then
+            sudo service start openvswitch
+            sudo chkconfig openvswitch on
+        fi
+    fi
+}
 
 # Install Open vSwitch
 
@@ -783,7 +834,11 @@ else
       t)    vm_other;;
       v)    ovs;;
       V)    OVS_RELEASE=$OPTARG;
-            ubuntuOvs;;
+            case $DIST in
+            Ubuntu|Debian) ubuntuOvs;;
+            CentOS|Fedora) centosOvs;;
+            *) echo "Invalid distribution $DIST";;
+            esac;;
       w)    install_wireshark;;
       x)    case $OF_VERSION in
             1.0) nox;;
