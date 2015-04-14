@@ -25,20 +25,20 @@ clean=false
 declare -a hosts=()
 user=$(whoami)
 SSHDIR=/tmp/mn/ssh
-USERDIR=/home/$user/.ssh
-usage=$'./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
+USERDIR=$HOME/.ssh
+usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
         Authenticate yourself and other cluster nodes to each other
         via ssh for mininet cluster edition. By default, we use a
         temporary ssh setup. An ssh directory is mounted over
-        /home/user/.ssh on each machine in the cluster.
+        $USERDIR on each machine in the cluster.
         
                 -h: display this help
                 -p: create a persistent ssh setup. This will add
                     new ssh keys and known_hosts to each nodes
-                    /home/user/.ssh directory
+                    $USERDIR directory
                 -c: method to clean up a temporary ssh setup.
                     Any hosts taken as arguments will be cleaned
-        '
+        "
 
 persistentSetup() {
     echo "***creating key pair"
@@ -74,40 +74,40 @@ tempSetup() {
     echo "***creating temporary ssh directory"
     mkdir -p $SSHDIR 
     echo "***creating key pair"
-    ssh-keygen -t rsa -C "Cluster_Edition_Key" -f /tmp/mn/ssh/id_rsa -N '' &> /dev/null
+    ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $SSHDIR/id_rsa -N '' &> /dev/null
 
     echo "***mounting temporary ssh directory"
-    sudo mount --bind $SSHDIR /home/$user/.ssh
+    sudo mount --bind $SSHDIR $USERDIR
     cp $SSHDIR/id_rsa.pub $SSHDIR/authorized_keys
 
-for host in $hosts; do
-    echo "***copying public key to $host"
-    ssh-copy-id $user@$host &> /dev/null
-    echo "***mounting remote temporary ssh directory for $host"
-    ssh -o ForwardAgent=yes  $user@$host "
-    mkdir -p /tmp/mn/ssh
-    cp /home/$user/.ssh/authorized_keys $SSHDIR/authorized_keys
-    sudo mount --bind $SSHDIR /home/$user/.ssh"
-    echo "***copying key pair to $host"
-    scp $SSHDIR/{id_rsa,id_rsa.pub} $user@$host:$SSHDIR
-done
+    for host in $hosts; do
+        echo "***copying public key to $host"
+        ssh-copy-id $user@$host &> /dev/null
+        echo "***mounting remote temporary ssh directory for $host"
+        ssh -o ForwardAgent=yes  $user@$host "
+        mkdir -p $SSHDIR
+        cp $USERDIR/authorized_keys $SSHDIR/authorized_keys
+        sudo mount --bind $SSHDIR $USERDIR"
+        echo "***copying key pair to $host"
+        scp $SSHDIR/{id_rsa,id_rsa.pub} $user@$host:$SSHDIR
+    done
 
-for host in $hosts; do
-    echo "***copying known_hosts to $host"
-    scp $SSHDIR/known_hosts $user@$host:$SSHDIR
-done
+    for host in $hosts; do
+        echo "***copying known_hosts to $host"
+        scp $SSHDIR/known_hosts $user@$host:$SSHDIR
+    done
 }
 
 cleanup() {
     
     for host in $hosts; do
     echo "***cleaning up $host"
-    ssh $user@$host "sudo umount /home/$user/.ssh
+    ssh $user@$host "sudo umount $USERDIR
                           sudo rm -rf $SSHDIR"
     done
 
     echo "**unmounting local directories"
-    sudo umount /home/$user/.ssh
+    sudo umount $USERDIR
     echo "***removing temporary ssh directory"
     sudo rm -rf $SSHDIR
     echo "done!"
