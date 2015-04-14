@@ -67,7 +67,7 @@ class Intf( object ):
         "Configure ourselves using ifconfig"
         return self.cmd( 'ifconfig', self.name, *args )
 
-    def setIP( self, ip, prefixLen=8, action=None ):
+    def setIP( self, ip, prefixLen=8, action='add' ):
         """Set our IP address(es) and bring interface up
            ip: IP address string or list
            prefixLen: optional default prefix length if '/' not in addr (8)
