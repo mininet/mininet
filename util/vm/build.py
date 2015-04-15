@@ -323,7 +323,7 @@ zerombr yes
 clearpart --all --initlabel
 #Automatic partitioning
 autopart
-#System authorization infomation
+#System authorization information
 auth  --useshadow  --enablemd5
 #Firewall configuration
 firewall --disabled
