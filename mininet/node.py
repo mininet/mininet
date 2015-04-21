@@ -436,9 +436,9 @@ class Node( object ):
                   'has no interfaces\n' )
 
     def intf( self, intf=None ):
-        """Return our interface object with given string name,
-           default intf if name is falsy (None, empty string, etc).
-           or the input intf arg.
+        """Return interface object with the given string name, the
+           default intf if name is false (None, empty string, etc).
+           Otherwise, return the input intf arg.
 
         Having this fcn return its arg for Intf objects makes it
         easier to construct functions with flexible input args for
