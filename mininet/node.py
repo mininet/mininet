@@ -76,7 +76,8 @@ class Node( object ):
 
     def __init__( self, name, inNamespace=True, **params ):
         """name: name of node
-           inNamespace: in network namespace?
+           inNamespace: in network namespace? (True)
+           pidns: in pid namespace? (False)
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
 
@@ -86,6 +87,7 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
+        self.pidns = params.get( 'pidns', False )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -131,6 +133,8 @@ class Node( object ):
         opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
             opts += 'n'
+        if self.pidns:
+            opts += 'P'
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
@@ -384,6 +388,7 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
+        debug( cmd, defaults )
         popen = self._popen( cmd, **defaults )
         return popen
 

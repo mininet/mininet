@@ -24,6 +24,7 @@
 #include <sched.h>
 #include <ctype.h>
 #include <sys/mount.h>
+#include <sys/wait.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -37,6 +38,7 @@ void usage(char *name)
            "  -c: close all file descriptors except stdin/out/error\n"
            "  -d: detach from tty by calling setsid()\n"
            "  -n: run in new network and mount namespaces\n"
+           "  -P: run in new pid namespace\n"
            "  -p: print ^A + pid\n"
            "  -a pid: attach to pid's network and mount namespaces\n"
            "  -g group: add to cgroup\n"
@@ -99,10 +101,10 @@ int main(int argc, char *argv[])
     char path[PATH_MAX];
     int nsid;
     int pid;
-    char *cwd = get_current_dir_name();
 
+    char *cwd = get_current_dir_name();
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
+    while ((c = getopt(argc, argv, "+cdPnpa:g:r:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -125,7 +127,7 @@ int main(int argc, char *argv[])
             setsid();
             break;
         case 'n':
-            /* run in network and mount namespaces */
+            /* invoke new namespace */
             if (unshare(CLONE_NEWNET|CLONE_NEWNS) == -1) {
                 perror("unshare");
                 return 1;
@@ -145,14 +147,38 @@ int main(int argc, char *argv[])
                 perror("mount");
                 return 1;
             }
-            break;
         case 'p':
             /* print pid */
             printf("\001%d\n", getpid());
             fflush(stdout);
             break;
+        case 'P':
+            /* pid namespace */
+            if (unshare(CLONE_NEWPID) == -1) {
+                perror("unshare");
+                return 1;
+            }
+            /* Need to fork */
+            switch(fork()) {
+                int status;
+                case -1:
+                    perror("fork");
+                    return 1;
+                case 0:
+                    /* child remounts /proc for ps */
+                    if (mount("proc", "/proc", "proc", MS_MGC_VAL, NULL) == -1) {
+                        perror("mountproc");
+                        return 1;
+                    }
+                    break;
+                default:
+                    /* parent must wait for child to terminate ;-(  */
+                    wait(&status);
+                    return 0;
+            }
+            break;
         case 'a':
-            /* Attach to pid's network namespace and mount namespace */
+            /* Attach to pid's network and mount namespaces */
             pid = atoi(optarg);
             sprintf(path, "/proc/%d/ns/net", pid);
             nsid = open(path, O_RDONLY);
@@ -181,6 +207,30 @@ int main(int argc, char *argv[])
                 return 1;
             }
             break;
+            /* Attach to pid ns if needed */
+            sprintf(path, "/proc/%d/ns/pid", pid);
+            nsid = open(path, O_RDONLY);
+            if (nsid >= 0) {
+              printf("ATTACH TO PIDNS\n");
+              if (setns(nsid, 0) != 0) {
+                perror("pidns setns");
+                return 1;
+              }
+              switch(fork()) {
+                    int status;
+              case -1:
+                    perror("fork");
+                    return 1;
+              case 0:
+                   /* child: fall through */
+                   printf("pidns child pid=%d\n", getpid());
+                   break;
+              default:
+                    /* parent must wait for child to terminate ;-(  */
+                    wait(&status);
+                    return 0;
+                }
+            }
         case 'g':
             /* Attach to cgroup */
             cgroup(optarg);
