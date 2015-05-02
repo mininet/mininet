@@ -357,6 +357,8 @@ class Mininet( object ):
             options.setdefault( 'port1', port1 )
         if port2 is not None:
             options.setdefault( 'port2', port2 )
+        if self.intf is not None:
+            options.setdefault( 'intf', self.intf )
         # Set default MAC - this should probably be in Link
         options.setdefault( 'addr1', self.randMac() )
         options.setdefault( 'addr2', self.randMac() )
