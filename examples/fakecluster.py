@@ -109,7 +109,7 @@ class MininetServer( Server ):
         "Add overlay dirs and private dirs, and change permissions"
         kwargs.update( overlayDirs=self.overlayDirs,
                        privateDirs=self.privateDirs )
-        Host.__init__( self, *args, **kwargs )
+        super( Server, self ).__init__( *args, **kwargs )
         # Change permissions, mainly for ssh
         for pdir in self.privateDirs:
             self.cmd( 'chown root:root', pdir )
