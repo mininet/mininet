@@ -124,7 +124,7 @@ class MininetServer( Server ):
 
     def startSSH( self ):
         "Start sshd with customized banner and fresh utmp/wtmp/btmp"
-        # Note! This *depends* on /etc and /var/run being overlays!
+        # Note: /etc, /var/run and /var/log must be overlays!
         msg  = '***  Welcome to Mininet host %s at %s' % ( self, self.IP() )
         bfile = '/etc/ssh/ssh_banner'
         self.cmd( 'echo "%s" > %s' % ( msg, bfile ) )
