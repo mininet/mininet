@@ -146,6 +146,7 @@ class MininetServer( Server ):
             self.service( 'openvswitch-switch start' )
 
     def terminate( self, *args, **kwargs ):
+        "Shut down services and terminate server"
         if self.ssh:
             self.service( 'ssh stop' )
         if self.ovs:
