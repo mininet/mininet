@@ -135,7 +135,9 @@ class MininetServer( Server ):
         self.cmd( '/etc/init.d/ssh start' )
 
     def config( self, ssh=False, ovs=False, **kwargs ):
-        "Start sshd and other stuff"
+        """Configure/start sshd and other stuff
+           ssh: start sshd?
+           ovs: start Open vSwitch?"""
         self.ssh, self.ovs = ssh, ovs
         super( MininetServer, self ).config( self, **kwargs )
         if self.ssh:
