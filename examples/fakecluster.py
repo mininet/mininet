@@ -27,6 +27,9 @@ Next:
 And maybe:
 - dnsmasq on root server
 - root resolv.conf pointing to dnsmasq? Hmm...
+Also:
+- cleanup shouldn't kill *everything* if we're in a namespace
+- pid namespace would fix this
 """
 
 class Server( Host ):
@@ -112,8 +115,13 @@ class MininetServer( Server ):
             self.cmd( 'chown root:root', pdir )
             self.cmd( 'chmod 755', pdir )
 
+    def service( self, cmd ):
+        """Start or stop a service
+           usage: service( 'ssh stop' )"""
+        self.cmd( '/etc/init.d/%s' % cmd )
+
     def startSSH( self ):
-        "Start sshd"
+        "Start sshd with customized banner and fresh utmp/wtmp"
         msg  = '***  Welcome to Mininet host %s at %s' % ( self, self.IP() )
         bfile = '/etc/ssh/ssh_banner'
         self.cmd( 'echo "%s" > %s' % ( msg, bfile ) )
@@ -123,33 +131,20 @@ class MininetServer( Server ):
         self.cmd( 'rm /var/run/sshd.pid' )
         self.cmd( '/etc/init.d/ssh start' )
 
-    def stopSSH( self ):
-        "Stop sshd"
-        self.cmd( '/etc/init.d/ssh stop' )
-
-    def startOVS( self ):
-        "Start OVS (will create new local ovsdb)"
-        self.cmd( '/etc/init.d/openvswitch-switch start' )
-
-    def stopOVS( self ):
-        "Stop OVS"
-        self.cmd( '/etc/init.d/openvswitch-switch stop' )
-
-    def config( self, **kwargs ):
+    def config( self, ssh=False, ovs=False, **kwargs ):
         "Start sshd and other stuff"
-        self.ssh = kwargs.pop( 'ssh', False )
-        self.ovs = kwargs.pop( 'ovs', False )
+        self.ssh, self.ovs = ssh, ovs
         super( MininetServer, self ).config( self, **kwargs )
         if self.ssh:
             self.startSSH()
         if self.ovs:
-            self.startOVS()
+            self.service( 'openvswitch-switch start' )
 
     def terminate( self, *args, **kwargs ):
         if self.ssh:
-            self.stopSSH()
+            self.service( 'ssh stop' )
         if self.ovs:
-            self.stopOVS()
+            self.service( 'openvswitch-switch stop' )
         super( MininetServer, self ).terminate( *args, **kwargs )
 
 
