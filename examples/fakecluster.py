@@ -98,7 +98,7 @@ class Server( Host ):
 class MininetServer( Server ):
     "A server (for nested Mininet) that can run ssh and ovsdb"
 
-    overlayDirs = ( '/etc', '/var/run' )
+    overlayDirs = ( '/etc', '/var/run', '/var/log' )
     privateDirs = ( '/var/run/sshd',
                     '/var/run/openvswitch', '/var/log/openvswitch' )
 
@@ -118,6 +118,7 @@ class MininetServer( Server ):
         bfile = '/etc/ssh/ssh_banner'
         self.cmd( 'echo "%s" > %s' % ( msg, bfile ) )
         self.cmd( 'echo "Banner %s" >> /etc/ssh/sshd_config' % bfile )
+        self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp*' )
         # This pid file should really be in /var/run/sshd
         self.cmd( 'rm /var/run/sshd.pid' )
         self.cmd( '/etc/init.d/ssh start' )
