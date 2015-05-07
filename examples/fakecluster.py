@@ -122,13 +122,11 @@ class MininetServer( Server ):
            usage: service( 'ssh stop' )"""
         self.cmd( '/etc/init.d/%s' % cmd )
 
-    def startSSH( self ):
-        "Start sshd with customized banner and fresh utmp/wtmp/btmp"
-        # Note: /etc, /var/run and /var/log must be overlays!
-        msg  = '***  Welcome to Mininet host %s at %s' % ( self, self.IP() )
-        bfile = '/etc/ssh/ssh_banner'
-        self.cmd( 'echo "%s" > %s' % ( msg, bfile ) )
-        self.cmd( 'echo "Banner %s" >> /etc/ssh/sshd_config' % bfile )
+    def startSSH( self, motd='/var/run/motd.dynamic' ):
+        "Update motd, clear out utmp/wtmp/btmp, and start sshd"
+        # Note: /var/run and /var/log must be overlays!
+        msg = 'Welcome to Mininet host %s at %s' % ( self, self.IP() )
+        self.cmd( "echo  '%s' > %s" % ( msg, motd ) )
         self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp* /var/log/btmp*' )
         # sshd.pid should really be in /var/run/sshd instead of /var/run
         self.cmd( 'rm /var/run/sshd.pid' )
