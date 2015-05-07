@@ -16,7 +16,6 @@ from mininet.cli import CLI
 from mininet.topo import Topo, SingleSwitchTopo
 from mininet.log import setLogLevel
 from mininet.util import errRun
-from mininet.examples.sshd import connectToRootNS
 
 from functools import partial
 
@@ -24,8 +23,7 @@ from functools import partial
 Comments
 Next:
 - dnsmasq on m1
-- overlayfs for /etc
-- custom resolv.conf pointing to m1 on m1-mn
+- custom /etc/resolv.conf pointing to m1 on m1-mn
 And maybe:
 - dnsmasq on root server
 - root resolv.conf pointing to dnsmasq? Hmm...
