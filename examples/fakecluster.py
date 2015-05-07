@@ -124,12 +124,13 @@ class MininetServer( Server ):
 
     def startSSH( self ):
         "Start sshd with customized banner and fresh utmp/wtmp"
+        # Note! This *depends* on /etc and /var/run being overlays!
         msg  = '***  Welcome to Mininet host %s at %s' % ( self, self.IP() )
         bfile = '/etc/ssh/ssh_banner'
         self.cmd( 'echo "%s" > %s' % ( msg, bfile ) )
         self.cmd( 'echo "Banner %s" >> /etc/ssh/sshd_config' % bfile )
         self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp*' )
-        # This pid file should really be in /var/run/sshd
+        # sshd.pid should really be in /var/run/sshd instead of /var/run
         self.cmd( 'rm /var/run/sshd.pid' )
         self.cmd( '/etc/init.d/ssh start' )
 
