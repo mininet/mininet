@@ -56,12 +56,15 @@ class Server( Host ):
     def _overlayFrom( self, entry ):
         "Helper function: return mountpaint, overlay, tmpfs from entry"
         if type( entry ) is str:
-           mountpoint, overlay = entry, None
+            # '/mountpoint'
+            mountpoint, overlay = entry, None
         elif len( entry ) is 1:
+            # [ '/mountpoint' ]
             mountpoint, overlay = entry[ 0 ], None
         else:
+            # [ '/mountpoint', '/overlay' ]
             mountpoint, overlay = entry
-        tmpfs = '/tmp/%s/%s' % ( self, mountpoint )
+        tmpfs = None if overlay else '/tmp/%s/%s' % ( self, mountpoint )
         return mountpoint, overlay, tmpfs
 
     def mountOverlayDirs( self ):
@@ -90,7 +93,7 @@ class Server( Host ):
             # is in use, possibly leaving tmpfs garbage in the root
             # mount namespace / file system
             self.cmd( 'umount', mountpoint )
-            if tmpfs:
+            if not overlay:
                 self.cmd( 'umount', tmpfs )
 
 
