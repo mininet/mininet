@@ -36,7 +36,9 @@ class Server( Host ):
     "A host that supports overlay directories"
 
     def __init__( self, *args, **kwargs ):
-        "Add private dirs and overlay dirs"
+        """overlayDirs: ['/mountpoint',...] or [('/mountpoint', '/overlay')...]
+           If '/overlay' is present and non-empty, use it as a persistent directory.
+           otherwise use a tmpfs."""
         self.overlayDirs = kwargs.pop( 'overlayDirs', () )
         Host.__init__( self, *args, **kwargs )
 
