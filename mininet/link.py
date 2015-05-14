@@ -224,7 +224,7 @@ class TCIntf( Intf ):
 
     # The parameters we use seem to work reasonably up to 1 Gb/sec
     # For higher data rates, we will probably need to change them.
-    bwParamMax = 1000
+    bwParamMax = 10000 # increase to 10 Gbps with virtual time
 
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False ):
