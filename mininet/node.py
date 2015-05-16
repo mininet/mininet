@@ -168,6 +168,8 @@ class Node( object ):
 
     def mountPrivateDirs( self ):
         "mount private directories"
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.privateDirs, basestring )
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 # mount given private directory
