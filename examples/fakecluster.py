@@ -103,9 +103,9 @@ class Server( Host ):
 class MininetServer( Server ):
     "A server (for nested Mininet) that can run ssh and ovsdb"
 
-    overlayDirs = ( '/etc', '/var/run', '/var/log' )
-    privateDirs = ( '/var/run/sshd',
-                    '/var/run/openvswitch', '/var/log/openvswitch' )
+    overlayDirs = [ '/etc', '/var/run', '/var/log' ]
+    privateDirs = [ '/var/run/sshd',
+                    '/var/run/openvswitch', '/var/log/openvswitch' ]
 
     def __init__( self, *args, **kwargs ):
         "Add overlay dirs and private dirs, and change permissions"
