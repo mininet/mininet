@@ -508,21 +508,42 @@ def custom( cls, **params ):
     customized.__name__ = 'custom(%s,%s)' % ( cls, params )
     return customized
 
-def splitArgs( argstr ):
-    """Split argument string into usable python arguments
-       argstr: argument string with format fn,arg2,kw1=arg3...
-       returns: fn, args, kwargs"""
-    split = argstr.split( ',' )
-    fn = split[ 0 ]
-    params = split[ 1: ]
+
+
+def parseArgs( argstr ):
+    """Parse argument string
+       returns args, kwargs"""
+    # One step at a time: support param=[a,b,c]
+    paramre = r'\[[^\]]*\]|[^,\[\]]+'
+    paramre = r'\w+=\[[^\]]*\]|\w+\[^,\[\]]+' + paramre
+    params = re.findall( paramre, argstr )
+    # Parse lists
+    for i, arg in enumerate( params ):
+        if arg.startswith( '[' ) and arg.endswith( ']' ):
+            arg = arg[ 1 : -1 ]
+            print "recurse on", arg
+            params[ i ] = parseArgs( args )
     # Convert int and float args; removes the need for function
     # to be flexible with input arg formats.
     args = [ makeNumeric( s ) for s in params if '=' not in s ]
     kwargs = {}
     for s in [ p for p in params if '=' in p ]:
-        key, val = s.split( '=', 1 )
-        kwargs[ key ] = makeNumeric( val )
-    return fn, args, kwargs
+        key, arg = s.split( '=', 1 )
+        if arg.startswith( '[' ) and arg.endswith( ']' ):
+            arg = arg[ 1 : -1 ]
+            print 'recurse on', arg
+            arg = parseArgs( arg )[ 0 ]
+        else:
+            arg = makeNumeric( arg )
+        kwargs[ key ] = arg
+    return args, kwargs
+
+def splitArgs( argstr ):
+    """Split argument string into usable python arguments
+       argstr: argument string with format fn,arg2,kw1=arg3...
+       returns: fn, args, kwargs"""
+    args, kwargs = parseArgs( argstr )
+    return args[ 0 ], args[ 1: ], kwargs
 
 def customClass( classes, argStr ):
     """Return customized class based on argStr
