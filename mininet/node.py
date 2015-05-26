@@ -74,10 +74,9 @@ class Node( object ):
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
 
-    def __init__( self, name, inNamespace=True, **params ):
+    def __init__( self, name, inNamespace=('net','mnt'), **params ):
         """name: name of node
-           inNamespace: in network namespace? (True)
-           pidns: in pid namespace? (False)
+           inNamespace: private namespaces to use ['net','mnt']
            privateDirs: list of private directory strings or tuples
            overlayDirs: list of overlay directory strings or tuples
            params: Node parameters (see config() for details)"""
@@ -88,8 +87,10 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.overlayDirs = params.get( 'overlayDirs', [] )
-        self.inNamespace = params.get( 'inNamespace', inNamespace )
         self.pidns = params.get( 'pidns', False )
+
+        # Allow 'ns' abbreviation
+        self.inNamespace = params.get( 'inNamespace', params.get( 'ns',  inNamespace ) )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -125,6 +126,8 @@ class Node( object ):
         node = cls.outToNode.get( fd )
         return node or cls.inToNode.get( fd )
 
+    _marker = re.compile( chr( 1 ) + r'(\d+)\r\n' )
+
     # Command support via shell process in namespace
     def startShell( self, mnopts=None ):
         "Start a shell process for running commands"
@@ -132,12 +135,16 @@ class Node( object ):
             error( "%s: shell is already running\n" % self.name )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace
-        opts = '-cd' if mnopts is None else mnopts
-        if self.inNamespace:
-            opts += 'n'
-        if self.pidns:
-            opts += 'P'
+        # (p)rint pid, and run in (n)etwork and (m)ount namespace
+        opts = '-cdp' if mnopts is None else mnopts
+        if self.inNamespace is True:
+            opts += 'mn'
+        elif hasattr( self.inNamespace, '__iter__' ):
+            # Handle additional namespaces if specified
+            nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
+            chars = [ nsmap[ ns ] for ns in self.inNamespace
+                      if ns in self.inNamespace ]
+            opts += ''.join( chars )
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
@@ -163,13 +170,11 @@ class Node( object ):
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
-        # Wait for prompt
-        while True:
-            data = self.read( 1024 )
-            if data[ -1 ] == chr( 127 ):
-                break
-            self.pollOut.poll()
-        self.waiting = False
+        self.waiting = True
+        # Get pid and wait for prompt
+        self.waitOutput( findPid=True )
+        assert self.lastPid is not None
+        self.pid = self.lastPid
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
 
@@ -366,18 +371,18 @@ class Node( object ):
         data = self.read( 1024 )
         pidre = r'\[\d+\] \d+\r\n'
         # Look for PID
-        marker = chr( 1 ) + r'\d+\r\n'
-        if findPid and chr( 1 ) in data:
+        if findPid and chr(1) in data:
             # suppress the job and PID of a backgrounded command
             if re.findall( pidre, data ):
                 data = re.sub( pidre, '', data )
             # Marker can be read in chunks; continue until all of it is read
-            while not re.findall( marker, data ):
+            while True:
+                markers = self._marker.findall( data )
+                if markers:
+                    self.lastPid = int( markers[ -1 ] )
+                    data = self._marker.sub( '', data )
+                    break
                 data += self.read( 1024 )
-            markers = re.findall( marker, data )
-            if markers:
-                self.lastPid = int( markers[ 0 ][ 1: ] )
-                data = re.sub( marker, '', data )
         # Look for sentinel/EOF
         if len( data ) > 0 and data[ -1 ] == chr( 127 ):
             self.waiting = False
