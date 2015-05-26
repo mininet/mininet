@@ -43,7 +43,7 @@ void usage(char *name)
            "  -P: run in a new pid namespace\n"
            "  -u: run in a new UTS (ipc, hostname) namespace\n"
            "  -p: print ^A + pid\n"
-           "  -a pid: attach to pid's specified namespaces\n"
+           "  -a pid: attach to pid's namespaces\n"
            "  -g group: add to cgroup\n"
            "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
            "  -v: print version\n",
@@ -99,63 +99,50 @@ void cgroup(char *gname)
     }
 }
 
-
-int attach(int pid, int flags) {
-
+/* Attach to ns 'name' if present */
+int attachns( pid_t pid, char *name ) {
     char path[PATH_MAX];
-    int netns = -1;
-    int pidns = -1;
-    int mountns = -1;
+    int nsid;
 
-    if (flags & CLONE_NEWNET) {
-        /* Attach to pid's network namespace */
-        sprintf(path, "/proc/%d/ns/net", pid);
-        netns = open(path, O_RDONLY);
-        if (netns < 0) {
-            perror(path);
-            return 1;
-        }
-        if (setns(netns, 0) != 0) {
-            perror("setns");
-            return 1;
-        }
-    }
+    sprintf(path, "/proc/%d/ns/%s", pid, name) ;
 
-    if (flags & CLONE_NEWPID) {
-        /* Attach to pid namespace */
-        sprintf(path, "/proc/%d/ns/pid", pid);
-        pidns = open(path, O_RDONLY);
-        if (pidns < 0) {
-            perror(path);
-            return 1;
-        }
-        if (setns(pidns, 0) != 0) {
-            perror("pidns setns");
-            return 1;
-        }
-    }
+    if ((nsid = open(path, O_RDONLY)) < 0)
+        return nsid;
 
-    if (flags & CLONE_NEWNS) {
-        char *cwd = get_current_dir_name();
-        /* Plan A: call setns() to attach to mount namespace */
-        sprintf(path, "/proc/%d/ns/mnt", pid);
-        mountns = open(path, O_RDONLY);
-        if (mountns < 0 || setns(mountns, 0) != 0) {
-            /* Plan B: chroot into pid's root file system */
-            sprintf(path, "/proc/%d/root", pid);
-            if (chroot(path) < 0) {
-                perror(path);
-                return 1;
-            }
-        }
-        /* chdir to correct working directory */
-        if (chdir(cwd) != 0) {
-            perror(cwd);
-            return 1;
-        }
+    if (setns(nsid, 0) != 0) {
+        perror("setns");
+        return 1;
     }
 
     return 0;
+}
+
+/* Attach to pid's namespaces - returns true if pidns */
+int attach(int pid) {
+
+    char *cwd = get_current_dir_name();
+    char path[PATH_MAX];
+    int pidns = 0;
+
+    attachns(pid, "net");
+    attachns(pid, "uts");
+    if ( attachns(pid, "pid") == 0 )
+        pidns = 1;
+
+    if (attachns(pid, "mnt") != 0) {
+        /* Plan B: chroot into pid's root file system */
+        sprintf(path, "/proc/%d/root", pid);
+        if (chroot(path) < 0) {
+            perror(path);
+        }
+    }
+
+    /* chdir to correct working directory */
+    if (chdir(cwd) != 0) {
+        perror(cwd);
+    }
+
+    return pidns;
 }
 
 
@@ -171,6 +158,7 @@ int main(int argc, char *argv[])
     int detachtty = 0;
     int printpid = 0;
     int rtprio = 0;
+    int pidns = 0;
 
     while ((c = getopt(argc, argv, "+cdmnPpa:g:r:uvh")) != -1)
         switch(c) {
@@ -180,7 +168,7 @@ int main(int argc, char *argv[])
             case 'n':   flags |= CLONE_NEWNET; break;
             case 'p':   printpid = 1; break;
             case 'P':   flags |= CLONE_NEWPID; break;
-            case 'a':   attachpid = atoi(optarg); break;
+            case 'a':   attachpid = atoi(optarg);break;
             case 'g':   cgrouparg = optarg ; break;
             case 'r':   rtprio = atoi(optarg); break;
             case 'u':   flags |= CLONE_NEWUTS; break;
@@ -195,6 +183,7 @@ int main(int argc, char *argv[])
         for (fd = getdtablesize(); fd > 2; fd--) close(fd);
     }
 
+    /* XXX We should not fork twice if we don't need to!! */
     if (detachtty) {
         /* detach from tty */
         if (getpgrp() == getpid()) {
@@ -213,7 +202,7 @@ int main(int argc, char *argv[])
 
     if (attachpid) {
         /* Attach to existing namespace(s) */
-      attach(attachpid, flags);
+      pidns = attach(attachpid);
     }
     else {
         /* Create new namespace(s) */
@@ -223,7 +212,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (flags & CLONE_NEWPID) {
+    if ( flags & CLONE_NEWPID || pidns ) {
         /* For pid namespace, we need to fork and wait for child ;-( */
         pid_t pid = fork();
         switch(pid) {
@@ -236,8 +225,10 @@ int main(int argc, char *argv[])
                 break;
             default:
                 /* We print the *child pid* if needed */
-                printf("\001%d\n", pid);
-                fflush(stdout);
+                if (printpid) {
+                    printf("\001%d\n", pid);
+                    fflush(stdout);
+                }
                 /* Parent needs to wait for child and exit */
                 wait(&status);
                 return 0;
