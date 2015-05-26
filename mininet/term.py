@@ -5,11 +5,11 @@ Utility functions to run a terminal (connected via socat(1)) on each host.
 Requires socat(1) and xterm(1).
 Optionally uses gnome-terminal.
 """
-
-from os import environ
-
 from mininet.log import error
 from mininet.util import quietRun, errRun
+
+from os import environ, getpid, path
+from subprocess import Popen
 
 def tunnelX11( node, display=None):
     """Create an X11 tunnel from node:6000 to the root host
@@ -28,12 +28,59 @@ def tunnelX11( node, display=None):
         quietRun( 'xhost +si:localuser:root' )
         return display, None
     else:
-        # Create a tunnel for the TCP connection
+        # XXX Need to handle case where node is in UTS namespace
+        # in this case, we need to set XAUTHORITY to a private
+        # xauth file
         port = 6000 + int( float( screen ) )
-        connection = r'TCP\:%s\:%s' % ( host, port )
-        cmd = [ "socat", "TCP-LISTEN:%d,fork,reuseaddr" % port,
-                "EXEC:'mnexec -a 1 socat STDIO %s'" % connection ]
+        # This can conflict if we are running nested Mininet
+        # in a pid namespace
+        socket = '/tmp/mininet.x11.%d' % getpid()
+        if not path.exists( socket ):
+            cmd = 'socat unix-listen:%s tcp:localhost:%d' % ( socket, port  )
+            # Should be shut down when mn shuts down
+            tunnelX11.socket = Popen( cmd, shell=True )
+        # Create a tunnel for the TCP connection
+        cmd = 'socat tcp-listen:%d unix:%s' % ( port, socket )
     return 'localhost:' + screen, node.popen( cmd )
+
+"""
+
+With pid namespaces, we can't easily escape the pid jail using mnexec
+(or can we?)
+
+What we can do, however, is create a unix socket in /tmp which connects
+to our x server, and a tcp listener in the host that connects to our
+unix socket!
+
+We just have to make sure that we clean up our processes and sockets
+when we quit.
+
+If we're using UTS namespaces, then xauth will get confused because
+our hostname has changed. So, we use a private XAUTHORITY file per
+host. We need to initialize this file with the key of our X server;
+this is a bit hard to figure out because the usual xauth list $DISPLAY
+may fail even if xlib can figure out a backup cookie to use.
+
+But what about namespace conflicts? This could certainly be very
+annoying for nested mininet!! In this case, our nested mininet servers
+should have a private /tmp that they can use.... except that conflicts
+with the shared unix domain socket in /tmp! ;-p
+
+We could also use a random name for the socket, to avoid the namespace
+conflict, although it's not clear what to do for cleanup to avoid
+blasting this....
+
+Perhaps the best idea is to use a canonical name (mininet.x11) and if the
+first name fails, try a second name??
+
+Another idea is to create a tmp dir for Mininet based on the pid of the
+mn process.....
+
+recommendation: for now, use mininet.x11.1234 as the socket.
+
+"""
+
+
 
 def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     """Create an X11 tunnel to the node and start up a terminal.
