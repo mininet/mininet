@@ -77,6 +77,8 @@ class Server( Host ):
            overlayDirs is of the form ((mountpoint,overlaydir), ...)
            much like privateDirs. If overlaydir doesn't exist, we
            mount a tmpfs at the specified mount point."""
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.overlayDirs, basestring )
         for entry in self.overlayDirs:
             mountpoint, overlay, tmpfs  = self._overlayFrom( entry )
             # Create tmpfs if overlay dir is not specified
