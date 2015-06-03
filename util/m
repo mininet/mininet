@@ -40,5 +40,5 @@ if [ -d $rootdir -a -x $rootdir/bin/bash ]; then
     cmd="chroot $rootdir /bin/bash -c $cmd"
 fi
 
-cmd="exec sudo mnexec $cg -a $pid $cmd"
+cmd="exec sudo -E mnexec $cg -a $pid $cmd"
 eval $cmd
