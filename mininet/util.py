@@ -180,16 +180,16 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
     ns1 = 1 if not node1 else node1.pid
     ns2 = 1 if not node2 else node2.pid
     if addr1 is None and addr2 is None:
-        cmdOutput = quietRun( 'ip link add name %s netns %s '
-                              'type veth peer name %s '
-                              'netns %s' % ( intf1, ns1, intf2, ns2 ) )
+        cmdOutput = runCmd( 'ip link add name %s netns %s '
+                            'type veth peer name %s '
+                            'netns %s' % ( intf1, ns1, intf2, ns2 ) )
     else:
-        cmdOutput = quietRun( 'ip link add name %s '
-                              'address %s netns %s '
-                              'type veth peer name %s '
-                              'address %s '
-                              'netns %s' %
-                              (  intf1, addr1, ns1, intf2, addr2, ns2 ) )
+        cmdOutput = runCmd( 'ip link add name %s '
+                            'address %s netns %s '
+                            'type veth peer name %s '
+                            'address %s '
+                            'netns %s' %
+                            (  intf1, addr1, ns1, intf2, addr2, ns2 ) )
     if cmdOutput:
         raise Exception( "Error creating interface pair (%s,%s): %s " %
                          ( intf1, intf2, cmdOutput ) )
