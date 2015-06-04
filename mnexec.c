@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
     /* XXX We should not fork twice if we don't need to!! */
     if (detachtty) {
         /* detach from tty */
-        if (0 && getpgrp() == getpid()) {
+        if (getpgrp() == getpid()) {
             switch(fork()) {
             case -1:
                 perror("fork");
