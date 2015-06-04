@@ -110,7 +110,7 @@ class MininetServer( Server ):
 
     inNamespace =  [ 'net', 'mnt', 'pid', 'uts' ]
     overlayDirs = [ '/etc', '/var/run', '/var/log' ]
-    privateDirs = [ '/var/run/sshd',
+    privateDirs = [ '/var/run/sshd', '/etc/openvswitch',
                     '/var/run/openvswitch', '/var/log/openvswitch' ]
 
     def __init__( self, *args, **kwargs ):
