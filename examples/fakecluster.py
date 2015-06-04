@@ -15,7 +15,7 @@ from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import Topo, SingleSwitchTopo
 from mininet.log import setLogLevel, warn
-from mininet.util import errRun
+from mininet.util import errRun, quietRun
 from mininet.link import Link
 
 from functools import partial
@@ -196,6 +196,10 @@ class ServerLink( Link ):
         # we just use 'm1eth0'; however, this should nest reasonably.
         return ( node.name + 'eth' + repr( n ) if isinstance( node, Server )
                  else node.name + '-eth' + repr( n ) )
+    def makeIntfPair( self, *args, **kwargs ):
+        "Override to use quietRun"
+        kwargs.update( runCmd=quietRun )
+        super( ServerLink, self ).makeIntfPair( *args, **kwargs )
 
 class ClusterTopo( Topo ):
     "Cluster topology: m1..mN"
