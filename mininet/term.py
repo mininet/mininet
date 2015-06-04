@@ -10,6 +10,7 @@ from mininet.util import quietRun, errRun
 
 from os import environ, getpid, path
 from subprocess import Popen
+from tempfile import NamedTemporaryFile
 
 def tunnelX11( node, display=None):
     """Create an X11 tunnel from node:6000 to the root host
@@ -31,16 +32,20 @@ def tunnelX11( node, display=None):
         # XXX Need to handle case where node is in UTS namespace
         # in this case, we need to set XAUTHORITY to a private
         # xauth file
+        if False and 'uts' in node.inNamespace and  not hasattr( node, 'xauthFile' ):
+            node.xauthFile = NamedTemporaryFile()
+            quietRun( 'xauth extract $DISPLAY | xauth -f %s merge' % node.xauthFile.name )
         port = 6000 + int( float( screen ) )
         # This can conflict if we are running nested Mininet
         # in a pid namespace
         socket = '/tmp/mininet.x11.%d' % getpid()
         if not path.exists( socket ):
-            cmd = 'socat unix-listen:%s tcp:localhost:%d' % ( socket, port  )
+            cmd = 'socat unix-listen:%s,fork tcp:localhost:%d' % ( socket, port  )
             # Should be shut down when mn shuts down
             tunnelX11.socket = Popen( cmd, shell=True )
         # Create a tunnel for the TCP connection
-        cmd = 'socat tcp-listen:%d unix:%s' % ( port, socket )
+        cmd = 'socat tcp-listen:%d,fork,reuseaddr unix:%s' % ( port, socket )
+
     return 'localhost:' + screen, node.popen( cmd )
 
 """

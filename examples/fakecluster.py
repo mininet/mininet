@@ -14,10 +14,13 @@ from mininet.net import Mininet
 from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import Topo, SingleSwitchTopo
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, warn
 from mininet.util import errRun
+from mininet.link import Link
 
 from functools import partial
+from tempfile import NamedTemporaryFile
+
 
 """
 Comments
@@ -105,13 +108,15 @@ class Server( Host ):
 class MininetServer( Server ):
     "A server (for nested Mininet) that can run ssh and ovsdb"
 
+    inNamespace =  [ 'net', 'mnt', 'pid', 'uts' ]
     overlayDirs = [ '/etc', '/var/run', '/var/log' ]
     privateDirs = [ '/var/run/sshd',
                     '/var/run/openvswitch', '/var/log/openvswitch' ]
 
     def __init__( self, *args, **kwargs ):
         "Add overlay dirs and private dirs, and change permissions"
-        kwargs.update( overlayDirs=self.overlayDirs,
+        kwargs.update( inNamespace = self.inNamespace,
+                       overlayDirs=self.overlayDirs,
                        privateDirs=self.privateDirs )
         super( Server, self ).__init__( *args, **kwargs )
         # Change permissions, mainly for ssh
@@ -119,16 +124,44 @@ class MininetServer( Server ):
             self.cmd( 'chown root:root', pdir )
             self.cmd( 'chmod 755', pdir )
 
+    @staticmethod
+    def whatever( x, y='foo' ):
+        "what the heck?!?!?!"
+        print x, y
+
+    @staticmethod
+    def updateHostsFiles( servers, tmpdir='/tmp' ):
+        """Update local hosts files on a list of servers
+           servers: list of servers
+           tmpdir: tmp dir shared between mn and servers"""
+        # This scales as n^2, so for a large configuration it's
+        # more efficient to use a DNS server
+        for s in servers:
+            dirs = getattr( s, 'overlayDirs', [] ) + getattr( s, 'privateDirs', [] )
+            if '/etc' in dirs:
+                with NamedTemporaryFile( dir=tmpdir ) as tmpfile:
+                    tmpfile.write( '# Mininet hosts file\n' )
+                    tmpfile.write( '127.0.0.1 localhost %s\n' % s )
+                    for t in servers:
+                        tmpfile.write( '%s %s\n' % ( t.IP(), t ) )
+                    tmpfile.flush()
+                    s.cmd( 'cp', tmpfile.name, '/etc/hosts' )
+            else:
+                warn( 'not updating hosts file on %s\n' % s )
+
     def service( self, cmd ):
         """Start or stop a service
            usage: service( 'ssh stop' )"""
         self.cmd( '/etc/init.d/%s' % cmd )
 
-    def startSSH( self, motd='/var/run/motd.dynamic' ):
+    def motd( self ):
+        "Return login message as a string"
+        return 'Welcome to Mininet host %s at %s' % ( self, self.IP() )
+
+    def startSSH( self, motdPath='/var/run/motd.dynamic' ):
         "Update motd, clear out utmp/wtmp/btmp, and start sshd"
         # Note: /var/run and /var/log must be overlays!
-        msg = 'Welcome to Mininet host %s at %s' % ( self, self.IP() )
-        self.cmd( "echo  '%s' > %s" % ( msg, motd ) )
+        self.cmd( "echo  '%s' > %s" % ( self.motd(), motdPath ) )
         self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp* /var/log/btmp*' )
         # sshd.pid should really be in /var/run/sshd instead of /var/run
         self.cmd( 'rm /var/run/sshd.pid' )
@@ -144,6 +177,8 @@ class MininetServer( Server ):
             self.startSSH()
         if self.ovs:
             self.service( 'openvswitch-switch start' )
+        if 'uts' in self.inNamespace:
+            self.cmd( 'hostname', self )
 
     def terminate( self, *args, **kwargs ):
         "Shut down services and terminate server"
@@ -154,21 +189,30 @@ class MininetServer( Server ):
         super( MininetServer, self ).terminate( *args, **kwargs )
 
 
+class ServerLink( Link ):
+    def intfName( self, node, n ):
+        "Override to avoid destruction by cleanup!"
+        # This is kind of ugly... for some reason 'eth0' fails so
+        # we just use 'm1eth0'; however, this should nest reasonably.
+        return ( node.name + 'eth' + repr( n ) if isinstance( node, Server )
+                 else node.name + '-eth' + repr( n ) )
+
 class ClusterTopo( Topo ):
     "Cluster topology: m1..mN"
     def build( self, n ):
         ms1 = self.addSwitch( 'ms1' )
         for i in range( 1, n + 1 ):
             h = self.addHost( 'm%d' % i )
-            self.addLink( h, ms1 )
+            self.addLink( h, ms1, cls=ServerLink )
 
 
 def test():
     "Test this setup"
-    setLogLevel( 'info' )
+    setLogLevel( 'debug' )
     topo = ClusterTopo( 3 )
     host = partial( MininetServer, ssh=True, ovs=True )
     net = Mininet( topo=topo, host=host, ipBase='10.0/24' )
+    MininetServer.updateHostsFiles( net.hosts )
     # addNAT().configDefault() also connects root namespace to Mininet
     net.addNAT().configDefault()
     net.start()

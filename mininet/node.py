@@ -129,9 +129,9 @@ class Node( object ):
         if self.shell:
             error( "%s: shell is already running\n" % self.name )
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
+        # mnexec: (c)lose descriptors
         # (p)rint pid, and run in (n)etwork and (m)ount namespace
-        opts = '-cdp' if mnopts is None else mnopts
+        opts = '-cp' if mnopts is None else mnopts
         if self.inNamespace is True:
             opts += 'mn'
         elif hasattr( self.inNamespace, '__iter__' ):
@@ -145,6 +145,7 @@ class Node( object ):
         # prompt is set to sentinel chr( 127 )
         cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '-is', 'mininet:' + self.name ]
+        print 'CMD', cmd
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
