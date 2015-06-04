@@ -212,7 +212,7 @@ class RemoteMixin( object ):
     def startShell( self, *args, **kwargs ):
         "Start a shell process for running commands"
         if self.isRemote:
-            kwargs.update( mnopts='-c' )
+            kwargs.update( mnopts='-cp' )
         super( RemoteMixin, self ).startShell( *args, **kwargs )
         # Optional split initialization
         self.sendCmd( 'echo $$' )
@@ -222,6 +222,7 @@ class RemoteMixin( object ):
     def finishInit( self ):
         "Wait for split initialization to complete"
         self.pid = int( self.waitOutput() )
+        print '\n***************************************', self, "PID IS", self.pid
 
     def rpopen( self, *cmd, **opts ):
         "Return a Popen object on underlying server in root namespace"
@@ -384,6 +385,8 @@ class RemoteLink( Link ):
         server2 = getattr( node2, 'server', 'localhost' )
         if server1 == server2:
             # Link within same server
+            print "SAME SERVER!!!", server1
+            print node1.cmd( 'ps ax' )
             return Link.makeIntfPair( intfname1, intfname2, addr1, addr2,
                                       node1, node2, deleteIntfs=deleteIntfs )
         # Otherwise, make a tunnel
