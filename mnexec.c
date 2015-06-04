@@ -183,19 +183,20 @@ int main(int argc, char *argv[])
         for (fd = getdtablesize(); fd > 2; fd--) close(fd);
     }
 
+    /* Use a new process group so we can use killpg */
+    setpgid( 0, 0 );
+    
     /* XXX We should not fork twice if we don't need to!! */
     if (detachtty) {
         /* detach from tty */
-        if (getpgrp() == getpid()) {
-            switch(fork()) {
-                case -1:
-                    perror("fork");
-                    return 1;
-                case 0:     /* child */
-                    break;
-                default:    /* parent */
-                    return 0;
-            }
+        switch(fork()) {
+            case -1:
+                perror("fork");
+                return 1;
+            case 0:     /* child */
+                break;
+            default:    /* parent */
+                return 0;
         }
         setsid();
     }
