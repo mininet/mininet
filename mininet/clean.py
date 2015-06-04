@@ -25,15 +25,15 @@ def sh( cmd ):
 
 def killprocs( pattern ):
     "Reliably terminate processes matching a pattern (including args)"
-    sh( 'pkill -9 -f %s' % pattern )
-    # Make sure they are gone
     while True:
         try:
-            pids = co( [ 'pgrep', '-f', pattern ] )
+            pids = co( [ 'pgrep', '-f', pattern ] ).split( '\n' )
         except CalledProcessError:
-            pids = ''
+            pids = []
+        # Don't kill init
+        pids = [ pid for pid in pids if pid and pid != '1' ]
         if pids:
-            sh( 'pkill -9 -f %s' % pattern )
+            sh( "kill -9 %s" % ' '.join( pids ) )
             time.sleep( .5 )
         else:
             break
