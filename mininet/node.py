@@ -131,9 +131,9 @@ class Node( object ):
             return
         # mnexec: (c)lose descriptors
         # (p)rint pid, and run in (n)etwork and (m)ount namespace
-        opts = '-cp' if mnopts is None else mnopts
+        opts = '-cdp' if mnopts is None else mnopts
         if self.inNamespace is True:
-            opts += 'mn'
+            self.inNamespace = [ 'net', 'mnt' ]
         elif hasattr( self.inNamespace, '__iter__' ):
             # Handle additional namespaces if specified
             nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
@@ -166,12 +166,11 @@ class Node( object ):
         self.lastPid = None
         self.readbuf = ''
         # Wait for prompt
-        while True:
-            data = self.read( 1024 )
-            if data[ -1 ] == chr( 127 ):
-                break
-            self.pollOut.poll()
-        self.waiting = False
+        self.waiting = True
+        self.waitOutput()
+        if 'P' in opts:
+            assert self.lastPid is not None
+            self.pid = self.lastPid
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
 
@@ -1533,3 +1532,4 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
 def NullController( *_args, **_kwargs ):
     "Nonexistent controller - simply returns None"
     return None
+                              
