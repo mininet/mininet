@@ -212,7 +212,7 @@ class ClusterTopo( Topo ):
 
 def test():
     "Test this setup"
-    setLogLevel( 'debug' )
+    setLogLevel( 'info' )
     topo = ClusterTopo( 3 )
     host = partial( MininetServer, ssh=True, ovs=True )
     net = Mininet( topo=topo, host=host, ipBase='10.0/24' )
