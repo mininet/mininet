@@ -183,13 +183,11 @@ int main(int argc, char *argv[])
         for (fd = getdtablesize(); fd > 2; fd--) close(fd);
     }
 
-    /* Use a new process group so we can use killpg */
-    setpgid( 0, 0 );
-    
     /* XXX We should not fork twice if we don't need to!! */
     if (detachtty) {
         /* detach from tty */
-        switch(fork()) {
+        if (0 && getpgrp() == getpid()) {
+            switch(fork()) {
             case -1:
                 perror("fork");
                 return 1;
@@ -197,6 +195,7 @@ int main(int argc, char *argv[])
                 break;
             default:    /* parent */
                 return 0;
+            }
         }
         setsid();
     }
@@ -212,6 +211,9 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    /* Use a new process group so we can use killpg */
+    setpgid( 0, 0 );
 
     if ( flags & CLONE_NEWPID || pidns ) {
         /* For pid namespace, we need to fork and wait for child ;-( */
@@ -241,6 +243,7 @@ int main(int argc, char *argv[])
         printf("\001%d\n", getpid());
         fflush(stdout);
     }
+
 
     if (flags & CLONE_NEWNS && !attachpid) {
         /* Child remounts /proc for ps */
