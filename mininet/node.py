@@ -145,7 +145,6 @@ class Node( object ):
         # prompt is set to sentinel chr( 127 )
         cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '-is', 'mininet:' + self.name ]
-        print 'CMD', cmd
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
