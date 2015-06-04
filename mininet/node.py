@@ -165,11 +165,13 @@ class Node( object ):
         self.lastCmd = None
         self.lastPid = None
         self.readbuf = ''
-        self.waiting = True
-        # Get pid and wait for prompt
-        self.waitOutput( findPid=True )
-        assert self.lastPid is not None
-        self.pid = self.lastPid
+        # Wait for prompt
+        while True:
+            data = self.read( 1024 )
+            if data[ -1 ] == chr( 127 ):
+                break
+            self.pollOut.poll()
+        self.waiting = False
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
 
@@ -314,7 +316,7 @@ class Node( object ):
         data = self.read( 1024 )
         pidre = r'\[\d+\] \d+\r\n'
         # Look for PID
-        if findPid and chr(1) in data:
+        if findPid and chr( 1 ) in data:
             # suppress the job and PID of a backgrounded command
             if re.findall( pidre, data ):
                 data = re.sub( pidre, '', data )
