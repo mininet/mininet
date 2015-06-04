@@ -385,7 +385,8 @@ class RemoteLink( Link ):
         if server1 == server2:
             # Link within same server
             return Link.makeIntfPair( intfname1, intfname2, addr1, addr2,
-                                      node1, node2, deleteIntfs=deleteIntfs )
+                                      node1, node2, deleteIntfs=deleteIntfs,
+                                      runCmd=None )
         # Otherwise, make a tunnel
         self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
                                        addr1, addr2 )
@@ -761,10 +762,13 @@ class MininetCluster( Mininet ):
         "Patch to update IP address to global IP address"
         controller = Mininet.addController( self, *args, **kwargs )
         # Update IP address for controller that may not be local
-        if ( isinstance( controller, Controller)
-             and controller.IP() == '127.0.0.1'
-             and ' eth0:' in controller.cmd( 'ip link show' ) ):
-            Intf( 'eth0', node=controller ).updateIP()
+        if ( isinstance( controller, Controller )
+             and controller.IP() == '127.0.0.1' ):
+            links = controller.cmd( 'ip link show' )
+            eth0 = re.findall( ' (.*eth0):', links )
+            if not eth0:
+                raise Exception( 'Cannot find IP address for controller eth0' )
+            Intf( eth0[ 0 ], node=controller ).updateIP()
         return controller
 
     def buildFromTopo( self, *args, **kwargs ):
