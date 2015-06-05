@@ -7,6 +7,7 @@ This contains additional Node types which you may find to be useful.
 from mininet.node import Node, Switch
 from mininet.log import info, warn
 from mininet.moduledeps import pathCheck
+from mininet.util import quietRun
 
 import re
 
@@ -59,8 +60,14 @@ class LinuxBridge( Switch ):
 
     @classmethod
     def setup( cls ):
-        "Make sure our class dependencies are available"
+        "Check dependencies and warn about firewalling"
         pathCheck( 'brctl', moduleName='bridge-utils' )
+        # Disable Linux bridge firewalling so that traffic can flow!
+        for table in 'arp', 'ip', 'ip6':
+            cmd = 'sysctl net.bridge.bridge-nf-call-%stables' % table
+            out = quietRun( cmd ).strip()
+            if out.endswith( '1' ):
+                warn( 'Warning: Linux bridge may not work with', out, '\n' )
 
 
 class NAT( Node ):
