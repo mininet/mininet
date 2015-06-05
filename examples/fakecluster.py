@@ -12,6 +12,7 @@ like h1 sudo -E -u openflow ssh 10.2
 
 from mininet.net import Mininet
 from mininet.node import Host
+from mininet.nodelib import LinuxBridge
 from mininet.cli import CLI
 from mininet.topo import Topo, SingleSwitchTopo
 from mininet.log import setLogLevel, warn
@@ -213,9 +214,9 @@ class ClusterTopo( Topo ):
 def test():
     "Test this setup"
     setLogLevel( 'info' )
-    topo = ClusterTopo( 3 )
-    host = partial( MininetServer, ssh=True, ovs=True )
-    net = Mininet( topo=topo, host=host, ipBase='10.0/24' )
+    topo = ClusterTopo( 8 )
+    host = partial( MininetServer, ssh=True, ovs=True)
+    net = Mininet( topo=topo, host=host, switch=LinuxBridge, ipBase='10.0/24' )
     MininetServer.updateHostsFiles( net.hosts )
     # addNAT().configDefault() also connects root namespace to Mininet
     net.addNAT().configDefault()
