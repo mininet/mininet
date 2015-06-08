@@ -201,6 +201,8 @@ class Server( Host ):
     def startSSH( self, motdPath='/var/run/motd.dynamic' ):
         "Update motd, clear out utmp/wtmp/btmp, and start sshd"
         # Note: /var/run and /var/log must be overlays!
+        assert ( '/var/run' in ( self.overlayDirs + self.privateDirs ) and
+                 '/var/log' in ( self.overlayDirs + self.privateDirs ) )
         self.cmd( "echo  '%s' > %s" % ( self.motd(), motdPath ) )
         self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp* /var/log/btmp*' )
         # sshd.pid should really be in /var/run/sshd instead of /var/run
