@@ -29,7 +29,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
-from mininet.nodelib import LinuxBridge
+from mininet.nodelib import LinuxBridge, Server
 from mininet.link import Link, TCLink, OVSLink
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
@@ -69,6 +69,7 @@ SWITCHES = { 'user': UserSwitch,
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
+          'server': Server,
           'rt': specialClass( CPULimitedHost, defaults=dict( sched='rt' ) ),
           'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
 
