@@ -156,7 +156,7 @@ class RemoteMixin( object ):
                 '-o', 'ForwardAgent=yes', '-tt' ]
 
     def __init__( self, name, server='localhost', user=None, serverIP=None,
-                  controlPath=False, splitInit=False, **kwargs):
+                  controlPath=True, splitInit=False, **kwargs):
         """Instantiate a remote node
            name: name of remote node
            server: remote server (optional)
