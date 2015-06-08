@@ -65,7 +65,7 @@ class TorusTopo( Topo ):
                 # dpid cannot be zero for OVS
                 dpid = ( i + 1 ) * 256 + ( j + 1 )
                 switch = switches[ i, j ] = self.addSwitch(
-                    's' + loc, dpid='%016x' % dpid )
+                    's' + loc, dpid='%x' % dpid )
                 for k in range( 0, n ):
                     host = hosts[ i, j, k ] = self.addHost( genHostName( loc, k + 1 ) )
                     self.addLink( host, switch )
