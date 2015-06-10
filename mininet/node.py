@@ -74,9 +74,9 @@ class Node( object ):
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
 
-    def __init__( self, name, inNamespace=('net','mnt'), **params ):
+    def __init__( self, name, **params ):
         """name: name of node
-           inNamespace: private namespaces to use ['net','mnt']
+           ns: private namespaces to use ['net','mnt']
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
 
@@ -86,8 +86,14 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.overlayDirs = params.get( 'overlayDirs', [] )
-        # Allow 'ns' abbreviation
-        self.inNamespace = params.get( 'inNamespace', params.get( 'ns',  inNamespace ) )
+        
+        # Support old inNamespace param
+        inNamespace = params.get( 'inNamespace', True )
+        if inNamespace:
+            self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
+        else:
+            self.ns = params.get( 'ns', [] )
+        self.inNamespace = 'net' in self.ns
         
         # Stash configuration parameters for future reference
         self.params = params
@@ -134,14 +140,10 @@ class Node( object ):
         # mnexec: (c)lose descriptors
         # (p)rint pid, and run in (n)etwork and (m)ount namespace
         opts = '-cdp' if mnopts is None else mnopts
-        if self.inNamespace is True:
-            self.inNamespace = [ 'net', 'mnt' ]
-        elif hasattr( self.inNamespace, '__iter__' ):
-            # Handle additional namespaces if specified
-            nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
-            chars = [ nsmap[ ns ] for ns in self.inNamespace
-                      if ns in self.inNamespace ]
-            opts += ''.join( chars )
+        # Handle additional namespaces if specified
+        nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
+        chars = [ nsmap.get( ns, '' ) for ns in self.ns ]
+        opts += ''.join( chars )
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
@@ -918,7 +920,7 @@ class Switch( Node ):
         self.dpid = self.defaultDpid( dpid )
         self.opts = opts
         self.listenPort = listenPort
-        if not self.inNamespace:
+        if 'net' not in self.ns:
             self.controlIntf = Intf( 'lo', self, port=0 )
 
     def defaultDpid( self, dpid=None ):
@@ -1124,10 +1126,9 @@ class OVSSwitch( Switch ):
         version = quietRun( 'ovs-vsctl --version' )
         cls.OVSVersion = findall( r'\d+\.\d+', version )[ 0 ]
 
-    @classmethod
-    def isOldOVS( cls ):
+    def isOldOVS( self ):
         "Is OVS ersion < 1.10?"
-        return ( StrictVersion( cls.OVSVersion ) <
+        return ( StrictVersion( self.OVSVersion ) <
                  StrictVersion( '1.10' ) )
 
     def dpctl( self, *args ):
@@ -1212,7 +1213,7 @@ class OVSSwitch( Switch ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
             raise Exception(
-                'OVS kernel switch does not work in a namespace' )
+                'OVS kernel switch does not work in a network namespace' )
         int( self.dpid, 16 )  # DPID must be a hex string
         # Command to add interfaces
         intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
