@@ -238,7 +238,7 @@ class MininetRunner( object ):
                          default=False, help="pin hosts to CPU cores "
                          "(requires --host cfs or --host rt)" )
         opts.add_option( '--nat', action='callback', callback=self.setNat,
-                         help="adds a NAT to the topology that"
+                         help="[option=val...] adds a NAT to the topology that"
                          " connects Mininet hosts to the physical network."
                          " Warning: This may route any traffic on the machine"
                          " that uses Mininet's"
