@@ -186,8 +186,8 @@ class OVSSwitchNS( OVSSwitch ):
         return self.ovsdb.defaultIntf()
 
     def __init__( self, *args, **kwargs ):
-        "group: number of OVS instances per OVSDB"
-        self.groupSize = kwargs.pop( 'group', self.groupSize )
+        "n: number of OVS instances per OVSDB"
+        self.groupSize = kwargs.pop( 'n', self.groupSize )
         super( OVSSwitchNS, self ).__init__( *args, **kwargs )
 
 
