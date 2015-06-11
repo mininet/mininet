@@ -144,7 +144,6 @@ class NAT( Node ):
 
     def terminate( self ):
         "Stop NAT/forwarding between Mininet and external network"
-        print 'STOPPING', self
         # Remote NAT rules
         self.cmd( 'iptables -D FORWARD',
                    '-i', self.localIntf, '-d', self.subnet, '-j DROP' )
