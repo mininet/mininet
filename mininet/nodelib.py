@@ -74,15 +74,17 @@ class NAT( Node ):
     "NAT: Provides connectivity to external network"
 
     def __init__( self, name, inetIntf=None, subnet='10.0/8',
-                  localIntf=None, **params):
+                  localIntf=None, flush=False, **params):
         """Start NAT/forwarding between Mininet and external network
            inetIntf: interface for internet access
-           subnet: Mininet subnet (default 10.0/8)="""
+           subnet: Mininet subnet (default 10.0/8)
+           flush: flush iptables before installing NAT rules"""
         super( NAT, self ).__init__( name, **params )
 
         self.inetIntf = inetIntf if inetIntf else self.getGatewayIntf()
         self.subnet = subnet
         self.localIntf = localIntf
+        self.flush = flush
 
     def config( self, **params ):
         """Configure the NAT and iptables"""
@@ -93,17 +95,15 @@ class NAT( Node ):
 
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
 
-        # Flush any currently active rules
-        # TODO: is this safe?
-        self.cmd( 'iptables -F' )
-        self.cmd( 'iptables -t nat -F' )
+        if self.flush:
+            self.cmd( 'iptables -F' )
+            self.cmd( 'iptables -t nat -F' )
+            # Create default entries for unmatched traffic
+            self.cmd( 'iptables -P INPUT ACCEPT' )
+            self.cmd( 'iptables -P OUTPUT ACCEPT' )
+            self.cmd( 'iptables -P FORWARD DROP' )
 
-        # Create default entries for unmatched traffic
-        self.cmd( 'iptables -P INPUT ACCEPT' )
-        self.cmd( 'iptables -P OUTPUT ACCEPT' )
-        self.cmd( 'iptables -P FORWARD DROP' )
-
-        # Configure NAT
+        # Install NAT rules
         self.cmd( 'iptables -I FORWARD',
                   '-i', self.localIntf, '-d', self.subnet, '-j DROP' )
         self.cmd( 'iptables -A FORWARD',
@@ -143,13 +143,17 @@ class NAT( Node ):
             return fallback
 
     def terminate( self ):
-        """Stop NAT/forwarding between Mininet and external network"""
-        # Flush any currently active rules
-        # TODO: is this safe?
-        self.cmd( 'iptables -F' )
-        self.cmd( 'iptables -t nat -F' )
-
+        "Stop NAT/forwarding between Mininet and external network"
+        print 'STOPPING', self
+        # Remote NAT rules
+        self.cmd( 'iptables -D FORWARD',
+                   '-i', self.localIntf, '-d', self.subnet, '-j DROP' )
+        self.cmd( 'iptables -D FORWARD',
+                  '-i', self.localIntf, '-s', self.subnet, '-j ACCEPT' )
+        self.cmd( 'iptables -D FORWARD',
+                   '-i', self.inetIntf, '-d', self.subnet, '-j ACCEPT' )
+        self.cmd( 'iptables -t nat -D POSTROUTING',
+                   '-o', self.inetIntf, '-s', self.subnet, '-j MASQUERADE' )
         # Instruct the kernel to stop forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-
         super( NAT, self ).terminate()
