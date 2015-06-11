@@ -20,6 +20,7 @@ from mininet.topo import LinearTopo, SingleSwitchTopo
 from mininet.topolib import TreeTopo
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
+from mininet.clean import Cleanup, sh
 
 from itertools import groupby
 from operator import attrgetter
@@ -99,6 +100,12 @@ class OVSDB( Node ):
         if self.__class__.ovsdbCount <= 0:
             self.stopControlNet()
 
+    @classmethod
+    def cleanup( cls ):
+        "Clean up leftover ovsdb-server/ovs-vswitchd processes"
+        info( '*** Shutting down extra ovsdb-server/ovs-vswitchd processes\n' )
+        sh( 'pkill -f mn.pid' )
+
     def self( self, *args, **kwargs ):
         "A fake constructor that sets params and returns self"
         self.params = kwargs
@@ -120,6 +127,8 @@ class OVSDB( Node ):
         ovsdb.configDefault()
         ovsdb.setDefaultRoute( 'via %s' % self.nat.intfs[ 0 ].IP() )
         ovsdb.startOVS()
+        # Install cleanup callback
+        Cleanup.addCleanupCallback( self.cleanup )
 
 
 class OVSSwitchNS( OVSSwitch ):
