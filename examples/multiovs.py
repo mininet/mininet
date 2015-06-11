@@ -101,7 +101,7 @@ class OVSDB( Node ):
             self.stopControlNet()
 
     @classmethod
-    def cleanup( cls ):
+    def cleanUpOVS( cls ):
         "Clean up leftover ovsdb-server/ovs-vswitchd processes"
         info( '*** Shutting down extra ovsdb-server/ovs-vswitchd processes\n' )
         sh( 'pkill -f mn.pid' )
@@ -128,7 +128,7 @@ class OVSDB( Node ):
         ovsdb.setDefaultRoute( 'via %s' % self.nat.intfs[ 0 ].IP() )
         ovsdb.startOVS()
         # Install cleanup callback
-        Cleanup.addCleanupCallback( self.cleanup )
+        Cleanup.addCleanupCallback( self.cleanUpOVS )
 
 
 class OVSSwitchNS( OVSSwitch ):
@@ -154,6 +154,7 @@ class OVSSwitchNS( OVSSwitch ):
             for switch in switches:
                 if switch.pid == ovsdb.pid:
                     switch.pid = None
+                    switch.shell = None
             result += OVSSwitch.batchShutdown( switchGroup, run=ovsdb.cmd )
             for switch in switchGroup:
                 switch.ovsdbFree()
@@ -183,20 +184,29 @@ class OVSSwitchNS( OVSSwitch ):
         kwargs.update( mnopts='-da %d ' % ovsdb.pid )
         self.ns = [ 'net' ]
         self.ovsdb = ovsdb
+        self._waiting = False
         if self.privateShell:
             super( OVSSwitchNS, self ).startShell( *args, **kwargs )
         else:
-            self.pid = self.ovsdb.pid
+            # Delegate methods and initialize local vars
+            attrs = ( 'cmd', 'cmdPrint', 'sendCmd', 'waitOutput',
+                      'monitor', 'write', 'read',
+                      'pid', 'shell', 'stdout',)
+            for attr in attrs:
+                setattr( self, attr, getattr( ovsdb, attr ) )
         self.defaultIntf().updateIP()
 
-    def cmd( self, *args, **kwargs ):
-        "Delegate to ovsdb"
-        return self.ovsdb.cmd( *args, **kwargs )
+    @property
+    def waiting( self ):
+        "Optionally delegated to ovsdb"
+        return self._waiting if self.privateShell else self.ovsdb.waiting
 
-    def popen( self, *args, **kwargs ):
-        "Delegate to ovsdb"
-        return self.ovsdb.popen( *args, **kwargs )
-    
+    @waiting.setter
+    def waiting( self, value ):
+        "Optionally delegated to ovsdb (read only!)"
+        if self.privateShell:
+            _waiting = value
+
     def start( self, controllers ):
         "Update controller IP addresses if necessary"
         for controller in controllers:
@@ -213,6 +223,7 @@ class OVSSwitchNS( OVSSwitch ):
             super( OVSSwitchNS, self ).terminate( *args, **kwargs )
         else:
             self.pid = None
+            self.shell= None
 
     def defaultIntf( self ):
         return self.ovsdb.defaultIntf()
