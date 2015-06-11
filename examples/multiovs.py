@@ -42,18 +42,12 @@ class OVSDB( Node ):
             cswitch = cnet.addSwitch( 'ovsbr0', cls=OVSBridge )
             # Add NAT - note this can conflict with data network NAT
             info( '### Adding NAT for control and data networks'
-                  '(do not use with --nat!)\n' )
+                  ' (use --nat flush=0 for data network)\n' )
             cls.cnet = cnet
-            cls.nat = cnet.addNAT()
+            cls.nat = cnet.addNAT( 'ovsdbnat0')
             cnet.start()
             info( '### Control network started\n' )
         return cnet
-
-    def attachNAT( self, switch ):
-        "Attach switch to NAT if necessary"
-        cls = self.__class__
-        if switch == self.switches[ 0 ]:
-            cls.cnet.addLink( cls.nat, switch )
     
     def stopControlNet( self ):
         info( '\n### Stopping control network\n' )
@@ -181,7 +175,6 @@ class OVSSwitchNS( OVSSwitch ):
         for controller in controllers:
             if controller.IP() == '127.0.0.1' and not controller.intfs:
                 controller.intfs[ 0 ] = self.ovsdb.nat.intfs[ 0 ]
-        self.ovsdb.attachNAT( self )
         super( OVSSwitchNS, self ).start( controllers )
 
     def stop( self, *args, **kwargs ):
