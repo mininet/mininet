@@ -28,7 +28,7 @@ class OVSDB( Node ):
                     '/var/log/openvswitch' ]
 
     # Control network
-    ipBase = '10.123.123.0/24'
+    ipBase = '172.123.123.0/24'
     cnet = None
     nat = None
 
