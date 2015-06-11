@@ -6,10 +6,6 @@ Multiple ovsdb OVS!!
 We scale up by creating multiple ovsdb instances,
 each of which is shared by several OVS switches
 
-Note: here is the command that is actually run to start ovsdb:
-
-ovsdb-server /etc/openvswitch/conf.db -vconsole:emer -vsyslog:err -vfile:info --remote=punix:/var/run/openvswitch/db.sock --private-key=db:Open_vSwitch,SSL,private_key --certificate=db:Open_vSwitch,SSL,certificate --bootstrap-ca-cert=db:Open_vSwitch,SSL,ca_cert --no-chdir --log-file=/var/log/openvswitch/ovsdb-server.log --pidfile=/var/run/openvswitch/ovsdb-server.pid --detach --monitor
-
 """
 
 from mininet.net import Mininet
@@ -32,8 +28,9 @@ class OVSDB( Node ):
                     '/var/log/openvswitch' ]
 
     # Control network
-    ipBase = '172.123.123.0/24'
+    ipBase = '10.123.123.0/24'
     cnet = None
+    nat = None
 
     @classmethod
     def startControlNet( cls ):
@@ -43,17 +40,21 @@ class OVSDB( Node ):
             info( '### Starting control network\n' )
             cnet = Mininet( ipBase=cls.ipBase )
             cswitch = cnet.addSwitch( 'ovsbr0', cls=OVSBridge )
-            root = cnet.addHost( 'root0', inNamespace=False )
-            cnet.addLink( root, cswitch )
+            # Add NAT - note this can conflict with data network NAT
+            info( '### Adding NAT for control and data networks'
+                  '(do not use with --nat!)\n' )
             cls.cnet = cnet
+            cls.nat = cnet.addNAT()
             cnet.start()
             info( '### Control network started\n' )
         return cnet
-  
-    @classmethod
-    def rootIntf( cls ):
-        return cls.cnet[ 'root0' ].intfs[ 0 ]
 
+    def attachNAT( self, switch ):
+        "Attach switch to NAT if necessary"
+        cls = self.__class__
+        if switch == self.switches[ 0 ]:
+            cls.cnet.addLink( cls.nat, switch )
+    
     def stopControlNet( self ):
         info( '\n### Stopping control network\n' )
         cls = self.__class__
@@ -62,6 +63,7 @@ class OVSDB( Node ):
 
     def addSwitch( self, switch ):
         "Add a switch to our namespace"
+        # Attach first switch to cswitch!
         self.switches.append( switch )
 
     def delSwitch( self, switch ):
@@ -118,6 +120,7 @@ class OVSDB( Node ):
         link = cnet.addLink( ovsdb, cnet.switches[ 0 ] )
         cnet.switches[ 0 ].attach( link.intf2 )
         ovsdb.configDefault()
+        ovsdb.setDefaultRoute( 'via %s' % self.nat.intfs[ 0 ].IP() )
         ovsdb.startOVS()
 
 
@@ -147,14 +150,14 @@ class OVSSwitchNS( OVSSwitch ):
         return result
 
     # OVSDB allocation
-    groupSize = 1      # switch group size
+    groupSize = 64
     switchCount = 0
     lastOvsdb = None
 
     @classmethod
     def ovsdbAlloc( cls, switch ):
         "Allocate (possibly new) OVSDB instance for switch"
-        if cls.switchCount % cls.groupSize == 0:
+        if cls.switchCount % switch.groupSize == 0:
             cls.lastOvsdb = OVSDB()
         cls.switchCount += 1
         cls.lastOvsdb.addSwitch( switch )
@@ -177,7 +180,8 @@ class OVSSwitchNS( OVSSwitch ):
         "Update controller IP addresses if necessary"
         for controller in controllers:
             if controller.IP() == '127.0.0.1' and not controller.intfs:
-                controller.intfs[ 0 ] = self.ovsdb.rootIntf()
+                controller.intfs[ 0 ] = self.ovsdb.nat.intfs[ 0 ]
+        self.ovsdb.attachNAT( self )
         super( OVSSwitchNS, self ).start( controllers )
 
     def stop( self, *args, **kwargs ):
@@ -188,8 +192,13 @@ class OVSSwitchNS( OVSSwitch ):
     def defaultIntf( self ):
         return self.ovsdb.defaultIntf()
 
+    def __init__( self, *args, **kwargs ):
+        "group: number of OVS instances per OVSDB"
+        self.groupSize = kwargs.pop( 'group', self.groupSize )
+        super( OVSSwitchNS, self ).__init__( *args, **kwargs )
 
-switches = { 'ovsns': OVSSwitchNS }
+
+switches = { 'ovsns': OVSSwitchNS, 'ovsm': OVSSwitchNS }
 
 
 def test():
