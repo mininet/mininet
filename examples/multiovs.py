@@ -6,12 +6,16 @@ Multiple ovsdb OVS!!
 We scale up by creating multiple ovsdb instances,
 each of which is shared by several OVS switches
 
+The shell may also be shared among switch instances,
+which causes switch.cmd() and switch.popen() to be
+delegated to the ovsdb instance.
+
 """
 
 from mininet.net import Mininet
 from mininet.node import Node, OVSSwitch
 from mininet.node import OVSBridge
-from mininet.link import Link, OVSLink
+from mininet.link import Link, OVSIntf
 from mininet.topo import LinearTopo, SingleSwitchTopo
 from mininet.topolib import TreeTopo
 from mininet.log import setLogLevel, info
@@ -138,6 +142,9 @@ class OVSSwitchNS( OVSSwitch ):
         for ovsdb, switchGroup in groupby( switches, attrgetter( 'ovsdb') ):
             switchGroup = list( switchGroup )
             info( '(%s)' % ovsdb )
+            for switch in switches:
+                if switch.pid == ovsdb.pid:
+                    switch.pid = None
             result += OVSSwitch.batchShutdown( switchGroup, run=ovsdb.cmd )
             for switch in switchGroup:
                 switch.ovsdbFree()
@@ -167,9 +174,20 @@ class OVSSwitchNS( OVSSwitch ):
         kwargs.update( mnopts='-da %d ' % ovsdb.pid )
         self.ns = [ 'net' ]
         self.ovsdb = ovsdb
-        super( OVSSwitchNS, self ).startShell( *args, **kwargs )
+        if self.privateShell:
+            super( OVSSwitchNS, self ).startShell( *args, **kwargs )
+        else:
+            self.pid = self.ovsdb.pid
         self.defaultIntf().updateIP()
 
+    def cmd( self, *args, **kwargs ):
+        "Delegate to ovsdb"
+        return self.ovsdb.cmd( *args, **kwargs )
+
+    def popen( self, *args, **kwargs ):
+        "Delegate to ovsdb"
+        return self.ovsdb.popen( *args, **kwargs )
+    
     def start( self, controllers ):
         "Update controller IP addresses if necessary"
         for controller in controllers:
@@ -179,20 +197,45 @@ class OVSSwitchNS( OVSSwitch ):
 
     def stop( self, *args, **kwargs ):
         "Stop and free OVSDB namespace if necessary"
-        super( OVSSwitchNS, self ).stop( *args, **kwargs )
         self.ovsdbFree()
+
+    def terminate( self, *args, **kwargs ):
+        if self.privateShell:
+            super( OVSSwitchNS, self ).terminate( *args, **kwargs )
+        else:
+            self.pid = None
 
     def defaultIntf( self ):
         return self.ovsdb.defaultIntf()
 
     def __init__( self, *args, **kwargs ):
-        "n: number of OVS instances per OVSDB"
+        """n: number of OVS instances per OVSDB
+           shell: run private shell/bash process? (False)
+           If shell is shared/not private, cmd() and popen() are
+           delegated to the OVSDB instance, which is different than
+           regular OVSSwitch semantics!!"""
         self.groupSize = kwargs.pop( 'n', self.groupSize )
+        self.privateShell = kwargs.pop( 'shell', False )
         super( OVSSwitchNS, self ).__init__( *args, **kwargs )
 
 
+class OVSLinkNS( Link ):
+    "OVSLink that supports OVSSwitchNS"
+    
+    def __init__( self, node1, node2, **kwargs ):
+        "See Link.__init__() for options"
+        self.isPatchLink = False
+        if ( isinstance( node1, OVSSwitch ) and
+             isinstance( node2, OVSSwitch ) and
+             getattr( node1, 'ovsdb', None ) ==
+             getattr( node2, 'ovsdb', None ) ):
+            self.isPatchLink = True
+            kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
+        Link.__init__( self, node1, node2, **kwargs )
+
 switches = { 'ovsns': OVSSwitchNS, 'ovsm': OVSSwitchNS }
 
+links = { 'ovs': OVSLinkNS }
 
 def test():
     "Test OVSNS switch"
