@@ -79,21 +79,21 @@ class OVSDB( Node ):
                   ' -vfile:emer -vfile:err -vfile:info'
                   ' --remote=punix:/var/run/openvswitch/db.sock '
                   ' --log-file=/var/log/openvswitch/ovsdb-server.log'
-                  ' --pidfile=/var/run/openvswitch/ovsdb-server.pid'
+                  ' --pidfile=/var/run/openvswitch/ovsdb-server-mn.pid'
                   ' --no-chdir'
                   ' --detach' )
 
         self.cmd( 'ovs-vswitchd unix:/var/run/openvswitch/db.sock'
                   ' -vfile:emer -vfile:err -vfile:info'
                   ' --mlockall --log-file=/var/log/openvswitch/ovs-vswitchd.log'
-                  ' --pidfile=/var/run/openvswitch/ovs-vswitchd.pid'
+                  ' --pidfile=/var/run/openvswitch/ovs-vswitchd-mn.pid'
                   ' --no-chdir'
                   ' --detach' )
 
     def stopOVS( self ):
         self.cmd( 'kill',
-                  '`cat /var/run/openvswitch/ovs-vswitchd.pid`',
-                  '`cat /var/run/openvswitch/ovsdb-server.pid`' )
+                  '`cat /var/run/openvswitch/ovs-vswitchd-mn.pid`',
+                  '`cat /var/run/openvswitch/ovsdb-server-mn.pid`' )
         self.cmd( 'wait' )
         self.__class__.ovsdbCount -= 1
         if self.__class__.ovsdbCount <= 0:
