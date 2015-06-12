@@ -53,7 +53,7 @@ class OVSDB( Node ):
             cnet.start()
             info( '### Control network started\n' )
         return cnet
-    
+
     def stopControlNet( self ):
         info( '\n### Stopping control network\n' )
         cls = self.__class__
@@ -72,7 +72,7 @@ class OVSDB( Node ):
             self.stopOVS()
 
     ovsdbCount = 0
-    
+
     def startOVS( self ):
         "Start new OVS instance"
         self.cmd( 'ovsdb-tool create /etc/openvswitch/conf.db' )
@@ -127,8 +127,10 @@ class OVSDB( Node ):
         ovsdb.configDefault()
         ovsdb.setDefaultRoute( 'via %s' % self.nat.intfs[ 0 ].IP() )
         ovsdb.startOVS()
-        # Install cleanup callback
-        Cleanup.addCleanupCallback( self.cleanUpOVS )
+
+
+# Install cleanup callback
+Cleanup.addCleanupCallback( OVSDB.cleanUpOVS )
 
 
 class OVSSwitchNS( OVSSwitch ):
@@ -241,7 +243,7 @@ class OVSSwitchNS( OVSSwitch ):
 
 class OVSLinkNS( Link ):
     "OVSLink that supports OVSSwitchNS"
-    
+
     def __init__( self, node1, node2, **kwargs ):
         "See Link.__init__() for options"
         self.isPatchLink = False
