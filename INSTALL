@@ -65,7 +65,7 @@ like to contribute an installation script, we would welcome it!)
    where <release tag> is the release you want to check out.
 
    If you are running Ubuntu, Debian, or Fedora, you may be able to use
-   our handy `install.sh` script, which is in `mininet/util`.
+   our handy `install.sh` script, which is in `util/`.
 
    *WARNING: USE AT YOUR OWN RISK!*
 
