@@ -65,7 +65,7 @@ like to contribute an installation script, we would welcome it!)
    where <release tag> is the release you want to check out.
 
    If you are running Ubuntu, Debian, or Fedora, you may be able to use
-   our handy `install.sh` script, which is in `mininet/util`.
+   our handy `install.sh` script, which is in `util/`.
 
    *WARNING: USE AT YOUR OWN RISK!*
 
@@ -81,7 +81,7 @@ like to contribute an installation script, we would welcome it!)
    To install Mininet itself, the OpenFlow reference implementation, and
    Open vSwitch, you may use:
 
-        mininet/util/install.sh -fnv
+        util/install.sh -fnv
 
    This should be reasonably quick, and the following command should
    work after the installation:
@@ -92,14 +92,14 @@ like to contribute an installation script, we would welcome it!)
    including POX, the OpenFlow WireShark dissector, the `oftest`
    framework, and other potentially useful software, you may use:
 
-        mininet/util/install.sh -a
+        util/install.sh -a
 
    This takes about 4 minutes on our test system.
 
    You can change the directory where the dependencies are installed using
    the -s <directory> flag.
 
-        mininet/util/install.sh -s <directory> -a
+        util/install.sh -s <directory> -a
 
 3.2. Native installation from source on Fedora 18+.
 
@@ -128,7 +128,7 @@ like to contribute an installation script, we would welcome it!)
     * install Mininet, the OpenFlow reference implementation, and
       Open vSwitch
 
-        mininet/util/install.sh -fnv
+        util/install.sh -fnv
 
     * enable and start openvswitch
 
