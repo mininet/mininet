@@ -103,7 +103,7 @@ def findUser():
             # Logged-in user (if we have a tty)
             ( quietRun( 'who am i' ).split() or [ False ] )[ 0 ] or
             # Give up and return effective user
-            quietRun( 'whoami' ) )
+            quietRun( 'whoami' ).strip() )
 
 
 class ClusterCleanup( object ):
