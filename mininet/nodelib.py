@@ -150,7 +150,7 @@ class Server( Host ):
        - control-c does not work in Mininet CLI with pid namespace
        - xterm does not work from Mininet CLI
        We may be able to address these issues in the future."""
-    
+
     inNamespace = [ 'net', 'mnt', 'pid', 'uts' ]
     overlayDirs = [ '/etc', '/var/run', '/var/log' ]
     privateDirs = [ '/var/run/sshd' ]
@@ -208,7 +208,7 @@ class Server( Host ):
         # sshd.pid should really be in /var/run/sshd instead of /var/run
         self.cmd( 'rm /var/run/sshd.pid' )
         self.cmd( '/etc/init.d/ssh start' )
-    
+
     def config( self, **kwargs ):
         """Configure/start sshd and other stuff
             ssh: start sshd? (True )"""
@@ -216,13 +216,11 @@ class Server( Host ):
         self.ssh = kwargs.get( 'ssh' )
         if self.ssh:
             self.startSSH()
-        if 'uts' in self.inNamespace:
+        if 'uts' in self.ns:
             self.cmd( 'hostname', self )
-    
+
     def terminate( self, *args, **kwargs ):
         "Shut down services and terminate server"
         if self.ssh:
             self.service( 'ssh stop' )
         super( Server, self ).terminate( *args, **kwargs )
-
-
