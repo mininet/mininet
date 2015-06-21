@@ -216,7 +216,7 @@ class Server( Host ):
         self.ssh = kwargs.get( 'ssh' )
         if self.ssh:
             self.startSSH()
-        if 'uts' in self.inNamespace:
+        if 'uts' in self.ns:
             self.cmd( 'hostname', self )
 
     def terminate( self, *args, **kwargs ):
