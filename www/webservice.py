@@ -27,14 +27,8 @@ import urllib
 
 # import bottle framework
 from bottle import route, run, template, request
-import os
-try:
-    user_paths = os.environ['PYTHONPATH'].split(os.pathsep)
-except KeyError:
-    user_paths = []
-print "user_paths: {0}".format(user_paths)
+
 setLogLevel( 'info' )
-print sys.path
 
 # gets the ipaddress of an interface
 # used to figure out which ip we should run bottle on
@@ -80,6 +74,7 @@ net = Mininet(
 # start is_running to false and server index at 0
 is_running = False
 server_index = 0
+method_list = {}
 
 # pretty dumb round robining but good enough for meow, mininet comes with
 # some balancing classes but at a glance they seem to only work if you build
@@ -118,13 +113,83 @@ def main():
                 return (True, msg.format(name))
 
             return (False, "")
+        var_str = " " if(success) else " does not "
+        wrapper.__descr__ = "ensures node"+var_str+"exist"
         return wrapper
+
+    def link_exists( msg="Link, {0}, does not exist", success=True ):
+        if( success == False ):
+            msg="Link, {0}, already exist"
+        def wrapper( name ):
+            exists = None
+            link = net.getLink( name )
+            if(link):
+                exists = True
+            else:
+                exists = False
+
+            if( exists != success ):
+                return (True, msg.format(name))
+
+            return (False, "")
+        var_str = " " if(success) else " does not "
+        wrapper.__descr__ = "ensures link"+var_str+"exist"
+        return wrapper
+
+    # takes in a validator grabs the method_name and method_description keys
+    # to build a help message to print to the user when /help is executed
+    def create_method_help_obj( validators ):
+        global method_list
+       
+        # grab our name and description and remove them from the validator dict
+        method_name        = validators.pop('method_name', None)
+        method_description = validators.pop('method_description', None)
+
+        # make sure they are defined
+        if(method_name is None):
+            print "You must provide a method_name along with the validator for the /help method!"
+            sys.exit(1)
+        if(method_description is None):
+            print "You must provide a method_description along with the validator for the /help method!"
+            sys.exit(1)
+
+        method_list[method_name] = {}
+        method_list[method_name]['description'] = method_description
+        method_list[method_name]['parameters']  = []
+
+        for param in validators:
+            parameter = {}
+            validator = validators[param]
+            parameter['name']     = param
+            parameter['required'] = validator.get('required', False)
+
+            if(validator.get('pattern', False)):
+                parameter['pattern'] = validator.get('pattern')
+
+            if(validator.get('type', False)):
+                parameter['type'] = validator.get('type')
+
+            if(validator.get('checks', False)):
+                checks = validator.get('checks');
+                parameter['checks'] = []
+                for check in checks:
+                    try:
+                        parameter['checks'].append(check.__descr__)
+                    except:
+                        print "Must provide __descr__ for checks!"
+                        sys.exit(1)
+            method_list[method_name]['parameters'].append(parameter)
+
+        method_list[method_name]['parameters'] = sorted( method_list[method_name]['parameters'], key=lambda k: k['name']) 
+
+        return validators
+
 
     # special decorator that takes in kwargs where the key is the parameter
     # and the value is an object representing the validation it should do to the 
     # parameter
     def validate_params( **kwargs ):
-        validators = kwargs
+        validators = create_method_help_obj(kwargs)
         def validate_params_decorator(func):
             def wrapper(*args, **kwargs):
                 validated_args = {}
@@ -145,12 +210,25 @@ def main():
                             pattern = validator.get('pattern')
                             regex   = re.compile(pattern)
                             if(not regex.match(value) ): 
-                                return format_results( None, "Parameter, {0}, must match pattern".format(param, pattern) )
+                                return format_results( None, "Parameter, {0}, must match pattern, {1}".format(param, pattern) )
+
+                        # if a type is set try to convert to the type otherwise send error
+                        if( validator.get('type', False) ):
+                            if( validator.get('type') == 'string' ):
+                                try: 
+                                    value = str(value)
+                                except Exception as e:
+                                    return format_results( None, "Error converting {0} to string: {1}".format(value, e))
+                            if( validator.get('type') == 'integer' ):
+                                try: 
+                                    value = int(value)
+                                except Exception as e:
+                                    return format_results( None, "Error converting {0} to integer: {1}".format(value, e))
+
+
                         # if the param has any special check perform them now
                         for check in checks:
-                            print "calling check"
                             err, msg = check( value )
-                            print "got err {0} and msg {1}".format(err, msg)
                             if(err):
                                 return format_results( None, msg )
 
@@ -162,48 +240,204 @@ def main():
             return wrapper
         return validate_params_decorator
 
+    @route('/add_vlan')
+    @validate_params(
+        method_name = 'add_vlan',
+        method_description = 'Creates a new vlan interface via vconfig',
+        host   = { 'required': True, 'checks': [ node_exists() ] },
+        vlan   = { 'required': True },
+        intf   = { 'required': True },
+        ip     = {},
+        mask   = {}
+    )
+    def add_vlan( params ):
+        host = params.get('host')
+        vlan = int(params.get('vlan'))
+        intf = params.get('intf')
+        ip   = params.get('ip')
+        mask = params.get('mask')
 
-    # note this method is dangerous since it allows you to run any command, and the commands are run
-    # as root, would be fine in are setup given the firewalls but we should make more specific commands
-#    @route('/cmd/<node>/<cmd>')
-#    def node_cmd( node, cmd='hostname' ):
-#        try:
-#            node_obj = net.get( node )
-#        except KeyError:
-#            err = "Node, {0}, does not currently exists in the mininet topology".format(node) 
-#            return format_results( None, err, 1 )
-#        except: 
-#            e = sys.exc_info()[0]
-#            err = "Encountered an error while trying to retrieve {0} instance: {1}".format(node, str(e))
-#            return format_results( None, err, 1 )
-#
-#        out, err, code = node_obj.pexec( cmd )
-#        return format_results( out, err, code )
+        # get host
+        host = net.get(host)
+        intf = host.nameToIntf[ intf ]
+        intf_name = "%s-%s" % (str(host.id), str(host.ports[ intf ]))
+
+        if(vlan > 0 and vlan < 4096):
+            # add vlan
+            out, err, code = host.pexec('vconfig add {0} {1}'.format(intf_name, vlan))
+            if(code):
+                return format_results(out, err)
+
+        # add ip addr if it was passed in
+        if( (ip is not None) and (mask is not None) ):
+            return add_ip_addr({
+                'ip':   ip,
+                'mask': mask,
+                'vlan': vlan,
+                'intf': intf,
+                'host': host.name
+            })
+        return format_results( [{'name': "{0}.{1}".format(intf_name, vlan)}] )
+
+
+    @route('/ifconfig')
+    @validate_params(
+        method_name = 'ifconfig',
+        method_description = 'Runs ifconfig on given node',
+        node   = { 'required': True, 'checks': [ node_exists() ] }
+    )	
+    def ifconfig( params ):
+        node = params.get('node')
+
+        # get host
+        node = net.get(node)
+
+        # add vlan
+        out, err, code = node.pexec('ifconfig')
+        if(code):
+             return format_results(out, err)
+
+        return format_results( [{'ifconfig': out.split('\n') }] )
+
+
+    @route('/add_ip_addr')
+    @validate_params(
+        method_name = 'add_ip_addr',
+        method_description = 'Adds an ip address to an interface via ifconfig',
+        host   = { 'required': True, 'checks': [ node_exists() ] },
+        intf   = { 'required': True },
+        ip     = { 'required': True },
+        mask   = { 'required': True },
+        vlan   = {}
+    )
+    def add_ip_addr( params ):
+        host = params.get('host')
+        intf = params.get('intf')
+        ip   = params.get('ip')
+        mask = params.get('mask')
+        vlan = int(params.get('vlan'))
+
+        host = net.get(host)
+
+        intf = host.nameToIntf[ intf ]
+        intf_name = "%s-%s" % (str(host.id), str(host.ports[ intf ]))
+        # append vlan on end of intf is passed in
+        if(vlan is not None and vlan > 0 and vlan < 4096): intf_name = intf_name + '.' + str(vlan)
+
+        out, err, code = host.pexec('ifconfig {0} {1}/{2}'.format(intf_name, ip, mask))
+        if(code):
+             return format_results(out, err)
+
+        return format_results( [{'name': "{0}".format(intf_name)}] )
+
+    @route('/ping')
+    @validate_params(
+        method_name = 'ping',
+        method_description = 'Sends a ping from a host to another host or ip and returns the results',
+        src   = { 'required': True, 'checks': [ node_exists() ] },
+        dst   = { 'required': True },
+	count = { 'default': 5 },
+	raw   = { 'default': False }
+    )
+    def ping( params ):
+        if(not is_running):
+            return format_results( None, "Can not ping a host when mininet is not running" )
+
+	src   = params.get('src')
+	dst   = params.get('dst')
+	count = params.get('count')
+	raw   = params.get('raw')
+
+        host = net.get(src)
+
+        out, err, code = host.pexec( "ping -c {0} {1}".format(count, dst) )
+	if(err):
+	    format_results(None, err)
+	if(raw):
+	    format_results(out, err)
+
+	lines   = out.split('\n')
+	results = { 'pings': [], 'stats': None }
+	for line in lines:
+            # capture a ping message
+            capture = re.search('(\d+) bytes from (.*): icmp_seq=(\d+) ttl=(\d+) time=(.*) ms', line)
+            if(capture):
+		bytesSent = int(capture.group(1))
+                src       = capture.group(2)
+                icmp_seq  = int(capture.group(3))
+		ttl       = int(capture.group(4))
+		time      = float(capture.group(5))
+                results['pings'].append({
+		    'bytes': bytesSent,
+                    'src': src,
+                    'icmp_seq': icmp_seq,
+                    'ttl': ttl,
+                    'time_ms': time
+                })
+
+	    # capture a ping failure message
+	    capture = re.search('From (.*) icmp_seq=(\d+) (.*)', line)
+            if(capture):
+            	src      = capture.group(1)
+            	icmp_seq = int(capture.group(2))
+		msg      = capture.group(3)
+	    	results['pings'].append({
+		    'src': src,
+		    'msg': msg,
+		    'icmp_seq': icmp_seq
+		})
+
+	    # capture the statistics message
+            capture = re.search(
+	        '(\d+) packets transmitted, (\d+) received, (?:\+(\d+) errors, )?(\d+)% packet loss, time (\d+)ms',
+		line
+	    )
+            if(capture):
+                tx_packets      = int(capture.group(1))
+                rx_packets      = int(capture.group(2))
+                errors          = int(capture.group(3)) if(capture.group(3) is not None) else 0
+		packet_loss_pct = int(capture.group(4))
+		time_ms         = int(capture.group(5))
+
+                results['stats'] = {
+		    'tx_packets': tx_packets,
+		    'rx_packets': rx_packets,
+		    'errors': errors,
+		    'packet_loss_pct': packet_loss_pct,
+		    'time_ms': time_ms
+                }
+        
+	return format_results( results, err )
 
 
     @route('/flows')
     @validate_params(
-        node = { 'checks': [ node_exists() ] }
+        method_name = 'flows',
+        method_description = 'Retrieve ofp flow mods for specified switches',
+        switch = { 'checks': [ node_exists() ] }
     )
     def flows( params ):
         if(not is_running):
             return format_results( None, "Can not retrieve flow stats when mn is not running" )
 
         # pull out params
-        node_name = params.get('node')
+        switch_name = params.get('switch')
 
-        nodes = []
-        if(node_name):
-            nodes.append(net.get(node_name))
+        switches = []
+        if(switch_name):
+            switches.append(net.get(switch_name))
         else:
-            nodes = net.switches 
+            switches = net.switches 
 
         # this will convert the string blob returned by dump-flows into an object
         def parse_stats_and_matches(str):
             stats = { 'matches': {} }
+            
             for kvp_str in str.split(','):
                 # get rid of leading and trailing whitespace
                 kvp_str = kvp_str.strip()
+                # if kvp_str is now an empty string skip (this is a wildcard match)
+                if(kvp_str == ""): continue
                 # split on '=' to get our key and value for the attr
                 kvp = kvp_str.split('=')
 
@@ -219,11 +453,42 @@ def main():
                     stats[kvp[0]] = kvp[1]
             return stats
 
-        # now loop through our nodes getting their stats
-        results = []
-        for node in nodes:
-            flow_txt = node.dpctl('dump-flows')
+        def parse_actions(str):
+            actions = []
+	    for kvp_str in str.split(','):
+                # get rid of leading and trailing whitespace
+                kvp_str = kvp_str.strip()
 
+                # split on '=' to get our key and value for the attr
+                kvp = kvp_str.split(':')
+		
+		if(len(kvp) < 2): continue
+
+                # convert numbers to ints if we can
+                try:
+                    kvp[1] = int(kvp[1])
+                except:
+                    kvp[1] = kvp[1]
+
+		actions.append({ kvp[0]: kvp[1] })
+
+	    return actions
+
+        # now loop through our switches getting their stats
+        results = []
+        for switch in switches:
+            flow_txt = switch.dpctl('dump-flows')
+
+            if(re.match("ovs-ofctl: (.*)? is not a bridge or a socket", flow_txt)):
+                results.append({
+                    'name': "{0}".format(switch),
+                    'xid': None,
+                    'flows': None,
+                    'error': True,
+                    'error_msg': flow_txt
+                })
+                continue
+                
             # need to do some formatting to this awful string blob
             capture = re.search('NXST_FLOW reply \(xid=(.*)?\):(.*)', flow_txt, re.MULTILINE|re.DOTALL)
 
@@ -237,7 +502,7 @@ def main():
 
             flows = []
             # if we have flows on the switch parse them
-            if(flows_blob != ' '):
+            if(flows_blob != ''):
                 # split on new lines to get a flow
                 for flow_blob in flows_blob.split('\r\n'):
                     # use regex to split the stats, matches, and actions
@@ -246,18 +511,24 @@ def main():
                     actions_str       = capture.group(2)
 
                     stats            = parse_stats_and_matches(stats_matches_str)
-                    stats['actions'] = actions_str.split(',')
+                    stats['actions'] = parse_actions(actions_str)
 
                     flows.append(stats)
 
             results.append({
-                'name': "{0}".format(node),
+                'name': "{0}".format(switch),
                 'xid': xid,
                 'flows': flows
             })
 
         return format_results( results )
 
+
+
+    @validate_params(
+        method_name = 'links',
+        method_description = 'Retrieves all links in mininet',
+    )
     @route('/links')
     def links():
         links = []
@@ -268,6 +539,10 @@ def main():
             })
         return { 'results': links }
     
+    @validate_params(
+        method_name = 'switches',
+        method_description = 'Retrieves all switches in mininet',
+    )
     @route('/switches')
     def switches():
         switches = []
@@ -294,6 +569,10 @@ def main():
             })
         return format_results( switches )
     
+    @validate_params(
+        method_name = 'hosts',
+        method_description = 'Retrieves all hosts in mininet',
+    )
     @route('/hosts')
     def hosts():
         hosts = []
@@ -321,6 +600,8 @@ def main():
     
     @route('/add_host')
     @validate_params(
+        method_name = 'add_host',
+        method_description = 'Adds a host to mininet',
         name = { 
             'required': True,
             'checks': [
@@ -337,15 +618,10 @@ def main():
         ip   = params.get('ip')
         mask = params.get('mask')
 
-        print "ip: {0}".format(ip)
-        print "mask: {0}".format(mask)
-
         # format our ip
         cidr_ip = None
         if(( ip is not None) and (mask is not None)):
             cidr_ip = ip+"/"+mask
-
-        print "cidr: {0}".format(cidr_ip)
 
         # round robin our cluster servers
         server = get_next_server()
@@ -358,8 +634,10 @@ def main():
 
     @route('/add_switch')
     @validate_params(
-        name={ 'required': True },
-        dpid={}
+        method_name = 'add_switch',
+        method_description = 'Adds a switch to mininet',
+        name={ 'required': True, 'checks': [node_exists(success=False)] },
+        dpid={ 'type': 'string' }
     )
     def add_switch(params):
         # pull out params
@@ -369,9 +647,9 @@ def main():
         # round robin our cluster servers
         server = get_next_server()
         if(server == 'localhost'):
-            switch = net.addSwitch(name, dpid=str(dpid))
+            switch = net.addSwitch(name, dpid=dpid)
         else:
-            switch = net.addSwitch(name, dpid=str(dpid), server=server)
+            switch = net.addSwitch(name, dpid=dpid, server=server)
 
         if(is_running):
             switch.start(net.controllers)
@@ -380,6 +658,8 @@ def main():
 
     @route('/add_switch_intf')
     @validate_params(
+        method_name = 'add_switch_intf',
+        method_description = 'Adds an interface to a switch in mininet',
         switch = {
             'required': True,
             'checks': [
@@ -387,7 +667,7 @@ def main():
             ]
         },
         intf = { 'required': True },
-        port = { 'required': True }
+        port = { 'required': True, 'type': 'integer' }
     )
     def add_switch_intf(params):
         # pull out params        
@@ -396,16 +676,17 @@ def main():
         port        = params.get('port')
 
         switch = net.get(switch_name)
-        intf   = Intf(switch_name+'-'+intf_name, node=switch, port=int(port))
-        #intf   = Intf(switch_name+'-'+intf_name, node=switch )
+        intf   = Intf(intf_name, node=switch, port=port)
         
         return format_results( [{'name': "{0}".format(intf)}] )
 
     @route('/add_controller')
     @validate_params(
+        method_name = 'add_controller',
+        method_description = 'Adds a remote controller to mininet',
         name = { 'required': True },
         ip   = { 'required': True },
-        port = { 'required': True }
+        port = { 'required': True, 'type': 'integer' }
     )
     def add_controller(params):
         # pull out params        
@@ -414,47 +695,41 @@ def main():
         port = params.get('port')
 
         # attach controller
-        c0 = RemoteController( name=name, ip=ip, port=int(port) )
+        c0 = RemoteController( name=name, ip=ip, port=port )
         net.addController(c0)
         
         return format_results( [{'name': "{0}".format(c0)}] )
 
     @route('/add_link')
     @validate_params(
+        method_name = 'add_link',
+        method_description = 'Adds a link between two nodes in mininet',
+        name   = {},
         node_a = { 'required': True, 'checks': [ node_exists(success=True) ] },
         node_z = { 'required': True, 'checks': [ node_exists(success=True) ] },
-        port_a = {},
-        port_z = {},
+        port_a = { 'type': 'integer' },
+        port_z = { 'type': 'integer' },
         intf_a = {},
         intf_z = {}
     )
     def add_link(params):
         # pull out params
-        node_a = params.get('node_a');
-        node_z = params.get('node_z');
-        port_a = params.get('port_a');
-        port_z = params.get('port_z');
-        intf_a = params.get('intf_a');
-        intf_z = params.get('intf_z');
+        name   = params.get('name')
+        node_a = params.get('node_a')
+        node_z = params.get('node_z')
+        port_a = params.get('port_a')
+        port_z = params.get('port_z')
+        intf_a = params.get('intf_a')
+        intf_z = params.get('intf_z')
 
-        # get node instances 
-        #node_a = net.get(node_a)
-        #node_z = net.get(node_z)
-        #print "intfs {0}: ".format(node_a.intfs)
-
-        if(port_a is not None):
-            port_a = int(port_a)
-
-        if(port_z is not None):
-            port_z = int(port_z)
-                
         link = net.addLink(
             node_a, 
             node_z,
             port1=port_a,
             port2=port_z,
             intfName1=intf_a,
-            intfName2=intf_z
+            intfName2=intf_z,
+            name=name
         )
 
         if(is_running):
@@ -464,18 +739,15 @@ def main():
             for node in nodes:
                 node.stop()
                 node.start( net.controllers )
-#                for intf in node.intfList():
-#                    print "INterface: {0}".format(intf.status())
-#                    print "{0}".format(intf.isUp())
-#                    print "{0}".format(intf.ifconfig())
-#                    if(intf.status() != "up"):
-#                        node.attach(intf)
 
         return format_results( [{'name': "{0}".format(link)}] )
 
-    @route('/delete_link/<link_name>')
+    @route('/delete_link')
     @validate_params(
-        link = {} 
+        method_name = 'delete_link',
+        method_description = 'Deletes a link in mininet',
+        link   = { 'required': True },
+        status = {}
     )
     def delete_link(params):
         # pull out params
@@ -489,9 +761,46 @@ def main():
                 return format_results ([{'success': 1}])
 
         return format_results(None, "Unable to find link {0}".format(link_name))
+    
+    @route('/update_link')
+    @validate_params(
+        method_name = 'update_link',
+        method_description = 'Updates a link in mininet',
+        link = { 'required': True, 'checks': [ link_exists() ] },
+        status = { 'pattern': '^(1|0)$', 'type': 'integer' }
+    )
+    def update_link(params):
+        link   = params.get('link')
+        status = params.get('status')
+        link = net.getLink(name=link);
+
+        if(status is not None):
+            if(status == 1):
+                # make link up by up'ing it's first interface
+                out, err, code = link.node1.pexec('ifconfig {0} up'.format(link.intf1.br_name))
+                if(code):
+                     return format_results(out, err)
+                return format_results([{
+                    'status': link.status(),
+                }])
+
+            else:
+                # make link up by up'ing it's first interface
+                out, err, code = link.node1.pexec('ifconfig {0} down'.format(link.intf1.br_name))
+                if(code):
+                    return format_results(out, err)
+                return format_results([{
+                    'status': link.status()
+                }])
+
+        return format_results(None, 'Must pass in a parameter to update')
 
     @route('/stop')
-    def stop():
+    @validate_params(
+        method_name = 'stop',
+        method_description = 'Stops mininet and reinitializes network',
+    )
+    def stop(params):
         global net
         global is_running
         # if mn is running stop and reinitialize, seems to crash
@@ -502,17 +811,21 @@ def main():
             net  = Mininet(
                 topo=None,
                 build=False,
-                switch=RemoteOVSSwitch,
+                switch=OVSSwitch,
                 controller=RemoteController,
-                link=RemoteLink,
-                host=RemoteHost
+                link=Link,
+                host=Host
             )
             return format_results( [{ "msg": "Successfully stopped mininet" }] )
         else:
             return format_results( [{ "msg": "Mininet was already stopped" }] )
     
     @route('/start')
-    def start():
+    @validate_params(
+        method_name = 'start',
+        method_description = 'Starts mininet network',
+    )
+    def start(params):
         global is_running
         if(not is_running):
             net.start()
@@ -522,7 +835,11 @@ def main():
             return format_results( [{ "msg": "Mininet was already running" }] )
     
     @route('/status')
-    def status():
+    @validate_params(
+        method_name = 'status',
+        method_description = 'Returns the status of the mininet network and counts of the network elements',
+    )
+    def status(params):
         return format_results( [{
             "is_running": is_running,
             "switch_count": len(net.switches),
@@ -531,7 +848,11 @@ def main():
         }] )
     
     @route('/reset')
-    def reset():
+    @validate_params(
+        method_name = 'reset',
+        method_description = 'Stops mininet and reinitializes network even if the network was not running',
+    )
+    def reset(params):
         global net
         global is_running
 
@@ -539,16 +860,38 @@ def main():
         is_running = False
         
         # reinitialize mininet
-        net  = Mininet(
+        net = Mininet(
             topo=None,
             build=False,
-            switch=RemoteOVSSwitch,
+            switch=OVSSwitch,
             controller=RemoteController,
-            link=RemoteLink,
-            host=RemoteHost
+            link=Link,
+            host=Host
         )
         return format_results( [{ "msg": "Mininet was been reset" }] )
 
+    @route('/')
+    @route('/help')
+    @validate_params(
+        method_name = 'help',
+        method_description = 'Returns information about what methods are available and their parameters if a method is specified',
+        method = {}
+    )
+    def help(params):
+        method = params.get('method')
+
+        methods = None
+        if(method is not None):
+            try:
+                methods = [method_list.get(method)]
+                methods[0]['name'] = method
+            except:
+                return format_results( None, "Method, {0}, does not exists".format(method) )
+        else:
+            methods = method_list.keys()
+
+        methods.sort()
+        return format_results( methods )
 
     run(host=get_ip_address('eth0'), port=8080)
 
