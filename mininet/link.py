@@ -44,6 +44,7 @@ class Intf( object ):
         self.mac = mac
         self.ip, self.prefixLen = None, None
         self.port = port
+        self.br_name = str(self.node.id)+'-'+str(self.port)
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
         if self.name == 'lo':
@@ -199,12 +200,21 @@ class Intf( object ):
 
     def status( self ):
         "Return intf status as a string"
-        links, _err, _result = self.node.pexec( 'ip link show' )
+        out, _err, _result = self.node.pexec( 'ip link show' )
         intName = str(self.node.id) + "-" + str(self.port)
-        if intName in links:
-            return "OK"
-        else:
-            return "MISSING"
+
+        for line in out.split('\n'):
+            if ' '+intName+':' in line:
+                capture = re.search('.*state (\w+) .*', line, re.MULTILINE|re.DOTALL)
+                state   = capture.group(1)
+                if(state == 'UP'):
+                    return 'UP'
+                elif(state == 'DOWN'):
+                    return 'DOWN'
+                else:
+                    return 'UNKNOWN'
+
+        return "MISSING"
 
     def __repr__( self ):
         return '<%s %s>' % ( self.__class__.__name__, self.name )
@@ -372,7 +382,7 @@ class Link( object ):
     def __init__( self, node1, node2, port1=None, port2=None,
                   intfName1=None, intfName2=None, addr1=None, addr2=None,
                   intf=Intf, cls1=None, cls2=None, params1=None,
-                  params2=None ):
+                  params2=None, name=None ):
         """Create veth link to another node, making two new interfaces.
            node1: first node
            node2: second node
@@ -408,6 +418,7 @@ class Link( object ):
         if not intfName2:
             intfName2 = self.intfName( node2, params2[ 'port' ] )
 
+        self.name  = name
         self.node1 = node1
         self.node2 = node2
 
@@ -457,7 +468,10 @@ class Link( object ):
         return "(%s %s)" % ( self.intf1.status(), self.intf2.status() )
 
     def __str__( self ):
-        return '%s<->%s' % ( self.intf1, self.intf2 )
+	if(self.name):
+	    return self.name
+        else:
+            return '{0}-{1}<->{2}-{3}'.format( self.node1, self.intf1, self.intf2, self.node2 )
 
 class TCLink( Link ):
     "Link with symmetric TC interfaces configured via opts"
