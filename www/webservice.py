@@ -19,6 +19,7 @@ from mininet.net import Mininet
 from mininet.util import quietRun
 #from mininet.examples.cluster import MininetCluster, SwitchBinPlacer, RemoteHost, RemoteLink, RemoteOVSSwitch
 from mininet.node import RemoteController, OVSSwitch, Host
+from mininet import CustomLink
 from mininet.log import setLogLevel
 from mininet.link import Intf, Link
 #from subprocess import check_call
@@ -794,6 +795,35 @@ def main():
                 }])
 
         return format_results(None, 'Must pass in a parameter to update')
+
+    @route('/add_remote_link')
+    @validate_params(
+        method_name = 'add_link',
+        method_description = 'Adds a link between two nodes in mininet',
+        name   = {},
+        node_a = { 'required': True, 'checks': [ node_exists(success=True) ] },
+        port_a = { 'type': 'integer' },
+        intf_a = {},
+        dest_addr = { 'required':True }
+    )
+    def add_remote_link(params):
+        # pull out params
+        name   = params.get('name')
+        node_a = params.get('node_a')
+        port_a = params.get('port_a')
+        intf_a = params.get('intf_a')
+        dest_addr = params.get('dest_addr')
+
+        link = net.addCustomLink(
+            node_a,
+            port1=port_a,
+            intfName1=intf_a,
+            name=name,
+            destAddr=destAddr,
+            localAddr=get_ip_address('eth0')
+        )
+
+        
 
     @route('/stop')
     @validate_params(
