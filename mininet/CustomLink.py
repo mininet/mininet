@@ -56,6 +56,7 @@ class CustomLink( object ):
 
         self.intf = intf
         self.makeTunnel()
+        self.node.addIntf(intf, port=port)
         
     def makeTunnel( self ):
         #lets delete it if it already exists
