@@ -151,17 +151,18 @@ class Server( Host ):
        - xterm does not work from Mininet CLI
        We may be able to address these issues in the future."""
 
-    inNamespace = [ 'net', 'mnt', 'pid', 'uts' ]
+    ns = [ 'net', 'mnt', 'pid', 'uts' ]
     overlayDirs = [ '/etc', '/var/run', '/var/log' ]
-    privateDirs = [ '/var/run/sshd' ]
+    privateDirs = [ '/var/run/sshd', ]
 
     def __init__( self, *args, **kwargs ):
         """Add overlay dirs and private dirs, and change permissions
            ssh: run sshd? (True)"""
-        kwargs.setdefault( 'ssh', True )
-        kwargs.setdefault( 'inNamespace', self.inNamespace )
+        kwargs.setdefault( 'inNamespace', True )
+        kwargs.setdefault( 'ns', self.ns )
         kwargs.setdefault( 'privateDirs', self.privateDirs )
         kwargs.setdefault( 'overlayDirs', self.overlayDirs )
+        kwargs.setdefault( 'ssh', True )
         super( Server, self ).__init__( *args, **kwargs )
         # Change permissions, mainly for ssh
         for pdir in self.privateDirs:

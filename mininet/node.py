@@ -88,11 +88,10 @@ class Node( object ):
         self.overlayDirs = params.get( 'overlayDirs', [] )
         
         # Support old inNamespace param
+        ns = params.get( 'ns', ( 'net', 'mnt' ) )
         inNamespace = params.get( 'inNamespace', True )
-        if inNamespace:
-            self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
-        else:
-            self.ns = params.get( 'ns', [] )
+        if not inNamespace:
+            self.ns = []
         self.inNamespace = 'net' in self.ns
         
         # Stash configuration parameters for future reference
