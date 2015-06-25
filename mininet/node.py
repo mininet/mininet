@@ -92,11 +92,10 @@ class Node( object ):
         self.inNamespace = params.get( 'inNamespace', params.get( 'ns',  inNamespace ) )
 
         # Support old inNamespace param
+        ns = params.get( 'ns', ( 'net', 'mnt' ) )
         inNamespace = params.get( 'inNamespace', True )
-        if inNamespace:
-            self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
-        else:
-            self.ns = params.get( 'ns', [] )
+        if not inNamespace:
+            self.ns = []
         self.inNamespace = 'net' in self.ns
 
         # Stash configuration parameters for future reference
