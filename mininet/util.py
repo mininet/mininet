@@ -152,7 +152,7 @@ def makeIntfPair( intf1,node1, intf2,node2, addr1=None, addr2=None, runCmd=quiet
        runCmd: function to run shell commands (quietRun)
        returns: ip link add result"""
     # Delete any old interfaces with the same names
-    print "Making interface pair!!\n"
+    print "Making interface pair!!\n"   
     runCmd( 'ip link del ' + str(node1) + '-' + str(intf1) )
     runCmd( 'ip link del ' + str(node2) + '-' + str(intf2) )
     # Create new pair

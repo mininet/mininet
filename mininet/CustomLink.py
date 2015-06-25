@@ -24,6 +24,7 @@ TCIntf: interface with bandwidth limiting and delay via tc
 Link: basic link class for creating veth pairs
 """
 
+from mininet.link import Intf
 from mininet.log import info, error, debug
 from mininet.util import makeIntfPair, quietRun
 import re
@@ -33,7 +34,7 @@ class CustomLink( object ):
     """A basic link is just a veth pair.
        Other types of links could be tunnels, link emulators, etc.."""
 
-    def __init__( self, node1, port1=None, intfName1=None, name=None, destAddr=None, localAddr=None ):
+    def __init__( self, node, port=None, intfName=None, name=None, destAddr=None, localAddr=None, addr=None ):
         """Create veth link to another node, making two new interfaces.
            node1: first node
            port1: node1 port number (optional)
@@ -44,37 +45,27 @@ class CustomLink( object ):
         """
 
         self.name  = name
-        self.node1 = node1
-        self.intfName1= intfName1
-        self.port1 = port1
+        self.node = node
+        self.intfName= intfName
+        self.port = port
         self.dstAddr = destAddr
         self.localAddr = localAddr
 
-        intf1 = Intf( name=intfName1, node=node1,
-                      link=self, mac=addr1, **params1 )
+        intf = Intf( name=intfName, node=node, port=port,
+                      link=self, mac=addr )
 
-        self.intf1 = intf1
+        self.intf = intf
         self.makeTunnel()
-
+        
     def makeTunnel( self ):
-        dst = "%s@%s" % ( self.dstUser, self.dstAddr)
-        
         #lets delete it if it already exists
-        node.rcmd ('ip link del %s' % self.intf1.br_name)
+        print "Making tunnel!\n"
+        quietRun('ip link del %s' % self.intf.br_name)
+        cmd = 'ip link add %s type gretap remote %s' % (self.intf.br_name, self.dstAddr)
+        quietRun(cmd)
+        cmd = 'ifconfig %s up' % self.intf.br_name
+        quietRun(cmd)
         
-        cmd = 'ip link add %s type gretap local %s remote %s' % (self.intf1.br_name,self.localAddr, self.dstAddr)
-        node.rcmd(cmd)
-
-
-    def intfName( self, node, n ):
-        "Construct a canonical interface name node-ethN for interface n."
-        # Leave this as an instance method for now
-        assert self
-        return node.name + '-eth' + repr( n )
-
-    def delete( self ):
-        "Delete this link"
-        self.intf1.delete()
 
     def stop( self ):
         "Override to stop and clean up link as needed"

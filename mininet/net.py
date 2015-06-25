@@ -102,6 +102,7 @@ from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
                            Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
+from mininet.CustomLink import CustomLink
 from mininet.util import quietRun, fixLimits, numCores, ensureRoot
 from mininet.util import macColonHex, ipStr, ipParse, netParse, ipAdd
 from mininet.term import cleanUpScreens, makeTerms
@@ -338,6 +339,14 @@ class Mininet( object ):
         "Return a random, non-multicast MAC address"
         return macColonHex( random.randint(1, 2**48 - 1) & 0xfeffffffffff |
                             0x020000000000 )
+
+    def addCustomLink( self, node, **params ):
+        print 'Adding a custom link\n'
+        node = node if not isinstance( node, basestring) else self [node]
+        options = dict( params )
+        params['addr'] = self.randMac()
+        link = CustomLink(node, **params)
+        self.links.append(link)
 
     def addLink( self, node1, node2, port1=None, port2=None,
                  cls=None, **params ):

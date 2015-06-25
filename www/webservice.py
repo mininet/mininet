@@ -801,29 +801,37 @@ def main():
         method_name = 'add_link',
         method_description = 'Adds a link between two nodes in mininet',
         name   = {},
-        node_a = { 'required': True, 'checks': [ node_exists(success=True) ] },
-        port_a = { 'type': 'integer' },
-        intf_a = {},
+        node = { 'required': True, 'checks': [ node_exists(success=True) ] },
+        port = { 'type': 'integer' },
+        intf = {},
         dest_addr = { 'required':True }
     )
     def add_remote_link(params):
         # pull out params
         name   = params.get('name')
-        node_a = params.get('node_a')
-        port_a = params.get('port_a')
-        intf_a = params.get('intf_a')
+        node = params.get('node')
+        port = params.get('port')
+        intf = params.get('intf')
         dest_addr = params.get('dest_addr')
 
         link = net.addCustomLink(
-            node_a,
-            port1=port_a,
-            intfName1=intf_a,
+            node,
+            port=port,
+            intfName=intf,
             name=name,
-            destAddr=destAddr,
+            destAddr=dest_addr,
             localAddr=get_ip_address('eth0')
         )
 
-        
+        if(is_running):
+            for controller in net.controllers:
+                controller.stop()
+                controller.start()
+            for node in nodes:
+                node.stop()
+                node.start( net.controllers )
+
+        return format_results( [{'name': "{0}".format(link)}] )
 
     @route('/stop')
     @validate_params(
