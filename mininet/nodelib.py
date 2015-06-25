@@ -110,7 +110,7 @@ class NAT( Node ):
         self.cmd( 'iptables -A FORWARD',
                   '-o', self.localIntf, '-d', self.subnet,'-j ACCEPT' )
         self.cmd( 'iptables -t nat -A POSTROUTING',
-                  '-s', self.subnet, '\'!\'', '-d', self.subnet, '-j MASQUERADE' )
+                  '-s', self.subnet, "'!'", '-d', self.subnet, '-j MASQUERADE' )
 
         # Instruct the kernel to perform forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
