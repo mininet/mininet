@@ -94,7 +94,6 @@ class NAT( Node ):
 
         if self.flush:
             self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-            
             self.cmd( 'iptables -F' )
             self.cmd( 'iptables -t nat -F' )
             # Create default entries for unmatched traffic
