@@ -144,6 +144,7 @@ class NAT( Node ):
         self.cmd( 'sysctl net.ipv4.ip_forward=%s' % self.forwardState )
         super( NAT, self ).terminate()
 
+
 class Server( Host ):
     """Run sshd in a net/mnt/pid/uts namespace, with private /etc/hosts
        WARNING!!! KNOWN ISSUES:
