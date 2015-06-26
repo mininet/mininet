@@ -165,6 +165,8 @@ class Mininet( object ):
 
         self.terms = []  # list of spawned xterm processes
 
+        self.updating_tdf = False;
+
         Mininet.init()  # Initialize Mininet if necessary
 
         self.built = False
@@ -732,7 +734,7 @@ class Mininet( object ):
     # XXX This should be cleaned up
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', fmt=None,
-               seconds=5, port=5001):
+               seconds=5, port=5001, interval=1, verbose=0, omit=0, emit_debug=0, client_file=None, server_file=None):
         """Run iperf between two hosts.
            hosts: list of hosts; if None, uses first and last hosts
            l4Type: string, one of [ TCP, UDP ]
@@ -740,6 +742,8 @@ class Mininet( object ):
            fmt: iperf format argument if any
            seconds: iperf time to transmit
            port: iperf port
+           interval, verbose, omit, emit_degub: more iperf3 options
+           client_file, server_file: hosts' log output
            returns: two-element array of [ server, client ] speeds
            note: send() is buffered, so client rate can be much higher than
            the actual transmission rate; on an unloaded system, server
@@ -747,29 +751,48 @@ class Mininet( object ):
         hosts = hosts or [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         assert len( hosts ) == 2
         client, server = hosts
+        
+        while self.updating_tdf:
+            sleep( 0.2 )
+        while client.waiting or server.waiting:
+            sleep( 0.2 )
+
         output( '*** Iperf: testing', l4Type, 'bandwidth between',
                 client, 'and', server, '\n' )
         server.cmd( 'killall -9 iperf' )
-        iperfArgs = 'iperf -p %d ' % port
+        iperfArgs = 'iperf3 -p %d ' % port
         bwArgs = ''
         if l4Type == 'UDP':
             iperfArgs += '-u '
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
+        # options for both client and server
         if fmt:
             iperfArgs += '-f %s ' % fmt
+        if interval != 1:
+            iperfArgs += '-i %d ' % interval
+        if verbose == 1:
+            iperfArgs += '-V '
+        if emit_degub == 1:
+            iperfArgs += '-d '
         server.sendCmd( iperfArgs + '-s' )
         if l4Type == 'TCP':
             if not waitListening( client, server.IP(), port ):
                 raise Exception( 'Could not connect to iperf on port %d'
                                  % port )
+        if omit != 0:
+            iperfArgs += '-O %d ' % omit
         cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
                              server.IP() + ' ' + bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
         servout = server.waitOutput()
         debug( 'Server output: %s\n' % servout )
+        if client_file:
+            client_file.write("%s\n", cliout)
+        if server_file:
+            server_file.write("%s\n", servout)
         result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':
             result.insert( 0, udpBw )

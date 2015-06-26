@@ -42,8 +42,12 @@ slowtest: $(MININET)
 	mininet/test/test_walkthrough.py -v
 	mininet/examples/test/runner.py -v
 
-mnexec: mnexec.c $(MN) mininet/net.py
-	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< -o $@
+# virtual time system calls
+syscall.o: syscall_wrapper.c
+	cc $(CFLAGS) $(LDFLAGS) -c syscall_wrapper.c
+
+mnexec: mnexec.c syscall.o $(MN) mininet/net.py
+	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< syscall.o -o $@
 
 install: $(MNEXEC) $(MANPAGES)
 	install $(MNEXEC) $(BINDIR)

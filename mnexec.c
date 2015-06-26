@@ -24,6 +24,7 @@
 #include <sched.h>
 #include <ctype.h>
 #include <sys/mount.h>
+#include "syscall_wrapper.h"
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -32,11 +33,12 @@
 void usage(char *name)
 {
     printf("Execution utility for Mininet\n\n"
-           "Usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] cmd args...\n\n"
+           "Usage: %s [-cdp] [-n tdf] [-t tdf] [-a pid] [-g group] [-r rtprio] cmd args...\n\n"
            "Options:\n"
            "  -c: close all file descriptors except stdin/out/error\n"
            "  -d: detach from tty by calling setsid()\n"
-           "  -n: run in new network and mount namespaces\n"
+           "  -n tdf: run in new network and mount namespaces with TDF\n"
+           "  -t tdf: change to a new TDF\n"
            "  -p: print ^A + pid\n"
            "  -a pid: attach to pid's network and mount namespaces\n"
            "  -g group: add to cgroup\n"
@@ -99,10 +101,11 @@ int main(int argc, char *argv[])
     char path[PATH_MAX];
     int nsid;
     int pid;
+    int tdf;
     char *cwd = get_current_dir_name();
 
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
+    while ((c = getopt(argc, argv, "+cdpn:t:a:g:r:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -125,14 +128,24 @@ int main(int argc, char *argv[])
             setsid();
             break;
         case 'n':
-            /* run in network and mount namespaces */
-            if (unshare(CLONE_NEWNET|CLONE_NEWNS) == -1) {
-                perror("unshare");
+            tdf = atoi(optarg);
+            /* run in network, mount namespaces and set TDF*/
+            if (virtualtimeunshare(CLONE_NEWNET|CLONE_NEWNS, tdf) == -1) {
+                perror("virtualtimeunshare");
                 return 1;
             }
             /* mount sysfs to pick up the new network namespace */
             if (mount("sysfs", "/sys", "sysfs", MS_MGC_VAL, NULL) == -1) {
                 perror("mount");
+                return 1;
+            }
+            break;
+        case 't':
+            tdf = atoi(optarg);
+            int ppid = getppid();
+            /* set host's TDF to another value */
+            if (settimedilationfactor(tdf, ppid) == -1) {
+                perror("virtualtimeunshare");
                 return 1;
             }
             break;

@@ -74,7 +74,7 @@ class Node( object ):
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
 
-    def __init__( self, name, inNamespace=True, **params ):
+    def __init__( self, name, inNamespace=True, tdf=1, **params ):
         """name: name of node
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
@@ -86,6 +86,7 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
+        self.tdf = params.get( 'tdf', tdf)
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -120,6 +121,11 @@ class Node( object ):
         node = cls.outToNode.get( fd )
         return node or cls.inToNode.get( fd )
 
+    def setTDF( self, tdf):
+        self.tdf = tdf
+        cmd = "mnexec -p -t %d " % tdf
+        out = self.cmd( cmd, printPid=True)
+
     # Command support via shell process in namespace
     def startShell( self, mnopts=None ):
         "Start a shell process for running commands"
@@ -130,7 +136,9 @@ class Node( object ):
         # (p)rint pid, and run in (n)amespace
         opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
-            opts += 'n'
+            opts += 'n %d ' % self.tdf
+            if self.tdf != 1:
+                print "[info] %s enter virtual time with tdf = %d\n" % (self.name, self.tdf)
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
