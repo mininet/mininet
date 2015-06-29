@@ -88,11 +88,8 @@ class Node( object ):
         self.privateDirs = params.get( 'privateDirs', [] )
         self.overlayDirs = params.get( 'overlayDirs', [] )
 
-        # Allow 'ns' abbreviation
-        self.inNamespace = params.get( 'inNamespace', params.get( 'ns',  inNamespace ) )
-
         # Support old inNamespace param
-        ns = params.get( 'ns', ( 'net', 'mnt' ) )
+        self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
         inNamespace = params.get( 'inNamespace', True )
         if not inNamespace:
             self.ns = []
