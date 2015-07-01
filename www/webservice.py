@@ -796,6 +796,37 @@ def main():
 
         return format_results(None, 'Must pass in a parameter to update')
 
+    @route('/update_switch')
+    @validate_params(
+        method_name = 'update_switch',
+        method_description = 'Adds a node in mininet',
+        switch = { 'required': True, 'checks': [ node_exists(success=True) ] },
+        status = { 'pattern': '^(1|0)$', 'type': 'integer' }
+    )
+    def update_switch(params):
+        switch = params.get('switch')
+        status = params.get('status')
+        sw = net.get(switch)
+        print "Status: %d\n" % status
+        if(status == 1):
+            print "Starting switch %s\n" % switch
+            sw.start(net.controllers)
+            return {'name': "{0}".format(sw),
+                'dpid': sw.dpid,
+                'controller_connection': sw.connected(),
+                'ip': sw.IP(),
+                'mac': sw.MAC(),
+                'server': sw.cmd( 'hostname' ).strip()
+        }
+        else:
+            print "Stopping switch %s\n" % switch
+            sw.stop()
+            return {'name': "{0}".format(sw),
+                'dpid': sw.dpid,
+                'controller_connection': False,
+        }
+            
+
     @route('/add_remote_link')
     @validate_params(
         method_name = 'add_link',
@@ -804,7 +835,7 @@ def main():
         node = { 'required': True, 'checks': [ node_exists(success=True) ] },
         port = { 'type': 'integer' },
         intf = {},
-        dest_addr = { 'required':True }
+        dest_addr = { 'required':True },
     )
     def add_remote_link(params):
         # pull out params
@@ -813,14 +844,14 @@ def main():
         port = params.get('port')
         intf = params.get('intf')
         dest_addr = params.get('dest_addr')
-
+        
         link = net.addCustomLink(
             node,
             port=port,
             intfName=intf,
             name=name,
             destAddr=dest_addr,
-            localAddr=get_ip_address('eth0')
+            localAddr=get_ip_address('eth0'),
         )
 
         if(is_running):
@@ -931,7 +962,7 @@ def main():
         methods.sort()
         return format_results( methods )
 
-    run(host=get_ip_address('eth0'), port=8080)
+    run(host="0.0.0.0", port=8080)
 
     if(is_running):
         net.stop()

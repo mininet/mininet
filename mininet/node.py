@@ -1161,7 +1161,7 @@ class OVSSwitch( Switch ):
                 'OVS kernel switch does not work in a namespace' )
         # Annoyingly, --if-exists option seems not to work
         #self.cmd( 'ovs-vsctl del-br', self )
-        self.cmd( 'ovs-vsctl del-br', self.br_name )
+        self.cmd( 'ovs-vsctl --if-exists del-br', self.br_name )
         int( self.dpid, 16 )  # DPID must be a hex string
         # Interfaces and controllers
         intfs = ' '.join( "-- --id=@intName%s create Interface name=%s-%s " % (self.ports[ intf ],str(self.id) ,str(self.ports[intf])) + 
@@ -1215,10 +1215,10 @@ class OVSSwitch( Switch ):
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
            deleteIntfs: delete interfaces? (True)"""
-        self.cmd( 'ovs-vsctl del-br', self.br_name)
-        if self.datapath == 'user':
-            self.cmd( 'ip link del', self.br_name )
-        super( OVSSwitch, self ).stop( deleteIntfs )
+        self.cmd( 'ovs-vsctl --if-exists del-br', self.br_name)
+#        if self.datapath == 'user':
+#            self.cmd( 'ip link del', self.br_name )
+#        super( OVSSwitch, self ).stop( deleteIntfs )
 
 
 OVSKernelSwitch = OVSSwitch
