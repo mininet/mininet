@@ -435,12 +435,13 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
     log( '* Ubuntu installation completed in %.2f seconds' % elapsed )
 
 
-def boot( cow, kernel, initrd, logfile, memory=1024 ):
+def boot( cow, kernel, initrd, logfile, memory=1024, cpuCores=1 ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
        logfile: log file for pexpect object
        memory: memory size in MB
+       cpuCores: number of CPU cores to use
        returns: pexpect object to qemu process"""
     # pexpect might not be installed until after depend() is called
     global pexpect
@@ -469,6 +470,8 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
             '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
     if Forward:
         cmd += sum( [ [ '-redir', f ] for f in Forward ], [] )
+    if cpuCores > 1:
+        cmd += [ '-smp cores=%s' % cpuCores ]
     cmd = ' '.join( cmd )
     log( '* BOOTING VM FROM', cow )
     log( cmd )
@@ -881,14 +884,15 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
+def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
                 runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
        post: command line to run in VM after tests
        prompt: shell prompt (default '$ ')
-       memory: VM memory size in MB"""
+       memory: VM memory size in MB
+       cpuCores: number of CPU cores to use"""
     bootTestStart = time()
     basename = path.basename( image )
     image = abspath( image )
@@ -906,7 +910,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, outputFile=None,
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile,
-               memory=memory )
+               memory=memory, cpuCores=cpuCores )
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
