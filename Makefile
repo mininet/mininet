@@ -2,6 +2,7 @@ MININET = mininet/*.py
 TEST = mininet/test/*.py
 EXAMPLES = mininet/examples/*.py
 MN = bin/mn
+PYMN = python -B bin/mn
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
@@ -43,7 +44,7 @@ slowtest: $(MININET)
 	mininet/examples/test/runner.py -v
 
 mnexec: mnexec.c $(MN) mininet/net.py
-	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(MN) --version`\" $< -o $@
+	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
 
 install: $(MNEXEC) $(MANPAGES)
 	install $(MNEXEC) $(BINDIR)
@@ -60,7 +61,7 @@ man: $(MANPAGES)
 
 mn.1: $(MN)
 	PYTHONPATH=. help2man -N -n "create a Mininet network." \
-	--no-discard-stderr $< -o $@
+	--no-discard-stderr "$(PYMN)" -o $@
 
 mnexec.1: mnexec
 	help2man -N -n "execution utility for Mininet." \
