@@ -353,10 +353,10 @@ class Node( object ):
         self.lastPid = None
         self.waiting = True
 
-    def sendInt( self, intr=chr( 3 ) ):
+    def sendInt( self, signal=signal.SIGINT ):
         "Interrupt running command."
-        debug( 'sendInt: writing chr(%d)\n' % ord( intr ) )
-        self.write( intr )
+        debug( "sending signal %d to pgrp %d" % ( signal, self.pid ) )
+        os.killpg( self.pid, signal )
 
     def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
