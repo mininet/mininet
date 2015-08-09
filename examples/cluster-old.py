@@ -50,7 +50,7 @@ the namespace using mnexec -a -g.
 
 Is there any value to using Paramiko vs. raw ssh?
 
-Yes, it creates fewer processes.
+Maybe, but it doesn't seem to support L2 tunneling.
 
 Should we preflight the entire network, including all server-to-server
 connections?
@@ -72,18 +72,6 @@ Things to do:
 - support for other tunneling schemes
 - tests and benchmarks
 - hifi support (e.g. delay compensation)
-
-
--------------------
-
-Cluster TNG:
-
-- paramiko for faster connections and fewer processes
-- shared shell switches for faster startup and fewer processes...
-- new, possibly lighter-weight tunneling schemes??
-- possibly batch link startup!??!?!
-
-
 """
 
 from mininet.node import Node, Host, OVSSwitch, Controller
@@ -91,57 +79,21 @@ from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
-from mininet.util import quietRun, errRun, irange, natural
+from mininet.util import quietRun, errRun
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 from mininet.clean import addCleanupCallback
-from mininet.topo import Topo
 
 from signal import signal, SIGINT, SIG_IGN
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 import os
 from random import randrange
 import sys
 import re
 from itertools import groupby
-from operator import attrgetter, itemgetter
+from operator import attrgetter
 from distutils.version import StrictVersion
-from types import MethodType
 
-# select.select() doesn't work with lots of file descriptors :(
-from select import poll, POLLIN, POLLOUT, POLLERR, POLLHUP
-import select
-
-def pollSelect( rlist, wlist, xlist, timeout ):
-    "Reimplementation of select() using poll()"
-    poller = poll()
-    for f in rlist:
-        poller.register( f, POLLIN )
-    for f in wlist:
-        poller.register( f, POLLOUT )
-    for f in xlist:
-        poller.register( f, POLLERR | POLLHUP )
-    fids = poller.poll( timeout )
-    result = { fid: events for fid, events in fids }
-    r, w, x = [], [], []
-    r = [ f for f in rlist
-          if ( result.get( f, 0 ) & POLLIN ) or
-             ( type( f ) != int and result.get( f.fileno(), 0 ) & POLLIN ) ]
-    w = [ f for f in wlist
-          if ( result.get( f, 0 ) & POLLOUT ) or
-             ( type( f ) != int and result.get( f.fileno(), 0 ) & POLLOUT ) ]
-    x = [ f for f in xlist
-          if ( result.get( f, 0 ) & POLLERR ) or
-             ( result.get( f, 0 ) & POLLHUP ) or
-             ( type( f ) != int and result.get( f.fileno(), 0 ) & POLLERR ) or
-             ( type( f ) != int and result.get( f.fileno(), 0 ) & POLLHUP ) ]
-    return r, w, x
-
-select.select = pollSelect
-
-
-from paramiko.client import SSHClient, AutoAddPolicy
-from paramiko.agent import AgentRequestHandler
 
 def findUser():
     "Try to return logged-in (usually non-root) user"
@@ -183,129 +135,25 @@ class ClusterCleanup( object ):
                 info( cmd, '\n' )
                 info( quietRun( cmd ) )
 
-
-def argsToCmd( *args, **kwargs ):
-    "Convert argument list to command"
-    if not isinstance( args[ 0 ], basestring ):
-        # Assume args[0] is arg list
-        assert len( args ) == 1
-        args = args[ 0 ]
-    cmd = ' '.join( args )
-    debug( 'argsToCmd: returning', repr( cmd ) )
-    return cmd
-
-
-class Popenssh( object ):
-    "A Popen-like object over an SSH channel"
-
-    # Map of ip address to open SSH connection (paramiko.SSHClient)
-    connections = {}
-    agents = {}
-    channelCount = {}    # count of channels per connection
-
-    def __init__( self, *args, **kwargs ):
-        "ip: IP address of remote SSH server"
-        server = kwargs.pop( 'server', 'localhost' )
-        user = kwargs.pop( 'user' )
-        sudo = kwargs.pop( 'sudo', False )
-        shell = kwargs.pop( 'shell', False )
-        stdin = kwargs.pop( 'stdin', PIPE )
-        stdout = kwargs.pop( 'stdout', PIPE )
-        stderr = kwargs.pop( 'stderr', PIPE )
-        # We can't wire up to other files/descriptors
-        assert stdin == stderr == stdout == PIPE
-        cmd = argsToCmd( *args )
-        if shell:
-            cmd = 'bash -c "%s"' % cmd
-        if sudo:
-            cmd = 'sudo -E %s' % cmd
-        self.connection = self.connect( user, server )
-        self.stdin, self.stdout, self.stderr = (
-            self.connection.exec_command( cmd,
-                                          **kwargs ) )
-        self.channel = self.stdout.channel
-        self.stdin.fileno = self.stdin.channel.fileno
-        self.stdout.fileno = self.stdout.channel.fileno
-        # self.stdout.channel.setblocking( 0 )
-        self.exit_status = None
-
-    # We support a subset of the Popen API, which should be enough
-    # for us to get by as far as Mininet is concerned, with minimal
-    # code changes!!
-
-    def poll( self ):
-        "If channel has exited, set exit_status"
-        if self.channel.exit_status_ready():
-            self.exit_status = self.channel.recv_exit_status()
-        return self.exit_status
-
-    chunkSize = 50
-
-    @classmethod
-    def connect( cls, user, server, preallocCount=0 ):
-        "Return a (possibly existing) SSHClient connected to ip"
-        dest = '%s@%s' % ( user, server )
-        if preallocCount:
-            count = preallocCount
-        else:
-            count = cls.channelCount.get( dest , 0 )
-            cls.channelCount[ dest ] = count + 1
-        key = "%s:%s" % ( dest, count / cls.chunkSize )
-        if key in cls.connections:
-            return cls.connections[ key ]
-        info( key, '' )
-        client = SSHClient()
-        client.set_missing_host_key_policy( AutoAddPolicy() )
-        client.load_system_host_keys()
-        client.connect( server, username=user )
-        agentsession = client.get_transport().open_session()
-        agenthandler = AgentRequestHandler( agentsession )
-        cls.agents[ key ] = ( agentsession, agenthandler )
-        cls.connections[ key ] = client
-        return client
-
-    def communicate( self ):
-        "Return stdout, stderr"
-        stdout, stderr = '', ''
-        poller = poll()
-        poller.register( self.channel.fileno(), POLLIN | POLLERR | POLLHUP )
-        while True:
-            exitcode = self.poll()
-            poller.poll()
-            while self.channel.recv_ready():
-                stdout += self.stdout.read( 1024 )
-            while self.channel.recv_stderr_ready():
-                stderr += self.stderr.read( 1024 )
-            if exitcode is not None:
-                break
-        return stdout, stderr
-
-    def wait( self ):
-        poller = poll()
-        poller.register( self.channel.fileno(), POLLIN | POLLERR | POLLHUP )
-        while True:
-            poller.poll()
-            if self.poll() is not None:
-                break
-
-
-    @classmethod
-    def prealloc( cls, user, server, count ):
-        "Preallocate shared connections to server"
-        debug( '*** Preallocating', count, 'connections to', server, '\n' )
-        for i in range( 0, count, cls.chunkSize ):
-            serverIP = RemoteMixin.findServerIP( server )
-            cls.connect( user, serverIP, i )
-
-    @classmethod
-    def shutdown( cls ):
-        "Shut down all connections"
-        for c in cls.connections:
-            cls.shutdown()
-
+# BL note: so little code is required for remote nodes,
+# we will probably just want to update the main Node()
+# class to enable it for remote access! However, there
+# are a large number of potential failure conditions with
+# remote nodes which we may want to detect and handle.
+# Another interesting point is that we could put everything
+# in a mix-in class and easily add cluster mode to 2.0.
 
 class RemoteMixin( object ):
-    "Experimental RemoteMixin replacement that uses paramiko"
+
+    "A mix-in class to turn local nodes into remote nodes"
+
+    # ssh base command
+    # -q: don't print stupid diagnostic messages
+    # BatchMode yes: don't ask for password
+    # ForwardAgent yes: forward authentication credentials
+    sshbase = [ 'ssh', '-q',
+                '-o', 'BatchMode=yes',
+                '-o', 'ForwardAgent=yes', '-tt' ]
 
     def __init__( self, name, server='localhost', user=None, serverIP=None,
                   controlPath=True, splitInit=False, **kwargs):
@@ -327,8 +175,15 @@ class RemoteMixin( object ):
             controlPath = '/tmp/mn-%r@%h:%p'
         self.controlPath = controlPath
         self.splitInit = splitInit
-        if self.user: #  and self.server != 'localhost':
+        if self.user and self.server != 'localhost':
             self.dest = '%s@%s' % ( self.user, self.serverIP )
+            self.sshcmd = [ 'sudo', '-E', '-u', self.user ] + self.sshbase
+            if self.controlPath:
+                self.sshcmd += [ '-o', 'ControlPath=' + self.controlPath,
+                                 '-o', 'ControlMaster=auto',
+                                 '-o', 'ControlPersist=' + '1' ]
+            self.sshcmd += [ self.dest ]
+            self.isRemote = True
         else:
             self.dest = None
             self.sshcmd = []
@@ -336,118 +191,6 @@ class RemoteMixin( object ):
         # Satisfy pylint
         self.shell, self.pid = None, None
         super( RemoteMixin, self ).__init__( name, **kwargs )
-
-    # Command support via shell process in namespace
-    def startShell( self, mnopts=None ):
-        "Start a shell process for running commands"
-        if self.shell:
-            error( "%s: shell is already running\n" % self.name )
-            return
-        # mnexec: (c)lose descriptors
-        # (p)rint pid, and run in (n)etwork and (m)ount namespace
-        opts = '-cp' if mnopts is None else mnopts
-        # Handle additional namespaces if specified
-        nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
-        chars = [ nsmap.get( ns, '' ) for ns in self.ns ]
-        opts += ''.join( chars )
-        # bash -i: force interactive
-        # -s: pass $* to shell, and make process easy to find in ps
-        # prompt is set to sentinel chr( 127 )
-        cmd = [ 'sudo -E', 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
-                'bash', '--norc', '-is', 'mininet:' + self.name ]
-        # Spawn a shell subprocess in a pseudo-tty, to disable buffering
-        # in the subprocess and insulate it from signals (e.g. SIGINT)
-        # received by the parent
-        self.shell = Popenssh( cmd, server=self.serverIP, user=self.user,
-                               get_pty=True )
-        self.stdin = self.shell.stdin
-        self.stdout = self.shell.stdout
-        self.pollOut = poll()
-        self.pollOut.register( self.stdout.fileno() )
-        # Maintain mapping between file descriptors and nodes
-        # This is useful for monitoring multiple nodes
-        # using select.poll()
-        self.outToNode[ self.stdout.fileno() ] = self
-        self.inToNode[ self.stdin.fileno() ] = self
-        self.execed = False
-        self.lastCmd = None
-        self.lastPid = None
-        self.readbuf = ''
-        # Wait for prompt
-        self.waiting = True
-        self.waitOutput()
-        # +m: disable job control notification
-        out = self.cmd( 'unset HISTFILE; stty -echo; set +m; echo $$' ).split( '\r\n')
-        self.pid = int( out[ 1 ] )
-
-    # Subshell I/O, commands and control
-
-    def read( self, maxbytes=1 ):
-        """Buffered read from node, non-blocking.
-           maxbytes: maximum number of bytes to return"""
-        count = len( self.readbuf )
-        if count < maxbytes:
-            data = self.stdout.channel.recv( maxbytes - count )
-            self.readbuf += data
-        if maxbytes >= len( self.readbuf ):
-            result = self.readbuf
-            self.readbuf = ''
-        else:
-            result = self.readbuf[ :maxbytes ]
-            self.readbuf = self.readbuf[ maxbytes: ]
-        return result
-
-    def write( self, data ):
-        """Write data to node.
-           data: string"""
-        self.stdin.write( data )
-
-    def waitReadable( self, timeoutms=None ):
-        """Wait until node's output is readable.
-           timeoutms: timeout in ms or None to wait indefinitely."""
-        if len( self.readbuf ) == 0:
-            while True:
-                self.pollOut.poll( timeoutms )
-                if self.stdout.channel.recv_ready():
-                    return
-
-    def sendInt( self ):
-        "Send interrupt to our process group"
-        self.rcmd( 'kill -INT -%d' % self.pid )
-
-    def terminate( self ):
-        "Shut down connection?"
-        self.stdout.channel.close()
-        self.stdout.channel.shutdown( 2 )
-
-    # We'd like to have reusable control connections
-    # for setting up tunnels, etc.
-
-    rootNodes = {}  # map of ip to server RemoteNode
-
-    @classmethod
-    def rootNode( cls, server ):
-        "Return shared node in root namespace for server"
-        if server in cls.rootNodes:
-            return cls.rootNodes[ server ]
-        node = RemoteNode( server, server=server, inNamespace=False )
-        cls.rootNodes[ server ] = node
-        return node
-
-    # Hmm....
-
-    def rcmd( self, *args, **kwargs ):
-        "Run command in root namespace"
-        errFail = kwargs.pop( 'errFail', False )
-        result = self.rootNode( self.server ).cmd( *args )
-        if errFail and result.strip():
-            error( 'rcmd returned error:', repr( result ) )
-            # raise Exception( result )
-        return result
-
-    def _popen( self, *args, **kwargs ):
-        kwargs.setdefault( 'sudo', True )
-        return Popenssh( *args, server=self.serverIP, user=self.user, **kwargs )
 
     # Determine IP address of local host
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
@@ -464,6 +207,89 @@ class RemoteMixin( object ):
         ips = cls._ipMatchRegex.findall( output )
         ip = ips[ 0 ] if ips else None
         return ip
+
+    # Command support via shell process in namespace
+    def startShell( self, *args, **kwargs ):
+        "Start a shell process for running commands"
+        if self.isRemote:
+            kwargs.update( mnopts='-cp' )
+        super( RemoteMixin, self ).startShell( *args, **kwargs )
+        # Optional split initialization
+        self.sendCmd( 'echo $$' )
+        if not self.splitInit:
+            self.finishInit()
+
+    def finishInit( self ):
+        "Wait for split initialization to complete"
+        self.pid = int( self.waitOutput() )
+
+    def rpopen( self, *cmd, **opts ):
+        "Return a Popen object on underlying server in root namespace"
+        params = { 'stdin': PIPE,
+                   'stdout': PIPE,
+                   'stderr': STDOUT,
+                   'sudo': True }
+        params.update( opts )
+        return self._popen( *cmd, **params )
+
+    def rcmd( self, *cmd, **opts):
+        """rcmd: run a command on underlying server
+           in root namespace
+           args: string or list of strings
+           returns: stdout and stderr"""
+        popen = self.rpopen( *cmd, **opts )
+        # print 'RCMD: POPEN:', popen
+        # These loops are tricky to get right.
+        # Once the process exits, we can read
+        # EOF twice if necessary.
+        result = ''
+        while True:
+            poll = popen.poll()
+            result += popen.stdout.read()
+            if poll is not None:
+                break
+        return result
+
+    @staticmethod
+    def _ignoreSignal():
+        "Detach from process group to ignore all signals"
+        os.setpgrp()
+
+    def _popen( self, cmd, sudo=True, tt=True, **params):
+        """Spawn a process on a remote node
+            cmd: remote command to run (list)
+            **params: parameters to Popen()
+            returns: Popen() object"""
+        if type( cmd ) is str:
+            cmd = cmd.split()
+        if self.isRemote:
+            if sudo:
+                cmd = [ 'sudo', '-E' ] + cmd
+            if tt:
+                cmd = self.sshcmd + cmd
+            else:
+                # Hack: remove -tt
+                sshcmd = list( self.sshcmd )
+                sshcmd.remove( '-tt' )
+                cmd = sshcmd + cmd
+        else:
+            if self.user and not sudo:
+                # Drop privileges
+                cmd = [ 'sudo', '-E', '-u', self.user ] + cmd
+        params.update( preexec_fn=self._ignoreSignal )
+        debug( '_popen', cmd, '\n' )
+        popen = super( RemoteMixin, self )._popen( cmd, **params )
+        return popen
+
+    def popen( self, *args, **kwargs ):
+        "Override: disable -tt"
+        return super( RemoteMixin, self).popen( *args, tt=False, **kwargs )
+
+    def addIntf( self, *args, **kwargs ):
+        "Override: use RemoteLink.moveIntf"
+        kwargs.update( moveIntfFn=RemoteLink.moveIntf )
+        return super( RemoteMixin, self).addIntf( *args, **kwargs )
+
 
 class RemoteNode( RemoteMixin, Node ):
     "A node on a remote server"
@@ -497,19 +323,6 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         return ( StrictVersion( cls.OVSVersions[ self.server ] ) <
                  StrictVersion( '1.10' ) )
 
-    def startShell( self, *args, **kwargs ):
-        "Don't start a shell"
-        self.shell = None
-        self.pid = int( self.rcmd( 'echo $$' ).strip() )
-
-    def terminate( self, *args, **kwargs ):
-        "Don't kill our pgroup"
-        pass
-
-    def cmd( self, *args, **kwargs ):
-        "Delegate to root node"
-        return self.rcmd( *args, **kwargs )
-
     @classmethod
     def batchStartup( cls, switches, **_kwargs ):
         "Start up switches in per-server batches"
@@ -529,8 +342,6 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
             info( '(%s)' % server )
             group = tuple( switchGroup )
             switch = group[ 0 ]
-            for switch in switches:
-                switch.pid = None
             OVSSwitch.batchShutdown( group, run=switch.rcmd )
         return switches
 
@@ -553,7 +364,7 @@ class RemoteLink( Link ):
     def stop( self ):
         "Stop this link"
         if self.tunnel:
-            self.node.rcmd( 'kill', self.pids() )
+            self.tunnel.terminate()
             self.intf1.delete()
             self.intf2.delete()
         else:
@@ -579,68 +390,87 @@ class RemoteLink( Link ):
         # Otherwise, make a tunnel
         self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
                                        addr1, addr2 )
+        return self.tunnel
 
-    tapNum = {}  # map of server to tap interface number
-    tapStart = 10
-
-    @classmethod
-    def nextTapNum( cls, server ):
-        "Return next usable tap interface number for server"
-        num = cls.tapNum.get( server, cls.tapStart )
-        cls.tapNum[ server] = num + 1
-        return num
+    @staticmethod
+    def moveIntf( intf, node, printError=True ):
+        """Move remote interface from root ns to node
+            intf: string, interface
+            dstNode: destination Node
+            srcNode: source Node or None (default) for root ns
+            printError: if true, print error"""
+        intf = str( intf )
+        cmd = 'ip link set %s netns %s' % ( intf, node.pid )
+        node.rcmd( cmd )
+        links = node.cmd( 'ip link show' )
+        if not ' %s:' % intf in links:
+            if printError:
+                error( '*** Error: RemoteLink.moveIntf: ' + intf +
+                       ' not successfully moved to ' + node.name + '\n' )
+            return False
+        return True
 
     def makeTunnel( self, node1, node2, intfname1, intfname2,
                     addr1=None, addr2=None ):
-        "Make an SSH tunnel across switches on different servers"
+        "Make a tunnel across switches on different servers"
+        # We should never try to create a tunnel to ourselves!
+        assert node1.server != 'localhost' or node2.server != 'localhost'
         # And we can't ssh into this server remotely as 'localhost',
         # so try again swappping node1 and node2
-        if node2.server == 'localhost' and node1.server != 'localhost':
-            return self.makeTunnel( node2, node1, intfname2, intfname1 )
-        num1 = self.nextTapNum( node1. server )
-        num2 = self.nextTapNum( node2.server )
-        tap1, tap2 = 'tap%d' % num1, 'tap%d' % num2
-        node1.rcmd( 'ip link del', tap1, ' 2> /dev/null;'
-                    'sudo ip tuntap add dev', tap1,
-                    'mode tap user', node1.user, errFail=True)
-        node2.rcmd( 'ip link del', tap2, ' 2>  /dev/null;'
-                    ' sudo ip tuntap add dev', tap2,
-                    'mode tap user', node2.user,
-                     errFail=True)
-        # XXX Painful.... it would be nice to avoid sudo here
-        self.cmd = ( 'sudo -E -u %s ssh -f -l %s -n -o BatchMode=yes -o Tunnel=Ethernet -w %d:%d %s echo @ &' %
-                     ( node1.user, node2.user, num1, num2, node2.serverIP ) )
-        self.node = node1
-        # Wait for '@' to appear, signaling tunnel is up
-        root = node1.rootNode( node1.server )
-        debug( '***', node1.server, self.cmd, '\n' )
-        root.sendCmd( self.cmd )
-        while '@' not in root.monitor():
-            pass
-        root.waitOutput()
-        node1.rcmd( 'ip link set', tap1, 'name', intfname1, 'netns', node1.pid,
-                     errFail=True )
-        node2.rcmd( 'ip link set', tap2, 'name', intfname2, 'netns', node2.pid,
-                    errFail=True )
-        return self.cmd
-
-    def pids( self ):
-        "Look for tunnel pid(s)"
-        out = self.node.rcmd( 'pgrep -f "%s"' % self.cmd ).strip()
-        return ' '.join( re.findall( '\d+', out ) )
-
-
+        if node2.server == 'localhost':
+            return self.makeTunnel( node2, node1, intfname2, intfname1,
+                                    addr2, addr1 )
+        # 1. Create tap interfaces
+        for node in node1, node2:
+            # For now we are hard-wiring tap9, which we will rename
+            cmd = 'ip tuntap add dev tap9 mode tap user ' + node.user
+            result = node.rcmd( cmd )
+            if result:
+                raise Exception( 'error creating tap9 on %s: %s' %
+                                 ( node, result ) )
+        # 2. Create ssh tunnel between tap interfaces
+        # -n: close stdin
+        dest = '%s@%s' % ( node2.user, node2.serverIP )
+        cmd = [ 'ssh', '-n', '-o', 'Tunnel=Ethernet', '-w', '9:9',
+                dest, 'echo @' ]
+        self.cmd = cmd
+        tunnel = node1.rpopen( cmd, sudo=False )
+        # When we receive the character '@', it means that our
+        # tunnel should be set up
+        debug( 'Waiting for tunnel to come up...\n' )
+        ch = tunnel.stdout.read( 1 )
+        if ch != '@':
+            raise Exception( 'makeTunnel:\n',
+                             'Tunnel setup failed for',
+                             '%s:%s' % ( node1, node1.dest ), 'to',
+                             '%s:%s\n' % ( node2, node2.dest ),
+                             'command was:', cmd, '\n' )
+        # 3. Move interfaces if necessary
+        for node in node1, node2:
+            if not self.moveIntf( 'tap9', node ):
+                raise Exception( 'interface move failed on node %s' % node )
+        # 4. Rename tap interfaces to desired names
+        for node, intf, addr in ( ( node1, intfname1, addr1 ),
+                                  ( node2, intfname2, addr2 ) ):
+            if not addr:
+                result = node.cmd( 'ip link set tap9 name', intf )
+            else:
+                result = node.cmd( 'ip link set tap9 name', intf,
+                                   'address', addr )
+            if result:
+                raise Exception( 'error renaming %s: %s' % ( intf, result ) )
+        return tunnel
 
     def status( self ):
         "Detailed representation of link"
         if self.tunnel:
-            pid = self.tunnel.pid()
-            if pid:
-                status = "Tunnel Running (%s: %s)" % ( self.node, pid )
+            if self.tunnel.poll() is not None:
+                status = "Tunnel EXITED %s" % self.tunnel.returncode
             else:
-                status = "Tunnel Exited (%s)" % self.node
+                status = "Tunnel Running (%s: %s)" % (
+                    self.tunnel.pid, self.cmd )
         else:
-            status = "Local"
+            status = "OK"
         result = "%s %s" % ( Link.status( self ), status )
         return result
 
@@ -845,7 +675,6 @@ class MininetCluster( Mininet ):
             self.serverIP = { server: RemoteMixin.findServerIP( server )
                               for server in self.servers }
         self.user = params.pop( 'user', findUser() )
-        print 'USER', self.user
         if params.pop( 'precheck' ):
             self.precheck()
         self.connections = {}
@@ -896,23 +725,6 @@ class MininetCluster( Mininet ):
             sys.exit( 1 )
         info( '\n' )
 
-    def preallocate( self ):
-        "Preallocate rcmd channels so paramiko's select() works!"
-        defaultUser = findUser()
-        def key( node ):
-            info = self.topo.nodeInfo( node )
-            user = info.get( 'user', defaultUser )
-            server = info.get( 'server', None )
-            return ( user, server )
-        nodes = self.topo.nodes()
-        for dest, serverGroup in groupby( sorted( nodes, key=key ), key ):
-            user, server = dest
-            serverGroup = tuple( serverGroup )
-            if user and server:
-                # Per-server root node uses one more connection
-                Popenssh.prealloc( user, server, len( serverGroup ) + 1 )
-                RemoteNode.rootNode( server )
-
     def modifiedaddHost( self, *args, **kwargs ):
         "Slightly modify addHost"
         assert self  # please pylint
@@ -931,7 +743,6 @@ class MininetCluster( Mininet ):
                                  hosts=self.topo.hosts(),
                                  switches=self.topo.switches(),
                                  links=self.topo.links() )
-        serverToNodes = {}
         for node in nodes:
             config = self.topo.nodeInfo( node )
             # keep local server name consistent accross nodes
@@ -940,16 +751,12 @@ class MininetCluster( Mininet ):
             server = config.setdefault( 'server', placer.place( node ) )
             if server:
                 config.setdefault( 'serverIP', self.serverIP[ server ] )
+            info( '%s:%s ' % ( node, server ) )
             key = ( None, server )
             _dest, cfile, _conn = self.connections.get(
                         key, ( None, None, None ) )
             if cfile:
                 config.setdefault( 'controlPath', cfile )
-            serverToNodes.setdefault( server, [] )
-            serverToNodes[ server ].append( node )
-        for server in sorted( serverToNodes, key=natural ):
-            nodes = ' '.join( sorted( serverToNodes[ server ], key=natural ) )
-            info( '%s: %s\n' % ( server, nodes ) )
 
     def addController( self, *args, **kwargs ):
         "Patch to update IP address to global IP address"
@@ -968,8 +775,6 @@ class MininetCluster( Mininet ):
         "Start network"
         info( '*** Placing nodes\n' )
         self.placeNodes()
-        info( '*** Preallocating connections\n' )
-        self.preallocate()
         info( '\n' )
         Mininet.buildFromTopo( self, *args, **kwargs )
 
@@ -1067,12 +872,13 @@ def testRemoteTopo():
 def testRemoteSwitches():
     "Test with local hosts and remote switches"
     servers = [ 'localhost', 'ubuntu2']
-    topo = TreeTopo( depth=2, fanout=2 )
+    topo = TreeTopo( depth=4, fanout=2 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=RoundRobinPlacer )
     net.start()
     net.pingAll()
     net.stop()
+
 
 #
 # For testing and demo purposes it would be nice to draw the
@@ -1084,13 +890,12 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8' ]
-    topo = TreeTopo( depth=5, fanout=4 )
+    servers = [ 'localhost', 'ubuntu2' ]
+    topo = TreeTopo( depth=3, fanout=3 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
     net.start()
-    # net.pingAll()
-    CLI( net )
+    net.pingAll()
     net.stop()
 
 def signalTest():
@@ -1104,31 +909,10 @@ def signalTest():
         print 'FAILURE:', h, 'exited with code', h.shell.returncode
     h.stop()
 
-# Extremely basic test
-def basicTest():
-    servers = [ 'localhost' ]
-    net = MininetCluster( servers=servers )
-    h1 = net.addHost( 'h1', server='localhost' )
-    h2 = net.addHost( 'h2', server='ubuntu3' )
-    net.addLink( h1, h2 )
-    net.start()
-    CLI( net )
-    net.stop()
-
-def paraTest():
-    "Ugh - how many of these can we make?"
-    l = []
-    for i in range( 0, 1024 ):
-        l.append( Popenssh( 'bash' ) )
-        print i,
-        sys.stdout.flush()
-
-
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    testMininetCluster()
     # testRemoteTopo()
     # testRemoteNet()
     # testMininetCluster()
     # testRemoteSwitches()
-    # signalTest()
+    signalTest()
