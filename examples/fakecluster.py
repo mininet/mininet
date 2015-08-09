@@ -19,6 +19,7 @@ from mininet.util import errRun, quietRun
 from mininet.link import Link
 
 from functools import partial
+from sys import argv
 
 class MininetServer( Server ):
     "A server (for nested Mininet) that runs ssh and ovs"
@@ -67,10 +68,10 @@ class ClusterTopo( Topo ):
             self.addLink( h, ms1, cls=ServerLink )
 
 
-def test():
+def test( serverCount ):
     "Test this setup"
     setLogLevel( 'info' )
-    topo = ClusterTopo( 8 )
+    topo = ClusterTopo( serverCount )
     host = partial( MininetServer, ssh=True, ovs=True)
     net = Mininet( topo=topo, host=host, switch=LinuxBridge, ipBase='10.0/24' )
     MininetServer.updateHostsFiles( net.hosts )
@@ -81,4 +82,5 @@ def test():
     net.stop()
 
 if __name__ == '__main__':
-    test()
+    n = 8 if len( argv ) != 2 else int( argv[ 1 ] )
+    test( n )
