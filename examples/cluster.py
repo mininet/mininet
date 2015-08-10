@@ -241,7 +241,7 @@ class Popenssh( object ):
             self.exit_status = self.channel.recv_exit_status()
         return self.exit_status
 
-    chunkSize = 50
+    chunkSize = 100
 
     @classmethod
     def connect( cls, user, server, preallocCount=0 ):
