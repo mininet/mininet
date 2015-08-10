@@ -466,7 +466,7 @@ class Mininet( object ):
     def stopXterms( self ):
         "Kill each xterm."
         for term in self.terms:
-            term.send_signal( SIGKILL )
+            term.send_signal( signal.SIGKILL )
         cleanUpScreens()
 
     def staticArp( self ):
