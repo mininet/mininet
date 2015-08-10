@@ -464,6 +464,7 @@ class RemoteMixin( object ):
         # Otherwise, look up remote server
         output = quietRun( 'getent ahostsv4 %s' % server )
         ips = cls._ipMatchRegex.findall( output )
+        ips = [ ip for ip in ips if not ip.startswith( '127.' ) ]
         ip = ips[ 0 ] if ips else None
         return ip
 
@@ -621,12 +622,10 @@ class RemoteLink( Link ):
     def makeTunnel( self, node1, node2, intfname1, intfname2,
                     addr1=None, addr2=None ):
         "Make an SSH tunnel across switches on different servers"
-        # And we can't ssh into this server remotely as 'localhost',
-        # so try again swappping node1 and node2
-        if node2.server == 'localhost' and node1.server != 'localhost':
-            # debug: let's try not doing this
-            raise Exception( 'Not reversing tunnels for now.' )
-            return self.makeTunnel( node2, node1, intfname2, intfname1 )
+        debug( 'tunnel from', node1.serverIP, 'to', node2.serverIP )
+        # Can't use loopback address to tunnel across servers
+        assert ( not node1.serverIP.startswith( '127.' ) and
+                 not node2.serverIP.startswith( '127.' ) )
         num1 = self.nextTapNum( node1. server )
         num2 = self.nextTapNum( node2.server )
         tap1, tap2 = 'tap%d' % num1, 'tap%d' % num2
@@ -644,7 +643,8 @@ class RemoteLink( Link ):
             error( err )
             return
         # XXX Painful.... it would be nice to avoid sudo here
-        self.cmd = ( 'sudo -E -u %s ssh -f -l %s -n -o BatchMode=yes -o Tunnel=Ethernet -w %d:%d %s echo @ &' %
+        self.cmd = ( 'sudo -E -u %s ssh -f -l %s -n -o BatchMode=yes -o Tunnel=Ethernet'
+                      ' -w %d:%d %s echo @' %
                      ( node1.user, node2.user, num1, num2, node2.serverIP ) )
         self.node = node1
         # Wait for '@' to appear, signaling tunnel is up
