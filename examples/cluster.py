@@ -193,7 +193,6 @@ def argsToCmd( *args, **kwargs ):
         assert len( args ) == 1
         args = args[ 0 ]
     cmd = ' '.join( str( arg ) for arg in args )
-    debug( 'argsToCmd: returning', repr( cmd ) )
     return cmd
 
 
@@ -526,9 +525,6 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     def cmd( self, *args, **kwargs ):
         "Delegate to root node"
         return self.rcmd( *args, **kwargs )
-    
-    def sendInt( self, *args, **kwargs ):
-        self.root.sendInt( *args, **kwargs )
 
     @property
     def waiting( self ):
@@ -872,22 +868,23 @@ class FunctionThread( Thread ):
             sys.stdout.flush()
 
     @classmethod
-    def call( cls, fn, chunks ):
+    def call( cls, fn, chunks, callback=debug ):
         """Call function on multiple threds
            fn: function to call
            chunks: chunks of (*args, **kwargs) lists"""
-        print "*** Creating threads"
+        debug( '*** Creating threads\n' )
         threads = [ cls( fn, chunk ) for chunk in chunks ]
-        print '*** Starting threads'
+        debug( '*** Starting threads\n' )
         for thread in threads:
             thread.start()
-        print '*** Waiting for thread completion'
+        debug( '*** Waiting for thread completion\n' )
         results = []
         for thread in threads:
             thread.join()
-            print ' '.join( str( obj ) for obj in thread.results )
+            callback( ' '.join( str( obj ) for obj in thread.results ) )
             results += thread.results
         return results
+
 
 def chunk( items, n ):
     "Divide items into n chunks"
@@ -1123,7 +1120,7 @@ class MininetCluster( Mininet ):
         chunks = [ [ ( [], params ) for src, dst, params in group ]
                   for dest, group in
                   self.linkiter( self.topo.links( withInfo=True) ) ]
-        print len( chunks )
+        debug( '*** %d chunks\n' % len( chunks ) )
         info( '\n*** Adding links\n' )
         self.links = FunctionThread.call( self.addLink, chunks )
 
@@ -1241,8 +1238,8 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ '10.%d' % i for i in irange( 1, 4 ) ]
-    topo = LinearTopo( 4 )
+    servers = [ '10.0.1.%d' % i for i in irange( 1, 12 ) ]
+    topo = TreeTopo( depth=4, fanout=4 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
     net.start()
