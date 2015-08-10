@@ -73,7 +73,7 @@ def test( serverCount ):
     setLogLevel( 'info' )
     topo = ClusterTopo( serverCount )
     host = partial( MininetServer, ssh=True, ovs=True)
-    net = Mininet( topo=topo, host=host, switch=LinuxBridge, ipBase='10.0/24' )
+    net = Mininet( topo=topo, host=host, switch=LinuxBridge, ipBase='10.0.1.0/24' )
     MininetServer.updateHostsFiles( net.hosts )
     # addNAT().configDefault() also connects root namespace to Mininet
     net.addNAT().configDefault()
