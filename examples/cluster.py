@@ -101,12 +101,14 @@ from signal import signal, SIGINT, SIG_IGN
 from subprocess import Popen, PIPE
 import os
 from random import randrange
+from math import ceil
 import sys
 import re
 from itertools import groupby
 from operator import attrgetter, itemgetter
 from distutils.version import StrictVersion
 from types import MethodType
+from threading import Thread
 
 # select.select() doesn't work with lots of file descriptors :(
 from select import poll, POLLIN, POLLOUT, POLLERR, POLLHUP
@@ -141,7 +143,7 @@ select.select = pollSelect
 
 
 from paramiko.client import SSHClient, AutoAddPolicy
-from paramiko.agent import Agent, AgentRequestHandler
+from paramiko.agent import AgentRequestHandler
 
 def findUser():
     "Try to return logged-in (usually non-root) user"
@@ -190,7 +192,7 @@ def argsToCmd( *args, **kwargs ):
         # Assume args[0] is arg list
         assert len( args ) == 1
         args = args[ 0 ]
-    cmd = ' '.join( args )
+    cmd = ' '.join( str( arg ) for arg in args )
     debug( 'argsToCmd: returning', repr( cmd ) )
     return cmd
 
@@ -260,9 +262,8 @@ class Popenssh( object ):
         keyfile = '%s/.ssh/cluster_key' % os.environ[ 'HOME' ]
         client.connect( server, username=user, key_filename=keyfile )
         agentsession = client.get_transport().open_session()
-        if Agent().get_keys():
-            agenthandler = AgentRequestHandler( agentsession )
-            cls.agents[ key ] = ( agentsession, agenthandler )
+        agenthandler = AgentRequestHandler( agentsession )
+        cls.agents[ key ] = ( agentsession, agenthandler )
         cls.connections[ key ] = client
         return client
 
@@ -550,7 +551,10 @@ class RemoteLink( Link ):
         kwargs.setdefault( 'params1', {} )
         kwargs.setdefault( 'params2', {} )
         self.cmd = None  # satisfy pylint
-        Link.__init__( self, node1, node2, **kwargs )
+        # Hack: don't bring up intfs immediately
+        kwargs[ 'params1' ].update( up=None )
+        kwargs[ 'params2' ].update( up=None )
+        super( RemoteLink, self ).__init__( node1, node2, **kwargs )
 
     def stop( self ):
         "Stop this link"
@@ -571,13 +575,13 @@ class RemoteLink( Link ):
             to change link type)"""
         node1 = self.node1 if node1 is None else node1
         node2 = self.node2 if node2 is None else node2
-        server1 = getattr( node1, 'server', 'localhost' )
-        server2 = getattr( node2, 'server', 'localhost' )
+        server1 = getattr( node1, 'server' )
+        server2 = getattr( node2, 'server' )
         if server1 == server2:
             # Link within same server
             return Link.makeIntfPair( intfname1, intfname2, addr1, addr2,
                                       node1, node2, deleteIntfs=deleteIntfs,
-                                      runCmd=None )
+                                      runCmd=node1.rcmd )
         # Otherwise, make a tunnel
         self.tunnel = self.makeTunnel( node1, node2, intfname1, intfname2,
                                        addr1, addr2 )
@@ -598,17 +602,25 @@ class RemoteLink( Link ):
         # And we can't ssh into this server remotely as 'localhost',
         # so try again swappping node1 and node2
         if node2.server == 'localhost' and node1.server != 'localhost':
+            # debug: let's try not doing this
+            raise Exception( 'Not reversing tunnels for now.' )
             return self.makeTunnel( node2, node1, intfname2, intfname1 )
         num1 = self.nextTapNum( node1. server )
         num2 = self.nextTapNum( node2.server )
         tap1, tap2 = 'tap%d' % num1, 'tap%d' % num2
+        # For concurrency, we only call node1 directly using rcmd,
+        # using pexec for node2
+        # Second command needs sudo...
         node1.rcmd( 'ip link del', tap1, ' 2> /dev/null;'
                     'sudo ip tuntap add dev', tap1,
-                    'mode tap user', node1.user, errFail=True)
-        node2.rcmd( 'ip link del', tap2, ' 2>  /dev/null;'
-                    ' sudo ip tuntap add dev', tap2,
-                    'mode tap user', node2.user,
-                     errFail=True)
+                    'mode tap user', node1.user, errFail=True )
+        # Second command needs sudo...
+        out, err, code = node2.pexec( 'ip link del', tap2, ' 2>  /dev/null;'
+                    'sudo ip tuntap add dev', tap2,
+                    'mode tap user', node2.user )
+        if err:
+            error( err )
+            return
         # XXX Painful.... it would be nice to avoid sudo here
         self.cmd = ( 'sudo -E -u %s ssh -f -l %s -n -o BatchMode=yes -o Tunnel=Ethernet -w %d:%d %s echo @ &' %
                      ( node1.user, node2.user, num1, num2, node2.serverIP ) )
@@ -616,22 +628,23 @@ class RemoteLink( Link ):
         # Wait for '@' to appear, signaling tunnel is up
         root = node1.rootNode( node1.server )
         debug( '***', node1.server, self.cmd, '\n' )
+        assert not root.waiting
         root.sendCmd( self.cmd )
         while '@' not in root.monitor():
             pass
         root.waitOutput()
         node1.rcmd( 'ip link set', tap1, 'name', intfname1, 'netns', node1.pid,
                      errFail=True )
-        node2.rcmd( 'ip link set', tap2, 'name', intfname2, 'netns', node2.pid,
-                    errFail=True )
+        out, err, code = node2.pexec( 'ip link set', tap2, 'name', intfname2,
+                                      'netns', node2.pid )
+        if err:
+            error( err )
         return self.cmd
 
     def pids( self ):
         "Look for tunnel pid(s)"
         out = self.node.rcmd( 'pgrep -f "%s"' % self.cmd ).strip()
         return ' '.join( re.findall( '\d+', out ) )
-
-
 
     def status( self ):
         "Detailed representation of link"
@@ -813,6 +826,50 @@ class HostSwitchBinPlacer( Placer ):
         return server
 
 
+### Threaded Object Creation
+
+class FunctionThread( Thread ):
+    "Parallel functions calls"
+
+    def __init__( self, fn, params ):
+        """fn: function to call
+           params: list of (*args, **kwargs)"""
+        self.fn = fn
+        self.params = params
+        self.results = []
+        Thread.__init__( self )
+
+    def run( self ):
+        for args, kwargs in self.params:
+            self.results.append( self.fn( *args, **kwargs ) )
+            info( '.' )
+            sys.stdout.flush()
+
+    @classmethod
+    def call( cls, fn, chunks ):
+        """Call function on multiple threds
+           fn: function to call
+           chunks: chunks of (*args, **kwargs) lists"""
+        print "*** Creating threads"
+        threads = [ cls( fn, chunk ) for chunk in chunks ]
+        print '*** Starting threads'
+        for thread in threads:
+            thread.start()
+        print '*** Waiting for thread completion'
+        results = []
+        for thread in threads:
+            thread.join()
+            print ' '.join( str( obj ) for obj in thread.results )
+            results += thread.results
+        return results
+
+def chunk( items, n ):
+    "Divide items into n chunks"
+    length = len( items )
+    chunksize = int( ceil( float( length ) / n ) )
+    return [ items[ i : i + chunksize ] for i in range( 0, length, chunksize ) ]
+
+
 # The MininetCluster class is not strictly necessary.
 # However, it has several purposes:
 # 1. To set up ssh connection sharing/multiplexing
@@ -897,20 +954,44 @@ class MininetCluster( Mininet ):
             sys.exit( 1 )
         info( '\n' )
 
+
+    _defaultUser = ''
+
+    @classmethod
+    def defaultUser( cls ):
+        "Return default user"
+        if not cls._defaultUser:
+            cls._defaultUser = findUser()
+        return cls._defaultUser
+
+    def nodekey( self, node ):
+        "Return user@server for node in topo"
+        info = self.topo.nodeInfo( node )
+        user = info.get( 'user', self.defaultUser() )
+        server = info.get( 'server', None )
+        return '%s@%s' % ( user, server )
+    
+    def nodeiter( self, nodes ):
+        "Iterator over groups of nodes on same server"
+        nodes = sorted( nodes, key=self.nodekey )
+        for dest, nodeGroup in groupby( nodes, key=self.nodekey ):
+            yield dest, sorted( nodeGroup, key=natural )
+
+    def linkiter( self, links ):
+        "Iterator over groups of links starting on same server"
+        def linkkey( link ):
+            src, dst, params = link
+            return self.nodekey( params[ 'node1' ] )
+        links = sorted( links, key=linkkey )
+        for dest, serverGroup in groupby( links, linkkey ):
+            yield dest, tuple( serverGroup )
+
     def preallocate( self ):
         "Preallocate rcmd channels so paramiko's select() works!"
-        defaultUser = findUser()
-        def key( node ):
-            info = self.topo.nodeInfo( node )
-            user = info.get( 'user', defaultUser )
-            server = info.get( 'server', None )
-            return ( user, server )
         nodes = self.topo.nodes()
-        for dest, serverGroup in groupby( sorted( nodes, key=key ), key ):
-            user, server = dest
-            serverGroup = tuple( serverGroup )
-            if user and server:
-                # Per-server root node uses one more connection
+        for dest, serverGroup in self.nodeiter( nodes ):
+            if dest:
+                user, server = dest.split( '@' )  # ah well...
                 Popenssh.prealloc( user, server, len( serverGroup ) + 1 )
                 RemoteNode.rootNode( server )
 
@@ -950,7 +1031,7 @@ class MininetCluster( Mininet ):
             serverToNodes[ server ].append( node )
         for server in sorted( serverToNodes, key=natural ):
             nodes = ' '.join( sorted( serverToNodes[ server ], key=natural ) )
-            info( '%s: %s\n' % ( server, nodes ) )
+            info( '%s: %s\n' % ( server , nodes) )
 
     def addController( self, *args, **kwargs ):
         "Patch to update IP address to global IP address"
@@ -965,15 +1046,65 @@ class MininetCluster( Mininet ):
             Intf( eth0[ 0 ], node=controller ).updateIP()
         return controller
 
-    def buildFromTopo( self, *args, **kwargs ):
+    def buildFromTopo( self, topo ):
         "Start network"
         info( '*** Placing nodes\n' )
         self.placeNodes()
         info( '*** Preallocating connections\n' )
         self.preallocate()
         info( '\n' )
-        Mininet.buildFromTopo( self, *args, **kwargs )
 
+        # Normal buildFromTopo follows
+
+        # Possibly we should clean up here and/or validate
+        # the topo
+        if self.cleanup:
+            pass
+
+        info( '*** Creating network\n' )
+
+        if not self.controllers and self.controller:
+            # Add a default controller
+            info( '*** Adding controller\n' )
+            classes = self.controller
+            if not isinstance( classes, list ):
+                classes = [ classes ]
+            for i, cls in enumerate( classes ):
+                # Allow Controller objects because nobody understands partial()
+                if isinstance( cls, Controller ):
+                    self.addController( cls )
+                else:
+                    self.addController( 'c%d' % i, cls )
+
+        info( '*** Adding hosts:\n' )
+        # Thread per server for now...
+        chunks = [ [ ( [ name ], topo.nodeInfo( name ) ) for name in group ]
+                   for dest, group in self.nodeiter( self.topo.hosts() ) ]
+        hosts = FunctionThread.call( self.addHost, chunks )
+        self.hosts = sorted( self.hosts, key=natural )
+
+        info( '\n*** Adding switches:\n' )
+        for switchName in topo.switches():
+            # A bit ugly: add batch parameter if appropriate
+            params = topo.nodeInfo( switchName)
+            cls = params.get( 'cls', self.switch )
+            if hasattr( cls, 'batchStartup' ):
+                params.setdefault( 'batch', True )
+            self.addSwitch( switchName, **params )
+            info( switchName + ' ' )
+
+        # ugly - fix this!
+        chunks = [ [ ( [], params ) for src, dst, params in group ]
+                  for dest, group in
+                  self.linkiter( self.topo.links( withInfo=True) ) ]
+        print len( chunks )
+        info( '\n*** Adding links\n' )
+        self.links = FunctionThread.call( self.addLink, chunks )
+
+        info( '\n*** HACK: bringing up switch links\n' )
+        for switch in self.switches:
+            for intf in switch.intfs.values():
+                intf.ifconfig( 'up' )
 
 def testNsTunnels():
     "Test tunnels between nodes in namespaces"
@@ -1116,7 +1247,7 @@ def basicTest():
     net.stop()
 
 def paraTest():
-    "Ugh - how many of these can we make?"
+    "How many of these can we make?"
     l = []
     for i in range( 0, 1024 ):
         l.append( Popenssh( 'bash' ) )
