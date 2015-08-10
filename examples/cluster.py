@@ -180,10 +180,11 @@ class ClusterCleanup( object ):
                 # Handled by mininet.clean.cleanup()
                 continue
             else:
-                cmd = [ 'su', user, '-c',
-                        'ssh %s@%s sudo mn -c' % ( user, server ) ]
+                ip = RemoteMixin.findServerIP( server )
+                cmd = [ 'sudo', '-u', user,
+                        'ssh %s@%s sudo mn -c' % ( user, ip ) ]
                 info( cmd, '\n' )
-                info( quietRun( cmd ) )
+                info( quietRun( cmd, shell=True) )
 
 
 def argsToCmd( *args, **kwargs ):
@@ -265,6 +266,12 @@ class Popenssh( object ):
         cls.agents[ key ] = ( agentsession, agenthandler )
         cls.connections[ key ] = client
         return client
+
+    @classmethod
+    def stopConnections( cls ):
+        for connection in cls.connections.values():
+            info( '.' )
+            connection.close()
 
     def communicate( self ):
         "Return stdout, stderr"
@@ -1128,6 +1135,12 @@ class MininetCluster( Mininet ):
         for switch in self.switches:
             for intf in switch.intfs.values():
                 intf.ifconfig( 'up' )
+
+    def stop( self ):
+        super( MininetCluster, self ).stop()
+        info( '*** Stopping connections' )
+        Popenssh.stopConnections()
+        info( '\n' )
 
 def testNsTunnels():
     "Test tunnels between nodes in namespaces"
