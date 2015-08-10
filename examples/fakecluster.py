@@ -82,6 +82,7 @@ def test( serverCount ):
     net.stop()
 
 hosts = { 'mn': MininetServer }
+links = { 'mn': ServerLink }
 
 if __name__ == '__main__':
     n = 8 if len( argv ) != 2 else int( argv[ 1 ] )
