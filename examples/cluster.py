@@ -528,12 +528,13 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     def batchShutdown( cls, switches, **_kwargs ):
         "Stop switches in per-server batches"
         key = attrgetter( 'server' )
+        # Don't kill init
+        for switch in switches:
+            switch.pid = None
         for server, switchGroup in groupby( sorted( switches, key=key ), key ):
             info( '(%s)' % server )
             group = tuple( switchGroup )
             switch = group[ 0 ]
-            for switch in switches:
-                switch.pid = None
             OVSSwitch.batchShutdown( group, run=switch.rcmd )
         return switches
 
