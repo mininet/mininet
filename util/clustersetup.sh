@@ -40,13 +40,25 @@ usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
                     Any hosts taken as arguments will be cleaned
         "
 
+
 persistentSetup() {
     echo "***creating key pair"
-    ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $USERDIR/cluster_key -N '' &> /dev/null
-    cat $USERDIR/cluster_key.pub >> $USERDIR/authorized_keys
+    if ! ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $USERDIR/cluster_key -N ''; then
+        echo "key generation returned error" $?
+    fi
+
+    echo "***adding to authorized_keys"
+    if ! grep -f $USERDIR/cluster_key.pub $USERDIR/authorized_keys > /dev/null; then
+        cat $USERDIR/cluster_key.pub >> $USERDIR/authorized_keys
+    else
+        echo "$USERDIR/cluster_key.pub already in $USERDIR/authorized_keys"
+    fi
+
     echo "***configuring ssh"
-    echo "IdentityFile $USERDIR/cluster_key" >> $USERDIR/config
-    echo "IdentityFile $USERDIR/id_rsa" >> $USERDIR/config
+    if ! grep cluster_key $USERDIR/config; then
+        echo "IdentityFile $USERDIR/cluster_key" >> $USERDIR/config
+        echo "IdentityFile $USERDIR/id_rsa" >> $USERDIR/config
+    fi
 
     for host in $hosts; do
         echo "***copying public key to $host"
@@ -56,17 +68,24 @@ persistentSetup() {
         scp $USERDIR/cluster_key.pub $user@$host:$USERDIR
         echo "***configuring remote host"
         ssh -o ForwardAgent=yes  $user@$host "
-        echo 'IdentityFile $USERDIR/cluster_key' >> $USERDIR/config
-        echo 'IdentityFile $USERDIR/id_rsa' >> $USERDIR/config"
+        if ! grep cluster_key $USERDIR/config > /dev/null; then
+            echo 'IdentityFile $USERDIR/cluster_key' >> $USERDIR/config
+            echo 'IdentityFile $USERDIR/id_rsa' >> $USERDIR/config;
+        fi"
     done
 
     for host in $hosts; do
         echo "***copying known_hosts to $host"
         scp $USERDIR/known_hosts $user@$host:$USERDIR/cluster_known_hosts
+        echo "***appending"
         ssh $user@$host "
-        cat $USERDIR/cluster_known_hosts >> $USERDIR/known_hosts
+        if ! grep -f $USERDIR/cluster_known_hosts $USERDIR/known_hosts > /dev/null; then
+            cat $USERDIR/cluster_known_hosts >> $USERDIR/known_hosts;
+        fi;
         rm $USERDIR/cluster_known_hosts"
     done
+
+    echo "***done with persistent setup"
 }
 
 tempSetup() {
@@ -145,7 +164,7 @@ if $showHelp; then
 fi
 
 for i in "$@"; do
-    if ! getent ahostsv4 $i; then
+    if ! getent ahostsv4 $i > /dev/null; then
         echo "***WARNING: could not find hostname $i"
         echo ""
     else
