@@ -503,15 +503,40 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     def startShell( self, *args, **kwargs ):
         "Don't start a shell"
         self.shell = None
-        self.pid = int( self.rcmd( 'echo $$' ).strip() )
+        self.root = self.rootNode( self.server )
+        self.pid = self.root.pid
+        self.stdin = self.root.shell.stdin
+        self.stdout = self.root.shell.stdout
+        self.stderr = self.root.shell.stderr
 
     def terminate( self, *args, **kwargs ):
         "Don't kill our pgroup"
         pass
 
+
+    # This seems like overkill - perhaps we should
+    # just modify the CLI!!
+
+    def sendCmd( self, *args, **kwargs ):
+        return self.root.sendCmd( *args, **kwargs )
+
+    def monitor( self, *args, **kwargs ):
+        return self.root.monitor( *args, **kwargs )
+
     def cmd( self, *args, **kwargs ):
         "Delegate to root node"
         return self.rcmd( *args, **kwargs )
+    
+    def sendInt( self, *args, **kwargs ):
+        self.root.sendInt( *args, **kwargs )
+
+    @property
+    def waiting( self ):
+        return self.root.waiting
+
+    @waiting.setter
+    def waiting( self, val ):
+        pass
 
     @classmethod
     def batchStartup( cls, switches, **_kwargs ):
@@ -971,7 +996,7 @@ class MininetCluster( Mininet ):
         user = info.get( 'user', self.defaultUser() )
         server = info.get( 'server', None )
         return '%s@%s' % ( user, server )
-    
+
     def nodeiter( self, nodes ):
         "Iterator over groups of nodes on same server"
         nodes = sorted( nodes, key=self.nodekey )
@@ -1216,8 +1241,8 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ '10.%d' % i for i in irange( 1, 16 ) ]
-    topo = TreeTopo( depth=2, fanout=4 )
+    servers = [ '10.%d' % i for i in irange( 1, 4 ) ]
+    topo = LinearTopo( 4 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
     net.start()
