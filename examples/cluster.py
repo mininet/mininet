@@ -1133,8 +1133,10 @@ class MininetCluster( Mininet ):
 
         info( '\n*** HACK: bringing up switch links\n' )
         for switch in self.switches:
-            for intf in switch.intfs.values():
-                intf.ifconfig( 'up' )
+            switch.cmd( ';'.join( 'ifconfig %s up' % intf
+                                  for intf in switch.intfs.values() ) )
+            info( '.' )
+        info( '\n' )
 
     def stop( self ):
         super( MininetCluster, self ).stop()
