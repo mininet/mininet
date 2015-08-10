@@ -1017,7 +1017,6 @@ def testRemoteNet( remote='ubuntu2' ):
     CLI( net )
     net.stop()
 
-
 # High-level/Topo API example
 #
 # This shows how existing Mininet topologies may be used in cluster
@@ -1084,7 +1083,7 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8' ]
+    servers = [ '10.%d' % i for i in irange( 1, 8 ) ]
     topo = TreeTopo( depth=5, fanout=4 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
