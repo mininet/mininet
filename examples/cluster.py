@@ -123,6 +123,7 @@ def pollSelect( rlist, wlist, xlist, timeout ):
         poller.register( f, POLLOUT )
     for f in xlist:
         poller.register( f, POLLERR | POLLHUP )
+    debug( '*' )  # So we can see when this is called
     fids = poller.poll( timeout )
     result = { fid: events for fid, events in fids }
     r, w, x = [], [], []
@@ -142,8 +143,14 @@ def pollSelect( rlist, wlist, xlist, timeout ):
 select.select = pollSelect
 
 
-from paramiko.client import SSHClient, AutoAddPolicy
-from paramiko.agent import AgentRequestHandler
+SSHClient, AutoAddPolicy, AgentRequestHandler = None, None, None
+
+def importParamiko():
+    "Import paramiko on demand"
+    global SSHClient, AutoAddPolicy, AgentRequestHandler
+    from paramiko.client import SSHClient, AutoAddPolicy
+    from paramiko.agent import AgentRequestHandler
+
 
 def findUser():
     "Try to return logged-in (usually non-root) user"
@@ -256,6 +263,8 @@ class Popenssh( object ):
         if key in cls.connections:
             return cls.connections[ key ]
         info( key, '' )
+        if not SSHClient:
+            importParamiko()
         client = SSHClient()
         client.set_missing_host_key_policy( AutoAddPolicy() )
         client.load_system_host_keys()
