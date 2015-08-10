@@ -81,6 +81,8 @@ def test( serverCount ):
     CLI( net )
     net.stop()
 
+hosts = { 'mn': MininetServer }
+
 if __name__ == '__main__':
     n = 8 if len( argv ) != 2 else int( argv[ 1 ] )
     test( n )
