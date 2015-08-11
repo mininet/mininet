@@ -116,7 +116,6 @@ def pollSelect( rlist, wlist, xlist, timeout ):
     "Reimplementation of select() using poll()"
     poller = poll()
     for f in rlist:
-        print 'FILE', repr(f)
         poller.register( f, POLLIN )
     for f in wlist:
         poller.register( f, POLLOUT )
@@ -848,7 +847,6 @@ class MininetCluster( Mininet ):
             self.serverIP = { server: RemoteMixin.findServerIP( server )
                               for server in self.servers }
         self.user = params.pop( 'user', findUser() )
-        print 'USER', self.user
         if params.pop( 'precheck' ):
             self.precheck()
         self.connections = {}
