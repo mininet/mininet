@@ -39,12 +39,13 @@ from mininet.util import buildTopo
 
 from functools import partial
 
-# Experimental! cluster edition prototype
-from mininet.examples.cluster import ( MininetCluster, RemoteHost,
-                                       RemoteOVSSwitch, RemoteLink,
-                                       SwitchBinPlacer, RandomPlacer,
-                                       ClusterCleanup )
-from mininet.examples.clustercli import ClusterCLI
+# Experimental! cluster edition prototy
+from mininet.cluster.net import MininetCluster
+from mininet.cluster.node import RemoteHost, RemoteOVSSwitch
+from mininet.cluster.link import RemoteLink
+from mininet.cluster.placer import SwitchBinPlacer, RandomPlacer
+from mininet.cluster.clean import ClusterCleanup
+from mininet.cluster.cli import ClusterCLI
 
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
