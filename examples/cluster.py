@@ -116,6 +116,7 @@ def pollSelect( rlist, wlist, xlist, timeout ):
     "Reimplementation of select() using poll()"
     poller = poll()
     for f in rlist:
+        print 'FILE', repr(f)
         poller.register( f, POLLIN )
     for f in wlist:
         poller.register( f, POLLOUT )
@@ -141,7 +142,7 @@ select.select = pollSelect
 
 
 from paramiko.client import SSHClient, AutoAddPolicy
-from paramiko.agent import AgentRequestHandler
+from paramiko.agent import Agent, AgentRequestHandler
 
 def findUser():
     "Try to return logged-in (usually non-root) user"
@@ -257,10 +258,12 @@ class Popenssh( object ):
         client = SSHClient()
         client.set_missing_host_key_policy( AutoAddPolicy() )
         client.load_system_host_keys()
-        client.connect( server, username=user )
+        keyfile = '%s/.ssh/cluster_key' % os.environ[ 'HOME' ]
+        client.connect( server, username=user, key_filename=keyfile )
         agentsession = client.get_transport().open_session()
-        agenthandler = AgentRequestHandler( agentsession )
-        cls.agents[ key ] = ( agentsession, agenthandler )
+        if Agent().get_keys():
+            agenthandler = AgentRequestHandler( agentsession )
+            cls.agents[ key ] = ( agentsession, agenthandler )
         cls.connections[ key ] = client
         return client
 
@@ -1083,8 +1086,8 @@ def testRemoteSwitches():
 
 def testMininetCluster():
     "Test MininetCluster()"
-    servers = [ '10.%d' % i for i in irange( 1, 8 ) ]
-    topo = TreeTopo( depth=5, fanout=4 )
+    servers = [ '10.%d' % i for i in irange( 1, 16 ) ]
+    topo = TreeTopo( depth=2, fanout=4 )
     net = MininetCluster( topo=topo, servers=servers,
                           placement=SwitchBinPlacer )
     net.start()
