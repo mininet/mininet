@@ -31,7 +31,7 @@ usage="./clustersetup.sh [ -p|h|c ] [ host1 ] [ host2 ] ...\n
         via ssh for mininet cluster edition. By default, we use a
         temporary ssh setup. An ssh directory is mounted over
         $USERDIR on each machine in the cluster.
-        
+
                 -h: display this help
                 -p: create a persistent ssh setup. This will add
                     new ssh keys and known_hosts to each nodes
@@ -70,9 +70,9 @@ persistentSetup() {
 }
 
 tempSetup() {
-    
+
     echo "***creating temporary ssh directory"
-    mkdir -p $SSHDIR 
+    mkdir -p $SSHDIR
     echo "***creating key pair"
     ssh-keygen -t rsa -C "Cluster_Edition_Key" -f $SSHDIR/id_rsa -N '' &> /dev/null
 
@@ -99,7 +99,7 @@ tempSetup() {
 }
 
 cleanup() {
-    
+
     for host in $hosts; do
     echo "***cleaning up $host"
     ssh $user@$host "sudo umount $USERDIR
@@ -145,9 +145,8 @@ if $showHelp; then
 fi
 
 for i in "$@"; do
-    output=$(getent ahostsv4 "$i")
-    if [ -z "$output" ]; then
-        echo '***WARNING: could not find hostname "$i"'
+    if ! getent ahostsv4 $i; then
+        echo "***WARNING: could not find hostname $i"
         echo ""
     else
         hosts+="$i "
