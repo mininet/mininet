@@ -92,7 +92,7 @@ from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun, errRun, irange, natural
-from mininet.examples.clustercli import CLI
+from mininet.examples.clustercli import ClusterCLI as CLI
 from mininet.log import setLogLevel, debug, info, error
 from mininet.clean import addCleanupCallback
 from mininet.topo import Topo
