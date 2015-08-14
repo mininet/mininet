@@ -480,8 +480,7 @@ class RemoteMixin( object ):
         # Otherwise, look up remote server
         output = quietRun( 'getent ahostsv4 %s' % server )
         ips = cls._ipMatchRegex.findall( output )
-        ips = [ ip for ip in ips if not ip.startswith( '127.' ) ]
-        ip = ips[ 0 ] if ips else None
+        ip = ips[ -1 ] if ips else None
         return ip
 
 class RemoteNode( RemoteMixin, Node ):
@@ -1308,7 +1307,7 @@ def hostTest():
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    testMininetCluster()
+    hostTest()
     # testRemoteTopo()
     # testRemoteNet()
     # testMininetCluster()
