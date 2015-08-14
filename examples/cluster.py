@@ -1301,6 +1301,10 @@ def paraTest():
         print i,
         sys.stdout.flush()
 
+def hostTest():
+    h1 = RemoteHost( 'h1' )
+    print h1.cmd( 'hostname' )
+    h1.stop()
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
