@@ -1405,7 +1405,7 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, command='controller',
-                  cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
+                  cargs='ptcp:%d', cdir=None, ip="127.0.0.1",
                   port=6633, protocol='tcp', **params ):
         self.command = command
         self.cargs = cargs
