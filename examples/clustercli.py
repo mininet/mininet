@@ -19,8 +19,7 @@ class ClusterCLI( CLI ):
                    'magenta', 'pink', 'grey', 'brown',
                    'white' ]
         slen, clen = len( seq ), len( colors )
-        reps = max( 1, slen / clen )
-        colors = colors * reps
+        colors = colors * ( slen / clen + 1 )
         colors = colors[ 0 : slen ]
         return colors
 
