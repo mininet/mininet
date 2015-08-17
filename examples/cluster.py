@@ -86,7 +86,7 @@ Cluster TNG:
 
 """
 
-from mininet.node import Node, Host, OVSSwitch, Controller
+from mininet.node import Node, Host, OVSSwitch, UserSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
@@ -493,6 +493,10 @@ class RemoteHost( RemoteNode ):
     pass
 
 
+class RemoteUserSwitch( RemoteMixin, UserSwitch ):
+    "Remote instance of UserSwitch"
+    pass
+
 class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
     "Remote instance of Open vSwitch"
 
@@ -695,6 +699,25 @@ class RemoteLink( Link ):
             status = "Local"
         result = "%s %s" % ( Link.status( self ), status )
         return result
+
+
+
+def ClusterController( *args, **kwargs):
+    "Custom Controller() constructor which updates its eth0 IP address"
+    controller = Controller( *args, **kwargs )
+    # Find out its IP address so that cluster switches can connect
+    Intf( 'eth0', node=controller ).updateIP()
+    return controller
+
+
+# Mapping of objects to remote equivalents
+
+RemoteMap = {
+    Host: RemoteHost,
+    OVSSwitch: RemoteOVSSwitch,
+    UserSwitch: RemoteUserSwitch,
+    Link: RemoteLink
+}
 
 
 # Some simple placement algorithms for MininetCluster
@@ -934,6 +957,9 @@ class MininetCluster( Mininet ):
                    'link': RemoteLink,
                    'precheck': True }
         params.update( kwargs )
+        # Substitute remote versions
+        for param in 'host', 'switch', 'link':
+            params[ param ] = RemoteMap.get( params[ param ], params[ param ] )
         servers = params.pop( 'servers', [ 'localhost' ] )
         servers = [ s if s else 'localhost' for s in servers ]
         self.servers = servers
@@ -1220,18 +1246,12 @@ def SwitchPlacer( name, *args, **params ):
     else:
         return RemoteOVSSwitch( name, *args, **params )
 
-def ClusterController( *args, **kwargs):
-    "Custom Controller() constructor which updates its eth0 IP address"
-    controller = Controller( *args, **kwargs )
-    # Find out its IP address so that cluster switches can connect
-    Intf( 'eth0', node=controller ).updateIP()
-    return controller
 
 def testRemoteTopo():
     "Test remote Node classes using Mininet()/Topo() API"
     topo = LinearTopo( 2 )
     net = Mininet( topo=topo, host=HostPlacer, switch=SwitchPlacer,
-                   link=RemoteLink, controller=ClusterController )
+                   link=RemoteLink )
     net.start()
     net.pingAll()
     net.stop()
@@ -1264,7 +1284,8 @@ def testMininetCluster():
     servers = [ '10.0.1.%d' % i for i in irange( 1, 12 ) ]
     topo = TreeTopo( depth=4, fanout=4 )
     net = MininetCluster( topo=topo, servers=servers,
-                          placement=SwitchBinPlacer )
+                          placement=SwitchBinPlacer,
+                          switch=UserSwitch )
     net.start()
     # net.pingAll()
     CLI( net )
@@ -1284,7 +1305,7 @@ def signalTest():
 # Extremely basic test
 def basicTest():
     servers = [ 'localhost' ]
-    net = MininetCluster( servers=servers )
+    net = MininetCluster( servers=servers, switch=UserSwitch )
     h1 = net.addHost( 'h1', server='localhost' )
     h2 = net.addHost( 'h2', server='ubuntu3' )
     net.addLink( h1, h2 )
@@ -1307,9 +1328,8 @@ def hostTest():
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    hostTest()
     # testRemoteTopo()
     # testRemoteNet()
-    # testMininetCluster()
+    testMininetCluster()
     # testRemoteSwitches()
     # signalTest()

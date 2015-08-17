@@ -40,8 +40,7 @@ from mininet.util import buildTopo
 from functools import partial
 
 # Experimental! cluster edition prototype
-from mininet.examples.cluster import ( MininetCluster, RemoteHost,
-                                       RemoteOVSSwitch, RemoteLink,
+from mininet.examples.cluster import ( MininetCluster,
                                        SwitchBinPlacer, RandomPlacer,
                                        ClusterCleanup )
 from mininet.examples.clustercli import ClusterCLI
@@ -336,9 +335,7 @@ class MininetRunner( object ):
         Net = MininetWithControlNet if inNamespace else Mininet
         cli = ClusterCLI if cluster else CLI
         if cluster:
-            warn( '*** WARNING: Experimental cluster mode!\n'
-                  '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
-            host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
+            warn( '*** WARNING: Experimental cluster mode!\n' )
             Net = partial( MininetCluster, servers=servers,
                            placement=PLACEMENT[ self.options.placement ] )
 
