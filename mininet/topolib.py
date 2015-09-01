@@ -78,4 +78,33 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
 
+class LeafSpineTopo ( Topo ):
+    """Leaf-Spine topology with a given leaf number, spine number and fanout"""
+
+    def build( self, leaf=2, spine=2, fanout=2):
+
+        leaf_list, spine_list, host, dpid = [], [], [], 0
+
+        # Build spine switches
+        self._addSwitch( spine, spine_list, "spine")
+        # Build leaf switches
+        self._addSwitch( leaf, leaf_list, "leaf")
+
+        # Link between leaf and spine
+        for spine_sw in spine_list:
+            for leaf_sw in leaf_list:
+                self.addLink(spine_sw, leaf_sw)
+
+        # Link between leaf and host
+        count = 0
+        for leaf_sw in leaf_list:
+            for y in range( 0, fanout ):
+                host = self.addHost( 'h' + str(count + 1))
+                self.addLink( leaf_sw, host )
+                count += 1
+
+    def _addSwitch( self, number, sw_list, sw_name ):
+        for i in range( 0, number ):
+            sw_list.append(self.addSwitch( sw_name + str(i + 1)))
+
 # pylint: enable=arguments-differ
