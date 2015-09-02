@@ -83,7 +83,7 @@ class LeafSpineTopo ( Topo ):
 
     def build( self, leaf=2, spine=2, fanout=2):
 
-        leaf_list, spine_list, host, dpid = [], [], [], 0
+        leaf_list, spine_list, host, dpid, hostNum = [], [], [], 0, 1
 
         # Build spine switches
         self._addSwitch( spine, spine_list, "spine")
@@ -96,12 +96,11 @@ class LeafSpineTopo ( Topo ):
                 self.addLink(spine_sw, leaf_sw)
 
         # Link between leaf and host
-        count = 0
         for leaf_sw in leaf_list:
-            for y in range( 0, fanout ):
-                host = self.addHost( 'h' + str(count + 1))
+            for _ in range( fanout ):
+                host = self.addHost( 'h%s' % hostNum)
                 self.addLink( leaf_sw, host )
-                count += 1
+                hostNum += 1
 
     def _addSwitch( self, number, sw_list, sw_name ):
         for i in range( 0, number ):
