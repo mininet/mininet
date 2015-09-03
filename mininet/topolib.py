@@ -82,8 +82,8 @@ class LeafSpineTopo ( Topo ):
     """Leaf-Spine topology with a given leaf number, spine number and fanout"""
 
     def build( self, leaf=2, spine=2, fanout=2):
-
-        leaf_list, spine_list, host, dpid, hostNum = [], [], [], 0, 1
+        self.dpid = 1
+        leaf_list, spine_list, hostNum = [], [], 1
 
         # Build spine switches
         self._addSwitch( spine, spine_list, "spine")
@@ -104,6 +104,7 @@ class LeafSpineTopo ( Topo ):
 
     def _addSwitch( self, number, sw_list, sw_name ):
         for i in range( 0, number ):
-            sw_list.append(self.addSwitch( sw_name + str(i + 1)))
+            sw_list.append(self.addSwitch( '%s%s' % (sw_name, str(i + 1)), dpid='%016x' % self.dpid ))
+            self.dpid += 1
 
 # pylint: enable=arguments-differ
