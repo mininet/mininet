@@ -1346,7 +1346,7 @@ class Controller( Node ):
 
     def __init__( self, name, inNamespace=False, command='controller',
                   cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                  port=6633, protocol='tcp', **params ):
+                  port=6653, protocol='tcp', **params ):
         self.command = command
         self.cargs = cargs
         self.cdir = cdir
@@ -1480,7 +1480,7 @@ class RemoteController( Controller ):
     "Controller running outside of Mininet's control."
 
     def __init__( self, name, ip='127.0.0.1',
-                  port=6633, **kwargs):
+                  port=None, **kwargs):
         """Init.
            name: name to give controller
            ip: the IP address where the remote controller is
@@ -1498,12 +1498,30 @@ class RemoteController( Controller ):
 
     def checkListening( self ):
         "Warn if remote controller is not accessible"
-        listening = self.cmd( "echo A | telnet -e A %s %d" %
-                              ( self.ip, self.port ) )
+        if self.port is not None:
+            self.isListening( self.ip, self.port )
+        else:
+            for port in [ 6653, 6633 ]:
+                if self.isListening( self.ip, port ):
+                    self.port = port
+                    info( "Connecting to remote controller"
+                          " at %s:%d\n" % ( self.ip, self.port ))
+                    break
+
+        if self.port is None:
+            self.port = 6653
+            warn( "Setting remote controller"
+                  " to %s:%d\n" % ( self.ip, self.port ))
+
+    def isListening( self, ip, port ):
+        "Check if a remote controller is listening at a specific ip and port"
+        listening = self.cmd( "echo A | telnet -e A %s %d" % ( ip, port ) )
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
-                  " at %s:%d\n" % ( self.ip, self.port ) )
-
+                  " at %s:%d\n" % ( ip, port ) )
+            return False
+        else:
+            return True
 
 DefaultControllers = ( Controller, OVSController )
 
