@@ -1501,7 +1501,7 @@ class RemoteController( Controller ):
         if self.port is not None:
             self.isListening( self.ip, self.port )
         else:
-            for port in [ 6653, 6633 ]:
+            for port in 6653, 6633:
                 if self.isListening( self.ip, port ):
                     self.port = port
                     info( "Connecting to remote controller"
