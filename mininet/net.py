@@ -92,6 +92,7 @@ import select
 import signal
 import random
 import copy
+import time
 from time import sleep
 from itertools import chain, groupby
 from math import ceil
@@ -108,7 +109,8 @@ from mininet.term import cleanUpScreens, makeTerms
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.1.0+"
 
-class Mininet( object ):
+
+class Mininet(object):
     "Network emulation with hosts spawned in network namespaces."
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
@@ -133,7 +135,9 @@ class Mininet( object ):
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
-               each additional switch in the net if inNamespace=False"""
+               each additional switch in the net if inNamespace=False
+        """
+
         self.topo = topo
         self.switch = switch
         self.host = host
@@ -543,7 +547,7 @@ class Mininet( object ):
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received
 
-    def ping( self, hosts=None, timeout=None ):
+    def ping( self, hosts=None, timeout=None):
         """Ping between all specified hosts.
            hosts: list of hosts
            timeout: time to wait for a response, as string
@@ -736,7 +740,83 @@ class Mininet( object ):
             result.insert( 0, udpBw )
         output( '*** Results: %s\n' % result )
         return result
+    
+    def iperf_single( self,hosts=None, udpBw='10M', period=60, port=5001):
+            """Run iperf between two hosts using UDP.
+               hosts: list of hosts; if None, uses opposite hosts
+               returns: results two-element array of server and client speeds"""
+            if not hosts:
+                return
+            else:
+                assert len( hosts ) == 2
+            client, server = hosts
+            filename = client.name[1:] + '.out'
+            output( '*** Iperf: testing bandwidth between ' )
+            output( "%s and %s\n" % ( client.name, server.name ) )
+            iperfArgs = 'iperf -u '
+            bwArgs = '-b ' + udpBw + ' '
+            print "***start server***"
+            server.cmd( iperfArgs + '-s -i 1' + ' > /home/zg/log/' + filename + '&')
+            print "***start client***"
+            client.cmd(
+                iperfArgs + '-t '+ str(period) + ' -c ' + server.IP() + ' ' + bwArgs
+                +' > /home/zg/log/' + 'client' + filename +'&')
 
+    def iperfMulti(self, bw, period=60):
+        base_port = 5001
+        server_list = []
+        client_list = [h for h in self.hosts]
+        host_list = []
+        host_list = [h for h in self.hosts]
+
+        cli_outs = []
+        ser_outs = []
+        
+        _len = len(host_list)
+        for i in xrange(0, _len):
+            client = host_list[i]
+            server = client
+            while( server == client ):
+                server = random.choice(host_list) 
+            server_list.append(server)
+            self.iperf_single(hosts = [client, server], udpBw=bw, period= period, port=base_port)
+            sleep(.05)
+            base_port += 1
+
+        sleep(period)
+        print "test has done"
+    # TODO: fix the list index out of range error.
+    def random_pick( self, _list, probabilities):  
+        x = random.uniform(0,1)  
+        p = None
+        cumulative_probability = 0.0  
+        for item, item_probability in zip(_list, probabilities):  
+            cumulative_probability += item_probability
+            p = item
+            if x < cumulative_probability:break 
+        return p
+
+    def iperfPb (self, bw, period = 60, i = 1,j = 4,k = 64,pt = 0.5,pa = 0.3):
+        base_port = 5001
+        server_list = []
+        client_list = []
+        client_list = [h for h in self.hosts]
+        cli_outs = []
+        ser_outs = []
+        host_list = []
+        host_list = [h for h in self.hosts]
+        pc = 1 - pt - pa
+        p_list = [pt,pa,pc]
+        _len = len(self.hosts)
+        for key in xrange(_len):
+            client = host_list[key]
+            access_host = [host_list[(key+i)%_len],host_list[(key+j)%_len],host_list[(key+k)%_len]]
+            server = self.random_pick(access_host,p_list)
+            server_list.append(server)
+            self.iperf_single(hosts = [client, server], udpBw=bw, port=base_port)
+            sleep(.05)
+        sleep(period)
+        print "test has done"
     def runCpuLimitTest( self, cpu, duration=5 ):
         """run CPU limit test with 'while true' processes.
         cpu: desired CPU fraction of each host

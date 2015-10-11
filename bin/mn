@@ -83,13 +83,15 @@ LINKS = { 'default': Link,
 
 
 # optional tests to run
-TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
+TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp','iperfmulti','iperfpb'
           'none' ]
 
 ALTSPELLING = { 'pingall': 'pingAll',
                 'pingpair': 'pingPair',
                 'iperfudp': 'iperfUdp',
-                'iperfUDP': 'iperfUdp' }
+                'iperfUDP': 'iperfUdp',
+                'iperfmulti':'iperfMulti', 
+                'iperfpb':'iperfPb'}
 
 
 def addDictOption( opts, choicesDict, default, name, helpStr=None ):
