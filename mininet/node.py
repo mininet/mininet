@@ -691,6 +691,8 @@ class Node( object ):
     def setup( cls ):
         "Make sure our class dependencies are available"
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
+        if '-m:' not in quietRun( 'mnexec -h' ):
+            raise Exception( 'Please update mnexec (e.g. make install)' )
 
 class Host( Node ):
     "A host is simply a Node"
