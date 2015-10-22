@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
+#include <assert.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -51,10 +52,12 @@ void usage(char *name)
 }
 
 
+#if !defined(setns)
 int setns(int fd, int nstype)
 {
     return syscall(__NR_setns, fd, nstype);
 }
+#endif
 
 
 /* Validate alphanumeric path foo1/bar2/baz */
@@ -126,7 +129,7 @@ int attach(int pid) {
 
     attachns(pid, "net");
     attachns(pid, "uts");
-    if ( attachns(pid, "pid") == 0 )
+    if (attachns(pid, "pid") == 0)
         pidns = 1;
 
     if (attachns(pid, "mnt") != 0) {
@@ -159,6 +162,7 @@ int main(int argc, char *argv[])
     int printpid = 0;
     int rtprio = 0;
     int pidns = 0;
+    int dofork = 0;
 
     while ((c = getopt(argc, argv, "+cdmnPpa:g:r:uvh")) != -1)
         switch(c) {
@@ -183,26 +187,9 @@ int main(int argc, char *argv[])
         for (fd = getdtablesize(); fd > 2; fd--) close(fd);
     }
 
-    /* XXX We should not fork twice if we don't need to!! */
-    if (detachtty) {
-        /* detach from tty */
-        if (getpgrp() == getpid()) {
-            switch(fork()) {
-            case -1:
-                perror("fork");
-                return 1;
-            case 0:     /* child */
-                break;
-            default:    /* parent */
-                return 0;
-            }
-        }
-        setsid();
-    }
-
     if (attachpid) {
         /* Attach to existing namespace(s) */
-      pidns = attach(attachpid);
+        pidns = attach(attachpid);
     }
     else {
         /* Create new namespace(s) */
@@ -212,12 +199,22 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* Use a new process group so we can use killpg */
-    setpgid( 0, 0 );
+    /* This complexity is here to avoid forking twice */
+    if (detachtty && getpgrp() == getpid()) {
+        /* Fork so that we will no longer be pgroup leader */
+        dofork = 1;
+    }
+    else {
+        detachtty = 0;
+    }
 
-    if ( flags & CLONE_NEWPID || pidns ) {
-        /* For pid namespace, we need to fork and wait for child ;-( */
+    if (flags & CLONE_NEWPID || pidns) {
+        dofork = 1;
+    }
+
+    if (dofork) {
         pid_t pid = fork();
+
         switch(pid) {
             int status;
             case -1:
@@ -227,23 +224,35 @@ int main(int argc, char *argv[])
                 /* child continues below */
                 break;
             default:
-                /* We print the *child pid* if needed */
+                /* We print the *child pid* in *parent's pidns* if needed */
                 if (printpid) {
                     printf("\001%d\n", pid);
                     fflush(stdout);
                 }
-                /* Parent needs to wait for child and exit */
-                wait(&status);
+                /* For pid namespace, we need to fork and wait for child ;-( */
+                if (flags & CLONE_NEWPID || pidns) {
+                     wait(&status);
+                }
                 return 0;
         }
     }
 
-    else if (printpid) {
-        /* If we're in a pid namespace, parent prints our pid instead */
+    if (detachtty) {
+        /* Create a new session - and by implication a new process group */
+        setsid();
+    }
+    else {
+        /* Use a new process group (in the current session)
+         * so Mininet can use killpg without unintended effects */
+        setpgid(0, 0);
+    }
+
+    if (printpid && !dofork) {
+        /* Print child pid if we didn't fork/aren't in a pidns */
+        assert(!pidns);
         printf("\001%d\n", getpid());
         fflush(stdout);
     }
-
 
     if (flags & CLONE_NEWNS && !attachpid) {
         /* Child remounts /proc for ps */
