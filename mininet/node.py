@@ -86,14 +86,14 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.overlayDirs = params.get( 'overlayDirs', [] )
-        
+
         # Support old inNamespace param
         self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
         inNamespace = params.get( 'inNamespace', True )
         if not inNamespace:
             self.ns = []
         self.inNamespace = 'net' in self.ns
-        
+
         # Stash configuration parameters for future reference
         self.params = params
 
@@ -219,7 +219,7 @@ class Node( object ):
             mountpoint, overlay = entry
         tmpfs = None if overlay else '/tmp/%s/%s' % ( self, mountpoint )
         return mountpoint, overlay, tmpfs
-    
+
     def mountOverlayDirs( self ):
         """Mount overlay directories. Overlay directories are similar
             to private directories except they are copy-on-write copies
@@ -1603,4 +1603,3 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
 def NullController( *_args, **_kwargs ):
     "Nonexistent controller - simply returns None"
     return None
-                              
