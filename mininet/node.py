@@ -407,6 +407,7 @@ class Node( object ):
         return self.portBase
 
     def addIntf( self, intf, port=None, moveIntfFn=moveIntf ):
+        # TODO
         """Add an interface.
            intf: interface
            port: port number (optional, typically OpenFlow port number)
@@ -1129,9 +1130,25 @@ class OVSSwitch( Switch ):
         if(intf.name == 'lo'):
             pass
         else:
-            self.cmd( 'ovs-vsctl -- --id=@intName create Interface name="' + self.id + '-' + intf.port + " -- add-port", self, intf.name,"Interface=@intName")
-            self.cmd( 'ifconfig', self.id + "-" + intf.port, 'up' )
+            iface = "{0}-{1}".format(self.id, intf.port) # Interface number on veth pair
+            cmd = 'ovs-vsctl -- --id=@intName create Interface name="' + iface + '" -- add-port'
+            self.cmd(cmd, self, str(intf.name), "Interface=@intName")
+            self.cmd("ifconfig", iface, "up")
             self.TCReapply( intf )
+
+    def addInterface(self, intf):
+        """Adds an interface to this OVSSwitch while Mininet is active
+
+        Underlying command:
+        $ ovs-vsctl add-port 8-0 8-102 name=eth100/2 -- set Interface 8-102 ofport_request=102
+        """
+        if intf.name == 'lo':
+            pass
+        else:
+            iface = "{0}-{1}".format(self.id, intf.port) # Interface number on veth pair
+            tmp = 'ovs-vsctl add-port {0} {1} name={2} -- set Interface {3} ofport_request={4}'
+            cmd = tmp.format(self.br_name, iface, intf, iface, intf.port)
+            self.cmd(cmd)
 
     def detach( self, intf ):
         "Disconnect a data port"
