@@ -89,7 +89,7 @@ method may be called to shut down the network.
 import os
 import re
 import select
-import signal
+from signal import SIGKILL
 import random
 
 from time import sleep
