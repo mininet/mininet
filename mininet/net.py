@@ -281,7 +281,7 @@ class Mininet( object ):
                 # Use first switch if not specified
                 connect = self.switches[ 0 ]
             # Connect the nat to the switch
-            self.addLink( nat, self.switches[ 0 ] )
+            self.addLink( nat, connect )
             # Set the default route on hosts
             natIP = nat.params[ 'ip' ].split('/')[ 0 ]
             for host in self.hosts:
