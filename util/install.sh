@@ -44,6 +44,18 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
         $install lsb-release
     fi
 fi
+
+test -e /etc/centos-release && DIST="CentOS"
+if [ "$DIST" = "CentOS" ]; then
+    install='sudo yum -y install'
+    remove='sudo yum -y erase'
+    pkginst='sudo rpm -ivh'
+    #prereps for this script
+    if ! which lsb_release &> /dev/null; then
+       $install redhat-lsb-core
+    fi
+fi
+
 test -e /etc/fedora-release && DIST="Fedora"
 if [ "$DIST" = "Fedora" ]; then
     install='sudo yum -y install'
@@ -66,8 +78,8 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora'; then
-    echo "Install.sh currently only supports Ubuntu, Debian and Fedora."
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|CentOS'; then
+    echo "Install.sh currently only supports Ubuntu, Debian, Fedora and Centos."
     exit 1
 fi
 
