@@ -308,7 +308,7 @@ class Node( object ):
         self.unmountOverlayDirs()
         if self.shell:
             if self.shell.poll() is None:
-                os.killpg( self.shell.pid, signal.SIGHUP )
+                os.killpg( self.pid, signal.SIGHUP )
         self.cleanup()
 
     def stop( self, deleteIntfs=False ):
