@@ -496,7 +496,7 @@ class Node( object ):
            intf: string, interface name"""
         return self.cmd( 'route add -host', ip, 'dev', intf )
 
-    def setDefaultRoute( self, intf=None ):
+    def setDefaultRoute( self, intf=None, ip6=False ):
         """Set the default route to go through intf.
            intf: Intf or {dev <intfname> via <gw-ip> ...}"""
         # Note setParam won't call us if intf is none
@@ -505,7 +505,10 @@ class Node( object ):
         else:
             params = 'dev %s' % intf
         # Do this in one line in case we're messing with the root namespace
-        self.cmd( 'ip route del default; ip route add default', params )
+        if ip6:
+            self.cmd( 'ip -6 route add default', params )
+        else:
+            self.cmd( 'ip route del default; ip route add default', params )
 
     # Convenience and configuration methods
 
@@ -523,9 +526,22 @@ class Node( object ):
            kwargs: any additional arguments for intf.setIP"""
         return self.intf( intf ).setIP( ip, prefixLen, **kwargs )
 
+    def setIP6( self, ip6, prefixLen=64, intf=None):
+        """Set the IPv6 address for an interface.
+           intf: intf or intf name
+           ip6: IPv6 address as a string
+           prefixLen: prefix length"""
+        if '/' not in ip6:
+            ip6 = '%s/%s' % ( ip6, prefixLen )
+        return self.intf( intf ).setIP6( ip6 )
+
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
         return self.intf( intf ).IP()
+
+    def IP6( self, intf=None ):
+        "Return IPv6 address of a node or specific interface."
+        return self.intf( intf ).IP6()
 
     def MAC( self, intf=None ):
         "Return MAC address of a node or specific interface."
@@ -562,7 +578,7 @@ class Node( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None,
+    def config( self, mac=None, ip=None, ip6=None,
                 defaultRoute=None, lo='up', **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address for default interface
@@ -576,6 +592,7 @@ class Node( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'setIP6', ip6=ip6 )
         self.setParam( r, 'setDefaultRoute', defaultRoute=defaultRoute )
         # This should be examined
         self.cmd( 'ifconfig lo ' + lo )
@@ -683,7 +700,7 @@ class CPULimitedHost( Host ):
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         # Sometimes cgdelete returns a resource busy error but still
         # deletes the group; next attempt will give "no such file"
-        return exitcode == 0  or ( 'no such file' in _err.lower() )
+        return exitcode == 0 or ( 'no such file' in _err.lower() )
 
     def popen( self, *args, **kwargs ):
         """Return a Popen() object in node's namespace

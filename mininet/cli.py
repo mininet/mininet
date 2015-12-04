@@ -411,9 +411,14 @@ class CLI( Cmd ):
             rest = args.split( ' ' )
             # Substitute IP addresses for node names in command
             # If updateIP() returns None, then use node name
-            rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
-                     if arg in self.mn else arg
-                     for arg in rest ]
+            if "ping6" in args:
+                rest = [ self.mn[ arg ].defaultIntf().updateIP6() or arg
+                         if arg in self.mn else arg
+                         for arg in rest ]
+            else:
+                rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
+                         if arg in self.mn else arg
+                         for arg in rest ]
             rest = ' '.join( rest )
             # Run cmd on node:
             node.sendCmd( rest )

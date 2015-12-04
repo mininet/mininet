@@ -336,6 +336,19 @@ def netParse( ipstr ):
         prefixLen = 24
     return ipParse( ip ), prefixLen
 
+def netParse6( ipstr ):
+    """Parse an IP network specification, returning
+       address and prefix len"""
+    prefixLen = 0
+    if '/' in ipstr:
+        ip, pf = ipstr.split( '/' )
+        prefixLen = int( pf )
+    #if no prefix is specified, set the prefix to 64
+    else:
+        ip = ipstr
+        prefixLen = 64
+    return ip, prefixLen
+
 def checkInt( s ):
     "Check if input string is an int"
     try:

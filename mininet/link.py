@@ -44,6 +44,7 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
+        self.ip6, self.prefixLen6 = None, None
 
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
@@ -81,6 +82,15 @@ class Intf( object ):
             self.ip, self.prefixLen = ipstr, prefixLen
             return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
 
+    def setIP6( self, ipstr, prefixLen=None ):
+        """Set IPv6 address"""
+        if '/' in ipstr:
+            self.ip6, self.prefixLen6 = ipstr.split( '/' )
+            return self.ifconfig( "inet6 add %s" % ipstr )
+        else:
+            self.ip6, self.prefixLen6 = ipstr, prefixLen
+            return self.ifconfig( 'inet6 add %s/%s' % ( ipstr, prefixLen ) )
+
     def setMAC( self, macstr ):
         """Set the MAC address for an interface.
            macstr: MAC address as string"""
@@ -91,6 +101,8 @@ class Intf( object ):
 
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
     _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
+    _ip6MatchRegex = re.compile(
+        r'inet6\s+addr:\s+(?:[0-9A-Fa-f]{0,4}:{0,1}){8}\/\d+\s+Scope:Global' )
 
     def updateIP( self ):
         "Return updated IP address based on ifconfig"
@@ -101,6 +113,17 @@ class Intf( object ):
         ips = self._ipMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
         return self.ip
+
+    def updateIP6( self ):
+        "Return updated IPv6 address based on ifconfig"
+        ip6addr, _err, _exitCode = self.node.pexec(
+            'ifconfig %s' % self.name )
+        # get the ipv6 address
+        ipv6s = self._ip6MatchRegex.findall( ip6addr )
+        self.ip6 = ipv6s[ 0 ] if ipv6s else None
+        if self.ip6 is not None:
+            self.ip6 = self.ip6.split()[2].split('/')[0]
+        return self.ip6
 
     def updateMAC( self ):
         "Return updated MAC address based on ifconfig"
@@ -125,6 +148,10 @@ class Intf( object ):
     def IP( self ):
         "Return IP address"
         return self.ip
+
+    def IP6( self ):
+        "Return IPv6 address"
+        return self.ip6
 
     def MAC( self ):
         "Return MAC address"
