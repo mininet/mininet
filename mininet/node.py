@@ -882,7 +882,7 @@ class Switch( Node ):
 
     def defaultIntf( self ):
         "Return control interface"
-        if self.controlIntf:
+        if hasattr(self, "controlIntf") and self.controlIntf:
             return self.controlIntf
         else:
             return Node.defaultIntf( self )
@@ -1081,6 +1081,9 @@ class OVSSwitch( Switch ):
         if self.batch:
             cmd = ' '.join( str( arg ).strip() for arg in args )
             self.commands.append( cmd )
+        elif self.inNamespace:
+            args = ('--db=unix:/tmp/%s/db.sock' % self.name, "--retry", "--timeout=2")+args
+            return self.cmd( 'ovs-vsctl', *args, **kwargs )
         else:
             return self.cmd( 'ovs-vsctl', *args, **kwargs )
 
@@ -1106,7 +1109,7 @@ class OVSSwitch( Switch ):
         """Return ovsdb UUIDs for our controllers
            update: update cached value"""
         if not self._uuids or update:
-            controllers = self.cmd( 'ovs-vsctl -- get Bridge', self,
+            controllers = self.vsctl( '--', 'get Bridge', self,
                                     'Controller' ).strip()
             if controllers.startswith( '[' ) and controllers.endswith( ']' ):
                 controllers = controllers[ 1 : -1 ]
@@ -1153,8 +1156,21 @@ class OVSSwitch( Switch ):
     def start( self, controllers ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
-            raise Exception(
-                'OVS kernel switch does not work in a namespace' )
+            self.workdir = workdir = "/tmp/%s" % self.name
+            self.cmd("mkdir %s || true" % workdir)
+            self.cmd("rm %s/* || true" % workdir)
+            self.cmd("ovsdb-tool create %s/conf.db" % workdir)
+            self.cmd("ovsdb-server",
+                "%s/conf.db" % workdir,
+                "--remote=punix:%s/db.sock" % workdir,
+                "-vfile:info",
+                "--log-file=%s/ovsdb-server.log" % workdir,
+                "&")
+            self.cmd("ovs-vswitchd",
+                'unix:%s/db.sock' % workdir,
+                "-vfile:info",
+                '--log-file=%s/ovs-vswitchd.log' % workdir,
+                '&')
         int( self.dpid, 16 )  # DPID must be a hex string
         # Command to add interfaces
         intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
@@ -1199,22 +1215,34 @@ class OVSSwitch( Switch ):
            switches: switches to start up
            run: function to run commands (errRun)"""
         info( '...' )
-        cmds = 'ovs-vsctl'
+        cmds = ''
         for switch in switches:
-            if switch.isOldOVS():
-                # Ideally we'd optimize this also
-                run( 'ovs-vsctl del-br %s' % switch )
-            for cmd in switch.commands:
-                cmd = cmd.strip()
-                # Don't exceed ARG_MAX
-                if len( cmds ) + len( cmd ) >= cls.argmax:
-                    run( cmds, shell=True )
-                    cmds = 'ovs-vsctl'
-                cmds += ' ' + cmd
-                switch.cmds = []
-                switch.batch = False
+            if switch.inNamespace:
+                switch.batch = False # stop batch capture
+                nscmds = ''
+                for cmd in switch.commands:
+                    cmd = cmd.strip()
+                    if len( nscmds ) + len( cmd ) >= cls.argmax:
+                        switch.vsctl( nscmds )
+                        nscmds = ''
+                    nscmds += ' ' + cmd
+                if nscmds:
+                    switch.vsctl( nscmds )
+            else:
+                if switch.isOldOVS():
+                    # Ideally we'd optimize this also
+                    run( 'ovs-vsctl del-br %s' % switch )
+                for cmd in switch.commands:
+                    cmd = cmd.strip()
+                    # Don't exceed ARG_MAX
+                    if len( cmds ) + len( cmd ) >= cls.argmax:
+                        run( 'ovs-vsctl' + cmds, shell=True )
+                        cmds = ''
+                    cmds += ' ' + cmd
+                    switch.cmds = []
+                    switch.batch = False
         if cmds:
-            run( cmds, shell=True )
+            run( 'ovs-vsctl' + cmds, shell=True )
         # Reapply link config if necessary...
         for switch in switches:
             for intf in switch.intfs.itervalues():
@@ -1225,23 +1253,25 @@ class OVSSwitch( Switch ):
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
            deleteIntfs: delete interfaces? (True)"""
-        self.cmd( 'ovs-vsctl del-br', self )
+        self.vsctl( 'del-br', str(self) )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
         super( OVSSwitch, self ).stop( deleteIntfs )
 
     @classmethod
     def batchShutdown( cls, switches, run=errRun ):
+        switches = [s for s in switches if not s.inNamespace]
         "Shut down a list of OVS switches"
         delcmd = 'del-br %s'
         if switches and not switches[ 0 ].isOldOVS():
             delcmd = '--if-exists ' + delcmd
         # First, delete them all from ovsdb
-        run( 'ovs-vsctl ' +
+        if switches:
+            run( 'ovs-vsctl ' +
              ' -- '.join( delcmd % s for s in switches ) )
         # Next, shut down all of the processes
-        pids = ' '.join( str( switch.pid ) for switch in switches )
-        run( 'kill -HUP ' + pids )
+            pids = ' '.join( str( switch.pid ) for switch in switches )
+            run( 'kill -HUP ' + pids )
         for switch in switches:
             switch.shell = None
         return switches
