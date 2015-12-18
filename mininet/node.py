@@ -1228,7 +1228,7 @@ class OVSSwitch( Switch ):
                     if len( nscmds ) + len( cmd ) >= cls.argmax:
                         switch.vsctl( nscmds )
                         nscmds = ''
-                    nscmds += ' ' + cmd
+                    nscmds += ' -- ' + cmd
                 if nscmds:
                     switch.vsctl( nscmds )
             else:
@@ -1241,7 +1241,7 @@ class OVSSwitch( Switch ):
                     if len( cmds ) + len( cmd ) >= cls.argmax:
                         run( 'ovs-vsctl' + cmds, shell=True )
                         cmds = ''
-                    cmds += ' ' + cmd
+                    cmds += ' -- ' + cmd
                     switch.cmds = []
                     switch.batch = False
         if cmds:
