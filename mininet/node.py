@@ -1157,17 +1157,20 @@ class OVSSwitch( Switch ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
             self.workdir = workdir = "/tmp/%s" % self.name
+            self.cmd("export OVS_RUNDIR=%s" % workdir)
             self.cmd("mkdir %s || true" % workdir)
             self.cmd("rm %s/* || true" % workdir)
             self.cmd("ovsdb-tool create %s/conf.db" % workdir)
             self.cmd("ovsdb-server",
                 "%s/conf.db" % workdir,
                 "--remote=punix:%s/db.sock" % workdir,
+                "-vconsole:emer",
                 "-vfile:info",
                 "--log-file=%s/ovsdb-server.log" % workdir,
                 "&")
             self.cmd("ovs-vswitchd",
                 'unix:%s/db.sock' % workdir,
+                "-vconsole:emer",
                 "-vfile:info",
                 '--log-file=%s/ovs-vswitchd.log' % workdir,
                 '&')
