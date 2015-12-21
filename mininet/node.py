@@ -1043,6 +1043,7 @@ class OVSSwitch( Switch ):
         self._uuids = []  # controller UUIDs
         self.batch = batch
         self.commands = []  # saved commands for batch startup
+        self.children = []
 
     @classmethod
     def setup( cls ):
@@ -1174,19 +1175,45 @@ class OVSSwitch( Switch ):
                 "-vfile:info",
                 '--log-file=%s/ovs-vswitchd.log' % workdir,
                 '&')
+            for c in controllers:
+                socat = None
+                if c.protocol == "tcp":
+                    socat = "socat unix-listen:%s/%s.%d.ofp,reuseaddr,fork tcp-connect:%s:%s" % (
+                        self.workdir, c.IP(), c.port, c.IP(), c.port )
+                elif c.protocol == "ssl":
+                    socat = "socat unix-listen:%s/%s.%d.ofp,reuseaddr,fork openssl:%s:%s" % (
+                        self.workdir, c.IP(), c.port, c.IP(), c.port )
+                elif c.protocol == "ptcp":
+                    socat = "socat tcp-listen:%s,reuseaddr,fork unix-connect:%s/%s.mgmt" % (
+                        c.port, self.workdir, self.name )
+                elif c.protocol == "pssl":
+                    socat = "socat ssl-listen:%s,reuseaddr,fork unix-connect:%s/%s.mgmt" % (
+                        c.port, self.workdir, self.name )
+                if socat:
+                    self.children.append(Popen(socat.split()))
+            if self.listenPort:
+                socat = "socat tcp-listen:%s,reuseaddr,fork unix-connect:%s/%s.mgmt" % (
+                    self.listenPort, self.workdir, self.name )
+                self.children.append(Popen(socat.split()))
         int( self.dpid, 16 )  # DPID must be a hex string
         # Command to add interfaces
         intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
                          self.intfOpts( intf )
                          for intf in self.intfList()
                          if self.ports[ intf ] and not intf.IP() )
-        # Command to create controller entries
-        clist = [ ( self.name + c.name, '%s:%s:%d' %
-                  ( c.protocol, c.IP(), c.port ) )
-                  for c in controllers ]
-        if self.listenPort:
-            clist.append( ( self.name + '-listen',
-                            'ptcp:%s' % self.listenPort ) )
+        if self.inNamespace:
+            # inNamespace, tcp, ssl controllers will be proxied through punix
+            clist = [ ( self.name + c.name, 'unix:%s/%s.%d.ofp' %
+                      ( self.workdir, c.IP(), c.port ) )
+                      for c in controllers if c.protocol not in ("ssl", "tcp") ]
+        else:
+            # Command to create controller entries
+            clist = [ ( self.name + c.name, '%s:%s:%d' %
+                      ( c.protocol, c.IP(), c.port ) )
+                      for c in controllers ]
+            if self.listenPort:
+                clist.append( ( self.name + '-listen',
+                                'ptcp:%s' % self.listenPort ) )
         ccmd = '-- --id=@%s create Controller target=\\"%s\\"'
         if self.reconnectms:
             ccmd += ' max_backoff=%d' % self.reconnectms
@@ -1256,6 +1283,8 @@ class OVSSwitch( Switch ):
     def stop( self, deleteIntfs=True ):
         """Terminate OVS switch.
            deleteIntfs: delete interfaces? (True)"""
+        for c in self.children:
+            c.kill()
         self.vsctl( 'del-br', str(self) )
         if self.datapath == 'user':
             self.cmd( 'ip link del', self )
@@ -1263,6 +1292,9 @@ class OVSSwitch( Switch ):
 
     @classmethod
     def batchShutdown( cls, switches, run=errRun ):
+        for s in switches:
+           for c in s.children:
+               c.kill()
         switches = [s for s in switches if not s.inNamespace]
         "Shut down a list of OVS switches"
         delcmd = 'del-br %s'
