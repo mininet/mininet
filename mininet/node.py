@@ -1205,7 +1205,7 @@ class OVSSwitch( Switch ):
             # inNamespace, tcp, ssl controllers will be proxied through punix
             clist = [ ( self.name + c.name, 'unix:%s/%s.%d.ofp' %
                       ( self.workdir, c.IP(), c.port ) )
-                      for c in controllers if c.protocol not in ("ssl", "tcp") ]
+                      for c in controllers if c.protocol in ("ssl", "tcp") ]
         else:
             # Command to create controller entries
             clist = [ ( self.name + c.name, '%s:%s:%d' %
