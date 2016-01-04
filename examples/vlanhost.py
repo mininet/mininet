@@ -116,7 +116,7 @@ if __name__ == '__main__':
         error( "Cannot find command 'vconfig'\nThe package",
                "'vlan' is required in Ubuntu or Debian,",
                "or 'vconfig' in Fedora\n" )
-        exit()
+        sys.exit()
 
     if len( sys.argv ) >= 2:
         exampleAllHosts( vlan=int( sys.argv[ 1 ] ) )

@@ -58,6 +58,7 @@ import re
 import signal
 import select
 from subprocess import Popen, PIPE
+from sys import exit
 from time import sleep
 
 from mininet.log import info, error, warn, debug

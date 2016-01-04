@@ -10,6 +10,7 @@ import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
+from sys import exit
 from functools import partial
 
 # Command execution support
