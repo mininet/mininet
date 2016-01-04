@@ -117,7 +117,7 @@ def addDictOption( opts, choicesDict, default, name, **kwargs ):
 def version( *_args ):
     "Print Mininet version and exit"
     print "%s" % VERSION
-    exit()
+    sys.exit()
 
 
 class MininetRunner( object ):
@@ -261,7 +261,7 @@ class MininetRunner( object ):
         # We don't accept extra arguments after the options
         if self.args:
             opts.print_help()
-            exit()
+            sys.exit()
 
     def setup( self ):
         "Setup and validate environment."
@@ -287,7 +287,7 @@ class MininetRunner( object ):
 
         if self.options.clean:
             cleanup()
-            exit()
+            sys.exit()
 
         start = time.time()
 
@@ -331,7 +331,7 @@ class MininetRunner( object ):
         cluster = self.options.cluster
         if inNamespace and cluster:
             print "Please specify --innamespace OR --cluster"
-            exit()
+            sys.exit()
         Net = MininetWithControlNet if inNamespace else Mininet
         cli = ClusterCLI if cluster else CLI
         if cluster:

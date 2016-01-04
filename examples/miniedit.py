@@ -3191,7 +3191,7 @@ class MiniEdit( Frame ):
         # We don't accept extra arguments after the options
         if self.args:
             opts.print_help()
-            exit()
+            sys.exit()
 
     def setCustom( self, name, value ):
         "Set custom parameters for MininetRunner."

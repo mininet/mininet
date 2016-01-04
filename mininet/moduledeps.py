@@ -3,6 +3,7 @@
 from mininet.util import quietRun
 from mininet.log import info, error, debug
 from os import environ
+from sys import exit
 
 def lsmod():
     "Return output of lsmod."
