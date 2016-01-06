@@ -79,32 +79,42 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw3 )
 
 class LeafSpineTopo ( Topo ):
-    """Leaf-Spine topology with a given leaf number, spine number and fanout"""
+    """Leaf-Spine topology with a given leaf number, spine number and host
+       # mn --topo leafspine,2,2,2 --mac --switch ovsk,protocols=OpenFlow13 --test pingall"""
 
-    def build( self, leaf=2, spine=2, fanout=2):
-        self.dpid = 1
-        leaf_list, spine_list, hostNum = [], [], 1
+    def build( self, leaf=2, spine=2, host=2 ):
+        """Leaf-Spine Topology
+           leaf: number of switch in leaf layer
+           spine: number of switch in spine layer
+           host: numebr of hosts per leaf switch"""
+
+        self.dpid, self.hostNum = 1, 1
+        leafList, spineList = [], []
 
         # Build spine switches
-        self._addSwitch( spine, spine_list, "spine")
+        self.createSwitch( spine, spineList, "spine" )
         # Build leaf switches
-        self._addSwitch( leaf, leaf_list, "leaf")
+        self.createSwitch( leaf, leafList, "leaf" )
 
         # Link between leaf and spine
-        for spine_sw in spine_list:
-            for leaf_sw in leaf_list:
-                self.addLink(spine_sw, leaf_sw)
+        for spineSwitch in spineList:
+            for leafSwitch in leafList:
+                self.addLink( spineSwitch, leafSwitch )
 
         # Link between leaf and host
-        for leaf_sw in leaf_list:
-            for _ in range( fanout ):
-                host = self.addHost( 'h%s' % hostNum)
-                self.addLink( leaf_sw, host )
-                hostNum += 1
+        for leafSwitch in leafList:
+            for _ in xrange( host ):
+                self.addLink( leafSwitch, self.addHost( 'h%s' % self.hostNum ) )
+                self.hostNum += 1
 
-    def _addSwitch( self, number, sw_list, sw_name ):
+    def createSwitch( self, number, switchList, switchPrefix ):
+        """ number: number of the switch
+            switchList: list of switches
+            switchPrefix: Prefix name of the switch"""
+
         for i in range( 0, number ):
-            sw_list.append(self.addSwitch( '%s%s' % (sw_name, str(i + 1)), dpid='%016x' % self.dpid ))
+            switchList.append( self.addSwitch( '%s%s' % ( switchPrefix, str( i + 1 ) ),
+                               dpid = '%016x' % self.dpid ) )
             self.dpid += 1
 
 # pylint: enable=arguments-differ
