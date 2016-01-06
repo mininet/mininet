@@ -697,29 +697,33 @@ class Mininet( object ):
 
     def pingAll( self, timeout=None, count=1 ):
         """Ping between all hosts.
+           timeout: time to wait for a response, as string
            count: number of packets
            returns: ploss packet loss percentage"""
         return self.ping( timeout=timeout, count=count )
 
-    def pingPair( self, count=1 ):
+    def pingPair( self, timeout=None, count=1 ):
         """Ping between first two hosts, useful for testing.
+           timeout: time to wait for a response, as string
            count: number of packets
            returns: ploss packet loss percentage"""
         hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
-        return self.ping( hosts=hosts, count=count )
+        return self.ping( timeout=timeout, hosts=hosts, count=count )
 
-    def pingAllFull( self, count=1 ):
+    def pingAllFull( self, timeout=None, count=1 ):
         """Ping between all hosts.
+           timeout: time to wait for a response, as string
            count: number of packets
            returns: ploss packet loss percentage"""
-        return self.pingFull( count=count )
+        return self.pingFull( timeout=timeout, count=count )
 
-    def pingPairFull( self, count=1 ):
+    def pingPairFull( self, timeout=None, count=1 ):
         """Ping between first two hosts, useful for testing.
+           timeout: time to wait for a response, as string
            count: number of packets
            returns: ploss packet loss percentage"""
         hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
-        return self.pingFull( hosts=hosts, count=count )
+        return self.pingFull( timeout=timeout, hosts=hosts, count=count )
 
     @staticmethod
     def _parseIperf( iperfOutput ):
