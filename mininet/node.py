@@ -1428,7 +1428,8 @@ class OVSController( Controller ):
     @classmethod
     def isAvailable( cls ):
         return ( quietRun( 'which ovs-controller' ) or
-                 quietRun( 'which test-controller' ) )
+                 quietRun( 'which test-controller' ) or
+                 quietRun( 'which ovs-testcontroller' ) )
 
 class NOX( Controller ):
     "Controller to run a NOX application."
