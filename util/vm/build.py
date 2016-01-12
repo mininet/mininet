@@ -66,36 +66,18 @@ isoURLs = {
     'precise64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
     'ubuntu-12.04.5-server-amd64.iso',
-    'quantal32server':
-    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
-    'ubuntu-12.10-server-i386.iso',
-    'quantal64server':
-    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
-    'ubuntu-12.10-server-amd64.iso',
-    'raring32server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
-    'ubuntu-13.04-server-i386.iso',
-    'raring64server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
-    'ubuntu-13.04-server-amd64.iso',
-    'saucy32server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
-    'ubuntu-13.10-server-i386.iso',
-    'saucy64server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
-    'ubuntu-13.10-server-amd64.iso',
     'trusty32server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04-server-i386.iso',
+    'ubuntu-14.04.3-server-i386.iso',
     'trusty64server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04-server-amd64.iso',
-    'utopic32server':
-    'http://mirrors.kernel.org/ubuntu-releases/14.10/'
-    'ubuntu-14.10-server-i386.iso',
-    'utopic64server':
-    'http://mirrors.kernel.org/ubuntu-releases/14.10/'
-    'ubuntu-14.10-server-amd64.iso',
+    'ubuntu-14.04.3-server-amd64.iso',
+    'wily32server':
+    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
+    'ubuntu-15.10-server-i386.iso',
+    'wily64server':
+    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
+    'ubuntu-15.10-server-amd64.iso',
 }
 
 
