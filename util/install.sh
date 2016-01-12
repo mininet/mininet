@@ -13,7 +13,7 @@ set -o nounset
 MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
 # Set up build directory, which by default is the working directory
-#  unless the working directory is a subdirectory of mininet, 
+#  unless the working directory is a subdirectory of mininet,
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
@@ -162,7 +162,9 @@ function of {
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
-    git clone git://openflowswitch.org/openflow.git
+    # was: git clone git://openflowswitch.org/openflow.git
+    # Use our own fork on github for now:
+    git clone git://github.com/mininet/openflow
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
@@ -553,7 +555,9 @@ function cbench {
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
     cd $BUILD_DIR/
-    git clone git://gitosis.stanford.edu/oflops.git
+    # was:  git clone git://gitosis.stanford.edu/oflops.git
+    # Use our own fork on github for now:
+    git clone git://github.com/mininet/oflops
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
