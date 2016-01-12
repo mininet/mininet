@@ -36,8 +36,9 @@ if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
-    install='sudo apt-get -y install'
-    remove='sudo apt-get -y remove'
+    # Truly non-interactive apt-get installation
+    install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
+    remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
     pkginst='sudo dpkg -i'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
