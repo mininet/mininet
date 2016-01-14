@@ -17,7 +17,7 @@ setLogLevel( 'info' )
 # Ignore the warning message that the remote isn't (yet) running
 c0 = Controller( 'c0', port=6633 )
 c1 = Controller( 'c1', port=6634 )
-c2 = RemoteController( 'c2', ip='127.0.0.1' )
+c2 = RemoteController( 'c2', ip='127.0.0.1', port=6633 )
 
 cmap = { 's1': c0, 's2': c1, 's3': c2 }
 
