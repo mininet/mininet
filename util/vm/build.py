@@ -54,6 +54,7 @@ NoKVM = False               # Don't use kvm and use emulation instead
 Branch = None               # Branch to update and check out before testing
 Zip = False                 # Archive .ovf and .vmdk into a .zip file
 Forward = []                # VM port forwarding options (-redir)
+Chown = ''                  # Build directory owner
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -774,18 +775,20 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
        post: command line to run in VM after tests
        prompt: shell prompt (default '$ ')
        memory: memory size in MB"""
-    global LogFile, Zip
+    global LogFile, Zip, Chown
     start = time()
     lstart = localtime()
     date = strftime( '%y%m%d-%H-%M-%S', lstart)
     ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
     if Branch:
-        dir = 'mn-%s-%s-%s' % ( Branch, flavor, date )
+        dirname = 'mn-%s-%s-%s' % ( Branch, flavor, date )
     try:
-        os.mkdir( dir )
+        os.mkdir( dir)
     except:
         raise Exception( "Failed to create build directory %s" % dir )
+    if Chown:
+        run( 'chown %s %s' % ( Chown, dir ) )
     os.chdir( dir )
     LogFile = open( 'build.log', 'w' )
     log( '* Logging to', abspath( LogFile.name ) )
@@ -935,7 +938,7 @@ def testString():
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT, Forward
+    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT, Forward, Chown
     parser = argparse.ArgumentParser( description='Mininet VM build script',
                                       epilog=buildFlavorString() + ' ' +
                                       testString() )
@@ -975,6 +978,8 @@ def parseArgs():
                          help='output file for test image (vmdk)' )
     parser.add_argument( '-f', '--forward', default=[], action='append',
                          help='forward VM ports to local server, e.g. tcp:5555::22' )
+    parser.add_argument( '-u', '--chown', metavar='user',
+                         help='specify an owner for build directory' )
     args = parser.parse_args()
     if args.depend:
         depend()
@@ -996,6 +1001,8 @@ def parseArgs():
         Forward = args.forward
     if not args.test and not args.run and not args.post:
         args.test = [ 'sanity', 'core' ]
+    if args.chown:
+        Chown = args.chown
     for flavor in args.flavor:
         if flavor not in isoURLs:
             print "Unknown build flavor:", flavor
