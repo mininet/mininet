@@ -424,12 +424,10 @@ function ryu {
 
     # install Ryu dependencies"
     $install autoconf automake g++ libtool python make
-    if [ "$DIST" = "Ubuntu" ]; then
+    if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
         $install libxml2 libxslt-dev python-pip python-dev
-        sudo pip install gevent
-    elif [ "$DIST" = "Debian" ]; then
-        $install libxml2 libxslt-dev python-pip python-dev
-        sudo pip install gevent
+        sudo pip install --upgrade gevent pbr webob routes paramiko \\
+            oslo.config
     fi
 
     # if needed, update python-six
