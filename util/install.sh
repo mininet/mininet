@@ -165,7 +165,7 @@ function of {
     fi
     # was: git clone git://openflowswitch.org/openflow.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/openflow
+    git clone https://github.com/mininet/openflow
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
@@ -412,7 +412,7 @@ function ivs {
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC --recursive
+    git clone https://github.com/floodlight/ivs $IVS_SRC --recursive
     cd $IVS_SRC
     make
     sudo make install
@@ -440,7 +440,7 @@ function ryu {
     fi
     # fetch RYU
     cd $BUILD_DIR/
-    git clone git://github.com/osrg/ryu.git ryu
+    git clone https://github.com/osrg/ryu.git ryu
     cd ryu
 
     # install ryu
@@ -548,7 +548,7 @@ function oftest {
 
     # Install oftest:
     cd $BUILD_DIR/
-    git clone git://github.com/floodlight/oftest
+    git clone https://github.com/floodlight/oftest
 }
 
 # Install cbench
@@ -563,7 +563,7 @@ function cbench {
     cd $BUILD_DIR/
     # was:  git clone git://gitosis.stanford.edu/oflops.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/oflops
+    git clone https://github.com/mininet/oflops
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
