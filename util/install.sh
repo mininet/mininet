@@ -128,11 +128,11 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man pyflakes pylint python-pep8
+            ethtool help2man pyflakes pylint python-pep8 python-pexpect
     else
         $install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
-            pyflakes pylint pep8
+            pyflakes pylint pep8 python-pexpect
     fi
 
     echo "Installing Mininet core"
