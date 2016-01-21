@@ -566,6 +566,9 @@ def useTest( vm, prompt=Prompt ):
         log( '* Restoring logging to stdout' )
         vm.logfile = stdout
 
+# A convenient alias for use - 'run'; we might want to allow
+# 'run' to take a parameter
+runTest = useTest
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
     # This is a bit subtle; it will check out an existing branch (e.g. master)
@@ -917,7 +920,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
 
 def buildFlavorString():
     "Return string listing valid build flavors"
-    return 'valid build flavors: ( %s )' % ' '.join( sorted( isoURLs ) )
+    return 'valid build flavors: %s' % ' '.join( sorted( isoURLs ) )
 
 
 def testDict():
@@ -933,15 +936,16 @@ def testDict():
 
 def testString():
     "Return string listing valid tests"
-    return 'valid tests: ( %s )' % ' '.join( testDict().keys() )
+    tests = [ '%s <%s>' % ( name, func.__doc__ )
+              for name, func in testDict().iteritems() ]
+    return 'valid tests: %s' % ', '.join( tests )
 
 
 def parseArgs():
     "Parse command line arguments and run"
     global LogToConsole, NoKVM, Branch, Zip, TIMEOUT, Forward, Chown
     parser = argparse.ArgumentParser( description='Mininet VM build script',
-                                      epilog=buildFlavorString() + ' ' +
-                                      testString() )
+                                      epilog='' )
     parser.add_argument( '-v', '--verbose', action='store_true',
                         help='send VM output to console rather than log file' )
     parser.add_argument( '-d', '--depend', action='store_true',
@@ -961,7 +965,7 @@ def parseArgs():
                          help='Boot and test an existing VM image' )
     parser.add_argument( '-t', '--test', metavar='test', default=[],
                          action='append',
-                         help='specify a test to run' )
+                         help='specify a test to run; ' + testString() )
     parser.add_argument( '-w', '--timeout', metavar='timeout', type=int,
                             default=0, help='set expect timeout' )
     parser.add_argument( '-r', '--run', metavar='cmd', default='',
@@ -971,7 +975,7 @@ def parseArgs():
     parser.add_argument( '-b', '--branch', metavar='branch',
                          help='branch to install and/or check out and test' )
     parser.add_argument( 'flavor', nargs='*',
-                         help='VM flavor(s) to build (e.g. raring32server)' )
+                         help='VM flavor(s) to build; ' + buildFlavorString() )
     parser.add_argument( '-z', '--zip', action='store_true',
                          help='archive .ovf and .vmdk into .zip file' )
     parser.add_argument( '-o', '--out',
