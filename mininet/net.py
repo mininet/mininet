@@ -767,8 +767,12 @@ class Mininet( object ):
         cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
                              server.IP() + ' ' + bwArgs )
         debug( 'Client output: %s\n' % cliout )
+        servout = ''
+        # We need the second *b/sec from the iperf server output
+        while len( re.findall( '/sec', servout ) ) < 2:
+            servout += server.monitor( timeoutms=5000 )
         server.sendInt()
-        servout = server.waitOutput()
+        server.waitOutput()
         debug( 'Server output: %s\n' % servout )
         result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':
