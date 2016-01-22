@@ -45,9 +45,10 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
         $install lsb-release
     fi
 fi
+test -e /etc/centos-release && DIST="CentOS"
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
-if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
     install='sudo yum -y install'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
@@ -68,7 +69,7 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer'; then
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|CentOS|RedHatEnterpriseServer'; then
     echo "Install.sh currently only supports Ubuntu, Debian, RedHat and Fedora."
     exit 1
 fi
