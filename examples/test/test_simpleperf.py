@@ -16,15 +16,15 @@ class testSimplePerf( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testE2E( self ):
         "Run the example and verify iperf results"
+        # 10 Mb/s, plus or minus 20% tolerance
         BW = 10
-        TOLERANCE = .8
-        expectedBw = BW * TOLERANCE
-        p = pexpect.spawn( 'python -m mininet.examples.simpleperf' )
+	TOLERANCE = .2 
+        p = pexpect.spawn( 'python -m mininet.examples.simpleperf testmode' )
         # check iperf results
         p.expect( "Results: \['10M', '([\d\.]+) .bits/sec", timeout=480 )
         measuredBw = float( p.match.group( 1 ) )
-        lowerBound = expectedBw * TOLERANCE
-        upperBound = expectedBw + expectedBw * ( 1 - TOLERANCE )
+        lowerBound = BW * ( 1 - TOLERANCE )
+        upperBound = BW + ( 1 + TOLERANCE )
         self.assertGreaterEqual( measuredBw, lowerBound )
         self.assertLessEqual( measuredBw, upperBound )
         p.wait()
