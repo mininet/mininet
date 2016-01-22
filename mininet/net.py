@@ -774,7 +774,7 @@ class Mininet( object ):
         while len( re.findall( '/sec', servout ) ) < count:
             servout += server.monitor( timeoutms=5000 )
         server.sendInt()
-        server.waitOutput()
+        servout += server.waitOutput()
         debug( 'Server output: %s\n' % servout )
         result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':
