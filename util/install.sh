@@ -706,6 +706,20 @@ function vm_clean {
     rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
     sudo rm -f ~/.ssh/authorized_keys*
 
+    # Remove SSH keys and regenerate on boot
+    echo 'Removing SSH keys from /etc/ssh/'
+    sudo rm -f /etc/ssh/*key*
+    if ! grep mininet /etc/rc.local >& /dev/null; then
+        sudo sed -i -e "s/exit 0//" /etc/rc.local
+        echo '
+# mininet: regenerate ssh keys if we deleted them
+if ! stat -t /etc/ssh/*key* >/dev/null 2>&1; then
+    /usr/sbin/dpkg-reconfigure openssh-server
+fi
+exit 0
+' | sudo tee -a /etc/rc.local > /dev/null
+    fi
+
     # Remove Mininet files
     #sudo rm -f /lib/modules/python2.5/site-packages/mininet*
     #sudo rm -f /usr/bin/mnexec
