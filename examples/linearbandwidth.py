@@ -121,6 +121,6 @@ def linearBandwidthTest( lengths ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
-    sizes = [ 1, 10, 20, 40, 60, 80, 100 ]
+    sizes = [ 1, 10, 20, 40, 60, 80 ]
     print "*** Running linearBandwidthTest", sizes
     linearBandwidthTest( sizes  )
