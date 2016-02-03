@@ -40,7 +40,9 @@ class testCPU( unittest.TestCase ):
                 if sched not in scheds:
                     scheds.append( sched )
                 else:
-                    self.assertTrue( bw < previous_bw )
+                    self.assertTrue( bw < previous_bw,
+                                     "%f should be less than %f\n" %
+                                     ( bw, previous_bw ) )
                 previous_bw = bw
             else:
                 break
