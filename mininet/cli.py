@@ -262,13 +262,25 @@ class CLI( Cmd ):
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):
-        """Bring link(s) between two nodes up or down.
-           Usage: link node1 node2 [up/down]"""
+        """Bring link between two nodes, or all links connected to a single node up or down.
+           Usage: link node1 (node2 | *) (up | down)"""
         args = line.split()
         if len(args) != 3:
-            error( 'invalid number of args: link end1 end2 [up down]\n' )
+            error( 'invalid number of args: link node1 (node2 | *) (up | down)\n' )
         elif args[ 2 ] not in [ 'up', 'down' ]:
-            error( 'invalid type: link end1 end2 [up down]\n' )
+            error( 'invalid type: link node1 (node2 | *) (up | down)\n' )
+        elif args[ 1 ] == '*':
+            end1 = args[ 0 ]
+            up_down = args[ 2 ]
+            for link in self.mn.links:
+                if link.intf1.node.name == end1:
+                    end2 = link.intf2.node.name
+                elif link.intf2.node.name == end1:
+                    end2 = link.intf1.node.name
+                else:
+                    continue
+                args = [end1, end2, up_down]   
+                self.mn.configLinkStatus( *args )
         else:
             self.mn.configLinkStatus( *args )
 
