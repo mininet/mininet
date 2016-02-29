@@ -33,7 +33,7 @@ from mininet.nodelib import LinuxBridge, Server
 from mininet.link import Link, TCLink, TCULInk, OVSLink
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
-from mininet.topolib import TreeTopo, TorusTopo
+import mininet.topolib
 from mininet.util import customClass, specialClass, splitArgs
 from mininet.util import buildTopo
 
@@ -53,9 +53,8 @@ TOPODEF = 'minimal'
 TOPOS = { 'minimal': MinimalTopo,
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
-          'single': SingleSwitchTopo,
-          'tree': TreeTopo,
-          'torus': TorusTopo }
+          'single': SingleSwitchTopo }
+TOPOS.update( mininet.topolib.topos)
 
 SWITCHDEF = 'default'
 SWITCHES = { 'user': UserSwitch,

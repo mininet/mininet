@@ -45,10 +45,11 @@ class TorusTopo( Topo ):
        without STP turned on! It can be used with STP, e.g.:
        # mn --topo torus,3,3 --switch lxbr,stp=1 --test pingall"""
 
-    def build( self, x, y, n=1 ):
-        """x: dimension of torus in x-direction
-           y: dimension of torus in y-direction
-           n: number of hosts per switch"""
+    def build( self, x, y, n=1, wrap=True ):
+        """x: number of switches per row
+           y: number of rows
+           n: number of hosts per switch
+           wrap: torus rather than grid? (True)"""
         if x < 3 or y < 3:
             raise Exception( 'Please use 3x3 or greater for compatibility '
                              'with 2.1' )
@@ -72,11 +73,33 @@ class TorusTopo( Topo ):
                     self.addLink( host, switch )
         # Connect switches
         for i in range( 0, x ):
-            for j in range( 0, y ):
-                sw1 = switches[ i, j ]
-                sw2 = switches[ i, ( j + 1 ) % y ]
-                sw3 = switches[ ( i + 1 ) % x, j ]
-                self.addLink( sw1, sw2 )
-                self.addLink( sw1, sw3 )
+            for j in range( 0, y):
+                sw = switches[ i, j ]
+                right = switches[ ( i + 1 ) % x, j ]
+                down = switches[ i, ( j + 1 ) % y ]
+                if wrap or i + 1 < x:
+                    self.addLink( sw, right )
+                if wrap or j + 1 < y:
+                    self.addLink( sw, down )
+
+
+class GridTopo( TorusTopo ):
+    """2-D Grid topology
+       WARNING: this topology has LOOPS and WILL NOT WORK
+       with the default controller or any Ethernet bridge
+       without STP turned on! It can be used with STP, e.g.:
+       # mn --topo grid,3,3 --switch lxbr,stp=1 --test pingall"""
+
+    def build( self, x, y, n=1, wrap=False ):
+        """x: number of switches per row
+           y: number of rows
+           n: number of hosts per switch
+           wrap: torus rather than grid (False)"""
+        super( GridTopo, self ).build( x, y, n, wrap )
+
+
+topos = { 'tree': TreeTopo,
+          'torus': TorusTopo,
+          'grid': GridTopo }
 
 # pylint: enable=arguments-differ

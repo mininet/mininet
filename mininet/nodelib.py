@@ -170,25 +170,28 @@ class Server( Host ):
             self.cmd( 'chmod 755', pdir )
 
     @staticmethod
-    def updateHostsFiles( servers, tmpdir='/tmp' ):
+    def updateHostsFiles( servers, tmpdirs=[ '/tmp', '/var/tmp' ] ):
         """Update local hosts files on a list of servers
             servers: list of servers
             tmpdir: tmp dir shared between mn and servers"""
-        # This scales as n^2, so for a large configuration it's
-        # more efficient to use a DNS server
+        # For large configurations it will be more efficient
+        # to use a DNS server
+        hosts = ( '# Mininet hosts file\n'
+                  '127.0.0.1 localhost %s\n' +
+                  ''.join( '%s %s\n' % ( t.IP(), t )
+                            for t in servers ) )
         for s in servers:
             dirs = ( getattr( s, 'overlayDirs', [] ) +
-            getattr( s, 'privateDirs', [] ))
+                     getattr( s, 'privateDirs', [] ) )
             if '/etc' in dirs:
-                with NamedTemporaryFile( dir=tmpdir ) as tmpfile:
-                      tmpfile.write( '# Mininet hosts file\n' )
-                      tmpfile.write( '127.0.0.1 localhost %s\n' % s )
-                      for t  in servers:
-                        tmpfile.write( '%s %s\n' % ( t.IP(), t ) )
-                      tmpfile.flush()
-                      s.cmd( 'cp', tmpfile.name, '/etc/hosts' )
-            else:
-                warn( 'not updating hosts file on %s\n' % s )
+                tmpdirs = [ d for d in tmpdirs if d not in dirs ]
+                if tmpdirs:
+                    with NamedTemporaryFile( dir=tmpdirs[ 0 ] ) as tmpfile:
+                        tmpfile.write( hosts % s )
+                        tmpfile.flush()
+                        s.cmd( 'cp', tmpfile.name, '/etc/hosts' )
+                else:
+                    warn( 'not updating hosts file on %s\n' % s )
 
     def service( self, cmd ):
         """Start or stop a service
@@ -200,7 +203,7 @@ class Server( Host ):
         return 'Welcome to Mininet host %s at %s' % ( self, self.IP() )
 
     def startSSH( self, motdPath='/var/run/motd.dynamic' ):
-        "Update motd, clear out utmp/wtmp/btmp, and start sshd"
+        "Update motd, Clear out utmp/wtmp/btmp, and start sshd"
         # Note: /var/run and /var/log must be overlays!
         assert ( '/var/run' in ( self.overlayDirs + self.privateDirs ) and
                  '/var/log' in ( self.overlayDirs + self.privateDirs ) )
