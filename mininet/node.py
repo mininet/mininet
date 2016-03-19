@@ -74,9 +74,9 @@ class Node( object ):
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
 
-    def __init__( self, name, inNamespace=True, **params ):
+    def __init__( self, name, **params ):
         """name: name of node
-           inNamespace: in network namespace?
+           ns: private namespaces to use ['net','mnt']
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
 
@@ -85,7 +85,14 @@ class Node( object ):
 
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
-        self.inNamespace = params.get( 'inNamespace', inNamespace )
+        self.overlayDirs = params.get( 'overlayDirs', [] )
+
+        # Support old inNamespace param
+        self.ns = params.get( 'ns', ( 'net', 'mnt' ) )
+        inNamespace = params.get( 'inNamespace', True )
+        if not inNamespace:
+            self.ns = []
+        self.inNamespace = 'net' in self.ns
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -102,8 +109,9 @@ class Node( object ):
         self.waiting = False
         self.readbuf = ''
 
-        # Start command interpreter shell
+        # Start command interpreter shell and mount any local dirs
         self.startShell()
+        self.mountOverlayDirs()
         self.mountPrivateDirs()
 
     # File descriptor to node mapping support
@@ -120,17 +128,21 @@ class Node( object ):
         node = cls.outToNode.get( fd )
         return node or cls.inToNode.get( fd )
 
+    _marker = re.compile( chr( 1 ) + r'(\d+)\r\n' )
+
     # Command support via shell process in namespace
     def startShell( self, mnopts=None ):
         "Start a shell process for running commands"
         if self.shell:
             error( "%s: shell is already running\n" % self.name )
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace
-        opts = '-cd' if mnopts is None else mnopts
-        if self.inNamespace:
-            opts += 'n'
+        # mnexec: (c)lose descriptors
+        # (p)rint pid, and run in (n)etwork and (m)ount namespace
+        opts = '-cdp' if mnopts is None else mnopts
+        # Handle additional namespaces if specified
+        nsmap = { 'pid': 'P', 'mnt': 'm', 'net': 'n', 'uts': 'u' }
+        chars = [ nsmap.get( ns, '' ) for ns in self.ns ]
+        opts += ''.join( chars )
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
@@ -157,17 +169,16 @@ class Node( object ):
         self.lastPid = None
         self.readbuf = ''
         # Wait for prompt
-        while True:
-            data = self.read( 1024 )
-            if data[ -1 ] == chr( 127 ):
-                break
-            self.pollOut.poll()
-        self.waiting = False
+        self.waiting = True
+        self.waitOutput()
+        if 'P' in opts:
+            assert self.lastPid is not None
+            self.pid = self.lastPid
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
 
     def mountPrivateDirs( self ):
-        "mount private directories"
+        "Mount private directories"
         # Avoid expanding a string into a list of chars
         assert not isinstance( self.privateDirs, basestring )
         for directory in self.privateDirs:
@@ -185,12 +196,60 @@ class Node( object ):
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
     def unmountPrivateDirs( self ):
-        "mount private directories"
+        "Unmount private and overlay directories"
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 self.cmd( 'umount ', directory[ 0 ] )
             else:
                 self.cmd( 'umount ', directory )
+
+    # XXX We should make overlayDirs as consistent as possible
+    # with privateDirs.
+
+    def _overlayFrom( self, entry ):
+        "Helper function: return mountpaint, overlay, tmpfs from entry"
+        if type( entry ) is str:
+            # '/mountpoint'
+            mountpoint, overlay = entry, None
+        elif len( entry ) is 1:
+            # [ '/mountpoint' ]
+            mountpoint, overlay = entry[ 0 ], None
+        else:
+            # [ '/mountpoint', '/overlay' ]
+            mountpoint, overlay = entry
+        tmpfs = None if overlay else '/tmp/%s/%s' % ( self, mountpoint )
+        return mountpoint, overlay, tmpfs
+
+    def mountOverlayDirs( self ):
+        """Mount overlay directories. Overlay directories are similar
+            to private directories except they are copy-on-write copies
+            of directories in the host file system.
+            overlayDirs is of the form ((mountpoint,overlaydir), ...)
+            much like privateDirs. If overlaydir doesn't exist, we
+            mount a tmpfs at the specified mount point."""
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.overlayDirs, basestring )
+        for entry in self.overlayDirs:
+            mountpoint, overlay, tmpfs  = self._overlayFrom( entry )
+            # Create tmpfs if overlay dir is not specified
+            if not overlay:
+                overlay = tmpfs
+                self.cmd( 'mkdir -p', overlay )
+                self.cmd( 'mount -t tmpfs tmpfs', overlay )
+            # Mount overlay dir at mount point
+            self.cmd( ( 'mount -t overlayfs -o upperdir=%s,lowerdir=%s'
+                       ' overlayfs %s' ) % ( overlay, mountpoint, mountpoint ) )
+
+    def unmountOverlayDirs( self ):
+        "Unmount overlay directories"
+        for entry in self.overlayDirs:
+            mountpoint, overlay, tmpfs = self._overlayFrom( entry )
+            # Unfortunately these umounts can fail if the mount point
+            # is in use, possibly leaving tmpfs garbage in the root
+            # mount namespace / file system
+            self.cmd( 'umount', mountpoint )
+            if not overlay:
+                self.cmd( 'umount', tmpfs )
 
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process
@@ -245,9 +304,10 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         self.unmountPrivateDirs()
+        self.unmountOverlayDirs()
         if self.shell:
             if self.shell.poll() is None:
-                os.killpg( self.shell.pid, signal.SIGHUP )
+                os.killpg( self.pid, signal.SIGHUP )
         self.cleanup()
 
     def stop( self, deleteIntfs=False ):
@@ -294,10 +354,10 @@ class Node( object ):
         self.lastPid = None
         self.waiting = True
 
-    def sendInt( self, intr=chr( 3 ) ):
+    def sendInt( self, signal=signal.SIGINT ):
         "Interrupt running command."
-        debug( 'sendInt: writing chr(%d)\n' % ord( intr ) )
-        self.write( intr )
+        debug( "sending signal %d to pgrp %d" % ( signal, self.pid ) )
+        os.killpg( self.pid, signal )
 
     def monitor( self, timeoutms=None, findPid=True ):
         """Monitor and return the output of a command.
@@ -310,18 +370,18 @@ class Node( object ):
         data = self.read( 1024 )
         pidre = r'\[\d+\] \d+\r\n'
         # Look for PID
-        marker = chr( 1 ) + r'\d+\r\n'
         if findPid and chr( 1 ) in data:
             # suppress the job and PID of a backgrounded command
             if re.findall( pidre, data ):
                 data = re.sub( pidre, '', data )
             # Marker can be read in chunks; continue until all of it is read
-            while not re.findall( marker, data ):
+            while True:
+                markers = self._marker.findall( data )
+                if markers:
+                    self.lastPid = int( markers[ -1 ] )
+                    data = self._marker.sub( '', data )
+                    break
                 data += self.read( 1024 )
-            markers = re.findall( marker, data )
-            if markers:
-                self.lastPid = int( markers[ 0 ][ 1: ] )
-                data = re.sub( marker, '', data )
         # Look for sentinel/EOF
         if len( data ) > 0 and data[ -1 ] == chr( 127 ):
             self.waiting = False
@@ -387,6 +447,7 @@ class Node( object ):
         # Shell requires a string, not a list!
         if defaults.get( 'shell', False ):
             cmd = ' '.join( cmd )
+        debug( cmd, defaults )
         popen = self._popen( cmd, **defaults )
         return popen
 
@@ -633,6 +694,8 @@ class Node( object ):
     def setup( cls ):
         "Make sure our class dependencies are available"
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
+        if '-m:' not in quietRun( 'mnexec -h' ):
+            raise Exception( 'Please update mnexec (e.g. make install)' )
 
 class Host( Node ):
     "A host is simply a Node"
@@ -863,7 +926,7 @@ class Switch( Node ):
         self.dpid = self.defaultDpid( dpid )
         self.opts = opts
         self.listenPort = listenPort
-        if not self.inNamespace:
+        if 'net' not in self.ns:
             self.controlIntf = Intf( 'lo', self, port=0 )
 
     def defaultDpid( self, dpid=None ):
@@ -1069,10 +1132,9 @@ class OVSSwitch( Switch ):
         version = quietRun( 'ovs-vsctl --version' )
         cls.OVSVersion = findall( r'\d+\.\d+', version )[ 0 ]
 
-    @classmethod
-    def isOldOVS( cls ):
+    def isOldOVS( self ):
         "Is OVS ersion < 1.10?"
-        return ( StrictVersion( cls.OVSVersion ) <
+        return ( StrictVersion( self.OVSVersion ) <
                  StrictVersion( '1.10' ) )
 
     def dpctl( self, *args ):
@@ -1157,7 +1219,7 @@ class OVSSwitch( Switch ):
         "Start up a new OVS OpenFlow switch using ovs-vsctl"
         if self.inNamespace:
             raise Exception(
-                'OVS kernel switch does not work in a namespace' )
+                'OVS kernel switch does not work in a network namespace' )
         int( self.dpid, 16 )  # DPID must be a hex string
         # Command to add interfaces
         intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +

@@ -89,7 +89,7 @@ method may be called to shut down the network.
 import os
 import re
 import select
-import signal
+from signal import SIGKILL
 import random
 
 from time import sleep
@@ -466,7 +466,7 @@ class Mininet( object ):
     def stopXterms( self ):
         "Kill each xterm."
         for term in self.terms:
-            os.kill( term.pid, signal.SIGKILL )
+            term.send_signal( SIGKILL )
         cleanUpScreens()
 
     def staticArp( self ):

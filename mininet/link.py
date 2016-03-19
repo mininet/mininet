@@ -25,7 +25,7 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair
+from mininet.util import makeIntfPair, quietRun
 import mininet.node
 import re
 
@@ -452,7 +452,8 @@ class Link( object ):
 
     @classmethod
     def makeIntfPair( cls, intfname1, intfname2, addr1=None, addr2=None,
-                      node1=None, node2=None, deleteIntfs=True ):
+                      node1=None, node2=None, deleteIntfs=True,
+                      runCmd=quietRun ):
         """Create pair of interfaces
            intfname1: name for interface 1
            intfname2: name for interface 2
@@ -465,7 +466,7 @@ class Link( object ):
         # Leave this as a class method for now
         assert cls
         return makeIntfPair( intfname1, intfname2, addr1, addr2, node1, node2,
-                             deleteIntfs=deleteIntfs )
+                             deleteIntfs=deleteIntfs, runCmd=runCmd )
 
     def delete( self ):
         "Delete this link"
