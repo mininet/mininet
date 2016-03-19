@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Show usage
+usage()
+{
+    echo "Usage: $1 [options] NODE_NAME"
+    echo "(type mn -h for details)"
+    echo
+    echo "The mn utility opens Mininet node terminal from the command line."
+    echo
+    echo "Options:"
+    echo "  -h, --help            show this help message and exit"
+    echo
+}
+
+# Parse input args
+if [ $# -ne 1 ]
+then
+    usage
+    exit 0
+elif [ $1 = '-h' -o $1 = '--help' ]
+
+then
+    usage
+    exit 0
+fi
+
+TARGET_NODE=$1
+TARGET_RCFILE=/tmp/bashrc_${TARGET_NODE}
+TARGET_NSLINK=/var/run/netns/${TARGET_NODE}
+TARGET_PID=`pgrep -f "mininet:${TARGET_NODE}"`
+if [ ! ${TARGET_PID} ]
+then
+    echo "No such node name: ${TARGET_NODE}"
+    exit 1
+fi
+
+# Make a link file to the target namespace
+if [ ! -d /var/run/netns ]
+then
+    sudo mkdir -p /var/run/netns
+fi
+if [ ! -L ${TARGET_NSLINK} ]
+then
+    sudo ln -s /proc/${TARGET_PID}/ns/net ${TARGET_NSLINK}
+fi
+
+# Invoke bash with the rcfile
+sudo echo "PS1=${TARGET_NODE}'> '" > ${TARGET_RCFILE}
+sudo ip netns exec ${TARGET_NODE} bash --rcfile ${TARGET_RCFILE}
+
+# Clean up
+if [ -L ${TARGET_NSLINK} ]
+then
+    sudo rm ${TARGET_NSLINK}
+fi
+if [ -f ${TARGET_RCFILE} ]
+then
+    sudo rm ${TARGET_RCFILE}
+fi
