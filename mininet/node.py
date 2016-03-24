@@ -1426,6 +1426,8 @@ class OVSController( Controller ):
     def __init__( self, name, command='ovs-controller', **kwargs ):
         if quietRun( 'which test-controller' ):
             command = 'test-controller'
+        if quietRun( 'which ovs-testcontroller' ):
+            command = 'ovs-testcontroller'
         Controller.__init__( self, name, command=command, **kwargs )
 
     @classmethod
