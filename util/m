@@ -33,12 +33,5 @@ if [ -d "$cgroup" ]; then
   cg="-g $host"
 fi
 
-# Check whether host should be running in a chroot dir
-rootdir="/var/run/mn/$host/root"
-if [ -d $rootdir -a -x $rootdir/bin/bash ]; then
-    cmd="'cd `pwd`; exec $cmd'"
-    cmd="chroot $rootdir /bin/bash -c $cmd"
-fi
-
 cmd="exec sudo -E mnexec $cg -a $pid $cmd"
 eval $cmd
