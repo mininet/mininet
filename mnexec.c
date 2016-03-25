@@ -26,6 +26,8 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <assert.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -41,7 +43,7 @@ void usage(char *name)
            "  -d: detach from tty by calling setsid()\n"
            "  -m: run in a new mount namespace\n"
            "  -n: run in a new network namespace\n"
-           "  -P: run in a new pid namespace\n"
+           "  -P: run in a new pid namespace (implies -m)\n"
            "  -u: run in a new UTS (ipc, hostname) namespace\n"
            "  -p: print ^A + pid\n"
            "  -a pid: attach to pid's namespaces\n"
@@ -102,25 +104,39 @@ void cgroup(char *gname)
     }
 }
 
-/* Attach to ns 'name' if present */
+
+/* Attach to ns 'name' if present; return 1 if pidns */
 int attachns( pid_t pid, char *name ) {
     char path[PATH_MAX];
-    int nsid;
+    int nsid, err;
+    int pidns = 0;
 
-    sprintf(path, "/proc/%d/ns/%s", pid, name) ;
+    snprintf(path, PATH_MAX, "/proc/%d/ns/%s", pid, name) ;
 
     if ((nsid = open(path, O_RDONLY)) < 0)
         return nsid;
 
-    if (setns(nsid, 0) != 0) {
-        perror("setns");
-        return 1;
+    if (strcmp(name, "pid") == 0) {
+        struct stat buf1, buf2;
+        int stat1 = stat(path, &buf1);
+        int stat2 = stat("/proc/self/ns/pid", &buf2);
+        /* Don't reattach to the same pid ns */
+        if (stat1 == 0 && stat2 == 0 &&
+            buf1.st_dev == buf2.st_dev &&
+            buf1.st_ino == buf2.st_ino)
+            return 0;
+        pidns = 1;
     }
 
-    return 0;
+    if ((err = setns(nsid, 0)) < 0) {
+        perror("setns");
+        return err;
+    }
+
+    return pidns;
 }
 
-/* Attach to pid's namespaces - returns true if pidns */
+/* Attach to pid's namespaces - returns 1 if pidns */
 int attach(int pid) {
 
     char *cwd = get_current_dir_name();
@@ -129,7 +145,7 @@ int attach(int pid) {
 
     attachns(pid, "net");
     attachns(pid, "uts");
-    if (attachns(pid, "pid") == 0)
+    if (attachns(pid, "pid") == 1)
         pidns = 1;
 
     if (attachns(pid, "mnt") != 0) {
@@ -141,9 +157,8 @@ int attach(int pid) {
     }
 
     /* chdir to correct working directory */
-    if (chdir(cwd) != 0) {
+    if (chdir(cwd) != 0)
         perror(cwd);
-    }
 
     return pidns;
 }
@@ -171,7 +186,7 @@ int main(int argc, char *argv[])
             case 'm':   flags |= CLONE_NEWNS; break;
             case 'n':   flags |= CLONE_NEWNET; break;
             case 'p':   printpid = 1; break;
-            case 'P':   flags |= CLONE_NEWPID; break;
+            case 'P':   flags |= CLONE_NEWPID | CLONE_NEWNS; break;
             case 'a':   attachpid = atoi(optarg);break;
             case 'g':   cgrouparg = optarg ; break;
             case 'r':   rtprio = atoi(optarg); break;
@@ -187,10 +202,9 @@ int main(int argc, char *argv[])
         for (fd = getdtablesize(); fd > 2; fd--) close(fd);
     }
 
-    if (attachpid) {
+    if (attachpid)
         /* Attach to existing namespace(s) */
         pidns = attach(attachpid);
-    }
     else {
         /* Create new namespace(s) */
         if (unshare(flags) == -1) {
@@ -199,29 +213,35 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* This complexity is here to avoid forking twice */
-    if (detachtty && getpgrp() == getpid()) {
+    if (flags & CLONE_NEWPID || pidns)
+        /* pidns requires fork/wait; child will be pid 1 */
+        dofork = 1;
+
+    if (detachtty && getpgrp() == getpid())
         /* Fork so that we will no longer be pgroup leader */
         dofork = 1;
-    }
-    else {
+    else
+        /* We don't need a new session, only a new pgroup */
         detachtty = 0;
-    }
 
-    if (flags & CLONE_NEWPID || pidns) {
-        dofork = 1;
-    }
+    if (detachtty)
+        /* Create a new session - and by implication a new process group */
+        setsid();
+    else
+        /* Use a new process group (in the current session)
+         * so Mininet can use killpg without unintended effects */
+        setpgid(0, 0);
 
     if (dofork) {
+        /* Fork and then wait if necessary */
         pid_t pid = fork();
-
         switch(pid) {
             int status;
             case -1:
                 perror("fork");
                 return 1;
             case 0:
-                /* child continues below */
+                /* Child continues below */
                 break;
             default:
                 /* We print the *child pid* in *parent's pidns* if needed */
@@ -237,16 +257,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (detachtty) {
-        /* Create a new session - and by implication a new process group */
-        setsid();
-    }
-    else {
-        /* Use a new process group (in the current session)
-         * so Mininet can use killpg without unintended effects */
-        setpgid(0, 0);
-    }
-
     if (printpid && !dofork) {
         /* Print child pid if we didn't fork/aren't in a pidns */
         assert(!pidns);
@@ -254,17 +264,15 @@ int main(int argc, char *argv[])
         fflush(stdout);
     }
 
-    if (flags & CLONE_NEWNS && !attachpid) {
+    if (flags & CLONE_NEWPID) {
         /* Child remounts /proc for ps */
         if (mount("proc", "/proc", "proc", MS_MGC_VAL, NULL) == -1) {
             perror("mountproc");
         }
     }
 
-    if (cgrouparg) {
-        /* Attach to cgroup */
-        cgroup(cgrouparg);
-    }
+    /* Attach to cgroup if necessary */
+    if (cgrouparg) cgroup(cgrouparg);
 
     if (flags & CLONE_NEWNET & CLONE_NEWNS) {
         /* Mount sysfs to pick up the new network namespace */
