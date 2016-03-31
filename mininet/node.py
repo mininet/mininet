@@ -130,11 +130,12 @@ class Node( object ):
         # (p)rint pid, and run in (n)amespace
         opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
+            opts = '-H %s %s' % (self.name, opts)
             opts += 'n'
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
+        cmd = [ 'mnexec' ] + opts.split() + [ 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '-is', 'mininet:' + self.name ]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)

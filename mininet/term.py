@@ -54,7 +54,7 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     display, tunnel = tunnelX11( node, display )
     if display is None:
         return []
-    term = node.popen( cmds[ term ] +
+    term = node.popen( [ '-H', node.name ] + cmds[ term ] +
                        [ display, '-e', 'env TERM=ansi %s' % cmd ] )
     return [ tunnel, term ] if tunnel else [ term ]
 
