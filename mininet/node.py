@@ -13,7 +13,7 @@ Host: a virtual host. By default, a host is simply a shell; commands
     monitor(). Examples of how to run experiments using this
     functionality are provided in the examples/ directory. By default,
     hosts share the root file system, but they may also specify private
-    directories.
+    directories or overlayed directories.
 
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
@@ -78,6 +78,7 @@ class Node( object ):
         """name: name of node
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
+           overlayDirs: list of overlay directory strings or tuples
            params: Node parameters (see config() for details)"""
 
         # Make sure class actually works
@@ -85,6 +86,7 @@ class Node( object ):
 
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
+        self.overlayDirs = params.get( 'overlayDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
@@ -104,6 +106,7 @@ class Node( object ):
 
         # Start command interpreter shell
         self.startShell()
+        self.mountOverlayDirs()
         self.mountPrivateDirs()
 
     # File descriptor to node mapping support
@@ -166,6 +169,42 @@ class Node( object ):
         self.waiting = False
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
+
+    def mountOverlayDirs( self ):
+        "mount overlay directories"
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.overlayDirs, basestring )
+        for directory in self.overlayDirs:
+            if isinstance( directory, tuple ):
+                # mount given overlay directory
+                overlayDir = directory[ 1 ] % self.__dict__
+                mountPoint = directory[ 0 ]
+            else:
+                # mount temporary filesystem on directory
+                tmpDir = '/tmp/mininet/%s%s' % (self, directory)
+                overlayDir = tmpDir + '/overlay'
+
+                mountPoint = directory
+                self.cmd( 'mkdir -p %s' % tmpDir )
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % tmpDir )
+                self.cmd( 'mkdir -p %s', overlayDir )
+
+            workDir = overlayDir + '.work'
+            self.cmd( 'mkdir -p %s %s' % (mountPoint, workDir) )
+            self.cmd( 'mount -t overlay overlay -o lowerdir=%s,upperdir=%s,workdir=%s %s' %
+                        ( mountPoint, overlayDir, workDir, mountPoint ) )
+
+    def unmountOverlayDirs( self ):
+        "mount overlay directories"
+        for directory in self.overlayDirs:
+            if isinstance( directory, tuple ):
+                mountPoint = directory[ 0 ]
+                self.cmd( 'umount ', mountPoint )
+            else:
+                mountPoint = directory
+                self.cmd( 'umount ', mountPoint )
+                tmpDir = '/tmp/mininet/%s/%s' % (self, directory)
+                self.cmd( 'umount ', tmpDir )
 
     def mountPrivateDirs( self ):
         "mount private directories"
@@ -246,6 +285,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         self.unmountPrivateDirs()
+        self.unmountOverlayDirs()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )
