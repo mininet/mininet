@@ -199,12 +199,15 @@ class Node( object ):
         for directory in self.overlayDirs:
             if isinstance( directory, tuple ):
                 mountPoint = directory[ 0 ]
+                overlayDir = directory[ 1 ] % self.__dict__
+                workDir = overlayDir + '.work'
                 self.cmd( 'umount ', mountPoint )
+                self.cmd( 'rmdir %s/work %s' % (workDir, workDir) )
             else:
                 mountPoint = directory
                 self.cmd( 'umount ', mountPoint )
-                tmpDir = '/tmp/mininet/%s/%s' % (self, directory)
-                self.cmd( 'umount ', tmpDir )
+                self.cmd( 'umount ', '/tmp/mininet/%s/%s' % (self, directory) )
+                self.cmd( 'rmdir /tmp/mininet/%s%s /tmp/mininet/%s /tmp/mininet' % (self, directory, self) )
 
     def mountPrivateDirs( self ):
         "mount private directories"
