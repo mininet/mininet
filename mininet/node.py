@@ -63,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
-from mininet.moduledeps import moduleDeps, pathCheck, TUN
+from mininet.moduledeps import moduleDeps, pathCheck, TUN, OVERLAY
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
@@ -175,10 +175,7 @@ class Node( object ):
         # Avoid expanding a string into a list of chars
         assert not isinstance( self.overlayDirs, basestring )
         if self.overlayDirs:
-            with open('/proc/filesystems', 'r') as f:
-                if 'overlay' not in f.read():
-                    raise OSError('OverlayFS is not supported by your kernel but is required by node %s' %
-                                    self.name)
+            moduleDeps( add=OVERLAY )
 
         for directory in self.overlayDirs:
             if isinstance( directory, tuple ):
