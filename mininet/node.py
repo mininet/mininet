@@ -193,7 +193,7 @@ class Node( object ):
                 mountPoint = directory
                 self.cmd( 'mkdir -p %s' % tmpDir )
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' % tmpDir )
-                self.cmd( 'mkdir -p %s', overlayDir )
+                self.cmd( 'mkdir -p %s' % overlayDir )
 
             workDir = overlayDir + '.work'
             self.cmd( 'mkdir -p %s %s %s' % (mountPoint, workDir, overlayDir) )
