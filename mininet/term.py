@@ -30,9 +30,10 @@ def tunnelX11( node, display=None):
         return display, None
     else:
         # Add credentials with new hostname
-        creds = subprocess.check_output( 'xauth list $DISPLAY', shell=True )
-        newCred = node.name + '/' + creds.split('/', 1)[ 1 ]
-        node.cmd( 'xauth add ' + newCred )
+        creds = subprocess.check_output( 'xauth list $DISPLAY', shell=True ).split('/', 1)
+        if len( creds ) == 2:
+            newCred = node.name + '/' + creds[ 1 ]
+            node.cmd( 'xauth add ' + newCred )
 
         # Create a tunnel for the TCP connection
         port = 6000 + int( float( screen ) )
