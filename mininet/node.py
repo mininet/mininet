@@ -174,6 +174,12 @@ class Node( object ):
         "mount overlay directories"
         # Avoid expanding a string into a list of chars
         assert not isinstance( self.overlayDirs, basestring )
+        if self.overlayDirs:
+            with open('/proc/filesystems', 'r') as f:
+                if 'overlay' not in f.read():
+                    raise OSError('OverlayFS is not supported by your kernel but is required by node %s' %
+                                    self.name)
+
         for directory in self.overlayDirs:
             if isinstance( directory, tuple ):
                 # mount given overlay directory
