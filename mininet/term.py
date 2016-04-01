@@ -7,6 +7,7 @@ Optionally uses gnome-terminal.
 """
 
 from os import environ
+import subprocess
 
 from mininet.log import error
 from mininet.util import quietRun, errRun
@@ -28,6 +29,11 @@ def tunnelX11( node, display=None):
         quietRun( 'xhost +si:localuser:root' )
         return display, None
     else:
+        # Add credentials with new hostname
+        creds = subprocess.check_output( 'xauth list $DISPLAY', shell=True )
+        newCred = node.name + '/' + creds.split('/', 1)[ 1 ]
+        node.cmd( 'xauth add ' + newCred )
+
         # Create a tunnel for the TCP connection
         port = 6000 + int( float( screen ) )
         connection = r'TCP\:%s\:%s' % ( host, port )
