@@ -33,6 +33,7 @@ import sys
 import time
 import os
 import atexit
+import re
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -401,31 +402,29 @@ class CLI( Cmd ):
         Past the first CLI argument, node names are automatically replaced with
         corresponding IP addrs."""
 
-        # Hosts are now a list.
-        host_list = []
+
+        host_list = [ ]
 
         first, args, line = self.parseline( line )
 
-        # If the command begins with a host and a range.
-        # E.g.: h[1-2], h[3,4,7-10],... then parse the
-        # list and create the host list. Otherwise, add
-        # the first argument to the list ("normal" processing).
         m = re.match("(.*?)\[(.*?)\]", line)
         if (m and m.group(2)):
-            host_string = m.group(2)
-            host_ranges = (host_range.split("-") for host_range in host_string.split(","))
-            host_list = [first + str(i) for hr in host_ranges for i in range(int(hr[0]), int(hr[-1]) + 1)]
-            args = " ".joint(args.split()[1:])
-	else:
+            #print args
+            s = m.group(2)
+            ranges = (x.split("-") for x in s.split(","))
+            #print ranges
+            host_list = [first + str(i) for r in ranges for i in range(int(r[0]), int(r[-1]) + 1)]
+            args = " ".join(args.split()[1:])
+            #print args
+        else:
             host_list.append(first)
 
-        # Iterate over all hosts and execute the command.
         for host in host_list:
-            if first in self.mn:
+            if host in self.mn:
                 if not args:
-                    print "*** Enter a command for node: %s <cmd>" % first
+                    print "*** Enter a command for node: %s <cmd>" % host
                     return
-                node = self.mn[ first ]
+                node = self.mn[ host ]
                 rest = args.split( ' ' )
                 # Substitute IP addresses for node names in command
                 # If updateIP() returns None, then use node name
@@ -433,18 +432,15 @@ class CLI( Cmd ):
                          if arg in self.mn else arg
                          for arg in rest ]
                 rest = ' '.join( rest )
-
-                # If the command is executed on more than one host,
-                # print on which host the command is executed.
-                if (len(host_list) > 1):
-                    print "*** Executing command on node: %s" % host
                 # Run cmd on node:
+                if(len(host_list) > 1):
+                    print "*** Executing command on node: %s" % host
                 node.sendCmd( rest )
-                self.waitForNode( node )
+                self.waitForNode( node, (len(host_list) > 1) )
             else:
                 error( '*** Unknown command: %s\n' % line )
 
-    def waitForNode( self, node ):
+    def waitForNode( self, node, is_list ):
         "Wait for a node to finish, and print its output."
         # Pollers
         nodePoller = poll()
