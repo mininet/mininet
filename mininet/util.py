@@ -13,6 +13,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+from itertools import islice
 
 # Command execution support
 
@@ -619,3 +620,15 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         time += .5
         result = runCmd( cmd )
     return True
+
+def pager( iterable, n ):
+    """Iterates through n-size pages of iterable.
+
+    Similar to the grouper itertools recipe, but does not pad the final group.
+    """
+    iterator = iter( iterable )
+    return iter( lambda: take( n, iterator ), () )
+
+def take( n, iterable ):
+    """Return first n items of the iterable as a tuple."""
+    return tuple( islice( iterable, n ) )

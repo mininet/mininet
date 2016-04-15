@@ -16,6 +16,7 @@ import time
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
+from mininet.util import pager
 
 
 def sh( cmd ):
@@ -92,9 +93,8 @@ class Cleanup( object ):
                     ).splitlines()
         # Delete blocks of links
         n = 1000  # chunk size
-        for i in xrange( 0, len( links ), n ):
-            cmd = ';'.join( 'ip link del %s' % link
-                             for link in links[ i : i + n ] )
+        for linkPage in pager( links, n ):
+            cmd = ';'.join( 'ip link del %s' % link for link in linkPage )
             sh( '( %s ) 2> /dev/null' % cmd )
 
         if 'tap9' in sh( 'ip link show' ):
