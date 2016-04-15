@@ -177,7 +177,7 @@ class CLI( Cmd ):
                 output( result + '\n' )
             else:
                 output( repr( result ) + '\n' )
-        except Exception, e:
+        except Exception as e:
             output( str( e ) + '\n' )
 
     # We are in fact using the exec() pseudo-function
@@ -188,7 +188,7 @@ class CLI( Cmd ):
             Node names may be used, e.g.: px print h1.cmd('ls')"""
         try:
             exec( line, globals(), self.getLocals() )
-        except Exception, e:
+        except Exception as e:
             output( str( e ) + '\n' )
 
     # pylint: enable=broad-except,exec-used
