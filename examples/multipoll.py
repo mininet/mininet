@@ -5,6 +5,8 @@ Simple example of sending output to multiple files and
 monitoring them
 """
 
+from __future__ import print_function
+
 from mininet.topo import SingleSwitchTopo
 from mininet.net import Mininet
 from mininet.log import setLogLevel
@@ -12,6 +14,7 @@ from mininet.log import setLogLevel
 from time import time
 from select import poll, POLLIN
 from subprocess import Popen, PIPE
+
 
 def monitorFiles( outfiles, seconds, timeoutms ):
     "Monitor set of files and return [(host, line)...]"
@@ -53,7 +56,7 @@ def monitorTest( N=3, seconds=3 ):
     net = Mininet( topo )
     net.start()
     hosts = net.hosts
-    print "Starting test..."
+    print( "Starting test..." )
     server = hosts[ 0 ]
     outfiles, errfiles = {}, {}
     for h in hosts:
@@ -67,10 +70,10 @@ def monitorTest( N=3, seconds=3 ):
                    '>', outfiles[ h ],
                    '2>', errfiles[ h ],
                    '&' )
-    print "Monitoring output for", seconds, "seconds"
+    print( "Monitoring output for", seconds, "seconds" )
     for h, line in monitorFiles( outfiles, seconds, timeoutms=500 ):
         if h:
-            print '%s: %s' % ( h.name, line )
+            print( '%s: %s' % ( h.name, line ) )
     for h in hosts:
         h.cmd('kill %ping')
     net.stop()

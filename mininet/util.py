@@ -1,5 +1,7 @@
 "Utility functions for Mininet."
 
+from __future__ import print_function
+
 from mininet.log import output, info, error, warn, debug
 
 from time import sleep
@@ -587,7 +589,7 @@ def ensureRoot():
     Probably we should only sudo when needed as per Big Switch's patch.
     """
     if os.getuid() != 0:
-        print "*** Mininet must run as root."
+        print( "*** Mininet must run as root." )
         exit( 1 )
     return
 

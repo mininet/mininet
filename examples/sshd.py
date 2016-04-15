@@ -16,6 +16,7 @@ demonstrates:
 - running server processes (sshd in this case) on hosts
 """
 
+from __future__ import print_function
 import sys
 
 from mininet.net import Mininet
@@ -24,6 +25,7 @@ from mininet.log import lg
 from mininet.node import Node
 from mininet.topolib import TreeTopo
 from mininet.util import waitListening
+
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
@@ -59,17 +61,17 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
-    print "*** Waiting for ssh daemons to start"
+    print( "*** Waiting for ssh daemons to start" )
     for server in network.hosts:
         waitListening( server=server, port=22, timeout=5 )
 
-    print
-    print "*** Hosts are running sshd at the following addresses:"
-    print
+    print()
+    print( "*** Hosts are running sshd at the following addresses:" )
+    print()
     for host in network.hosts:
-        print host.name, host.IP()
-    print
-    print "*** Type 'exit' or control-D to shut down network"
+        print( host.name, host.IP() )
+    print()
+    print( "*** Type 'exit' or control-D to shut down network" )
     CLI( network )
     for host in network.hosts:
         host.cmd( 'kill %' + cmd )

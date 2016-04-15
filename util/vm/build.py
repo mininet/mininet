@@ -26,6 +26,7 @@ Basic idea:
 
 """
 
+from __future__ import print_function
 import os
 from os import stat, path
 from stat import ST_MODE, ST_SIZE
@@ -112,9 +113,9 @@ def log( *args, **kwargs ):
     msg = ' '.join( str( arg ) for arg in args )
     output = '%s [ %.3f ] %s' % ( clocktime, elapsed, msg )
     if cr:
-        print output
+        print( output )
     else:
-        print output,
+        print( output, )
     # Optionally mirror to LogFile
     if type( LogFile ) is file:
         if cr:
@@ -202,7 +203,7 @@ def attachNBD( cow, flags='' ):
             continue
         srun( 'modprobe nbd max-part=64' )
         srun( 'qemu-nbd %s -c %s %s' % ( flags, nbd, cow ) )
-        print
+        print()
         return nbd
     raise Exception( "Error: could not find unused /dev/nbdX device" )
 
@@ -221,7 +222,7 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
         return kernel, initrd
     log( '* Extracting kernel to', kernel )
     nbd = attachNBD( image, flags='-r' )
-    print srun( 'partx ' + nbd )
+    print( srun( 'partx ' + nbd ) )
     # Assume kernel is in partition 1/boot/vmlinuz*generic for now
     part = nbd + 'p1'
     mnt = mkdtemp()
@@ -988,7 +989,7 @@ def parseArgs():
     if args.depend:
         depend()
     if args.list:
-        print buildFlavorString()
+        print( buildFlavorString() )
     if args.clean:
         cleanup()
     if args.verbose:
@@ -1009,8 +1010,8 @@ def parseArgs():
         Chown = args.chown
     for flavor in args.flavor:
         if flavor not in isoURLs:
-            print "Unknown build flavor:", flavor
-            print buildFlavorString()
+            print( "Unknown build flavor:", flavor )
+            print( buildFlavorString() )
             break
         try:
             build( flavor, tests=args.test, pre=args.run, post=args.post,
