@@ -32,8 +32,8 @@ def multiControllerNet():
     s2 = net.addSwitch( 's2' )
 
     print( "*** Creating hosts" )
-    hosts1 = [ net.addHost( 'h%d' % n ) for n in 3, 4 ]
-    hosts2 = [ net.addHost( 'h%d' % n ) for n in 5, 6 ]
+    hosts1 = [ net.addHost( 'h%d' % n ) for n in ( 3, 4 ) ]
+    hosts2 = [ net.addHost( 'h%d' % n ) for n in ( 5, 6 ) ]
 
     print( "*** Creating links" )
     for h in hosts1:
