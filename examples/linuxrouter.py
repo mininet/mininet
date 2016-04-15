@@ -27,11 +27,14 @@ Additional routes may be added to the router or hosts by
 executing 'ip route' or 'route' commands on the router or hosts.
 """
 
+from __future__ import print_function
+
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.node import Node
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
+
 
 class LinuxRouter( Node ):
     "A Node with IP forwarding enabled."
@@ -80,7 +83,7 @@ def run():
     net = Mininet( topo=topo )  # controller is used by s1-s3
     net.start()
     info( '*** Routing Table on Router:\n' )
-    print net[ 'r0' ].cmd( 'route' )
+    print( net[ 'r0' ].cmd( 'route' ) )
     CLI( net )
     net.stop()
 

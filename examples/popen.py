@@ -5,6 +5,8 @@ This example monitors a number of hosts using host.popen() and
 pmonitor()
 """
 
+from __future__ import print_function
+
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topo import SingleSwitchTopo
@@ -27,7 +29,7 @@ def monitorhosts( hosts=5, sched='cfs' ):
     # Monitor them and print output
     for host, line in pmonitor( popens ):
         if host:
-            print "<%s>: %s" % ( host.name, line.strip() )
+            print( "<%s>: %s" % ( host.name, line.strip() ) )
     # Done
     net.stop()
 

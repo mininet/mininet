@@ -4,6 +4,7 @@
 Test for sshd.py
 """
 
+from __future__ import print_function
 import unittest
 import pexpect
 from mininet.clean import sh
@@ -20,7 +21,7 @@ class testSSHD( unittest.TestCase ):
         while True:
             index = p.expect( self.opts )
             if index == 0:
-                print p.match.group(0)
+                print( p.match.group(0) )
                 p.sendline( 'yes' )
             elif index == 1:
                 return False
