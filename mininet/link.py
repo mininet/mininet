@@ -49,6 +49,7 @@ class Intf( object ):
         # This saves an ifconfig command per node
         if self.name == 'lo':
             self.ip = '127.0.0.1'
+            self.prefixLen = 8
         # Add to node (and move ourselves if necessary )
         moveIntfFn = params.pop( 'moveIntfFn', None )
         if moveIntfFn:
