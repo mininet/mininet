@@ -6,7 +6,6 @@ Example to create a Mininet topology and connect it to the internet via NAT
 
 from mininet.cli import CLI
 from mininet.log import lg
-from mininet.node import Node
 from mininet.topolib import TreeNet
 
 if __name__ == '__main__':
