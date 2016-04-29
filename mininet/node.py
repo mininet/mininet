@@ -176,7 +176,10 @@ class Node( object ):
             assert self.lastPid is not None
             self.pid = self.lastPid
         # +m: disable job control notification
-        self.cmd( 'unset HISTFILE; stty -echo; set +m' )
+        initcmd = 'unset HISTFILE; stty -echo; set +m'
+        if 'uts' in self.ns:
+            initcmd += '; hostname ' + self.name
+        self.cmd( initcmd )
 
     def mountPrivateDirs( self ):
         "Mount private directories"

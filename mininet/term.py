@@ -8,11 +8,40 @@ Optionally uses gnome-terminal.
 from mininet.log import error
 from mininet.util import quietRun, errRun
 
-from os import environ, getpid, path
-from subprocess import Popen
+from os import environ, getpid, path, setsid
+from subprocess import Popen, PIPE, STDOUT
 from tempfile import NamedTemporaryFile
 
-def tunnelX11( node, display=None):
+def getAuthX11( display ):
+    "Return X11 credentials for display"
+    host, screen = display.split( ':' )
+    host = host.split( '/' )[ 0 ]
+    hostname = quietRun( 'hostname' ).strip()
+    # First, try hostname:display
+    if host == 'localhost':
+        host = hostname
+    result = quietRun( 'xauth list %s:%s' % ( host, screen ) )
+    # Otherwise, try hostname/unix:display
+    if not result:
+        result = quietRun( 'xauth list %s/unix:%s' % ( host, screen ) )
+    items = result.strip().split()
+    if len( items ) != 3:
+        raise Exception( "getAuthX11: could not fetch credentials for " +
+                         display )
+    return items
+
+# This is tricky with uts and pid namespaces
+# For uts namespaces, we create and use a private $XAUTHORITY
+# and add credentials for the node's hostname.
+# To enable pid namespaces to work, we proxy the X11
+# socket twice using socat - first with a shared socket in /tmp, and
+# second with a TCP listener in the host network  namespace.
+# Note that this will fail if /tmp is not shared - we should
+# probably think about this some more. We could potentially
+# specify a globally shared directory somehow if /tmp is
+# private.
+
+def tunnelX11( node, display=None ):
     """Create an X11 tunnel from node:6000 to the root host
        display: display on root host (optional)
        returns: node $DISPLAY, Popen object for tunnel"""
@@ -29,63 +58,31 @@ def tunnelX11( node, display=None):
         quietRun( 'xhost +si:localuser:root' )
         return display, None
     else:
-        # XXX Need to handle case where node is in UTS namespace
-        # in this case, we need to set XAUTHORITY to a private
-        # xauth file
-        if False and 'uts' in node.inNamespace and  not hasattr( node, 'xauthFile' ):
-            node.xauthFile = NamedTemporaryFile()
-            quietRun( 'xauth extract $DISPLAY | xauth -f %s merge' % node.xauthFile.name )
+        hostname = quietRun( 'hostname' ).strip()
         port = 6000 + int( float( screen ) )
+        if 'uts' in node.ns and ( hostname in display or
+                                  'localhost' in display ):
+            # Use private xauth file, and add credentials
+            # for this hostname
+            if not hasattr( node, 'xauthFile' ):
+                node.xauthFile = NamedTemporaryFile()
+            _display, proto, cookie = getAuthX11( display )
+            creds = '%s %s %s' % ( '%s/unix:%s' % ( node.name, screen ),
+                                   proto, cookie )
+            node.cmd( 'export XAUTHORITY=' + node.xauthFile.name )
+            node.cmd( 'xauth -f $XAUTHORITY add ' + creds )
+        # Create a shared unix socket in /tmp
         # This can conflict if we are running nested Mininet
-        # in a pid namespace
+        # in a pid namespace, and it will also fail if /tmp is not
+        # shared
         socket = '/tmp/mininet.x11.%d' % getpid()
-        if not path.exists( socket ):
-            cmd = 'socat unix-listen:%s,fork tcp:localhost:%d' % ( socket, port  )
-            # Should be shut down when mn shuts down
-            tunnelX11.socket = Popen( cmd, shell=True )
+        if not hasattr( tunnelX11, 'socket' ):
+            cmd = ( 'socat unix-listen:%s,fork tcp:localhost:%d' %
+                    ( socket, port  ) ).split()
+            tunnelX11.socket = Popen( cmd )
         # Create a tunnel for the TCP connection
         cmd = 'socat tcp-listen:%d,fork,reuseaddr unix:%s' % ( port, socket )
-
     return 'localhost:' + screen, node.popen( cmd )
-
-"""
-
-With pid namespaces, we can't easily escape the pid jail using mnexec
-(or can we?)
-
-What we can do, however, is create a unix socket in /tmp which connects
-to our x server, and a tcp listener in the host that connects to our
-unix socket!
-
-We just have to make sure that we clean up our processes and sockets
-when we quit.
-
-If we're using UTS namespaces, then xauth will get confused because
-our hostname has changed. So, we use a private XAUTHORITY file per
-host. We need to initialize this file with the key of our X server;
-this is a bit hard to figure out because the usual xauth list $DISPLAY
-may fail even if xlib can figure out a backup cookie to use.
-
-But what about namespace conflicts? This could certainly be very
-annoying for nested mininet!! In this case, our nested mininet servers
-should have a private /tmp that they can use.... except that conflicts
-with the shared unix domain socket in /tmp! ;-p
-
-We could also use a random name for the socket, to avoid the namespace
-conflict, although it's not clear what to do for cleanup to avoid
-blasting this....
-
-Perhaps the best idea is to use a canonical name (mininet.x11) and if the
-first name fails, try a second name??
-
-Another idea is to create a tmp dir for Mininet based on the pid of the
-mn process.....
-
-recommendation: for now, use mininet.x11.1234 as the socket.
-
-"""
-
-
 
 def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     """Create an X11 tunnel to the node and start up a terminal.
@@ -97,8 +94,8 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     if not node.inNamespace:
         title += ' (root)'
     cmds = {
-        'xterm': [ 'xterm', '-title', title, '-display' ],
-        'gterm': [ 'gnome-terminal', '--title', title, '--display' ]
+        'xterm': [ 'xterm', '-title', title ],
+        'gterm': [ 'gnome-terminal', '--title', title ]
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
@@ -106,8 +103,10 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     display, tunnel = tunnelX11( node, display )
     if display is None:
         return []
-    term = node.popen( cmds[ term ] +
-                       [ display, '-e', 'env TERM=ansi %s' % cmd ] )
+    env = [ 'env', 'TERM=ansi', 'DISPLAY=%s' % display ]
+    if hasattr( node, 'xauthFile' ):
+        env += [ 'XAUTHORITY=%s' % node.xauthFile.name ]
+    term = node.popen( env + cmds[ term ] + [ '-e', cmd ] )
     return [ tunnel, term ] if tunnel else [ term ]
 
 def runX11( node, cmd ):
@@ -120,7 +119,7 @@ def runX11( node, cmd ):
 
 def cleanUpScreens():
     "Remove moldy socat X11 tunnels."
-    errRun( "pkill -9 -f mnexec.*socat" )
+    errRun( "pkill -9 -f socat.*mininet" )
 
 def makeTerms( nodes, title='Node', term='xterm' ):
     """Create terminals.
