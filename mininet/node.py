@@ -78,6 +78,7 @@ class Node( object ):
         """name: name of node
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
+           overlayDirs: list of overlay directory strings or tuples
            params: Node parameters (see config() for details)"""
 
         # Make sure class actually works
@@ -85,6 +86,7 @@ class Node( object ):
 
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
+        self.overlayDirs = params.get( 'overlayDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
@@ -102,8 +104,9 @@ class Node( object ):
         self.waiting = False
         self.readbuf = ''
 
-        # Start command interpreter shell
+        # Start command interpreter shell and mount any local dirs
         self.startShell()
+        self.mountOverlayDirs()
         self.mountPrivateDirs()
 
     # File descriptor to node mapping support
@@ -167,7 +170,7 @@ class Node( object ):
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
 
     def mountPrivateDirs( self ):
-        "mount private directories"
+        "Mount private directories"
         # Avoid expanding a string into a list of chars
         assert not isinstance( self.privateDirs, basestring )
         for directory in self.privateDirs:
@@ -185,12 +188,60 @@ class Node( object ):
                 self.cmd( 'mount -n -t tmpfs tmpfs %s' % directory )
 
     def unmountPrivateDirs( self ):
-        "mount private directories"
+        "Unmount private and overlay directories"
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 self.cmd( 'umount ', directory[ 0 ] )
             else:
                 self.cmd( 'umount ', directory )
+
+    # XXX We should make overlayDirs as consistent as possible
+    # with privateDirs.
+
+    def _overlayFrom( self, entry ):
+        "Helper function: return mountpaint, overlay, tmpfs from entry"
+        if type( entry ) is str:
+            # '/mountpoint'
+            mountpoint, overlay = entry, None
+        elif len( entry ) is 1:
+            # [ '/mountpoint' ]
+            mountpoint, overlay = entry[ 0 ], None
+        else:
+            # [ '/mountpoint', '/overlay' ]
+            mountpoint, overlay = entry
+        tmpfs = None if overlay else '/tmp/%s/%s' % ( self, mountpoint )
+        return mountpoint, overlay, tmpfs
+
+    def mountOverlayDirs( self ):
+        """Mount overlay directories. Overlay directories are similar
+            to private directories except they are copy-on-write copies
+            of directories in the host file system.
+            overlayDirs is of the form ((mountpoint,overlaydir), ...)
+            much like privateDirs. If overlaydir doesn't exist, we
+            mount a tmpfs at the specified mount point."""
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.overlayDirs, basestring )
+        for entry in self.overlayDirs:
+            mountpoint, overlay, tmpfs  = self._overlayFrom( entry )
+            # Create tmpfs if overlay dir is not specified
+            if not overlay:
+                overlay = tmpfs
+                self.cmd( 'mkdir -p', overlay )
+                self.cmd( 'mount -t tmpfs tmpfs', overlay )
+            # Mount overlay dir at mount point
+            self.cmd( ( 'mount -t overlayfs -o upperdir=%s,lowerdir=%s'
+                       ' overlayfs %s' ) % ( overlay, mountpoint, mountpoint ) )
+
+    def unmountOverlayDirs( self ):
+        "Unmount overlay directories"
+        for entry in self.overlayDirs:
+            mountpoint, overlay, tmpfs = self._overlayFrom( entry )
+            # Unfortunately these umounts can fail if the mount point
+            # is in use, possibly leaving tmpfs garbage in the root
+            # mount namespace / file system
+            self.cmd( 'umount', mountpoint )
+            if not overlay:
+                self.cmd( 'umount', tmpfs )
 
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process
@@ -245,6 +296,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         self.unmountPrivateDirs()
+        self.unmountOverlayDirs()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )
