@@ -4,10 +4,13 @@ Node Library for Mininet
 This contains additional Node types which you may find to be useful.
 """
 
-from mininet.node import Node, Switch
+from mininet.node import Node, Host, Switch
 from mininet.log import info, warn
 from mininet.moduledeps import pathCheck
 from mininet.util import quietRun
+
+import re
+from tempfile import NamedTemporaryFile
 
 
 class LinuxBridge( Switch ):
@@ -143,3 +146,79 @@ class NAT( Node ):
         # Put the forwarding state back to what it was
         self.cmd( 'sysctl net.ipv4.ip_forward=%s' % self.forwardState )
         super( NAT, self ).terminate()
+
+
+class Server( Host ):
+    "Run sshd in a net/mnt/pid/uts namespace, with private /etc/hosts"
+
+    inNamespace = [ 'net', 'mnt', 'pid', 'uts' ]
+    overlayDirs = [ '/etc', '/var/run', '/var/log' ]
+    privateDirs = [ '/var/run/sshd' ]
+
+    def __init__( self, *args, **kwargs ):
+        """Add overlay dirs and private dirs, and change permissions
+           ssh: run sshd? (True)"""
+        kwargs.setdefault( 'ssh', True )
+        kwargs.setdefault( 'inNamespace', self.inNamespace )
+        kwargs.setdefault( 'privateDirs', self.privateDirs )
+        kwargs.setdefault( 'overlayDirs', self.overlayDirs )
+        super( Server, self ).__init__( *args, **kwargs )
+        # Change permissions, mainly for ssh
+        for pdir in self.privateDirs:
+            self.cmd( 'chown root:root', pdir )
+            self.cmd( 'chmod 755', pdir )
+
+    @staticmethod
+    def updateHostsFiles( servers, tmpdir='/tmp' ):
+        """Update local hosts files on a list of servers
+            servers: list of servers
+            tmpdir: tmp dir shared between mn and servers"""
+        # This scales as n^2, so for a large configuration it's
+        # more efficient to use a DNS server
+        for s in servers:
+            dirs = ( getattr( s, 'overlayDirs', [] ) +
+            getattr( s, 'privateDirs', [] ))
+            if '/etc' in dirs:
+                with NamedTemporaryFile( dir=tmpdir ) as tmpfile:
+                      tmpfile.write( '# Mininet hosts file\n' )
+                      tmpfile.write( '127.0.0.1 localhost %s\n' % s )
+                      for t  in servers:
+                        tmpfile.write( '%s %s\n' % ( t.IP(), t ) )
+                      tmpfile.flush()
+                      s.cmd( 'cp', tmpfile.name, '/etc/hosts' )
+            else:
+                warn( 'not updating hosts file on %s\n' % s )
+
+    def service( self, cmd ):
+        """Start or stop a service
+           usage: service( 'ssh stop' )"""
+        self.cmd( '/etc/init.d/%s' % cmd )
+
+    def motd( self ):
+        "Return login message as a string"
+        return 'Welcome to Mininet host %s at %s' % ( self, self.IP() )
+
+    def startSSH( self, motdPath='/var/run/motd.dynamic' ):
+        "Update motd, clear out utmp/wtmp/btmp, and start sshd"
+        # Note: /var/run and /var/log must be overlays!
+        self.cmd( "echo  '%s' > %s" % ( self.motd(), motdPath ) )
+        self.cmd( 'truncate -s0 /var/run/utmp /var/log/wtmp* /var/log/btmp*' )
+        # sshd.pid should really be in /var/run/sshd instead of /var/run
+        self.cmd( 'rm /var/run/sshd.pid' )
+        self.cmd( '/etc/init.d/ssh start' )
+
+    def config( self, **kwargs ):
+        """Configure/start sshd and other stuff
+            ssh: start sshd? (True )"""
+        super( Server, self ).config( **kwargs )
+        self.ssh = kwargs.get( 'ssh' )
+        if self.ssh:
+            self.startSSH()
+        if 'uts' in self.inNamespace:
+            self.cmd( 'hostname', self )
+
+    def terminate( self, *args, **kwargs ):
+        "Shut down services and terminate server"
+        if self.ssh:
+            self.service( 'ssh stop' )
+        super( Server, self ).terminate( *args, **kwargs )
