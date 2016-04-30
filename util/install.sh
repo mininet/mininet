@@ -418,8 +418,9 @@ function ivs {
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC --recursive
+    git clone git://github.com/floodlight/ivs $IVS_SRC
     cd $IVS_SRC
+    git submodule update --init
     make
     sudo make install
 }
