@@ -408,7 +408,13 @@ function ivs {
     IVS_SRC=$BUILD_DIR/ivs
 
     # Install dependencies
-    $install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
+    $install gcc make
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        $install git pkgconfig libnl3-devel libcap-devel openssl-devel
+    else
+        $install git-core pkg-config libnl-3-dev libnl-route-3-dev \
+            libnl-genl-3-dev
+    fi
 
     # Install IVS from source
     cd $BUILD_DIR
