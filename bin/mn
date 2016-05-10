@@ -88,14 +88,15 @@ LINKS = { 'default': Link,
           'ovs': OVSLink }
 
 
-# optional tests to run
-TESTS = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
-          'none' ]
+# Names of tests that are Mininet() methods
+TESTNAMES = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
+              'none' ]
 
-ALTSPELLING = { 'pingall': 'pingAll',
-                'pingpair': 'pingPair',
-                'iperfudp': 'iperfUdp',
-                'iperfUDP': 'iperfUdp' }
+# Map to alternate functions and/or spellings of Mininet() methods
+TESTS = { 'pingall': 'pingAll',
+          'pingpair': 'pingPair',
+          'iperfudp': 'iperfUdp',
+          'iperfUDP': 'iperfUdp' }
 
 
 def addDictOption( opts, choicesDict, default, name, **kwargs ):
@@ -158,7 +159,8 @@ class MininetRunner( object ):
 
     def setCustom( self, name, value ):
         "Set custom parameters for MininetRunner."
-        if name in ( 'topos', 'switches', 'hosts', 'controllers', 'links' ):
+        if name in ( 'topos', 'switches', 'hosts', 'controllers', 'links'
+                     'testnames', 'tests' ):
             # Update dictionaries
             param = name.upper()
             globals()[ param ].update( value )
@@ -208,10 +210,9 @@ class MininetRunner( object ):
                          type='string',
                          help='read custom classes or params from .py file(s)'
                          )
-
-        opts.add_option( '--test', type='choice', choices=TESTS,
-                         default=TESTS[ 0 ],
-                         help='|'.join( TESTS ) )
+        testList = TESTNAMES + TESTS.keys()
+        opts.add_option( '--test', default=[], action='append',
+                         dest='tests', help='|'.join( testList ) )
         opts.add_option( '--xterms', '-x', action='store_true',
                          default=False, help='spawn xterms for each node' )
         opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
@@ -358,23 +359,27 @@ class MininetRunner( object ):
         if self.options.pre:
             cli( mn, script=self.options.pre )
 
-        test = self.options.test
-        test = ALTSPELLING.get( test, test )
-
         mn.start()
 
-        if test == 'none':
-            pass
-        elif test == 'all':
-            mn.waitConnected()
-            mn.start()
-            mn.ping()
-            mn.iperf()
-        elif test == 'cli':
+        if not self.options.tests:
             cli( mn )
-        elif test != 'build':
-            mn.waitConnected()
-            getattr( mn, test )()
+
+        for test in self.options.tests:
+            test = TESTS.get( test, test )
+            if callable( test ):  # user added TESTMAP={'mytest': testfn}
+                test( mn )
+            elif test == 'none':
+                pass
+            elif test == 'all':
+                mn.waitConnected()
+                mn.start()
+                mn.ping()
+                mn.iperf()
+            elif test == 'cli':
+                cli( mn )
+            elif test != 'build':
+                mn.waitConnected()
+                getattr( mn, test )()
 
         if self.options.post:
             cli( mn, script=self.options.post )
