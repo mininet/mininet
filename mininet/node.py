@@ -1423,16 +1423,16 @@ class Controller( Node ):
 
 class OVSController( Controller ):
     "Open vSwitch controller"
-    def __init__( self, name, command='ovs-controller', **kwargs ):
-        if quietRun( 'which test-controller' ):
-            command = 'test-controller'
-        Controller.__init__( self, name, command=command, **kwargs )
+    def __init__( self, name, **kwargs ):
+        kwargs.setdefault( 'command', self.isAvailable() or
+                           'ovs-controller' )
+        Controller.__init__( self, name, **kwargs )
 
     @classmethod
     def isAvailable( cls ):
         return ( quietRun( 'which ovs-controller' ) or
                  quietRun( 'which test-controller' ) or
-                 quietRun( 'which ovs-testcontroller' ) )
+                 quietRun( 'which ovs-testcontroller' ) ).strip()
 
 class NOX( Controller ):
     "Controller to run a NOX application."
