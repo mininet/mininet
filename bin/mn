@@ -11,6 +11,7 @@ Example to pull custom params (topo, switch, etc.) from a file:
   sudo mn --custom ~/mininet/custom/custom_example.py
 """
 
+from __future__ import print_function
 from optparse import OptionParser
 import os
 import sys
@@ -117,7 +118,7 @@ def addDictOption( opts, choicesDict, default, name, **kwargs ):
 
 def version( *_args ):
     "Print Mininet version and exit"
-    print "%s" % VERSION
+    print( "%s" % VERSION )
     exit()
 
 
@@ -269,7 +270,7 @@ class MininetRunner( object ):
 
         # set logging verbosity
         if LEVELS[self.options.verbosity] > LEVELS['output']:
-            print ( '*** WARNING: selected verbosity level (%s) will hide CLI '
+            print( '*** WARNING: selected verbosity level (%s) will hide CLI '
                     'output!\n'
                     'Please restart Mininet with -v [debug, info, output].'
                     % self.options.verbosity )
@@ -331,7 +332,7 @@ class MininetRunner( object ):
         inNamespace = self.options.innamespace
         cluster = self.options.cluster
         if inNamespace and cluster:
-            print "Please specify --innamespace OR --cluster"
+            print( "Please specify --innamespace OR --cluster" )
             exit()
         Net = MininetWithControlNet if inNamespace else Mininet
         cli = ClusterCLI if cluster else CLI

@@ -1,5 +1,7 @@
 "Utility functions for Mininet."
 
+from __future__ import print_function
+
 from mininet.log import output, info, error, warn, debug
 
 from time import sleep
@@ -11,6 +13,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+from itertools import islice
 
 # Command execution support
 
@@ -587,7 +590,7 @@ def ensureRoot():
     Probably we should only sudo when needed as per Big Switch's patch.
     """
     if os.getuid() != 0:
-        print "*** Mininet must run as root."
+        print( "*** Mininet must run as root." )
         exit( 1 )
     return
 
@@ -617,3 +620,15 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         time += .5
         result = runCmd( cmd )
     return True
+
+def pager( iterable, n ):
+    """Iterates through n-size pages of iterable.
+
+    Similar to the grouper itertools recipe, but does not pad the final group.
+    """
+    iterator = iter( iterable )
+    return iter( lambda: take( n, iterator ), () )
+
+def take( n, iterable ):
+    """Return first n items of the iterable as a tuple."""
+    return tuple( islice( iterable, n ) )
