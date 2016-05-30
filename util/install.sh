@@ -35,25 +35,37 @@ if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
-if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
-    # Truly non-interactive apt-get installation
-    install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
-    remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
-    pkginst='sudo dpkg -i'
+if [ "$DIST" = "Debian" ]; then
+    install() { echo 'Please, type root password:'; su -c 'DEBIAN_FRONTEND=noninteractive apt -y -q install $@'; }
+    remove()  { echo 'Please, type root password:'; su -c 'DEBIAN_FRONTEND=noninteractive apt -y -q remove $@'; }
+    update()  { echo 'Please, type root password:'; su -c 'DEBIAN_FRONTEND=noninteractive apt -q update'; }
+    pkginst() { echo 'Please, type root password:'; su -c 'dpkg -i $@'; }
+    sudo() { echo 'Please, type root password:'; su -c '$@'; }
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-        $install lsb-release
+        install lsb-release
+    fi
+fi
+if [ "$DIST" = "Ubuntu" ]; then
+    install() { echo 'Please, type your password:'; sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install $@; }
+    remove()  { echo 'Please, type your password:'; sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove $@; }
+    update()  { echo 'Please, type your password:'; sudo DEBIAN_FRONTEND=noninteractive apt-get -q update; }
+    pkginst() { echo 'Please, type your password:'; sudo dpkg -i $@; }
+    # Prereqs for this script
+    if ! which lsb_release &> /dev/null; then
+        install lsb-release
     fi
 fi
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
 if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-    install='sudo yum -y install'
-    remove='sudo yum -y erase'
-    pkginst='sudo rpm -ivh'
+    install() { echo 'Please, type your password:'; sudo yum install -y $@; }
+    remove()  { echo 'Please, type your password:'; sudo yum remove -y $@ ; }
+    update()  { echo 'Please, type your password:'; sudo yum update; }
+    pkginst() { echo 'Please, type your password:'; sudo rpm -ivh $@; }
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-        $install redhat-lsb-core
+        install redhat-lsb-core
     fi
 fi
 if which lsb_release &> /dev/null; then
@@ -103,8 +115,8 @@ OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
-    sudo apt-get update
-    if ! $install linux-image-$KERNEL_NAME; then
+    update
+    if ! install linux-image-$KERNEL_NAME; then
         echo "Could not install linux-image-$KERNEL_NAME"
         echo "Skipping - assuming installed kernel is OK."
     fi
@@ -114,7 +126,7 @@ function kernel_clean {
     echo "Cleaning kernel..."
 
     # To save disk space, remove previous kernel
-    if ! $remove $KERNEL_IMAGE_OLD; then
+    if ! remove $KERNEL_IMAGE_OLD; then
         echo $KERNEL_IMAGE_OLD not installed.
     fi
 
@@ -126,11 +138,11 @@ function kernel_clean {
 function mn_deps {
     echo "Installing Mininet dependencies"
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install gcc make socat psmisc xterm openssh-clients iperf \
+        install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man pyflakes pylint python-pep8 python-pexpect
     else
-        $install gcc make socat psmisc xterm ssh iperf iproute telnet \
+        install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
             pyflakes pylint pep8 python-pexpect
     fi
@@ -144,8 +156,8 @@ function mn_deps {
 # Install Mininet developer dependencies
 function mn_dev {
     echo "Installing Mininet developer dependencies"
-    $install doxygen doxypy texlive-fonts-recommended
-    if ! $install doxygen-latex; then
+    install doxygen doxypy texlive-fonts-recommended
+    if ! install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
 }
@@ -157,11 +169,11 @@ function mn_dev {
 function of {
     echo "Installing OpenFlow reference implementation..."
     cd $BUILD_DIR
-    $install autoconf automake libtool make gcc
+    install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install git pkgconfig glibc-devel
+        install git pkgconfig glibc-devel
     else
-        $install git-core autotools-dev pkg-config libc6-dev
+        install git-core autotools-dev pkg-config libc6-dev
     fi
     # was: git clone git://openflowswitch.org/openflow.git
     # Use our own fork on github for now:
@@ -182,7 +194,7 @@ function of {
 function of13 {
     echo "Installing OpenFlow 1.3 soft switch implementation..."
     cd $BUILD_DIR/
-    $install  git-core autoconf automake autotools-dev pkg-config \
+    install  git-core autoconf automake autotools-dev pkg-config \
         make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
         unzip libpcre3-dev flex bison libboost-dev
 
@@ -229,9 +241,9 @@ function install_wireshark {
     if ! which wireshark; then
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-            $install wireshark wireshark-gnome
+            install wireshark wireshark-gnome
         else
-            $install wireshark tshark
+            install wireshark tshark
         fi
     fi
 
@@ -301,11 +313,11 @@ function ubuntuOvs {
     fi
 
     # Remove any old packages
-    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
+    remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
             openvswitch-pki openvswitch-switch
 
     # Get build deps
-    $install build-essential fakeroot debhelper autoconf automake libssl-dev \
+    install build-essential fakeroot debhelper autoconf automake libssl-dev \
              pkg-config bzip2 openssl python-all procps python-qt4 \
              python-zopeinterface python-twisted-conch dkms
 
@@ -313,9 +325,9 @@ function ubuntuOvs {
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
             DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
     cd ..
-    $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
+    pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
              openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
-    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+    if pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
         echo "Ignoring error installing openvswitch-controller"
     fi
 
@@ -339,7 +351,7 @@ function ovs {
     echo "Installing Open vSwitch..."
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install openvswitch openvswitch-controller
+        install openvswitch openvswitch-controller
         return
     fi
 
@@ -352,17 +364,17 @@ function ovs {
             # If you've already installed a datapath, assume you
             # know what you're doing and don't need dkms datapath.
             # Otherwise, install it.
-            $install openvswitch-datapath-dkms
+            install openvswitch-datapath-dkms
         fi
     fi
 
-    $install openvswitch-switch
+    install openvswitch-switch
     OVSC=""
-    if $install openvswitch-controller; then
+    if install openvswitch-controller; then
         OVSC="openvswitch-controller"
     else
         echo "Attempting to install openvswitch-testcontroller"
-        if $install openvswitch-testcontroller; then
+        if install openvswitch-testcontroller; then
             OVSC="openvswitch-testcontroller"
         else
             echo "Failed - skipping openvswitch-testcontroller"
@@ -385,7 +397,7 @@ function remove_ovs {
     pkgs=`dpkg --get-selections | grep openvswitch | awk '{ print $1;}'`
     echo "Removing existing Open vSwitch packages:"
     echo $pkgs
-    if ! $remove $pkgs; then
+    if ! remove $pkgs; then
         echo "Not all packages removed correctly"
     fi
     # For some reason this doesn't happen
@@ -408,7 +420,7 @@ function ivs {
     IVS_SRC=$BUILD_DIR/ivs
 
     # Install dependencies
-    $install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
+    install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
 
     # Install IVS from source
     cd $BUILD_DIR
@@ -423,9 +435,9 @@ function ryu {
     echo "Installing RYU..."
 
     # install Ryu dependencies"
-    $install autoconf automake g++ libtool python make
+    install autoconf automake g++ libtool python make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
-        $install libxml2 libxslt-dev python-pip python-dev
+        install libxml2 libxslt-dev python-pip python-dev
         sudo pip install --upgrade gevent pbr webob routes paramiko \\
             oslo.config
     fi
@@ -453,17 +465,17 @@ function nox {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python python-twisted \
+    install autoconf automake g++ libtool python python-twisted \
 		swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
-        $install libboost1.35-dev
+        install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        $install python-dev libboost-dev
-        $install libboost-filesystem-dev
-        $install libboost-test-dev
+        install python-dev libboost-dev
+        install libboost-filesystem-dev
+        install libboost-test-dev
     fi
     # Install NOX optional deps:
-    $install libsqlite3-dev python-simplejson
+    install libsqlite3-dev python-simplejson
 
     # Fetch NOX destiny
     cd $BUILD_DIR/
@@ -501,14 +513,14 @@ function nox13 {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python python-twisted \
+    install autoconf automake g++ libtool python python-twisted \
         swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
-        $install libboost1.35-dev
+        install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        $install python-dev libboost-dev
-        $install libboost-filesystem-dev
-        $install libboost-test-dev
+        install python-dev libboost-dev
+        install libboost-filesystem-dev
+        install libboost-test-dev
     fi
 
     # Fetch NOX destiny
@@ -542,7 +554,7 @@ function oftest {
     echo "Installing oftest..."
 
     # Install deps:
-    $install tcpdump python-scapy
+    install tcpdump python-scapy
 
     # Install oftest:
     cd $BUILD_DIR/
@@ -554,9 +566,9 @@ function cbench {
     echo "Installing cbench..."
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install net-snmp-devel libpcap-devel libconfig-devel
+        install net-snmp-devel libpcap-devel libconfig-devel
     else
-        $install libsnmp-dev libpcap-dev libconfig-dev
+        install libsnmp-dev libpcap-dev libconfig-dev
     fi
     cd $BUILD_DIR/
     # was:  git clone git://gitosis.stanford.edu/oflops.git
@@ -576,7 +588,7 @@ function vm_other {
     # Remove avahi-daemon, which may cause unwanted discovery packets to be
     # sent during tests, near link status changes:
     echo "Removing avahi-daemon"
-    $remove avahi-daemon
+    remove avahi-daemon
 
     # was: Disable IPv6.  Add to /etc/modprobe.d/blacklist:
     #echo "Attempting to disable IPv6"
@@ -616,19 +628,19 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
 
     # Install tcpdump, cmd-line packet dump tool.  Also install gitk,
     # a graphical git history viewer.
-    $install tcpdump gitk
+    install tcpdump gitk
 
     # Install common text editors
-    $install vim nano emacs
+    install vim nano emacs
 
     # Install NTP
-    $install ntp
+    install ntp
 
     # Install vconfig for VLAN example
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install vconfig
+        install vconfig
     else
-        $install vlan
+        install vlan
     fi
 
     # Set git to colorize everything.
