@@ -533,10 +533,12 @@ class TCLink( Link ):
                        addr1=addr1, addr2=addr2,
                        params1=params,
                        params2=params )
+
 class TCLink1( Link ):
      "Link with potential asymetric TC interfaces configured via opts"
-     def __init__( self,node1,node2,port1=None,port2=None,
-                   intfName1=None, intfName2, **params):
+     def __init__( self, node1, node2, port1=None, port2=None,
+                   intfName1=None, intfName2=None,
+                   addr1=None, addr2=None, **params):
          if isinstance(params,dict):
              pars1 = {}
              pars2 = {}
@@ -551,5 +553,6 @@ class TCLink1( Link ):
                        intfName1=intfName1, intfName2=intfName2,
                        cls1=TCIntf,
                        cls2=TCIntf,
+                       addr1=addr1, addr2=addr2,
                        params1=pars1,
                        params2=pars2)
