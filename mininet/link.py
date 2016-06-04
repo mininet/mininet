@@ -535,19 +535,24 @@ class TCLink( Link ):
                        params2=params )
 
 class TCLink1( Link ):
-     "Link with potential asymetric TC interfaces configured via opts"
+     "Link with potential asymmetric TC interfaces configured via opts"
      def __init__( self, node1, node2, port1=None, port2=None,
                    intfName1=None, intfName2=None,
                    addr1=None, addr2=None, **params):
-         if isinstance(params,dict):
-             pars1 = {}
-             pars2 = {}
-             if 'params1' in params:
-                 pars1 = params['params1']
-             if 'params2' in params:
-                 pars2 = params['params2']
-         else:
-             print 'Dictionnary expected for asymetric link pars'
+         p1 = {}
+         p2 = {}
+         if 'params1' in params:
+             p1 = params['params1']
+             del params['params1']
+         if 'params2' in params:
+             p2 = params['params2']
+             del params['params2']
+
+         pars1 = params.copy()
+         pars1.update(p1)
+
+         pars2 = params.copy()
+         pars2.update(p2)
 
          Link.__init__(self, node1, node2, port1=port1, port2=port2,
                        intfName1=intfName1, intfName2=intfName2,
