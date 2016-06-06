@@ -20,7 +20,7 @@ setup(
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
-    packages=[ 'mininet', 'mininet.examples' ],
+    packages=[ 'mininet', 'mininet.examples', 'mininet.cluster' ],
     long_description="""
         Mininet is a network emulator which uses lightweight
         virtualization to create virtual networks for rapid
