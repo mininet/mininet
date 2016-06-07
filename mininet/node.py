@@ -67,6 +67,7 @@ from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
+from random import shuffle
 
 class Node( object ):
     """A virtual network node is simply a shell in a network namespace.
@@ -993,8 +994,8 @@ class UserSwitch( Switch ):
            Log to /tmp/sN-{ofd,ofp}.log.
            controllers: list of controller objects"""
         # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
+        shuffle(controllers)
+        info("Controllers: ", controllers)
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
@@ -1002,10 +1003,11 @@ class UserSwitch( Switch ):
                   ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
                   self.dpopts +
                   ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
-        self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-                  ' ' + clist +
-                  ' --fail=closed ' + self.opts +
-                  ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+        for c in controllers:
+                self.cmd( 'ofprotocol unix:/tmp/' + self.name +
+                        ' ' +  'tcp:%s:%d' % (c.IP(), c.port)  +
+                        ' --fail=closed ' + self.opts +
+                        ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         if "no-slicing" not in self.dpopts:
             # Only TCReapply if slicing is enable
             sleep(1)  # Allow ofdatapath to start before re-arranging qdisc's
@@ -1017,7 +1019,7 @@ class UserSwitch( Switch ):
         """Stop OpenFlow reference user datapath.
            deleteIntfs: delete interfaces? (True)"""
         self.cmd( 'kill %ofdatapath' )
-        self.cmd( 'kill %ofprotocol' )
+        self.cmd( "ps ax | grep '/%s ' | awk '{print $1}' | xargs sudo kill" % self.name )
         super( UserSwitch, self ).stop( deleteIntfs )
 
 
