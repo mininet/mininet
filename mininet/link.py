@@ -304,6 +304,30 @@ class TCIntf( Intf ):
                 parent = ' parent 10:1 '
         return cmds, parent
 
+    @staticmethod
+    def reorderCmds( parent, delay=None, reorder=None, correlation=None):
+        cmds = []
+        if delay and delay < 0:
+            error( 'Negative delay', delay, '\n' )
+        elif reorder and (reorder < 0 or reorder > 100):
+            error( 'Bad reorder percentage', reorder, '\n' )
+        elif correlation and (correlation < 0 or correlation > 100):
+            error( 'Bad correlation percentage', correlation, '\n' )
+        elif reorder is None and correlation is not None:
+            error( 'Reorder required to specify correlation\n' )
+        else:
+            netemargs = '%s%s%s' % (
+                'delay %s ' % delay if delay is not None else '',
+                'reorder %s ' % reorder if reorder is not None else '',
+                '%s' % correlation if correlation is not None else ''
+            )
+            if netemargs:
+                cmds = [ '%s qdisc add dev %s ' + parent +
+                         ' handle 15: netem ' +
+                         netemargs ]
+                parent = ' parent 15:1 '
+        return cmds, parent
+
     def tc( self, cmd, tc='tc' ):
         "Execute tc command for our interface"
         c = cmd % (tc, self)  # Add in tc command and our name
@@ -313,7 +337,8 @@ class TCIntf( Intf ):
     def config( self, bw=None, delay=None, jitter=None, loss=None,
                 disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
-                max_queue_size=None, **params ):
+                max_queue_size=None, reorder=None, reorder_correlation=None,
+                **params ):
         "Configure the port and set its properties."
 
         result = Intf.config( self, **params)
@@ -350,11 +375,18 @@ class TCIntf( Intf ):
                                             parent=parent )
         cmds += delaycmds
 
+        reordercmds, parent = self.reorderCmds( parent=parent,
+                                                delay=delay,
+                                                reorder=reorder,
+                                                correlation=reorder_correlation)
+        cmds += reordercmds
+
         # Ugly but functional: display configuration info
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
                   ( ['%d%% loss' % loss ] if loss is not None else [] ) +
+                  ( ['%d%%(%d%%) reorder' % (reorder, reorder_correlation) ] if reorder is not None else [] ) +
                   ( [ 'ECN' ] if enable_ecn else [ 'RED' ]
                     if enable_red else [] ) )
         info( '(' + ' '.join( stuff ) + ') ' )
