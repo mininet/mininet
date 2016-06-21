@@ -19,6 +19,8 @@ to-do:
 - think about clearing last hop - why doesn't that work?
 """
 
+from __future__ import print_function
+
 from mininet.net import Mininet
 from mininet.node import OVSSwitch
 from mininet.topo import LinearTopo
@@ -105,27 +107,27 @@ def moveHost( host, oldSwitch, newSwitch, newPort=None ):
 
 def mobilityTest():
     "A simple test of mobility"
-    print '* Simple mobility test'
+    print( '* Simple mobility test' )
     net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch )
-    print '* Starting network:'
+    print( '* Starting network:' )
     net.start()
     printConnections( net.switches )
-    print '* Testing network'
+    print( '* Testing network' )
     net.pingAll()
-    print '* Identifying switch interface for h1'
+    print( '* Identifying switch interface for h1' )
     h1, old = net.get( 'h1', 's1' )
     for s in 2, 3, 1:
         new = net[ 's%d' % s ]
         port = randint( 10, 20 )
-        print '* Moving', h1, 'from', old, 'to', new, 'port', port
+        print( '* Moving', h1, 'from', old, 'to', new, 'port', port )
         hintf, sintf = moveHost( h1, old, new, newPort=port )
-        print '*', hintf, 'is now connected to', sintf
-        print '* Clearing out old flows'
+        print( '*', hintf, 'is now connected to', sintf )
+        print( '* Clearing out old flows' )
         for sw in net.switches:
             sw.dpctl( 'del-flows' )
-        print '* New network:'
+        print( '* New network:' )
         printConnections( net.switches )
-        print '* Testing connectivity:'
+        print( '* Testing connectivity:' )
         net.pingAll()
         old = new
     net.stop()

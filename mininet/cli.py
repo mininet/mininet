@@ -25,6 +25,7 @@ list all nodes ('nodes'), to print out the network topology
 and bandwidth ('iperf'.)
 """
 
+from __future__ import print_function
 from subprocess import call
 from cmd import Cmd
 from os import isatty
@@ -176,7 +177,7 @@ class CLI( Cmd ):
                 output( result + '\n' )
             else:
                 output( repr( result ) + '\n' )
-        except Exception, e:
+        except Exception as e:
             output( str( e ) + '\n' )
 
     # We are in fact using the exec() pseudo-function
@@ -187,7 +188,7 @@ class CLI( Cmd ):
             Node names may be used, e.g.: px print h1.cmd('ls')"""
         try:
             exec( line, globals(), self.getLocals() )
-        except Exception, e:
+        except Exception as e:
             output( str( e ) + '\n' )
 
     # pylint: enable=broad-except,exec-used
@@ -371,7 +372,7 @@ class CLI( Cmd ):
     def do_links( self, _line ):
         "Report on links"
         for link in self.mn.links:
-            print link, link.status()
+            print( link, link.status() )
 
     def do_switch( self, line ):
         "Starts or stops a switch"
@@ -405,7 +406,7 @@ class CLI( Cmd ):
 
         if first in self.mn:
             if not args:
-                print "*** Enter a command for node: %s <cmd>" % first
+                print( "*** Enter a command for node: %s <cmd>" % first )
                 return
             node = self.mn[ first ]
             rest = args.split( ' ' )

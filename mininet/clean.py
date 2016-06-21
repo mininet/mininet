@@ -92,7 +92,7 @@ class Cleanup( object ):
                     ).splitlines()
         # Delete blocks of links
         n = 1000  # chunk size
-        for i in xrange( 0, len( links ), n ):
+        for i in range( 0, len( links ), n ):
             cmd = ';'.join( 'ip link del %s' % link
                              for link in links[ i : i + n ] )
             sh( '( %s ) 2> /dev/null' % cmd )

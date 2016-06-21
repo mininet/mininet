@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from __future__ import print_function
 from subprocess import check_output as co
 from sys import exit
 
@@ -16,8 +17,8 @@ for line in lines.split( '\n' ):
     if line and 'Binary' not in line:
         fname, fversion = line.split( ':' )
         if version != fversion:
-            print "%s: incorrect version '%s' (should be '%s')" % (
-                fname, fversion, version )
+            print( "%s: incorrect version '%s' (should be '%s')" % (
+                fname, fversion, version ) )
             error = True
 
 if error:
