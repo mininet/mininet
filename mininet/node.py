@@ -873,15 +873,15 @@ class Switch( Node ):
             dpid = dpid.translate( None, ':' )
             assert len( dpid ) <= self.dpidLen and int( dpid, 16 ) >= 0
         else:
-            # Use hex of the first number in the switch name
-            nums = re.findall( r'\d+', self.name )
-            if nums:
-                dpid = hex( int( nums[ 0 ] ) )[ 2: ]
+            # Use hex encoding of node name, limited to 16 characters as dpid
+            if self.name is not None and self.name != "":
+                dpid = self.name.encode("hex")[:self.dpidLen]
+                return '0' * ( self.dpidLen - len( dpid ) ) + dpid
             else:
                 raise Exception( 'Unable to derive default datapath ID - '
                                  'please either specify a dpid or use a '
-                                 'canonical switch name such as s23.' )
-        return '0' * ( self.dpidLen - len( dpid ) ) + dpid
+                                 'canonical switch name such as s23. '
+                                 'The name '+self.name+" seems to be empty or invalid." )
 
     def defaultIntf( self ):
         "Return control interface"
