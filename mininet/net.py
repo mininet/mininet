@@ -828,32 +828,59 @@ class Mininet( object ):
         output( '*** Results: %s\n' % cpu_fractions )
         return cpu_fractions
 
-    # BL: I think this can be rewritten now that we have
-    # a real link class.
+    @staticmethod
+    def _parseNodePort(nodeport):
+        parts = nodeport.split(':')
+        if len(parts) == 1:
+            return nodeport, ''
+        elif len(parts) == 2:
+            return parts[0], parts[1]
+        else:
+            error( 'Could not parse node argument: %s\n' %nodeport )
+
+    @staticmethod
+    def _configLinkIntfs(srcIntf, dstIntf, status):
+        result = srcIntf.ifconfig( status )
+        if result:
+            error( 'link src status change failed: %s\n' % result )
+        result = dstIntf.ifconfig( status )
+        if result:
+            error( 'link dst status change failed: %s\n' % result )
+
+
     def configLinkStatus( self, src, dst, status ):
-        """Change status of src <-> dst links.
-           src: node name
-           dst: node name
+        """Change status of src <-> dst link specified by ports, or all if no 
+           ports specified.
+           src: node name and port(optional) separated by colon
+           dst: node name and port(optional) separated by colon
            status: string {up, down}"""
-        if src not in self.nameToNode:
-            error( 'src not in network: %s\n' % src )
-        elif dst not in self.nameToNode:
-            error( 'dst not in network: %s\n' % dst )
+        
+        srcnode, srcport = self._parseNodePort( src )
+        dstnode, dstport = self._parseNodePort( dst )
+        if srcnode not in self.nameToNode:
+            error( 'src not in network: %s\n' % srcnode )
+        elif dstnode not in self.nameToNode:
+            error( 'dst not in network: %s\n' % dstnode )
         else:
             if isinstance( src, basestring ):
-                src = self.nameToNode[ src ]
+                srcnode = self.nameToNode[ srcnode ]
             if isinstance( dst, basestring ):
-                dst = self.nameToNode[ dst ]
-            connections = src.connectionsTo( dst )
+                dstnode = self.nameToNode[ dstnode ]
+            connections = srcnode.connectionsTo( dstnode )
             if len( connections ) == 0:
-                error( 'src and dst not connected: %s %s\n' % ( src, dst) )
-            for srcIntf, dstIntf in connections:
-                result = srcIntf.ifconfig( status )
-                if result:
-                    error( 'link src status change failed: %s\n' % result )
-                result = dstIntf.ifconfig( status )
-                if result:
-                    error( 'link dst status change failed: %s\n' % result )
+                error( 'src and dst not connected: %s %s\n' % ( srcnode, dstnode) )
+            
+            if not srcport and not dstport:
+                for srcIntf, dstIntf in connections:
+                    self._configLinkIntfs(srcIntf, dstIntf, status)
+            else:
+                try:
+                    srcIntf = srcnode.intfs[int(srcport)]
+                    dstIntf = dstnode.intfs[int(dstport)]
+                    self._configLinkIntfs(srcIntf, dstIntf, status)
+                except KeyError:
+                    error( 'src and dst not connected through specified'
+                            ' ports: %s %s\n' %( src, dst ) )
 
     def interact( self ):
         "Start network and run our simple CLI."
