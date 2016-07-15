@@ -44,6 +44,13 @@ RemoteController: a remote controller node, which may use any
     arbitrary OpenFlow-compatible controller, and which is not
     created or managed by Mininet.
 
+VPPSwitch: Vector Packet Processing (VPP) virtual switch
+    VPP is a rapid packet processing development platform for
+    highly performing network applications.
+    It is not OpenFlow-compatible.
+    See the "what is VPP" page: https://wiki.fd.io/view/VPP/What_is_VPP%3F
+        and the fd.io web page: https://fd.io
+
 Future enhancements:
 
 - Possibly make Node, Switch and Controller more abstract so that
@@ -1556,3 +1563,108 @@ def DefaultController( name, controllers=DefaultControllers, **kwargs ):
 def NullController( *_args, **_kwargs ):
     "Nonexistent controller - simply returns None"
     return None
+
+
+class VPPSwitch( Switch ):
+    """Vector Packet Processing (VPP) switch.
+       See https://wiki.fd.io/view/VPP """
+
+    def __init__( self, name, verbose=False, **kwargs ):
+        "name: name of the node"
+        global vpp
+
+        try:
+            import fnmatch
+            from vpp_papi import VPP
+            vpp_json_dir = '/usr/share/vpp/api/'
+
+            jsonfiles = []
+            for root, dirnames, filenames in os.walk(vpp_json_dir):
+                for filename in fnmatch.filter(filenames, '*.api.json'):
+                    jsonfiles.append(os.path.join(vpp_json_dir, filename))
+
+            if not jsonfiles:
+                print('Error: no json api files found')
+                raise ImportError
+
+            vpp = VPP(jsonfiles)
+        except ImportError:
+            error( 'Please install vpp.\n' +
+                   'See https://wiki.fd.io/view/VPP/' +
+                   'Installing_VPP_binaries_from_packages' )
+            exit( 1 )
+
+        Switch.__init__( self, name, **kwargs )
+        self.name = name
+
+        return None
+
+    @classmethod
+    def setup( cls ):
+        "Test whether vpp is installed & running"
+        out, err, exitcode = errRun( 'vppctl show version' )
+        if exitcode or out == '\n':
+            error( out + err +
+                'vppctl exited with code %d\n' % exitcode +
+                '*** make sure vpp is running\n')
+
+    def dpctl( self, *args ):
+        "Run VPP command"
+        return self.cmd( 'vppctl ' + ' '.join( args ) )
+
+    def start( self, controllers=[] ):
+        "Start up a new VPP switch"
+        vpp.connect( "mininet" )
+        vpp.bridge_domain_add_del( bd_id = int( self.dpid, 16 ),
+                flood = 1,
+                uu_flood = 1,
+                forward = 1,
+                learn = 1,
+                arp_term = 0,
+                mac_age = 0,
+                is_add = 1 )
+        vpp.disconnect()
+
+        for intf in self.intfList():
+            if self.ports[ intf ] and not intf.IP():
+                self.attach( intf )
+
+    def stop( self, deleteIntfs=True ):
+        "Stop VPP switch"
+        for intf in self.intfList():
+            if self.ports[ intf ] and not intf.IP():
+                self.detach( intf )
+
+        vpp.connect( "mininet" )
+        vpp.bridge_domain_add_del( bd_id = int( self.dpid, 16 ),
+                flood = 1,
+                uu_flood = 1,
+                forward = 1,
+                learn = 1,
+                arp_term = 0,
+                mac_age = 0,
+                is_add = 0 )
+        vpp.disconnect()
+
+    def attach( self, intf ):
+        "Connect a data port"
+        vpp.connect( "mininet" )
+        vppIf = vpp.af_packet_create( host_if_name = intf.name,
+                hw_addr = "",
+                use_random_hw_addr = 1 )
+        vpp.sw_interface_set_flags( sw_if_index = vppIf.sw_if_index,
+                admin_up_down = 1,
+                link_up_down = 1,
+                deleted = 0 )
+        vpp.sw_interface_set_l2_bridge( rx_sw_if_index = vppIf.sw_if_index,
+                                        bd_id = int( self.dpid, 16 ),
+                                        shg = 0,
+                                        bvi = 0,
+                                        enable = 1 )
+        vpp.disconnect()
+
+    def detach( self, intf ):
+        "Disconnect a data port"
+        vpp.connect( "mininet" )
+        vpp.af_packet_delete( host_if_name = intf.name )
+        vpp.disconnect()
