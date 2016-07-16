@@ -15,6 +15,7 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <string.h>
 #include <linux/sched.h>
 #include <unistd.h>
 #include <limits.h>
@@ -155,7 +156,7 @@ int main(int argc, char *argv[])
         case 'a':
             /* Attach to pid's network namespace and mount namespace */
             pid = atoi(optarg);
-            sprintf(path, "/proc/%d/ns/net", pid);
+            snprintf(path, PATH_MAX, "/proc/%d/ns/net", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0) {
                 perror(path);
@@ -166,11 +167,11 @@ int main(int argc, char *argv[])
                 return 1;
             }
             /* Plan A: call setns() to attach to mount namespace */
-            sprintf(path, "/proc/%d/ns/mnt", pid);
+            snprintf(path, PATH_MAX, "/proc/%d/ns/mnt", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0 || setns(nsid, 0) != 0) {
                 /* Plan B: chroot/chdir into pid's root file system */
-                sprintf(path, "/proc/%d/root", pid);
+                snprintf(path, PATH_MAX, "/proc/%d/root", pid);
                 if (chroot(path) < 0) {
                     perror(path);
                     return 1;
@@ -182,7 +183,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
             /* Attach to pid's UTS namespace */
-            sprintf(path, "/proc/%d/ns/uts", pid);
+            snprintf(path, PATH_MAX, "/proc/%d/ns/uts", pid);
             nsid = open(path, O_RDONLY);
             if (nsid < 0) {
                 perror(path);
