@@ -34,6 +34,7 @@ class TreeTopo( Topo ):
 
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
+    # topo = TreeTopo( depth, fanout, hopts={'setHostname':True})
     topo = TreeTopo( depth, fanout )
     return Mininet( topo, **kwargs )
 

@@ -32,15 +32,16 @@
 void usage(char *name)
 {
     printf("Execution utility for Mininet\n\n"
-           "Usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] cmd args...\n\n"
+           "Usage: %s [-cdnp] [-a pid] [-g group] [-r rtprio] [-u hostname] cmd args...\n\n"
            "Options:\n"
            "  -c: close all file descriptors except stdin/out/error\n"
            "  -d: detach from tty by calling setsid()\n"
            "  -n: run in new network and mount namespaces\n"
            "  -p: print ^A + pid\n"
-           "  -a pid: attach to pid's network and mount namespaces\n"
+           "  -a pid: attach to pid's network, mount and UTS namespaces\n"
            "  -g group: add to cgroup\n"
            "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
+           "  -u hostname: run in new uts namespace\n"
            "  -v: print version\n",
            name);
 }
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
     char *cwd = get_current_dir_name();
 
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
+    while ((c = getopt(argc, argv, "+cdnpa:g:r:u:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -180,6 +181,17 @@ int main(int argc, char *argv[])
                 perror(cwd);
                 return 1;
             }
+            /* Attach to pid's UTS namespace */
+            sprintf(path, "/proc/%d/ns/uts", pid);
+            nsid = open(path, O_RDONLY);
+            if (nsid < 0) {
+                perror(path);
+                return 1;
+            }
+            if (setns(nsid, 0) != 0) {
+                perror("setns");
+                return 1;
+            }
             break;
         case 'g':
             /* Attach to cgroup */
@@ -190,6 +202,16 @@ int main(int argc, char *argv[])
             sp.sched_priority = atoi(optarg);
             if (sched_setscheduler(getpid(), SCHED_RR, &sp) < 0) {
                 perror("sched_setscheduler");
+                return 1;
+            }
+            break;
+        case 'u':
+            if (unshare(CLONE_NEWUTS) == -1) {
+                perror("unshare NEWUTS");
+                return 1;
+            }
+            if (sethostname(optarg, strlen(optarg)) == -1) {
+                perror("sethostname");
                 return 1;
             }
             break;
