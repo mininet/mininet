@@ -85,7 +85,7 @@ class VLANStarTopo( Topo ):
         for i in range( k ):
             vlan = vlanBase + i
             for j in range(n):
-                name = 'h%d-%d' % ( j+1, vlan )
+                name = 'h%d_%d' % ( j+1, vlan )
                 h = self.addHost( name, cls=VLANHost, vlan=vlan )
                 self.addLink( h, s1 )
         for j in range( n ):
