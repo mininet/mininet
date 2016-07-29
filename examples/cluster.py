@@ -547,7 +547,7 @@ class RemoteGRELink( RemoteLink ):
                 raise Exception('error creating gretap on %s: %s'
                                 % (node, result))
             if addr:
-                node.rcmd('ip link det %s address %s' % (intfname, addr))
+                node.rcmd('ip link set %s address %s' % (intfname, addr))
 
             node.rcmd('ip link set dev %s up' % intfname)
             node.rcmd('ip link set dev %s mtu 1450' % intfname)
