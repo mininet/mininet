@@ -79,6 +79,12 @@ isoURLs = {
     'wily64server':
     'http://mirrors.kernel.org/ubuntu-releases/15.10/'
     'ubuntu-15.10-server-amd64.iso',
+    'xenial32server':
+    'http://mirrors.kernel.org/ubuntu-releases/16.04/'
+    'ubuntu-16.04.1-server-i386.iso',
+    'xenial64server':
+    'http://mirrors.kernel.org/ubuntu-releases/16.04/'
+    'ubuntu-16.04.1-server-amd64.iso',
 }
 
 
@@ -148,7 +154,7 @@ def depend():
     run( 'sudo apt-get -qy update' )
     run( 'sudo apt-get -qy install'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
-         ' e2fsprogs dnsmasq curl'
+         ' e2fsprogs curl'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
@@ -221,7 +227,10 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
         return kernel, initrd
     log( '* Extracting kernel to', kernel )
     nbd = attachNBD( image, flags='-r' )
-    print srun( 'partx ' + nbd )
+    try:
+        print( srun( 'partx ' + nbd ) )
+    except:
+        log( 'Warning - partx failed with error' )
     # Assume kernel is in partition 1/boot/vmlinuz*generic for now
     part = nbd + 'p1'
     mnt = mkdtemp()
@@ -245,8 +254,9 @@ def findBaseImage( flavor, size='8G' ):
         # Detect race condition with multiple builds
         perms = stat( image )[ ST_MODE ] & 0777
         if perms != 0444:
-            raise Exception( 'Error - %s is writable ' % image +
-                            '; are multiple builds running?' )
+            raise Exception( 'Error - base image %s is writable.' % image +
+                             ' Are multiple builds running? if not,'
+                             ' remove %s and try again.' % image )
     else:
         # We create VMImageDir here since we are called first
         run( 'mkdir -p %s' % VMImageDir )
@@ -378,6 +388,10 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
         accel = 'tcg'
     else:
         accel = 'kvm'
+        try:
+            run( 'kvm-ok' )
+        except:
+            raise Exception( 'kvm-ok failed; try using --nokvm' )
     cmd = [ 'sudo', kvm,
            '-machine', 'accel=%s' % accel,
            '-nographic',
