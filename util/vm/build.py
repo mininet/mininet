@@ -69,10 +69,10 @@ isoURLs = {
     'ubuntu-12.04.5-server-amd64.iso',
     'trusty32server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04.3-server-i386.iso',
+    'ubuntu-14.04.4-server-i386.iso',
     'trusty64server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04.3-server-amd64.iso',
+    'ubuntu-14.04.4-server-amd64.iso',
     'wily32server':
     'http://mirrors.kernel.org/ubuntu-releases/15.10/'
     'ubuntu-15.10-server-i386.iso',
