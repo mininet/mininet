@@ -37,6 +37,7 @@ test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     # Truly non-interactive apt-get installation
+    package_manager=apt-get
     install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
     remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
     pkginst='sudo dpkg -i'
@@ -48,6 +49,7 @@ fi
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
 if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    package_manager=yum
     install='sudo yum -y install'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
@@ -103,7 +105,7 @@ OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
-    sudo apt-get update
+    sudo $package_manager update
     if ! $install linux-image-$KERNEL_NAME; then
         echo "Could not install linux-image-$KERNEL_NAME"
         echo "Skipping - assuming installed kernel is OK."
