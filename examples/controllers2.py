@@ -11,7 +11,6 @@ Note that one could also create a custom switch class and pass it into
 the Mininet() constructor.
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import Controller, OVSSwitch

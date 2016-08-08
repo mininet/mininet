@@ -8,7 +8,6 @@ multiple hosts and monitor their output interactively for a period=
 of time.
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import Node

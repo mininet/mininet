@@ -2,7 +2,6 @@
 
 "Monitor multiple hosts using popen()/pmonitor()"
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.topo import SingleSwitchTopo

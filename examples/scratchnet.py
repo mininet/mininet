@@ -8,7 +8,6 @@ but it exposes the configuration details and allows customization.
 For most tasks, the higher-level API will be preferable.
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import Node

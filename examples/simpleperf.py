@@ -9,7 +9,6 @@ iperf will hang indefinitely if the TCP handshake fails
 to complete.
 """
 
-from __future__ import print_function
 
 from mininet.topo import Topo
 from mininet.net import Mininet

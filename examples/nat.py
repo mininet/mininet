@@ -4,7 +4,6 @@
 Example to create a Mininet topology and connect it to the internet via NAT
 """
 
-from __future__ import print_function
 
 from mininet.cli import CLI
 from mininet.log import lg

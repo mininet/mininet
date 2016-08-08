@@ -23,7 +23,6 @@ of switches, this example demonstrates:
 
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller

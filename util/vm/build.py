@@ -26,7 +26,6 @@ Basic idea:
 
 """
 
-from __future__ import print_function
 import os
 from os import stat, path
 from stat import ST_MODE, ST_SIZE

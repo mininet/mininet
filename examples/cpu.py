@@ -4,7 +4,6 @@
 cpu.py: test iperf bandwidth for varying cpu limits
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost

@@ -16,7 +16,6 @@ demonstrates:
 - running server processes (sshd in this case) on hosts
 """
 
-from __future__ import print_function
 import sys
 
 from mininet.net import Mininet

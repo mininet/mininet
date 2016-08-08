@@ -1,6 +1,5 @@
 "Utility functions for Mininet."
 
-from __future__ import print_function
 
 from mininet.log import output, info, error, warn, debug
 

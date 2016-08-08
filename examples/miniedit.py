@@ -20,7 +20,6 @@ OpenFlow icon from https://www.opennetworking.org/
 
 MINIEDIT_VERSION = '2.2.0.1'
 
-from __future__ import print_function
 from optparse import OptionParser
 # from Tkinter import *
 from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,

@@ -5,7 +5,6 @@ Simple example of sending output to multiple files and
 monitoring them
 """
 
-from __future__ import print_function
 
 from mininet.topo import SingleSwitchTopo
 from mininet.net import Mininet

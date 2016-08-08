@@ -19,7 +19,6 @@ to-do:
 - think about clearing last hop - why doesn't that work?
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import OVSSwitch

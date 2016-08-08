@@ -2,7 +2,6 @@
 
 "Create a 64-node tree network, and test connectivity using ping."
 
-from __future__ import print_function
 
 from mininet.log import setLogLevel
 from mininet.node import UserSwitch, OVSKernelSwitch  # , KernelSwitch

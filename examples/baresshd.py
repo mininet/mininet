@@ -2,7 +2,6 @@
 
 "This example doesn't use OpenFlow, but attempts to run sshd in a namespace."
 
-from __future__ import print_function
 import sys
 
 from mininet.node import Host

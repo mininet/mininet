@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-from __future__ import print_function
 from subprocess import check_output as co
 from sys import exit
 

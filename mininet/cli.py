@@ -25,7 +25,6 @@ list all nodes ('nodes'), to print out the network topology
 and bandwidth ('iperf'.)
 """
 
-from __future__ import print_function
 from subprocess import call
 from cmd import Cmd
 from os import isatty

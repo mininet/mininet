@@ -74,7 +74,6 @@ Things to do:
 - hifi support (e.g. delay compensation)
 """
 
-from __future__ import print_function
 
 from mininet.node import Node, Host, OVSSwitch, Controller
 from mininet.link import Link, Intf

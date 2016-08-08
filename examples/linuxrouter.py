@@ -27,7 +27,6 @@ Additional routes may be added to the router or hosts by
 executing 'ip route' or 'route' commands on the router or hosts.
 """
 
-from __future__ import print_function
 
 from mininet.topo import Topo
 from mininet.net import Mininet

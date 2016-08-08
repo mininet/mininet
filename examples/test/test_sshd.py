@@ -4,7 +4,6 @@
 Test for sshd.py
 """
 
-from __future__ import print_function
 import unittest
 import pexpect
 from mininet.clean import sh

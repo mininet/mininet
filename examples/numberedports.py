@@ -6,7 +6,6 @@ Validate that the port numbers match to the interface name,
 and that the ovs ports match the mininet ports.
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import Controller

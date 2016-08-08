@@ -5,7 +5,6 @@ This example monitors a number of hosts using host.popen() and
 pmonitor()
 """
 
-from __future__ import print_function
 
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
