@@ -16,8 +16,8 @@ from distutils.version import StrictVersion
 def tsharkVersion():
     "Return tshark version"
     versionStr = quietRun( 'tshark -v' )
-    versionMatch = re.findall( r'TShark \d+.\d+.\d+', versionStr )[0]
-    return versionMatch.split()[ 1 ]
+    versionMatch = re.findall( r'TShark[^\d]*(\d+.\d+.\d+)', versionStr )
+    return versionMatch[ 0 ]
 
 # pylint doesn't understand pexpect.match, unfortunately!
 # pylint:disable=maybe-no-member
