@@ -239,7 +239,7 @@ class RemoteMixin( object ):
            args: string or list of strings
            returns: stdout and stderr"""
         popen = self.rpopen( *cmd, **opts )
-        # print( 'RCMD: POPEN:', popen )
+        # info( 'RCMD: POPEN:', popen, '\n' )
         # These loops are tricky to get right.
         # Once the process exits, we can read
         # EOF twice if necessary.
@@ -416,8 +416,8 @@ class RemoteLink( Link ):
         if node2.server == 'localhost':
             return self.makeTunnel( node2, node1, intfname2, intfname1,
                                     addr2, addr1 )
-        print( '\n*** Make SSH tunnel ' + node1.server + ':' + intfname1 +
-                                ' == ' + node2.server + ':' + intfname2 )
+        debug( '\n*** Make SSH tunnel ' + node1.server + ':' + intfname1 +
+               ' == ' + node2.server + ':' + intfname2 )
         # 1. Create tap interfaces
         for node in node1, node2:
             # For now we are hard-wiring tap9, which we will rename
@@ -531,8 +531,8 @@ class RemoteGRELink( RemoteLink ):
         if node1.server == 'localhost':
             output = quietRun('ip route get %s' % node2.serverIP)
             IP1 = output.split(' src ')[1].split()[0]
-        print( '\n*** Make GRE tunnel ' + node1.server + ':' + intfname1 +
-                                ' == ' + node2.server + ':' + intfname2 )
+        debug( '\n*** Make GRE tunnel ' + node1.server + ':' + intfname1 +
+               ' == ' + node2.server + ':' + intfname2 )
         tun1 = 'local ' + IP1 + ' remote ' + IP2
         tun2 = 'local ' + IP2 + ' remote ' + IP1
         global GRE_KEY
@@ -872,27 +872,27 @@ def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
 
 def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
     "Test remote Node classes"
-    print( '*** Remote Node Test' )
+    info( '*** Remote Node Test\n' )
     net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link )
     c0 = net.addController( 'c0' )
     # Make sure controller knows its non-loopback address
     Intf( 'eth0', node=c0 ).updateIP()
-    print( "*** Creating local h1" )
+    info( "*** Creating local h1\n" )
     h1 = net.addHost( 'h1' )
-    print( "*** Creating remote h2" )
+    info( "*** Creating remote h2\n" )
     h2 = net.addHost( 'h2', server=remote )
-    print( "*** Creating local s1" )
+    info( "*** Creating local s1\n" )
     s1 = net.addSwitch( 's1' )
-    print( "*** Creating remote s2" )
+    info( "*** Creating remote s2\n" )
     s2 = net.addSwitch( 's2', server=remote )
-    print( "*** Adding links" )
+    info( "*** Adding links\n" )
     net.addLink( h1, s1 )
     net.addLink( s1, s2 )
     net.addLink( h2, s2 )
     net.start()
-    print( 'Mininet is running on', quietRun( 'hostname' ).strip() )
+    info( 'Mininet is running on', quietRun( 'hostname' ).strip(), '\n' )
     for node in c0, h1, h2, s1, s2:
-        print( 'Node', node, 'is running on', node.cmd( 'hostname' ).strip() )
+        info( 'Node', node, 'is running on', node.cmd( 'hostname' ).strip(), '\n' )
     net.pingAll()
     CLI( net )
     net.stop()
@@ -978,9 +978,10 @@ def signalTest( remote='ubuntu2'):
     h.shell.send_signal( SIGINT )
     h.shell.poll()
     if h.shell.returncode is None:
-        print( 'OK: ', h, 'has not exited' )
+        info( 'signalTest: SUCCESS: ', h, 'has not exited after SIGINT', '\n' )
     else:
-        print( 'FAILURE:', h, 'exited with code', h.shell.returncode )
+        info( 'signalTest: FAILURE:', h, 'exited with code',
+              h.shell.returncode, '\n' )
     h.stop()
 
 
