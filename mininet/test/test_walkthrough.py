@@ -126,10 +126,13 @@ class testWalkthrough( unittest.TestCase ):
         p.sendline( "s1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         s1Output = p.before
-        # strip command from ps output
-        h1Output = h1Output.split( '\n', 1 )[ 1 ]
-        s1Output = s1Output.split( '\n', 1 )[ 1 ]
-        self.assertEqual( h1Output, s1Output, 'h1 and s1 "ps" output differs')
+        # strip command from ps output and compute diffs
+        h1Output = h1Output.split( '\n' )[ 1: ]
+        s1Output = s1Output.split( '\n' )[ 1: ]
+        diffs = set( h1Output ).difference( set( s1Output ) )
+        # allow up to two diffs to account for daemons, etc.
+        self.assertTrue( len( diffs ) <= 2,
+                         'h1 and s1 "ps" output differ too much: %s' % diffs )
         p.sendline( 'exit' )
         p.wait()
 
