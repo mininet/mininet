@@ -20,7 +20,7 @@ import sys
 
 from mininet.net import Mininet
 from mininet.cli import CLI
-from mininet.log import lg
+from mininet.log import lg, info
 from mininet.node import Node
 from mininet.topolib import TreeTopo
 from mininet.util import waitListening
@@ -60,17 +60,14 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     connectToRootNS( network, switch, ip, routes )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
-    print( "*** Waiting for ssh daemons to start" )
+    info( "*** Waiting for ssh daemons to start\n" )
     for server in network.hosts:
         waitListening( server=server, port=22, timeout=5 )
 
-    print()
-    print( "*** Hosts are running sshd at the following addresses:" )
-    print()
+    info( "\n*** Hosts are running sshd at the following addresses:\n" )
     for host in network.hosts:
-        print( host.name, host.IP() )
-    print()
-    print( "*** Type 'exit' or control-D to shut down network" )
+        info( host.name, host.IP(), '\n' )
+    info( "\n*** Type 'exit' or control-D to shut down network\n" )
     CLI( network )
     for host in network.hosts:
         host.cmd( 'kill %' + cmd )

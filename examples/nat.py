@@ -6,7 +6,7 @@ Example to create a Mininet topology and connect it to the internet via NAT
 
 
 from mininet.cli import CLI
-from mininet.log import lg
+from mininet.log import lg, info
 from mininet.topolib import TreeNet
 
 
@@ -16,8 +16,8 @@ if __name__ == '__main__':
     # Add NAT connectivity
     net.addNAT().configDefault()
     net.start()
-    print( "*** Hosts are running and should have internet connectivity" )
-    print( "*** Type 'exit' or control-D to shut down network" )
+    info( "*** Hosts are running and should have internet connectivity\n" )
+    info( "*** Type 'exit' or control-D to shut down network\n" )
     CLI( net )
     # Shut down NAT
     net.stop()

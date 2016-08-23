@@ -15,7 +15,7 @@ from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.util import dumpNodeConnections
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, info
 
 from sys import argv
 
@@ -45,9 +45,9 @@ def perfTest( lossy=True ):
                    host=CPULimitedHost, link=TCLink,
                    autoStaticArp=True )
     net.start()
-    print( "Dumping host connections" )
+    info( "Dumping host connections\n" )
     dumpNodeConnections(net.hosts)
-    print( "Testing bandwidth between h1 and h4" )
+    info( "Testing bandwidth between h1 and h4\n" )
     h1, h4 = net.getNodeByName('h1', 'h4')
     net.iperf( ( h1, h4 ), l4Type='UDP' )
     net.stop()

@@ -27,7 +27,7 @@ of switches, this example demonstrates:
 from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
-from mininet.log import lg
+from mininet.log import lg, info
 from mininet.util import irange, quietRun
 from mininet.link import TCLink
 from functools import partial
@@ -84,7 +84,7 @@ def linearBandwidthTest( lengths ):
     assert 'reno' in output
 
     for datapath in switches.keys():
-        print( "*** testing", datapath, "datapath" )
+        info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
         link = partial( TCLink, delay='1ms' )
@@ -92,36 +92,34 @@ def linearBandwidthTest( lengths ):
                        controller=Controller, waitConnected=True,
                        link=link )
         net.start()
-        print( "*** testing basic connectivity" )
+        info( "*** testing basic connectivity\n" )
         for n in lengths:
             net.ping( [ net.hosts[ 0 ], net.hosts[ n ] ] )
-        print( "*** testing bandwidth" )
+        info( "*** testing bandwidth\n" )
         for n in lengths:
             src, dst = net.hosts[ 0 ], net.hosts[ n ]
             # Try to prime the pump to reduce PACKET_INs during test
             # since the reference controller is reactive
             src.cmd( 'telnet', dst.IP(), '5001' )
-            print( "testing", src.name, "<->", dst.name )
+            info( "testing", src.name, "<->", dst.name, '\n' )
             bandwidth = net.iperf( [ src, dst ], seconds=10 )
-            print( bandwidth )
+            info( bandwidth, '\n' )
             flush()
             results[ datapath ] += [ ( n, bandwidth ) ]
         net.stop()
 
     for datapath in switches.keys():
-        print()
-        print( "*** Linear network results for", datapath, "datapath:" )
-        print()
+        info( "\n*** Linear network results for", datapath, "datapath:\n" )
         result = results[ datapath ]
-        print( "SwitchCount\tiperf Results" )
+        info( "SwitchCount\tiperf Results\n" )
         for switchCount, bandwidth in result:
-            print( switchCount, '\t\t' )
-            print( bandwidth[ 0 ], 'server, ', bandwidth[ 1 ], 'client' )
-        print()
-    print()
+            info( switchCount, '\t\t' )
+            info( bandwidth[ 0 ], 'server, ', bandwidth[ 1 ], 'client\n' )
+        info( '\n')
+    info( '\n' )
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     sizes = [ 1, 10, 20, 40, 60, 80 ]
-    print( "*** Running linearBandwidthTest", sizes )
+    info( "*** Running linearBandwidthTest", sizes, '\n' )
     linearBandwidthTest( sizes  )

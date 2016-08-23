@@ -82,7 +82,7 @@ def run():
     net = Mininet( topo=topo )  # controller is used by s1-s3
     net.start()
     info( '*** Routing Table on Router:\n' )
-    print( net[ 'r0' ].cmd( 'route' ) )
+    info( net[ 'r0' ].cmd( 'route' ) )
     CLI( net )
     net.stop()
 

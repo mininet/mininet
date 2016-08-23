@@ -41,7 +41,7 @@ def scratchNet( cname='controller', cargs='-v ptcp:' ):
     switch.cmd( 'ovs-vsctl del-br dp0' )
     switch.cmd( 'ovs-vsctl add-br dp0' )
     for intf in switch.intfs.values():
-        print( switch.cmd( 'ovs-vsctl add-port dp0 %s' % intf ) )
+        switch.cmd( 'ovs-vsctl add-port dp0 %s\n' % intf )
 
     # Note: controller and switch are in root namespace, and we
     # can connect via loopback interface
