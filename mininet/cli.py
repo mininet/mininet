@@ -373,7 +373,7 @@ class CLI( Cmd ):
     def do_links( self, _line ):
         "Report on links"
         for link in self.mn.links:
-            output( link, link.status() )
+            output( link, link.status(), '\n' )
 
     def do_switch( self, line ):
         "Starts or stops a switch"
