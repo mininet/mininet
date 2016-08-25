@@ -34,8 +34,8 @@ class testLinearBandwidth( unittest.TestCase ):
                     bw *= 10 ** 9
                 # check that we have a previous result to compare to
                 if n != 1:
-                    info = ( 'bw: %d bits/s across %d switches, '
-                             'previous: %d bits/s across %d switches' %
+                    info = ( 'bw: %.2e bits/s across %d switches, '
+                             'previous: %.2e bits/s across %d switches' %
                              ( bw, n, previous_bw, previous_n ) )
                     self.assertTrue( bw < previous_bw, info )
                 previous_bw, previous_n = bw, n

@@ -87,7 +87,7 @@ def linearBandwidthTest( lengths ):
         info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        link = partial( TCLink, delay='1ms' )
+        link = partial( TCLink, delay='2ms' )
         net = Mininet( topo=topo, switch=Switch,
                        controller=Controller, waitConnected=True,
                        link=link )
@@ -102,19 +102,20 @@ def linearBandwidthTest( lengths ):
             # since the reference controller is reactive
             src.cmd( 'telnet', dst.IP(), '5001' )
             info( "testing", src.name, "<->", dst.name, '\n' )
-            bandwidth = net.iperf( [ src, dst ], seconds=10 )
-            info( bandwidth, '\n' )
+            # serverbw = received; _clientbw = buffered
+            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=10 )
+            info( serverbw, '\n' )
             flush()
-            results[ datapath ] += [ ( n, bandwidth ) ]
+            results[ datapath ] += [ ( n, serverbw ) ]
         net.stop()
 
     for datapath in switches.keys():
         info( "\n*** Linear network results for", datapath, "datapath:\n" )
         result = results[ datapath ]
         info( "SwitchCount\tiperf Results\n" )
-        for switchCount, bandwidth in result:
+        for switchCount, serverbw in result:
             info( switchCount, '\t\t' )
-            info( bandwidth[ 0 ], 'server, ', bandwidth[ 1 ], 'client\n' )
+            info( serverbw, '\n' )
         info( '\n')
     info( '\n' )
 
