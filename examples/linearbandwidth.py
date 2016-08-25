@@ -26,7 +26,7 @@ of switches, this example demonstrates:
 from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
-from mininet.log import lg
+from mininet.log import lg, info
 from mininet.util import irange, quietRun
 from mininet.link import TCLink
 from functools import partial
@@ -86,7 +86,7 @@ def linearBandwidthTest( lengths ):
         print "*** testing", datapath, "datapath"
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        link = partial( TCLink, delay='1ms' )
+        link = partial( TCLink, delay='2ms' )
         net = Mininet( topo=topo, switch=Switch,
                        controller=Controller, waitConnected=True,
                        link=link )
@@ -100,11 +100,12 @@ def linearBandwidthTest( lengths ):
             # Try to prime the pump to reduce PACKET_INs during test
             # since the reference controller is reactive
             src.cmd( 'telnet', dst.IP(), '5001' )
-            print "testing", src.name, "<->", dst.name,
-            bandwidth = net.iperf( [ src, dst ], seconds=10 )
-            print bandwidth
+            info( "testing", src.name, "<->", dst.name, '\n' )
+            # serverbw = received; _clientbw = buffered
+            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=10 )
+            info( serverbw, '\n' )
             flush()
-            results[ datapath ] += [ ( n, bandwidth ) ]
+            results[ datapath ] += [ ( n, serverbw ) ]
         net.stop()
 
     for datapath in switches.keys():
@@ -112,12 +113,13 @@ def linearBandwidthTest( lengths ):
         print "*** Linear network results for", datapath, "datapath:"
         print
         result = results[ datapath ]
-        print "SwitchCount\tiperf Results"
-        for switchCount, bandwidth in result:
-            print switchCount, '\t\t',
-            print bandwidth[ 0 ], 'server, ', bandwidth[ 1 ], 'client'
-        print
-    print
+        info( "SwitchCount\tiperf Results\n" )
+        for switchCount, serverbw in result:
+            info( switchCount, '\t\t' )
+            info( serverbw, '\n' )
+        info( '\n')
+    info( '\n' )
+
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
