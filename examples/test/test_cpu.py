@@ -25,13 +25,13 @@ class testCPU( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
-        p = pexpect.spawn( 'python -m mininet.examples.cpu' )
+        p = pexpect.spawn( 'python -m mininet.examples.cpu', timeout=300 )
         # matches each line from results( shown above )
         opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.e\+]+)',
                  pexpect.EOF ]
         scheds = []
         while True:
-            index = p.expect( opts, timeout=600 )
+            index = p.expect( opts )
             if index == 0:
                 sched = p.match.group( 1 )
                 cpu = float( p.match.group( 2 ) )
@@ -40,7 +40,7 @@ class testCPU( unittest.TestCase ):
                     scheds.append( sched )
                 else:
                     self.assertTrue( bw < previous_bw,
-                                     "%f should be less than %f\n" %
+                                     "%e should be less than %e\n" %
                                      ( bw, previous_bw ) )
                 previous_bw = bw
             else:
