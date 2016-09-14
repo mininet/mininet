@@ -30,7 +30,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
 from mininet.nodelib import LinuxBridge
-from mininet.link import Link, TCLink, OVSLink
+from mininet.link import Link, TCLink, TCLink1, OVSLink
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
 from mininet.topolib import TreeTopo, TorusTopo
@@ -85,6 +85,7 @@ CONTROLLERS = { 'ref': Controller,
 LINKDEF = 'default'
 LINKS = { 'default': Link,
           'tc': TCLink,
+          'tc1': TCLink1,
           'ovs': OVSLink }
 
 # TESTS dict can contain functions and/or Mininet() method names
