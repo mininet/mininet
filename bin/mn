@@ -225,7 +225,7 @@ class MininetRunner( object ):
                          help = '|'.join( LEVELS.keys() )  )
         opts.add_option( '--innamespace', action='store_true',
                          default=False, help='sw and ctrl in namespace?' )
-        opts.add_option( '--listenport', type='int', default=6634,
+        opts.add_option( '--listenport', type='int', default=6654,
                          help='base port for passive switch listening' )
         opts.add_option( '--nolistenport', action='store_true',
                          default=False, help="don't use passive listening " +
