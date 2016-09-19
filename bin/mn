@@ -30,7 +30,7 @@ from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
 from mininet.nodelib import LinuxBridge
-from mininet.link import Link, TCLink, OVSLink
+from mininet.link import Link, TCLink, TCULink, OVSLink
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
 from mininet.topolib import TreeTopo, TorusTopo
@@ -73,18 +73,18 @@ HOSTS = { 'proc': Host,
           'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
 
 CONTROLLERDEF = 'default'
-
 CONTROLLERS = { 'ref': Controller,
                 'ovsc': OVSController,
                 'nox': NOX,
                 'remote': RemoteController,
                 'ryu': Ryu,
-                'default': DefaultController,  # Note: replaced below
+                'default': DefaultController,  # Note: overridden below
                 'none': NullController }
 
 LINKDEF = 'default'
-LINKS = { 'default': Link,
+LINKS = { 'default': Link,  # Note: overridden below
           'tc': TCLink,
+          'tcu': TCULink,
           'ovs': OVSLink }
 
 # TESTS dict can contain functions and/or Mininet() method names
@@ -341,11 +341,19 @@ class MininetRunner( object ):
                                      "for switch %s" %
                                      opts.switch )
 
+
+
         topo = buildTopo( TOPOS, opts.topo )
         switch = customClass( SWITCHES, opts.switch )
         host = customClass( HOSTS, opts.host )
         controller = [ customClass( CONTROLLERS, c )
                        for c in opts.controller ]
+
+        if opts.switch == 'user' and opts.link == 'default':
+            debug( '*** Using TCULink with UserSwitch\n' )
+            # Use link configured correctly for UserSwitch
+            opts.link = 'tcu'
+
         link = customClass( LINKS, opts.link )
 
         if self.validate:
