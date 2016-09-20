@@ -230,7 +230,8 @@ class TCIntf( Intf ):
     bwParamMax = 1000
 
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
-                latency_ms=None, enable_ecn=False, enable_red=False ):
+                latency_ms=None, enable_ecn=False, enable_red=False,
+                smooth_change=False ):
         "Return tc commands to set bandwidth"
 
         cmds, parent = [], ' root '
@@ -239,6 +240,8 @@ class TCIntf( Intf ):
             error( 'Bandwidth limit', bw, 'is outside supported range 0..%d'
                    % self.bwParamMax, '- ignoring\n' )
         elif bw is not None:
+            smooth_change_str = 'change' if smooth_change else 'add'
+            
             # BL: this seems a bit brittle...
             if ( speedup > 0 and
                  self.node.name[0:1] == 's' ):
@@ -248,18 +251,24 @@ class TCIntf( Intf ):
             # are specifying the correct sizes. For now I have used
             # the same settings we had in the mininet-hifi code.
             if use_hfsc:
-                cmds += [ '%s qdisc add dev %s root handle 5:0 hfsc default 1',
-                          '%s class add dev %s parent 5:0 classid 5:1 hfsc sc '
+                if not smooth_change:
+                    cmds += [ '%s qdisc add dev %s root handle 5:0 hfsc default 1']
+                cmds += ['%s class ' + smooth_change_str + ' dev %s parent 5:0 classid 5:1 hfsc sc '
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
                 if latency_ms is None:
                     latency_ms = 15 * 8 / bw
+                if smooth_change:
+                    error("tbf does not support smooth change")
+                    
                 cmds += [ '%s qdisc add dev %s root handle 5: tbf ' +
                           'rate %fMbit burst 15000 latency %fms' %
                           ( bw, latency_ms ) ]
-            else:
-                cmds += [ '%s qdisc add dev %s root handle 5:0 htb default 1',
-                          '%s class add dev %s parent 5:0 classid 5:1 htb ' +
+            else:    
+                if not smooth_change:
+                    cmds += [ '%s qdisc add dev %s root handle 5:0 htb default 1']
+                cmds += [ '%s class ' + smooth_change_str +
+                          ' dev %s parent 5:0 classid 5:1 htb ' +
                           'rate %fMbit burst 15k' % bw ]
             parent = ' parent 5:1 '
 
@@ -282,7 +291,7 @@ class TCIntf( Intf ):
 
     @staticmethod
     def delayCmds( parent, delay=None, jitter=None,
-                   loss=None, max_queue_size=None ):
+                   loss=None, max_queue_size=None, smooth_change=False ):
         "Internal method: return tc commands for delay and loss"
         cmds = []
         if delay and delay < 0:
@@ -300,7 +309,8 @@ class TCIntf( Intf ):
                 'limit %d' % max_queue_size if max_queue_size is not None
                 else '' )
             if netemargs:
-                cmds = [ '%s qdisc add dev %s ' + parent +
+                smooth_change_str = 'change' if smooth_change else 'add'
+                cmds = [ '%s qdisc ' + smooth_change_str + ' dev %s ' + parent +
                          ' handle 10: netem ' +
                          netemargs ]
                 parent = ' parent 10:1 '
@@ -312,27 +322,64 @@ class TCIntf( Intf ):
         debug(" *** executing command: %s\n" % c)
         return self.cmd( c )
 
+    def requiresHardReset(self, bw, delay, jitter, loss, max_queue_size, use_hfsc, use_tbf):
+        # pessimistic assumptions: always require hard reset when limits are
+        # set from not None to None or the tc type changes
+        return ((bw is None and self.bw is not None) or
+                (delay is None and self.delay is not None) or
+                (jitter is None and self.jitter is not None) or
+                (loss is None and self.loss is not None) or
+                (max_queue_size is None and self.max_queue_size is not None) or
+                self.use_hfsc is not use_hfsc or
+                self.use_tbf is not use_tbf)
+
+    def storeConfig(self, bw, delay, jitter, loss, max_queue_size, use_hfsc, use_tbf):
+        self.bw = bw
+        self.delay = delay
+        self.jitter = jitter
+        self.loss = loss
+        self.max_queue_size = max_queue_size
+        self.use_hfsc = use_hfsc
+        self.use_tbf = use_tbf
+
+    def firstTimeConfig(self):
+        # any attribute could be used for this...
+        return not hasattr(self, 'use_hfsc')
+    
     def config( self, bw=None, delay=None, jitter=None, loss=None,
                 disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
-                max_queue_size=None, **params ):
+                max_queue_size=None, smooth_change=False, **params ):
         "Configure the port and set its properties."
-
+        
         result = Intf.config( self, **params)
 
         # Disable GRO
         if disable_gro:
             self.cmd( 'ethtool -K %s gro off' % self )
 
-        # Optimization: return if nothing else to configure
-        # Question: what happens if we want to reset things?
-        if ( bw is None and not delay and not loss
-             and max_queue_size is None ):
+        # Optimization: return if nothing else to configure and nothing changed.
+        # Note that the attribute 'use_hfsc' is only available if previous calls
+        # passed this check.
+        if ( bw is None and delay is None and loss is None
+             and max_queue_size is None and self.firstTimeConfig()):
             return
 
+        if smooth_change and self.firstTimeConfig():
+            error("smooth change is not support for setting initial values")
+            smooth_change = False
+
+        if (smooth_change and
+               self.requiresHardReset(bw, delay, jitter, loss, max_queue_size, use_hfsc, use_tbf)):
+            error("smooth change is not support if tc type changes or limits set to None")
+            smooth_change = False
+            
+        self.storeConfig(bw, delay, jitter, loss, max_queue_size, use_hfsc, use_tbf)
+        
         # Clear existing configuration
         tcoutput = self.tc( '%s qdisc show dev %s' )
-        if "priomap" not in tcoutput and "noqueue" not in tcoutput:
+        if ( "priomap" not in tcoutput and "noqueue" not in tcoutput
+             and not smooth_change ):
             cmds = [ '%s qdisc del dev %s root' ]
         else:
             cmds = []
@@ -342,14 +389,16 @@ class TCIntf( Intf ):
                                       use_hfsc=use_hfsc, use_tbf=use_tbf,
                                       latency_ms=latency_ms,
                                       enable_ecn=enable_ecn,
-                                      enable_red=enable_red )
+                                      enable_red=enable_red,
+                                      smooth_change=smooth_change)
         cmds += bwcmds
 
         # Delay/jitter/loss/max_queue_size using netem
         delaycmds, parent = self.delayCmds( delay=delay, jitter=jitter,
                                             loss=loss,
                                             max_queue_size=max_queue_size,
-                                            parent=parent )
+                                            parent=parent,
+                                            smooth_change=smooth_change)
         cmds += delaycmds
 
         # Ugly but functional: display configuration info
