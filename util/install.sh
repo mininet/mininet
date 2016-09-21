@@ -693,7 +693,7 @@ function all {
     # ivs
     # NOX-classic is deprecated, but you can install it manually if desired.
     # nox
-    pox
+    # pox
     oftest
     cbench
     echo "Enjoy Mininet!"
