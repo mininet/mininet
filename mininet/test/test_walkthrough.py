@@ -253,6 +253,8 @@ class testWalkthrough( unittest.TestCase ):
             p.sendline( 'h%d ifconfig' % i )
             p.expect( 'HWaddr 00:00:00:00:00:0%d' % i )
             p.expect( self.prompt )
+        p.sendline( 'exit' )
+        p.expect( pexpect.EOF )
 
     def testSwitches( self ):
         "Run iperf test using user and ovsk switches"
