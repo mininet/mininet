@@ -47,6 +47,8 @@ class testWalkthrough( unittest.TestCase ):
         mn.expect( '0% dropped' )
         tshark.expect( [ '74 Hello', '74 of_hello', '74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
+        mn.expect( pexpect.EOF )
+        tshark.expect( pexpect.EOF )
 
     def testBasic( self ):
         "Test basic CLI commands (help, nodes, net, dump)"
