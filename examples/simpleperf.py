@@ -21,8 +21,7 @@ from sys import argv
 
 class SingleSwitchTopo(Topo):
     "Single switch connected to n hosts."
-    def __init__(self, n=2, lossy=True, **opts):
-        Topo.__init__(self, **opts)
+    def build(self, n=2,lossy=True, **opts):
         switch = self.addSwitch('s1')
         for h in range(n):
             # Each host gets 50%/n of system CPU
