@@ -56,6 +56,16 @@ if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install redhat-lsb-core
     fi
 fi
+test -e /etc/SuSE-release && DIST="SUSE Linux"
+if [ "$DIST" = "SUSE Linux" ]; then
+    install='sudo zypper --non-interactive install '
+    remove='sudo zypper --non-interactive  remove '
+    pkginst='sudo rpm -ivh'
+    # Prereqs for this script
+    if ! which lsb_release &> /dev/null; then
+		$install openSUSE-release
+    fi
+fi
 if which lsb_release &> /dev/null; then
     DIST=`lsb_release -is`
     RELEASE=`lsb_release -rs`
@@ -68,7 +78,7 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer'; then
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'; then
     echo "Install.sh currently only supports Ubuntu, Debian, RedHat and Fedora."
     exit 1
 fi
@@ -129,6 +139,10 @@ function mn_deps {
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man pyflakes pylint python-pep8 python-pexpect
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+		$install gcc make socat psmisc xterm openssh iperf \
+			iproute telnet python-setuptools libcgroup-tools \
+			ethtool help2man python-pyflakes python3-pylint python-pep8 python-pexpect
     else
         $install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
@@ -160,6 +174,8 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+       $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
@@ -230,6 +246,8 @@ function install_wireshark {
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
             $install wireshark wireshark-gnome
+		elif [ "$DIST" = "SUSE LINUX"  ]; then
+			$install wireshark
         else
             $install wireshark tshark
         fi
@@ -562,6 +580,8 @@ function cbench {
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+		$install net-snmp-devel libpcap-devel libconfig-devel
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
