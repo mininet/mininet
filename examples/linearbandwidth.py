@@ -87,7 +87,7 @@ def linearBandwidthTest( lengths ):
         info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        link = partial( TCLink, delay='2ms' )
+        link = partial( TCLink, delay='2ms', bw=10 )
         net = Mininet( topo=topo, switch=Switch,
                        controller=Controller, waitConnected=True,
                        link=link )
