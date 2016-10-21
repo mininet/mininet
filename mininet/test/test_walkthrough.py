@@ -12,6 +12,7 @@ import os
 import re
 from mininet.util import quietRun
 from distutils.version import StrictVersion
+from time import sleep
 
 def tsharkVersion():
     "Return tshark version"
@@ -157,6 +158,11 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'h1 python -m SimpleHTTPServer 80 &' )
+        # The walkthrough doesn't specify a delay here, and
+        # we also don't read the output (also a possible problem),
+        # but for now let's wait a couple of seconds to make
+        # it less likely to fail due to the race condition.
+        sleep( 2 )
         p.expect( self.prompt )
         p.sendline( ' h2 wget -O - h1' )
         p.expect( '200 OK' )
