@@ -307,7 +307,7 @@ function ubuntuOvs {
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
              pkg-config bzip2 openssl python-all procps python-qt4 \
-             python-zopeinterface python-twisted-conch dkms
+             python-zopeinterface python-twisted-conch dkms uuid-runtime
 
     # Build OVS
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
