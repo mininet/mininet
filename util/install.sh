@@ -301,30 +301,36 @@ function ubuntuOvs {
     fi
 
     # Remove any old packages
-    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
-            openvswitch-pki openvswitch-switch
+
+    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-pki openvswitch-switch \
+            openvswitch-controller || true
 
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
              pkg-config bzip2 openssl python-all procps python-qt4 \
-             python-zopeinterface python-twisted-conch dkms
+             python-zopeinterface python-twisted-conch dkms dh-python dh-autoreconf \
+             uuid-runtime
 
     # Build OVS
+    parallel=`grep processor /proc/cpuinfo | wc -l`
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
-            DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+            DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
-    $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
-             openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
-    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+    for pkg in common datapath-dkms pki switch; do
+        pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
+        echo "Installing $pkg"
+        $pkginst $pkg
+    done
+    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb 2>/dev/null; then
         echo "Ignoring error installing openvswitch-controller"
     fi
 
-    modinfo openvswitch
+    /sbin/modinfo openvswitch
     sudo ovs-vsctl show
     # Switch can run on its own, but
     # Mininet should control the controller
     # This appears to only be an issue on Ubuntu/Debian
-    if sudo service openvswitch-controller stop; then
+    if sudo service openvswitch-controller stop 2>/dev/null; then
         echo "Stopped running controller"
     fi
     if [ -e /etc/init.d/openvswitch-controller ]; then
