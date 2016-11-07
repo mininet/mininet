@@ -787,6 +787,37 @@ class Mininet( object ):
 
     # XXX This should be cleaned up
 
+    @staticmethod
+    def _parseIperfServer( iperfOutput ):
+        """Parse iperf server output for multiple clients
+           and return bandwidth
+           iperfOutput: string
+           returns: dictionary formated {'IP':'bandwidth'}
+        """
+        idReg = r'(\[.+\d+\])'
+        ipReg = r'(\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b)'
+        valReg = r'([\d\.]+ \w+/sec)'
+
+        idToIP = {}
+        idToRes = {}
+
+        splitOut = iperfOutput.splitlines()
+        for line in splitOut:
+            # iperf id to ip
+            if len(re.findall(idReg, line)) == 1 and len(re.findall(ipReg, line)) == 2:
+                idToIP[re.findall(idReg, line)[0]] = re.findall(ipReg, line)[1]
+            # iperf id to result
+            elif len(re.findall(idReg, line)) == 1 and len(re.findall(valReg, line)) == 1:
+                idToRes[re.findall(idReg, line)[0]] = re.findall(valReg, line)[0]
+
+        results = {}
+        for _id in idToRes:
+            # Remove wait listen connections
+            if idToRes[_id] != '0.00 bits/sec' and _id in idToIP:
+                results[idToIP[_id]] = idToRes[_id]
+
+        return results
+
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M', fmt=None,
                seconds=5, port=5001):
         """Run iperf between two hosts.
@@ -837,6 +868,82 @@ class Mininet( object ):
             result.insert( 0, udpBw )
         output( '*** Results: %s\n' % result )
         return result
+
+    def iperfMulti( self, hosts=None, seconds=5, port=5001):
+        """Run iperf between a server and multiple  clients.
+           hosts: list of hosts with the server as the first; if None, all of the hosts are used
+           seconds: iperf time to transmit
+           port: iperf port
+           returns: A key-value dictinary with the client as the key and a two-element array 
+           of [serverSpeed, clientSpeed] as the value.
+           notes: 
+           - send() is buffered, so client rate can be much higher than
+             the actual transmission rate; on an unloaded system, server
+             rate should be much closer to the actual receive rate
+           - if a client cannot connect to the server its results will be [None, None]
+           - in the rare case that the server results cannot be parsed correctly
+             its results will be [None, clientSpeed]
+        """
+
+        #sort server and clients 
+        hosts = hosts or self.hosts
+        server = hosts[0]
+        clients = hosts[1:]
+
+        output('*** Iperf server: ', server, '\n')
+        output('*** Iperf clinets: ', *clients)
+        output('\n')
+
+        #start server
+        server.cmd('killall -9 iperf')
+        iperfArgs = 'iperf -p %d ' % port
+        server.sendCmd(iperfArgs + '-s')
+
+	#start clients
+        workingClients = []
+        for client in clients:
+            if not waitListening(client, server.IP(), 5001):
+                output('Client', client, 'could not connect to server', server,'\n')
+            else:
+                workingClients.append(client)
+                output('Client', client, 'connected to server', server,'\n')
+                client.sendCmd(iperfArgs + '-t %d -c ' % seconds + server.IP())
+
+        #get server output
+        serverout = ''
+        count = 2 * len(workingClients)
+        while len( re.findall( '/sec', serverout ) ) < count:
+            serverout += server.monitor( timeoutms=5000 )
+        server.sendInt()
+        serverout += server.waitOutput()
+
+        #get client output
+        clientout = {}
+        while len(workingClients) > 0:
+            for client in workingClients:
+                if client not in clientout:
+                    clientout[client] = ''
+                if len( re.findall('/sec', clientout[client])) < 1:
+                    clientout[client] += client.monitor( timeoutms=5000 )
+                else:
+                    clientout[client] += client.waitOutput()
+                    workingClients.remove(client)
+
+        # need to match iperf ID to host IP for iperf server output
+        serverIPtoRes = self._parseIperfServer(serverout)
+        results = {}
+        for client in clients:
+            if client not in clientout:
+                output('*** Client ' + client.name + ' failed to connect to ' + server.name + '\n')
+                results[client] = [None, None]
+            elif client.IP() in serverIPtoRes:
+                output('*** ' + client.name + '\nClient speed: ' + self._parseIperf(clientout[client]) + '\nServer speed: ' + serverIPtoRes[client.IP()] + '\n')
+                results[client] = [serverIPtoRes[client.IP()], self._parseIperf(clientout[client])]
+            else:
+                output('*** ' + client.name + '\nClient speed: ' + self._parseIperf(clientout[client]) + '\nServer speed: None\n')
+                results[client] = [None, self._parseIperf(clientout[client])]
+
+        return results
 
     def runCpuLimitTest( self, cpu, duration=5 ):
         """run CPU limit test with 'while true' processes.
