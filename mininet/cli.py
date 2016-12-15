@@ -195,20 +195,76 @@ class CLI( Cmd ):
     # pylint: enable=broad-except,exec-used
 
     def do_pingall( self, line ):
-        "Ping between all hosts."
-        self.mn.pingAll( line )
+        """ Ping between all hosts.
+            timeout: (optional) time to wait for a response
+            count: (optional) number of packets
+            Usage: pingall timeout count"""
+        args = line.split()
+        if not args:
+            self.mn.pingAll()
+        elif len(args) == 2:
+            if not args[ 0 ].isdigit():
+                error( 'invalid timeout parameter\n' )
+            elif not args[ 1 ].isdigit():
+                error( 'invalid count parameter\n' )
+            else:
+                self.mn.pingAll( timeout=args[ 0 ] , count=args[ 1 ] )
+        else:
+            error( 'invalid number of args: pingall timeout count\n' )
 
-    def do_pingpair( self, _line ):
-        "Ping between first two hosts, useful for testing."
-        self.mn.pingPair()
+    def do_pingpair( self, line ):
+        """ Ping between first two hosts, useful for testing.
+            timeout: (optional) time to wait for a response
+            count: (optional) number of packets
+            Usage: pingpair timeout count"""
+        args = line.split()
+        if not args:
+            self.mn.pingPair()
+        elif len(args) == 2:
+            if not args[ 0 ].isdigit():
+                error( 'invalid timeout parameter\n' )
+            elif not args[ 1 ].isdigit():
+                error( 'invalid count parameter\n' )
+            else:
+                self.mn.pingPair( timeout=args[ 0 ] , count=args[ 1 ] )
+        else:
+            error( 'invalid number of args: pingpair timeout count\n' )
 
-    def do_pingallfull( self, _line ):
-        "Ping between all hosts, returns all ping results."
-        self.mn.pingAllFull()
+    def do_pingallfull( self, line ):
+        """ Ping between all hosts, returns all ping results.
+            timeout: (optional) time to wait for a response
+            count: (optional) number of packets
+            Usage: pingallfull timeout count"""
+        args = line.split()
+        if not args:
+            self.mn.pingAllFull()
+        elif len(args) == 2:
+            if not args[ 0 ].isdigit():
+                error( 'invalid timeout parameter\n' )
+            elif not args[ 1 ].isdigit():
+                error( 'invalid count parameter\n' )
+            else:
+                self.mn.pingAllFull( timeout=args[ 0 ] , count=args[ 1 ] )
+        else:
+            error( 'invalid number of args: pingallfull timeout count\n' )
 
-    def do_pingpairfull( self, _line ):
-        "Ping between first two hosts, returns all ping results."
-        self.mn.pingPairFull()
+    def do_pingpairfull( self, line ):
+        """ Ping between first two hosts, returns all ping results.
+            timeout: (optional) time to wait for a response
+            count: (optional) number of packets
+            Usage: pingpairfull timeout count"""
+        args = line.split()
+        if not args:
+            self.mn.pingPairFull()
+        elif len(args) == 2:
+            if not args[ 0 ].isdigit():
+                error( 'invalid timeout parameter\n' )
+            elif not args[ 1 ].isdigit():
+                error( 'invalid count parameter\n' )
+            else:
+                self.mn.pingPairFull( timeout=args[ 0 ] , count=args[ 1 ] )
+        else:
+            error( 'invalid number of args: pingpairfull timeout count\n' )
 
     def do_iperf( self, line ):
         """Simple iperf TCP test between two (optionally specified) hosts.

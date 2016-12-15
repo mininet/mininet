@@ -627,24 +627,25 @@ class Mininet( object ):
     # Probably we should create a tests.py for them
 
     @staticmethod
-    def _parsePing( pingOutput ):
+    def _parsePing( pingOutput, count ):
         "Parse ping output and return packets sent, received."
         # Check for downed link
         if 'connect: Network is unreachable' in pingOutput:
-            return 1, 0
+            return count, 0
         r = r'(\d+) packets transmitted, (\d+) received'
         m = re.search( r, pingOutput )
         if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
                    pingOutput )
-            return 1, 0
+            return count, 0
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received
 
-    def ping( self, hosts=None, timeout=None ):
+    def ping( self, hosts=None, timeout=None, count=1 ):
         """Ping between all specified hosts.
            hosts: list of hosts
            timeout: time to wait for a response, as string
+           count: number of packets
            returns: ploss packet loss percentage"""
         # should we check if running?
         packets = 0
@@ -661,9 +662,9 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' %
-                                           (opts, dest.IP()) )
-                        sent, received = self._parsePing( result )
+                        result = node.cmd( 'ping -c%s %s %s' %
+                                           (count, opts, dest.IP()) )
+                        sent, received = self._parsePing( result, count )
                     else:
                         sent, received = 0, 0
                     packets += sent
@@ -686,9 +687,9 @@ class Mininet( object ):
         return ploss
 
     @staticmethod
-    def _parsePingFull( pingOutput ):
+    def _parsePingFull( pingOutput, count ):
         "Parse ping output and return all data."
-        errorTuple = (1, 0, 0, 0, 0, 0)
+        errorTuple = (count, 0, 0, 0, 0, 0)
         # Check for downed link
         r = r'[uU]nreachable'
         m = re.search( r, pingOutput )
@@ -716,10 +717,11 @@ class Mininet( object ):
         rttdev = float( m.group( 4 ) )
         return sent, received, rttmin, rttavg, rttmax, rttdev
 
-    def pingFull( self, hosts=None, timeout=None ):
+    def pingFull( self, hosts=None, timeout=None, count=1 ):
         """Ping between all specified hosts and return all data.
            hosts: list of hosts
            timeout: time to wait for a response, as string
+           count: number of packets
            returns: all ping data; see function body."""
         # should we check if running?
         # Each value is a tuple: (src, dsd, [all ping outputs])
@@ -734,8 +736,8 @@ class Mininet( object ):
                     opts = ''
                     if timeout:
                         opts = '-W %s' % timeout
-                    result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
-                    outputs = self._parsePingFull( result )
+                    result = node.cmd( 'ping -c%s %s %s' % (count, opts, dest.IP()) )
+                    outputs = self._parsePingFull( result, count )
                     sent, received, rttmin, rttavg, rttmax, rttdev = outputs
                     all_outputs.append( (node, dest, outputs) )
                     output( ( '%s ' % dest.name ) if received else 'X ' )
@@ -749,27 +751,35 @@ class Mininet( object ):
                     (rttmin, rttavg, rttmax, rttdev) )
         return all_outputs
 
-    def pingAll( self, timeout=None ):
+    def pingAll( self, timeout=None, count=1 ):
         """Ping between all hosts.
+           timeout: time to wait for a response, as string
+           count: number of packets
            returns: ploss packet loss percentage"""
-        return self.ping( timeout=timeout )
+        return self.ping( timeout=timeout, count=count )
 
-    def pingPair( self ):
+    def pingPair( self, timeout=None, count=1 ):
         """Ping between first two hosts, useful for testing.
+           timeout: time to wait for a response, as string
+           count: number of packets
            returns: ploss packet loss percentage"""
         hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
-        return self.ping( hosts=hosts )
+        return self.ping( timeout=timeout, hosts=hosts, count=count )
 
-    def pingAllFull( self ):
+    def pingAllFull( self, timeout=None, count=1 ):
         """Ping between all hosts.
+           timeout: time to wait for a response, as string
+           count: number of packets
            returns: ploss packet loss percentage"""
-        return self.pingFull()
+        return self.pingFull( timeout=timeout, count=count )
 
-    def pingPairFull( self ):
+    def pingPairFull( self, timeout=None, count=1 ):
         """Ping between first two hosts, useful for testing.
+           timeout: time to wait for a response, as string
+           count: number of packets
            returns: ploss packet loss percentage"""
         hosts = [ self.hosts[ 0 ], self.hosts[ 1 ] ]
-        return self.pingFull( hosts=hosts )
+        return self.pingFull( timeout=timeout, hosts=hosts, count=count )
 
     @staticmethod
     def _parseIperf( iperfOutput ):
