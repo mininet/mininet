@@ -45,7 +45,7 @@ if 'PYTHONPATH' in os.environ:
 
 # someday: from ttk import *
 
-from mininet.log import info, debug, setLogLevel
+from mininet.log import info, warn, debug, setLogLevel
 from mininet.net import Mininet, VERSION
 from mininet.util import netParse, ipAdd, quietRun
 from mininet.util import buildTopo
