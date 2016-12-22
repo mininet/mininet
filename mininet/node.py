@@ -836,6 +836,11 @@ class CPULimitedHost( Host ):
         mountCgroups()
         cls.inited = True
 
+# new-18.12
+class Agent(Node):
+    def __init__(self, name, **params):
+        print("agent")
+        Node.__init__(self, name, **params)
 
 # Some important things to note:
 #
