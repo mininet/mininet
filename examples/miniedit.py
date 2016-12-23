@@ -50,6 +50,7 @@ from mininet.net import Mininet, VERSION
 from mininet.util import netParse, ipAdd, quietRun
 from mininet.util import buildTopo
 from mininet.util import custom, customClass
+from mininet.util import macColonHex
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import Controller, RemoteController, NOX, OVSController
 from mininet.node import CPULimitedHost, Host, Node
@@ -176,36 +177,53 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         self.rightfieldFrame = Frame(self.rootFrame, padx=5, pady=5)
         self.rightfieldFrame.grid(row=0, column=2, sticky='nswe', columnspan=2)
 
+        rowCount = 0
+
         # Field for Base IP
-        Label(self.leftfieldFrame, text="IP Base:").grid(row=0, sticky=E)
+        Label(self.leftfieldFrame, text="IP Base:").grid(row=rowCount, sticky=E)
         self.ipEntry = Entry(self.leftfieldFrame)
-        self.ipEntry.grid(row=0, column=1)
+        self.ipEntry.grid(row=rowCount, column=1)
         ipBase =  self.prefValues['ipBase']
         self.ipEntry.insert(0, ipBase)
+        rowCount += 1
+
+        # Selection for AutoSetMacs
+        autoSetMacs = self.prefValues['autoSetMacs']
+        Label(self.leftfieldFrame, text="Auto set host MACs:").grid(row=rowCount, sticky=E)
+        self.autoSetMacs = IntVar()
+        self.autoSetMacsButton = Checkbutton(self.leftfieldFrame, variable=self.autoSetMacs)
+        self.autoSetMacsButton.grid(row=1, column=rowCount, sticky=W)
+        if self.prefValues['autoSetMacs'] == '0':
+            self.autoSetMacsButton.deselect()
+        else:
+            self.autoSetMacsButton.select()
+        rowCount += 1
 
         # Selection of terminal type
-        Label(self.leftfieldFrame, text="Default Terminal:").grid(row=1, sticky=E)
+        Label(self.leftfieldFrame, text="Default Terminal:").grid(row=rowCount, sticky=E)
         self.terminalVar = StringVar(self.leftfieldFrame)
         self.terminalOption = OptionMenu(self.leftfieldFrame, self.terminalVar, "xterm", "gterm")
-        self.terminalOption.grid(row=1, column=1, sticky=W)
+        self.terminalOption.grid(row=rowCount, column=1, sticky=W)
         terminalType = self.prefValues['terminalType']
         self.terminalVar.set(terminalType)
+        rowCount += 1
 
         # Field for CLI
-        Label(self.leftfieldFrame, text="Start CLI:").grid(row=2, sticky=E)
+        Label(self.leftfieldFrame, text="Start CLI:").grid(row=rowCount, sticky=E)
         self.cliStart = IntVar()
         self.cliButton = Checkbutton(self.leftfieldFrame, variable=self.cliStart)
-        self.cliButton.grid(row=2, column=1, sticky=W)
+        self.cliButton.grid(row=rowCount, column=1, sticky=W)
         if self.prefValues['startCLI'] == '0':
             self.cliButton.deselect()
         else:
             self.cliButton.select()
+        rowCount += 1
 
         # Selection of switch type
-        Label(self.leftfieldFrame, text="Default Switch:").grid(row=3, sticky=E)
+        Label(self.leftfieldFrame, text="Default Switch:").grid(row=rowCount, sticky=E)
         self.switchType = StringVar(self.leftfieldFrame)
         self.switchTypeMenu = OptionMenu(self.leftfieldFrame, self.switchType, "Open vSwitch Kernel Mode", "Indigo Virtual Switch", "Userspace Switch", "Userspace Switch inNamespace")
-        self.switchTypeMenu.grid(row=3, column=1, sticky=W)
+        self.switchTypeMenu.grid(row=rowCount, column=1, sticky=W)
         switchTypePref = self.prefValues['switchType']
         if switchTypePref == 'ivs':
             self.switchType.set("Indigo Virtual Switch")
@@ -215,11 +233,12 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             self.switchType.set("Userspace Switch")
         else:
             self.switchType.set("Open vSwitch Kernel Mode")
+        rowCount += 1
 
 
         # Fields for OVS OpenFlow version
         ovsFrame= LabelFrame(self.leftfieldFrame, text='Open vSwitch', padx=5, pady=5)
-        ovsFrame.grid(row=4, column=0, columnspan=2, sticky=EW)
+        ovsFrame.grid(row=rowCount, column=0, columnspan=2, sticky=EW)
         Label(ovsFrame, text="OpenFlow 1.0:").grid(row=0, sticky=E)
         Label(ovsFrame, text="OpenFlow 1.1:").grid(row=1, sticky=E)
         Label(ovsFrame, text="OpenFlow 1.2:").grid(row=2, sticky=E)
@@ -257,17 +276,12 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         else:
             self.covsOf13.select()
 
-        # Field for DPCTL listen port
-        Label(self.leftfieldFrame, text="dpctl port:").grid(row=5, sticky=E)
-        self.dpctlEntry = Entry(self.leftfieldFrame)
-        self.dpctlEntry.grid(row=5, column=1)
-        if 'dpctl' in self.prefValues:
-            self.dpctlEntry.insert(0, self.prefValues['dpctl'])
+        rowCount = 0
 
         # sFlow
         sflowValues = self.prefValues['sflow']
         self.sflowFrame= LabelFrame(self.rightfieldFrame, text='sFlow Profile for Open vSwitch', padx=5, pady=5)
-        self.sflowFrame.grid(row=0, column=0, columnspan=2, sticky=EW)
+        self.sflowFrame.grid(row=rowCount, column=0, columnspan=2, sticky=EW)
 
         Label(self.sflowFrame, text="Target:").grid(row=0, sticky=E)
         self.sflowTarget = Entry(self.sflowFrame)
@@ -288,11 +302,12 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         self.sflowPolling = Entry(self.sflowFrame)
         self.sflowPolling.grid(row=3, column=1)
         self.sflowPolling.insert(0, sflowValues['sflowPolling'])
+        rowCount += 1
 
         # NetFlow
         nflowValues = self.prefValues['netflow']
         self.nFrame= LabelFrame(self.rightfieldFrame, text='NetFlow Profile for Open vSwitch', padx=5, pady=5)
-        self.nFrame.grid(row=1, column=0, columnspan=2, sticky=EW)
+        self.nFrame.grid(row=rowCount, column=0, columnspan=2, sticky=EW)
 
         Label(self.nFrame, text="Target:").grid(row=0, sticky=E)
         self.nflowTarget = Entry(self.nFrame)
@@ -312,6 +327,15 @@ class PrefsDialog(tkSimpleDialog.Dialog):
             self.nflowAddIdButton.deselect()
         else:
             self.nflowAddIdButton.select()
+
+        rowCount += 1
+
+        # Field for DPCTL listen port
+        Label(self.rightfieldFrame, text="dpctl port:").grid(row=rowCount, sticky=E)
+        self.dpctlEntry = Entry(self.rightfieldFrame)
+        self.dpctlEntry.grid(row=rowCount, column=1)
+        if 'dpctl' in self.prefValues:
+            self.dpctlEntry.insert(0, self.prefValues['dpctl'])
 
         # initial focus
         return self.ipEntry
@@ -335,12 +359,14 @@ class PrefsDialog(tkSimpleDialog.Dialog):
         nflowvalues = {'nflowTarget':self.nflowTarget.get(),
                        'nflowTimeout':self.nflowTimeout.get(),
                        'nflowAddId':str(self.nflowAddId.get())}
+	autoSetMacs = str(self.autoSetMacs.get())
         self.result = {'ipBase':ipBase,
                        'terminalType':terminalType,
                        'dpctl':dpctl,
                        'sflow':sflowValues,
                        'netflow':nflowvalues,
-                       'startCLI':startCLI}
+                       'startCLI':startCLI,
+                       'autoSetMacs':autoSetMacs}
         if sw == 'Indigo Virtual Switch':
             self.result['switchType'] = 'ivs'
             if StrictVersion(MININET_VERSION) < StrictVersion('2.1'):
@@ -1102,8 +1128,8 @@ class MiniEdit( Frame ):
             'openFlowVersions':{'ovsOf10':'1',
                                 'ovsOf11':'0',
                                 'ovsOf12':'0',
-                                'ovsOf13':'0'}
-
+                                'ovsOf13':'0'},
+            'autoSetMacs': '0'
         }
 
 
@@ -1445,6 +1471,8 @@ class MiniEdit( Frame ):
                 self.appPrefs["sflow"] = self.sflowDefaults
             if "netflow" not in self.appPrefs:
                 self.appPrefs["netflow"] = self.nflowDefaults
+            if "autoSetMacs" not in self.appPrefs:
+		self.appPrefs["autoSetMacs"] = '0'
 
         # Load controllers
         if 'controllers' in loadedTopology:
@@ -1819,15 +1847,20 @@ class MiniEdit( Frame ):
                         nodeNum = self.hostOpts[name]['nodeNum']
                         ipBaseNum, prefixLen = netParse( self.appPrefs['ipBase'] )
                         ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
+                    mac = None
+                    if self.appPrefs['autoSetMacs'] != '0':
+                        mac = "'"+macColonHex( self.hostOpts[name]['nodeNum'] )+"'"
+                    else:
+                        mac = 'None'
 
                     if 'cores' in opts or 'cpu' in opts:
-                        f.write("    "+name+" = net.addHost('"+name+"', cls=CPULimitedHost, ip='"+ip+"', defaultRoute="+defaultRoute+")\n")
+                        f.write("    "+name+" = net.addHost('"+name+"', cls=CPULimitedHost, ip='"+ip+"', defaultRoute="+defaultRoute+", mac="+mac+")\n")
                         if 'cores' in opts:
                             f.write("    "+name+".setCPUs(cores='"+opts['cores']+"')\n")
                         if 'cpu' in opts:
                             f.write("    "+name+".setCPUFrac(f="+str(opts['cpu'])+", sched='"+opts['sched']+"')\n")
                     else:
-                        f.write("    "+name+" = net.addHost('"+name+"', cls=Host, ip='"+ip+"', defaultRoute="+defaultRoute+")\n")
+                        f.write("    "+name+" = net.addHost('"+name+"', cls=Host, ip='"+ip+"', defaultRoute="+defaultRoute+", mac="+mac+")\n")
                     if 'externalInterfaces' in opts:
                         for extInterface in opts['externalInterfaces']:
                             f.write("    Intf( '"+extInterface+"', node="+name+" )\n")
@@ -2772,6 +2805,7 @@ class MiniEdit( Frame ):
                 newSwitch = net.addHost( name , cls=LegacyRouter)
             elif 'Host' in tags:
                 opts = self.hostOpts[name]
+                hostParams = {}
                 # debug( str(opts), '\n' )
                 ip = None
                 defaultRoute = None
@@ -2783,6 +2817,8 @@ class MiniEdit( Frame ):
                     nodeNum = self.hostOpts[name]['nodeNum']
                     ipBaseNum, prefixLen = netParse( self.appPrefs['ipBase'] )
                     ip = ipAdd(i=nodeNum, prefixLen=prefixLen, ipBaseNum=ipBaseNum)
+                if self.appPrefs['autoSetMacs'] != '0':
+                    hostParams['mac'] = macColonHex( self.hostOpts[name]['nodeNum'] )
 
                 # Create the correct host class
                 if 'cores' in opts or 'cpu' in opts:
@@ -2801,7 +2837,8 @@ class MiniEdit( Frame ):
                 newHost = net.addHost( name,
                                        cls=hostCls,
                                        ip=ip,
-                                       defaultRoute=defaultRoute
+                                       defaultRoute=defaultRoute,
+                                       **hostParams
                                       )
 
                 # Set the CPULimitedHost specific options
