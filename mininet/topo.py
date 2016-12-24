@@ -135,6 +135,16 @@ class Topo( object ):
             opts = self.hopts
         return self.addNode( name, **opts )
 
+    #new-22.12
+    def addAgent( self, name, **opts ):
+        """Convenience method: Add host to graph.
+           name: host name
+           opts: host options
+           returns: host name"""
+        # if not opts and self.hopts:
+        #     opts = self.hopts
+        return self.addNode( name, isAgent= True, **opts )
+
     def addSwitch( self, name, **opts ):
         """Convenience method: Add switch to graph.
            name: switch name
@@ -170,6 +180,11 @@ class Topo( object ):
         "Returns true if node is a switch."
         return self.g.node[ n ].get( 'isSwitch', False )
 
+    # new-22.12
+    def isAgent( self, n ):
+        "Returns true if node is a switch."
+        return self.g.node[ n ].get( 'isAgent', False )
+
     def switches( self, sort=True ):
         """Return switches.
            sort: sort switches alphabetically
@@ -180,7 +195,14 @@ class Topo( object ):
         """Return hosts.
            sort: sort hosts alphabetically
            returns: list of hosts"""
-        return [ n for n in self.nodes( sort ) if not self.isSwitch( n ) ]
+        return [ n for n in self.nodes( sort ) if not self.isSwitch( n ) and not self.isAgent( n )]
+
+    #new-22.12
+    def agents(self, sort=True):
+        """Return agents.
+           sort: sort hosts alphabetically
+           returns: list of hosts"""
+        return [n for n in self.nodes(sort) if self.isAgent( n )]
 
     def iterLinks( self, withKeys=False, withInfo=False ):
         """Return links (iterator)
@@ -301,6 +323,20 @@ class SingleSwitchTopo( Topo ):
             host = self.addHost( 'h%s' % h )
             self.addLink( host, switch )
 
+# new-22.12
+class SingleSwitchAndAgentTopo( Topo ):
+    "Single switch connected to k hosts."
+
+    def build( self, k=2, **_opts ):
+        "k: number of hosts"
+        self.k = k
+        switch = self.addSwitch( 's1' )
+        for h in irange( 1, k ):
+            host = self.addHost( 'h%s' % h )
+            self.addLink( host, switch )
+        agent = self.addAgent ('a1')
+        self.addLink( agent, switch)
+
 
 class SingleSwitchReversedTopo( Topo ):
     """Single switch connected to k hosts, with reversed ports.
@@ -317,6 +353,11 @@ class SingleSwitchReversedTopo( Topo ):
             self.addLink( host, switch,
                           port1=0, port2=( k - h + 1 ) )
 
+#new-22.12
+class AgentTopo( SingleSwitchAndAgentTopo ):
+    "Agent topology with two hosts, one agent and one switch"
+    def build( self ):
+        return SingleSwitchAndAgentTopo.build( self, k=2 )
 
 class MinimalTopo( SingleSwitchTopo ):
     "Minimal topology with two hosts and one switch"
