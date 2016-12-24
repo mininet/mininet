@@ -248,13 +248,15 @@ class Mininet( object ):
         self.delNode( host, nodes=self.hosts )
 
     # new-22.12
-    def addAgent(self, name, cls=None):
+    def addAgent(self, name, cls=None, **params ):
         """Add agent.
            name: name of agent to add
            cls: custom agent class/constructor (optional)"""
+        defaults = {}
+        defaults.update(params)
         if not cls:
             cls = self.agent
-        a = cls(name)
+        a = cls(name, **defaults)
         self.agents.append(a)
         self.nameToNode[name] = a
         return a
@@ -462,6 +464,25 @@ class Mininet( object ):
             # it needs to be done somewhere.
         info( '\n' )
 
+    # new-22.12
+    def configAgents( self ):
+        "Configure a set of agents."
+        for agent in self.agents:
+            info( agent.name + ' ' )
+            intf = agent.defaultIntf()
+            if intf:
+                agent.configDefault()
+            else:
+                # Don't configure nonexistent intf
+                agent.configDefault( ip=None, mac=None )
+            # You're low priority, dude!
+            # BL: do we want to do this here or not?
+            # May not make sense if we have CPU lmiting...
+            # quietRun( 'renice +18 -p ' + repr( host.pid ) )
+            # This may not be the right place to do this, but
+            # it needs to be done somewhere.
+        info( '\n' )
+
     def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
@@ -491,6 +512,12 @@ class Mininet( object ):
         for hostName in topo.hosts():
             self.addHost( hostName, **topo.nodeInfo( hostName ) )
             info( hostName + ' ' )
+
+        # new-22.12
+        info('\n*** Adding agents:\n')
+        for agentName in topo.agents():
+            self.addAgent(agentName, **topo.nodeInfo(agentName))
+            info(agentName + ' ')
 
         info( '\n*** Adding switches:\n' )
         for switchName in topo.switches():
@@ -523,6 +550,10 @@ class Mininet( object ):
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
+        #new-22.12
+        info('*** Configuring agents\n')
+        self.configAgents()
+        #end-new
         if self.xterms:
             self.startTerms()
         if self.autoStaticArp:
@@ -606,6 +637,13 @@ class Mininet( object ):
                 switch.stop()
             switch.terminate()
         info( '\n' )
+        # new-22.12
+        info('*** Stopping %i agents\n' % len(self.agents))
+        for agent in self.agents:
+            info(agent.name + ' ')
+            agent.terminate()
+        # end-new
+        info('\n')
         info( '*** Stopping %i hosts\n' % len( self.hosts ) )
         for host in self.hosts:
             info( host.name + ' ' )
