@@ -842,6 +842,7 @@ class Agent(Node):
         print("agent")
         Node.__init__(self, name, **params)
 
+
 # Some important things to note:
 #
 # The "IP" address which setIP() assigns to the switch is not
@@ -914,7 +915,7 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                    self.name )
 
-    def connected( self ):
+    def connected( self ): #todo connect switch to agent? trough here or by link topo?i think this only checks we are connected to a controller
         "Is the switch connected to a controller? (override this method)"
         # Assume that we are connected by default to whatever we need to
         # be connected to. This should be overridden by any OpenFlow

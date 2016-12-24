@@ -124,6 +124,7 @@ class Mininet( object ):
            topo: Topo (topology) object or None
            switch: default Switch class
            host: default Host class/constructor
+           agent: default Agent class #new- 24.12
            controller: default Controller class/constructor
            link: default Link class/constructor
            intf: default Intf class/constructor
@@ -174,7 +175,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def waitConnected( self, timeout=None, delay=.5 ):
+    def waitConnected( self, timeout=None, delay=.5 ): #todo wait for each agent to connect to a switch?
         """wait for each switch to connect to a controller,
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely
@@ -214,13 +215,13 @@ class Mininet( object ):
         defaults = { 'ip': ipAdd( self.nextIP,
                                   ipBaseNum=self.ipBaseNum,
                                   prefixLen=self.prefixLen ) +
-                                  '/%s' % self.prefixLen }
-        if self.autoSetMacs:
+                                  '/%s' % self.prefixLen } #so - gets host ip
+        if self.autoSetMacs: #so- gets mac
             defaults[ 'mac' ] = macColonHex( self.nextIP )
-        if self.autoPinCpus:
+        if self.autoPinCpus: #so-defines cpu
             defaults[ 'cores' ] = self.nextCore
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
-        self.nextIP += 1
+        self.nextIP += 1 #so- for updating ip integer so ther wont be collisions in ip/mac.
         defaults.update( params )
         if not cls:
             cls = self.host
@@ -251,18 +252,20 @@ class Mininet( object ):
     def addAgent(self, name, cls=None):
         """Add agent.
            name: name of agent to add
-           cls: custom agent class/constructor (optional)"""
+           cls: custom agent class/constructor (optional)
+           returns: added agent"""
+
         if not cls:
             cls = self.agent
         a = cls(name)
-        self.agents.append(a)
+        self.agents.append(a) #so- adds agent to agents list
         self.nameToNode[name] = a
         return a
 
     # new-22.12
-    def delAgent( self, agent ):
-        "Delete a agent"
-        self.delNode( agent, nodes=self.agents )
+    def delAgent(self, agent):
+        "Delete an agent"
+        self.delNode(agent, nodes=self.agents)
 
 
     def addSwitch( self, name, cls=None, **params ):
@@ -462,7 +465,7 @@ class Mininet( object ):
             # it needs to be done somewhere.
         info( '\n' )
 
-    def buildFromTopo( self, topo=None ):
+    def buildFromTopo( self, topo=None ): #todo *adding agents
         """Build mininet from a topology object
            At the end of this function, everything should be connected
            and up."""
