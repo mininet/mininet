@@ -32,8 +32,9 @@ from mininet.node import ( Host, Agent, CPULimitedHost, Controller, OVSControlle
                            IVSSwitch )
 from mininet.nodelib import LinuxBridge
 from mininet.link import Link, TCLink, TCULink, OVSLink
+#new-22.12
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
-                           SingleSwitchReversedTopo, MinimalTopo )
+                           SingleSwitchReversedTopo, MinimalTopo, AgentTopo )
 from mininet.topolib import TreeTopo, TorusTopo
 from mininet.util import customClass, specialClass, splitArgs
 from mininet.util import buildTopo
@@ -50,8 +51,10 @@ from mininet.examples.clustercli import ClusterCLI
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
 # built in topologies, created only when run
-TOPODEF = 'minimal'
-TOPOS = { 'minimal': MinimalTopo,
+#new-22.12
+TOPODEF = 'agent'
+TOPOS = { 'agent' : AgentTopo,
+          'minimal': MinimalTopo,
           'linear': LinearTopo,
           'reversed': SingleSwitchReversedTopo,
           'single': SingleSwitchTopo,
