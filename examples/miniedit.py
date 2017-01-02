@@ -1719,8 +1719,28 @@ class MiniEdit( Frame ):
                 f.write("        return\n")
 
             f.write("\n")
+
             f.write("def myNetwork():\n")
             f.write("\n")
+
+            f.write("    def doStop():\n")
+            for widget in self.widgetToItem:
+                name = widget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                if 'Host' in tags:
+                    opts = self.hostOpts[name]
+                    # Run User Defined Stop Command
+                    if 'stopCommand' in opts:
+                        f.write("        "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
+                if 'Switch' in tags:
+                    opts = self.switchOpts[name]
+                    # Run User Defined Stop Command
+                    if 'stopCommand' in opts:
+                        f.write("        "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
+
+            f.write("        net.stop()\n")
+            f.write("\n")
+
             f.write("    net = Mininet( topo=None,\n")
             if len(self.appPrefs['dpctl']) > 0:
                 f.write("                   listenPort="+self.appPrefs['dpctl']+",\n")
@@ -2002,31 +2022,32 @@ class MiniEdit( Frame ):
                     f.write("    call('"+sflowCmd+sflowSwitches+"', shell=True)\n")
 
             f.write("\n")
-            f.write("    CLI(net)\n")
-            for widget in self.widgetToItem:
-                name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-                if 'Host' in tags:
-                    opts = self.hostOpts[name]
-                    # Run User Defined Stop Command
-                    if 'stopCommand' in opts:
-                        f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
-                if 'Switch' in tags:
-                    opts = self.switchOpts[name]
-                    # Run User Defined Stop Command
-                    if 'stopCommand' in opts:
-                        f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
 
-            f.write("    net.stop()\n")
-            f.write("\n")
-            f.write("if __name__ == '__main__':\n")
-            f.write("    setLogLevel( 'info' )\n")
-            f.write("    myNetwork()\n")
-            f.write("\n")
+            if self.appPrefs['startCLI'] == '1':
+                f.write("    CLI(net)\n")
+                f.write("    doStop()\n")
+                f.write("\n")
 
+                f.write("if __name__ == '__main__':\n")
+                f.write("    setLogLevel( 'info' )\n")
+                f.write("    myNetwork()\n")
+                f.write("\n")
+
+            else:
+                f.write("    return net, doStop\n")
+                f.write("\n")
+
+                f.write("if __name__ == '__main__':\n")
+                f.write("    setLogLevel( 'info' )\n")
+                f.write("    info(\"*** Start CLI disabled, to run this topology:\\n\
+    - import this file from Python:         'from <fileName> import myNetwork'\\n\
+    - start the topology:                   'net, doStop = myNetwork()'\\n\
+    - (optional) import the Mininet CLI:    'from mininet.cli import CLI'\\n\
+    - (optional) start the CLI:             'CLI(net)'\\n\
+    - execute your own functionality\\n\
+    - (always) stop the topology:           'doStop()'                   ***\\n\")\n")
 
             f.close()
-
 
     # Generic canvas handler
     #
