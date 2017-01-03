@@ -321,7 +321,7 @@ def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
     while len(args) < 4:
-        args.append( 0 )
+        args.insert( len(args) - 1, 0 )
     return ipNum( *args )
 
 def netParse( ipstr ):
