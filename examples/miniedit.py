@@ -379,8 +379,8 @@ class PrefsDialog(tkSimpleDialog.Dialog):
     @staticmethod
     def getOvsVersion():
         "Return OVS version"
-        outp = quietRun("ovs-vsctl show")
-        r = r'ovs_version: "(.*)"'
+        outp = quietRun("ovs-vsctl --version")
+        r = r'ovs-vsctl \(Open vSwitch\) (.*)'
         m = re.search(r, outp)
         if m is None:
             warn( 'Version check failed' )
