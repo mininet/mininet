@@ -274,8 +274,8 @@ class Mininet( object ):
         if not controller:
             controller = self.controller
         # Construct new controller if one is not given
-        if isinstance( name, Controller ):
-            controller_new = name
+        if isinstance( controller, Controller ):
+            controller_new = controller
             # Pylint thinks controller is a str()
             # pylint: disable=maybe-no-member
             name = controller_new.name
