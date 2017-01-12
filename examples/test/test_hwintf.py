@@ -57,8 +57,8 @@ class testHwintf( unittest.TestCase ):
         p.wait()
 
     def tearDown( self ):
-        self.h3.terminate()
-        self.n0.terminate()
+        self.h3.stop( deleteIntfs=True )
+        self.n0.stop( deleteIntfs=True )
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )
