@@ -32,7 +32,8 @@ def runTests( testDir, verbosity=1 ):
     # discover all tests in testDir
     testSuite = unittest.defaultTestLoader.discover( testDir )
     # run tests
-    MininetTestRunner( verbosity=verbosity ).run( testSuite )
+    success = MininetTestRunner( verbosity=verbosity ).run( testSuite ).wasSuccessful()
+    sys.exit( 0 if success else 1 )
 
 if __name__ == '__main__':
     # get the directory containing example tests
