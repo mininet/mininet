@@ -13,3 +13,8 @@ script:
 - sudo mn --test pingall
 - sudo python mininet/test/runner.py -v -quick
 - sudo python examples/test/runner.py -v -quick
+
+notifications:
+  email:
+    on_success: never
+# More details: https://docs.travis-ci.com/user/notifications#Configuring-email-notifications
