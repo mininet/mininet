@@ -16,8 +16,8 @@ for line in lines.split( '\n' ):
     if line and 'Binary' not in line:
         fname, fversion = line.split( ':' )
         if version != fversion:
-            print "%s: incorrect version '%s' (should be '%s')" % (
-                fname, fversion, version )
+            print( "%s: incorrect version '%s' (should be '%s')" % (
+                fname, fversion, version ) )
             error = True
 
 if error:

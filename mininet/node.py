@@ -431,6 +431,15 @@ class Node( object ):
             debug( 'moving', intf, 'into namespace for', self.name, '\n' )
             moveIntfFn( intf.name, self  )
 
+    def delIntf( self, intf ):
+        """Remove interface from Node's known interfaces
+           Note: to fully delete interface, call intf.delete() instead"""
+        port = self.ports.get( intf )
+        if port is not None:
+            del self.intfs[ port ]
+            del self.ports[ intf ]
+            del self.nameToIntf[ intf.name ]
+
     def defaultIntf( self ):
         "Return interface for lowest port"
         ports = self.intfs.keys()
@@ -1423,16 +1432,16 @@ class Controller( Node ):
 
 class OVSController( Controller ):
     "Open vSwitch controller"
-    def __init__( self, name, command='ovs-controller', **kwargs ):
-        if quietRun( 'which test-controller' ):
-            command = 'test-controller'
-        Controller.__init__( self, name, command=command, **kwargs )
+    def __init__( self, name, **kwargs ):
+        kwargs.setdefault( 'command', self.isAvailable() or
+                           'ovs-controller' )
+        Controller.__init__( self, name, **kwargs )
 
     @classmethod
     def isAvailable( cls ):
         return ( quietRun( 'which ovs-controller' ) or
                  quietRun( 'which test-controller' ) or
-                 quietRun( 'which ovs-testcontroller' ) )
+                 quietRun( 'which ovs-testcontroller' ) ).strip()
 
 class NOX( Controller ):
     "Controller to run a NOX application."

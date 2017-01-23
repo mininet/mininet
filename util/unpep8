@@ -40,6 +40,7 @@ Bob Lantz, rlantz@cs.stanford.edu
 1/24/2010
 """
 
+from __future__ import print_function
 import re, sys
 
 def fixUnderscoreTriplet( match ):
@@ -195,4 +196,4 @@ def convertFromPep8( program ):
    return program
 
 if __name__ == '__main__':
-   print convertFromPep8( sys.stdin.read() )
+   print( convertFromPep8( sys.stdin.read() ) )

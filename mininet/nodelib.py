@@ -9,7 +9,6 @@ from mininet.log import info, warn
 from mininet.moduledeps import pathCheck
 from mininet.util import quietRun
 
-import re
 
 class LinuxBridge( Switch ):
     "Linux Bridge (with optional spanning tree)"
@@ -138,7 +137,8 @@ class NAT( Node ):
         self.cmd( 'iptables -D FORWARD',
                   '-o', self.localIntf, '-d', self.subnet,'-j ACCEPT' )
         self.cmd( 'iptables -t nat -D POSTROUTING',
-                  '-s', self.subnet, '\'!\'', '-d', self.subnet, '-j MASQUERADE' )
+                  '-s', self.subnet, '\'!\'', '-d', self.subnet,
+                  '-j MASQUERADE' )
         # Put the forwarding state back to what it was
         self.cmd( 'sysctl net.ipv4.ip_forward=%s' % self.forwardState )
         super( NAT, self ).terminate()

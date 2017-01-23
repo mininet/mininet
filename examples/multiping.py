@@ -8,10 +8,11 @@ multiple hosts and monitor their output interactively for a period=
 of time.
 """
 
+
 from mininet.net import Mininet
 from mininet.node import Node
 from mininet.topo import SingleSwitchTopo
-from mininet.log import setLogLevel
+from mininet.log import info, setLogLevel
 
 from select import poll, POLLIN
 from time import time
@@ -34,8 +35,8 @@ def startpings( host, targetips ):
             ' done; '
             'done &' )
 
-    print ( '*** Host %s (%s) will be pinging ips: %s' %
-            ( host.name, host.IP(), targetips ) )
+    info( '*** Host %s (%s) will be pinging ips: %s\n' %
+          ( host.name, host.IP(), targetips ) )
 
     host.cmd( cmd )
 
@@ -69,7 +70,7 @@ def multiping( netsize, chunksize, seconds):
         readable = poller.poll(1000)
         for fd, _mask in readable:
             node = Node.outToNode[ fd ]
-            print '%s:' % node.name, node.monitor().strip()
+            info( '%s:' % node.name, node.monitor().strip(), '\n' )
 
     # Stop pings
     for host in hosts:

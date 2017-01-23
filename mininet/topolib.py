@@ -67,7 +67,8 @@ class TorusTopo( Topo ):
                 switch = switches[ i, j ] = self.addSwitch(
                     's' + loc, dpid='%x' % dpid )
                 for k in range( 0, n ):
-                    host = hosts[ i, j, k ] = self.addHost( genHostName( loc, k + 1 ) )
+                    host = hosts[ i, j, k ] = self.addHost(
+                        genHostName( loc, k + 1 ) )
                     self.addLink( host, switch )
         # Connect switches
         for i in range( 0, x ):

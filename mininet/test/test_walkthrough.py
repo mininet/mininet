@@ -12,12 +12,13 @@ import os
 import re
 from mininet.util import quietRun
 from distutils.version import StrictVersion
+from time import sleep
 
 def tsharkVersion():
     "Return tshark version"
     versionStr = quietRun( 'tshark -v' )
-    versionMatch = re.findall( r'TShark \d+.\d+.\d+', versionStr )[0]
-    return versionMatch.split()[ 1 ]
+    versionMatch = re.findall( r'TShark[^\d]*(\d+.\d+.\d+)', versionStr )
+    return versionMatch[ 0 ]
 
 # pylint doesn't understand pexpect.match, unfortunately!
 # pylint:disable=maybe-no-member
@@ -47,6 +48,8 @@ class testWalkthrough( unittest.TestCase ):
         mn.expect( '0% dropped' )
         tshark.expect( [ '74 Hello', '74 of_hello', '74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
+        mn.expect( pexpect.EOF )
+        tshark.expect( pexpect.EOF )
 
     def testBasic( self ):
         "Test basic CLI commands (help, nodes, net, dump)"
@@ -91,7 +94,8 @@ class testWalkthrough( unittest.TestCase ):
         "Test ifconfig and ps on h1 and s1"
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
-        interfaces = [ 'h1-eth0', 's1-eth1', '[^-]eth0', 'lo', self.prompt ]
+        # Third pattern is a local interface beginning with 'eth' or 'en'
+        interfaces = [ 'h1-eth0', 's1-eth1', '[^-](eth|en)\w*\d', 'lo', self.prompt ]
         # h1 ifconfig
         p.sendline( 'h1 ifconfig -a' )
         ifcount = 0
@@ -117,7 +121,7 @@ class testWalkthrough( unittest.TestCase ):
                 ifcount += 1
             else:
                 break
-        self.assertEqual( ifcount, 3, 'Missing interfaces on s1')
+        self.assertTrue( ifcount >= 3, 'Missing interfaces on s1')
         # h1 ps
         p.sendline( "h1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
@@ -126,10 +130,13 @@ class testWalkthrough( unittest.TestCase ):
         p.sendline( "s1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         s1Output = p.before
-        # strip command from ps output
-        h1Output = h1Output.split( '\n', 1 )[ 1 ]
-        s1Output = s1Output.split( '\n', 1 )[ 1 ]
-        self.assertEqual( h1Output, s1Output, 'h1 and s1 "ps" output differs')
+        # strip command from ps output and compute diffs
+        h1Output = h1Output.split( '\n' )[ 1: ]
+        s1Output = s1Output.split( '\n' )[ 1: ]
+        diffs = set( h1Output ).difference( set( s1Output ) )
+        # allow up to two diffs to account for daemons, etc.
+        self.assertTrue( len( diffs ) <= 2,
+                         'h1 and s1 "ps" output differ too much: %s' % diffs )
         p.sendline( 'exit' )
         p.wait()
 
@@ -151,6 +158,11 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'h1 python -m SimpleHTTPServer 80 &' )
+        # The walkthrough doesn't specify a delay here, and
+        # we also don't read the output (also a possible problem),
+        # but for now let's wait a couple of seconds to make
+        # it less likely to fail due to the race condition.
+        sleep( 2 )
         p.expect( self.prompt )
         p.sendline( ' h2 wget -O - h1' )
         p.expect( '200 OK' )
@@ -249,6 +261,8 @@ class testWalkthrough( unittest.TestCase ):
             p.sendline( 'h%d ifconfig' % i )
             p.expect( 'HWaddr 00:00:00:00:00:0%d' % i )
             p.expect( self.prompt )
+        p.sendline( 'exit' )
+        p.expect( pexpect.EOF )
 
     def testSwitches( self ):
         "Run iperf test using user and ovsk switches"

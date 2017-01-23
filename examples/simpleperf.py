@@ -9,19 +9,19 @@ iperf will hang indefinitely if the TCP handshake fails
 to complete.
 """
 
+
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.link import TCLink
 from mininet.util import dumpNodeConnections
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, info
 
 from sys import argv
 
 class SingleSwitchTopo(Topo):
     "Single switch connected to n hosts."
-    def __init__(self, n=2, lossy=True, **opts):
-        Topo.__init__(self, **opts)
+    def build(self, n=2,lossy=True, **opts):
         switch = self.addSwitch('s1')
         for h in range(n):
             # Each host gets 50%/n of system CPU
@@ -44,9 +44,9 @@ def perfTest( lossy=True ):
                    host=CPULimitedHost, link=TCLink,
                    autoStaticArp=True )
     net.start()
-    print "Dumping host connections"
+    info( "Dumping host connections\n" )
     dumpNodeConnections(net.hosts)
-    print "Testing bandwidth between h1 and h4"
+    info( "Testing bandwidth between h1 and h4\n" )
     h1, h4 = net.getNodeByName('h1', 'h4')
     net.iperf( ( h1, h4 ), l4Type='UDP' )
     net.stop()

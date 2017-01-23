@@ -5,10 +5,11 @@ This example monitors a number of hosts using host.popen() and
 pmonitor()
 """
 
+
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topo import SingleSwitchTopo
-from mininet.log import setLogLevel
+from mininet.log import setLogLevel, info
 from mininet.util import custom, pmonitor
 
 def monitorhosts( hosts=5, sched='cfs' ):
@@ -27,7 +28,7 @@ def monitorhosts( hosts=5, sched='cfs' ):
     # Monitor them and print output
     for host, line in pmonitor( popens ):
         if host:
-            print "<%s>: %s" % ( host.name, line.strip() )
+            info( "<%s>: %s" % ( host.name, line ) )
     # Done
     net.stop()
 

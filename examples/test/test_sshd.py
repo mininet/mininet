@@ -20,7 +20,7 @@ class testSSHD( unittest.TestCase ):
         while True:
             index = p.expect( self.opts )
             if index == 0:
-                print p.match.group(0)
+                print( p.match.group(0) )
                 p.sendline( 'yes' )
             elif index == 1:
                 return False

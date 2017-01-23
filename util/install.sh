@@ -40,6 +40,7 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
     remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
     pkginst='sudo dpkg -i'
+    update='sudo apt-get'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install lsb-release
@@ -51,9 +52,20 @@ if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
     install='sudo yum -y install'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
+    update='sudo yum'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install redhat-lsb-core
+    fi
+fi
+test -e /etc/SuSE-release && DIST="SUSE Linux"
+if [ "$DIST" = "SUSE Linux" ]; then
+    install='sudo zypper --non-interactive install '
+    remove='sudo zypper --non-interactive  remove '
+    pkginst='sudo rpm -ivh'
+    # Prereqs for this script
+    if ! which lsb_release &> /dev/null; then
+		$install openSUSE-release
     fi
 fi
 if which lsb_release &> /dev/null; then
@@ -68,7 +80,7 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer'; then
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'; then
     echo "Install.sh currently only supports Ubuntu, Debian, RedHat and Fedora."
     exit 1
 fi
@@ -103,7 +115,7 @@ OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
 
 function kernel {
     echo "Install Mininet-compatible kernel if necessary"
-    sudo apt-get update
+    $update update
     if ! $install linux-image-$KERNEL_NAME; then
         echo "Could not install linux-image-$KERNEL_NAME"
         echo "Skipping - assuming installed kernel is OK."
@@ -129,6 +141,10 @@ function mn_deps {
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man pyflakes pylint python-pep8 python-pexpect
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+		$install gcc make socat psmisc xterm openssh iperf \
+			iproute telnet python-setuptools libcgroup-tools \
+			ethtool help2man python-pyflakes python3-pylint python-pep8 python-pexpect
     else
         $install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
@@ -160,6 +176,8 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+       $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
@@ -230,6 +248,8 @@ function install_wireshark {
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
             $install wireshark wireshark-gnome
+		elif [ "$DIST" = "SUSE LINUX"  ]; then
+			$install wireshark
         else
             $install wireshark tshark
         fi
@@ -301,30 +321,36 @@ function ubuntuOvs {
     fi
 
     # Remove any old packages
-    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-controller \
-            openvswitch-pki openvswitch-switch
+
+    $remove openvswitch-common openvswitch-datapath-dkms openvswitch-pki openvswitch-switch \
+            openvswitch-controller || true
 
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
              pkg-config bzip2 openssl python-all procps python-qt4 \
-             python-zopeinterface python-twisted-conch dkms
+             python-zopeinterface python-twisted-conch dkms dh-python dh-autoreconf \
+             uuid-runtime
 
     # Build OVS
+    parallel=`grep processor /proc/cpuinfo | wc -l`
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
-            DEB_BUILD_OPTIONS='parallel=2 nocheck' fakeroot debian/rules binary
+            DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
-    $pkginst openvswitch-common_$OVS_RELEASE*.deb openvswitch-datapath-dkms_$OVS_RELEASE*.deb \
-             openvswitch-pki_$OVS_RELEASE*.deb openvswitch-switch_$OVS_RELEASE*.deb
-    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb; then
+    for pkg in common datapath-dkms pki switch; do
+        pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
+        echo "Installing $pkg"
+        $pkginst $pkg
+    done
+    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb 2>/dev/null; then
         echo "Ignoring error installing openvswitch-controller"
     fi
 
-    modinfo openvswitch
+    /sbin/modinfo openvswitch
     sudo ovs-vsctl show
     # Switch can run on its own, but
     # Mininet should control the controller
     # This appears to only be an issue on Ubuntu/Debian
-    if sudo service openvswitch-controller stop; then
+    if sudo service openvswitch-controller stop 2>/dev/null; then
         echo "Stopped running controller"
     fi
     if [ -e /etc/init.d/openvswitch-controller ]; then
@@ -408,12 +434,19 @@ function ivs {
     IVS_SRC=$BUILD_DIR/ivs
 
     # Install dependencies
-    $install git pkg-config gcc make libnl-3-dev libnl-route-3-dev libnl-genl-3-dev
+    $install gcc make
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        $install git pkgconfig libnl3-devel libcap-devel openssl-devel
+    else
+        $install git-core pkg-config libnl-3-dev libnl-route-3-dev \
+            libnl-genl-3-dev
+    fi
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC --recursive
+    git clone git://github.com/floodlight/ivs $IVS_SRC
     cd $IVS_SRC
+    git submodule update --init
     make
     sudo make install
 }
@@ -555,6 +588,8 @@ function cbench {
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
+	elif [ "$DIST" = "SUSE LINUX"  ]; then
+		$install net-snmp-devel libpcap-devel libconfig-devel
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi

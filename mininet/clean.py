@@ -51,7 +51,7 @@ class Cleanup( object ):
         info( "*** Removing excess controllers/ofprotocols/ofdatapaths/"
               "pings/noxes\n" )
         zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
-        zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs'
+        zombies += 'ovs-openflowd ovs-controller udpbwtest mnexec ivs ryu-manager'
         # Note: real zombie processes can't actually be killed, since they
         # are already (un)dead. Then again,
         # you can't connect to them either, so they're mostly harmless.
@@ -92,7 +92,7 @@ class Cleanup( object ):
                     ).splitlines()
         # Delete blocks of links
         n = 1000  # chunk size
-        for i in xrange( 0, len( links ), n ):
+        for i in range( 0, len( links ), n ):
             cmd = ';'.join( 'ip link del %s' % link
                              for link in links[ i : i + n ] )
             sh( '( %s ) 2> /dev/null' % cmd )
