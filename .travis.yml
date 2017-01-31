@@ -1,6 +1,12 @@
 language: python
 sudo: required
-dist: trusty
+
+matrix:
+  include:
+    - dist: trusty
+      env: dist="14.04 LTS trusty"
+    - dist: xenial
+      env: dist="16.04 LTS xenial"
 
 before_install:
 - sudo apt-get update -qq
