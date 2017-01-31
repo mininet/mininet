@@ -1,0 +1,26 @@
+language: python
+sudo: required
+
+matrix:
+  include:
+    - dist: trusty
+      env: dist="14.04 LTS trusty"
+    - dist: xenial
+      env: dist="16.04 LTS xenial"
+
+before_install:
+- sudo apt-get update -qq
+- sudo apt-get install -qq vlan
+
+install:
+- sudo util/install.sh -fnvw
+
+script:
+- sudo mn --test pingall
+- sudo python mininet/test/runner.py -v -quick
+- sudo python examples/test/runner.py -v -quick
+
+notifications:
+  email:
+    on_success: never
+# More details: https://docs.travis-ci.com/user/notifications#Configuring-email-notifications
