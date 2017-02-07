@@ -213,8 +213,8 @@ class testWalkthrough( unittest.TestCase ):
         p.sendline( 'iperf' )
         p.expect( r"Results: \['([\d\.]+) Mbits/sec'," )
         bw = float( p.match.group( 1 ) )
-        self.assertTrue( bw < 10.1, 'Bandwidth > 10 Mb/s')
-        self.assertTrue( bw > 9.0, 'Bandwidth < 9 Mb/s')
+        self.assertTrue( bw < 10.1, 'Bandwidth %.2f >= 10.1 Mb/s' % bw )
+        self.assertTrue( bw > 9.0, 'Bandwidth %.2f <= 9 Mb/s' % bw )
         p.expect( self.prompt )
         # test delay
         p.sendline( 'h1 ping -c 4 h2' )
