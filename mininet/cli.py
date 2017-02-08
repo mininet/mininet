@@ -471,8 +471,7 @@ class CLI( Cmd ):
 
 
     def parseHosts( self, line ):
-        "expand the hosts to a host list. This is called from the default function."
-
+        "Expand the hosts to a host list. This is called from the default function."
         hostList = []
         first, args, line = self.parseline( line )
 
