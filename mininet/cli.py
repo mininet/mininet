@@ -33,6 +33,7 @@ import sys
 import time
 import os
 import atexit
+import re
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -403,27 +404,30 @@ class CLI( Cmd ):
         Past the first CLI argument, node names are automatically replaced with
         corresponding IP addrs."""
 
-        first, args, line = self.parseline( line )
+        hostList, args = self.parseHosts(line)
 
-        if first in self.mn:
-            if not args:
-                error( "*** Enter a command for node: %s <cmd>" % first )
-                return
-            node = self.mn[ first ]
-            rest = args.split( ' ' )
-            # Substitute IP addresses for node names in command
-            # If updateIP() returns None, then use node name
-            rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
-                     if arg in self.mn else arg
-                     for arg in rest ]
-            rest = ' '.join( rest )
-            # Run cmd on node:
-            node.sendCmd( rest )
-            self.waitForNode( node )
-        else:
-            error( '*** Unknown command: %s\n' % line )
+        for host in hostList:
+            if host in self.mn:
+                if not args:
+                    error( "*** Enter a command for node: %s <cmd>" % host )
+                    return
+                node = self.mn[ host ]
+                rest = args.split( ' ' )
+                # Substitute IP addresses for node names in command
+                # If updateIP() returns None, then use node name
+                rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
+                         if arg in self.mn else arg
+                         for arg in rest ]
+                rest = ' '.join( rest )
+                # Run cmd on node:
+                if(len(hostList) > 1):
+                    print "*** Executing command on node: %s" % host
+                node.sendCmd( rest )
+                self.waitForNode( node, (len(hostList) > 1) )
+            else:
+                error( '*** Unknown command: %s\n' % line )
 
-    def waitForNode( self, node ):
+    def waitForNode( self, node, is_list ):
         "Wait for a node to finish, and print its output."
         # Pollers
         nodePoller = poll()
@@ -465,6 +469,23 @@ class CLI( Cmd ):
             line = line.split( '#' )[ 0 ]
         return line
 
+
+    def parseHosts( self, line ):
+        "Expand the hosts to a host list. This is called from the default function."
+        hostList = []
+        first, args, line = self.parseline( line )
+
+        match = re.match("(\w)\[(.*?)\]", line)
+
+        if (match and match.group(2)):
+           s = match.group(2)
+           ranges = (x.split("-") for x in s.split(","))
+           hostList = [first + str(i) for r in ranges for i in range(int(r[0]), int(r[-1]) + 1)]
+           args = " ".join(args.split()[1:])
+        else:
+           hostList.append(first)
+
+        return hostList, args
 
 # Helper functions
 
