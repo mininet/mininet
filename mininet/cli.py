@@ -399,15 +399,16 @@ class CLI( Cmd ):
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
-        Overridden to run shell commands when a node is the first CLI argument.
-        Past the first CLI argument, node names are automatically replaced with
-        corresponding IP addrs."""
+           Overridden to run shell commands when a node is the first
+           CLI argument.  Past the first CLI argument, node names are
+           automatically replaced with corresponding IP addrs."""
 
         first, args, line = self.parseline( line )
 
         if first in self.mn:
             if not args:
-                error( "*** Enter a command for node: %s <cmd>" % first )
+                error( '*** Please enter a command for node: %s <cmd>\n'
+                       % first )
                 return
             node = self.mn[ first ]
             rest = args.split( ' ' )
