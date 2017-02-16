@@ -5,6 +5,8 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 Mininet 2.2.2b3
 
+[![Build Status][1]](https://travis-ci.org/mininet/mininet)
+
 ### What is Mininet?
 
 Mininet emulates a complete network of hosts, links, and switches
@@ -127,3 +129,5 @@ Mininet to change the networking world!
 
 Bob Lantz
 Mininet Core Team
+
+[1]: https://travis-ci.org/mininet/mininet.svg?branch=devel/2.2.2
