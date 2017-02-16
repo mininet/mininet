@@ -31,7 +31,7 @@ rate includes buffering.
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
-from mininet.util import custom, waitListening, pmonitor
+from mininet.util import custom, waitListening
 from mininet.log import setLogLevel, info
 
 
