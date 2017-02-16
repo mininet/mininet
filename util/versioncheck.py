@@ -4,7 +4,7 @@ from subprocess import check_output as co
 from sys import exit
 
 # Actually run bin/mn rather than importing via python path
-version = 'Mininet ' + co( 'PYTHONPATH=. bin/mn --version', shell=True )
+version = 'Mininet ' + co( 'PYTHONPATH=. bin/mn --version 2>&1', shell=True )
 version = version.strip()
 
 # Find all Mininet path references
