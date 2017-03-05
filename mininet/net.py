@@ -803,7 +803,7 @@ class Mininet( object ):
            rate should be much closer to the actual receive rate"""
         hosts = hosts or [ self.hosts[ 0 ], self.hosts[ -1 ] ]
         assert len( hosts ) == 2
-        client, server = hosts
+        server, client = hosts
         output( '*** Iperf: testing', l4Type, 'bandwidth between',
                 client, 'and', server, '\n' )
         server.cmd( 'killall -9 iperf' )
