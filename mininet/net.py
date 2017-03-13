@@ -145,7 +145,8 @@ class Mininet( object ):
         self.ipBase = ipBase
         self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
         hostIP = ( 0xffffffff >> self.prefixLen ) & self.ipBaseNum
-        self.nextIP = hostIP if hostIP > 0 else 1  # start for address allocation
+        # Start for address allocation
+        self.nextIP = hostIP if hostIP > 0 else 1
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
