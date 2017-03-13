@@ -892,7 +892,8 @@ def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
     net.start()
     info( 'Mininet is running on', quietRun( 'hostname' ).strip(), '\n' )
     for node in c0, h1, h2, s1, s2:
-        info( 'Node', node, 'is running on', node.cmd( 'hostname' ).strip(), '\n' )
+        info( 'Node', node, 'is running on',
+              node.cmd( 'hostname' ).strip(), '\n' )
     net.pingAll()
     CLI( net )
     net.stop()
