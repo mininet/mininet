@@ -21,7 +21,8 @@ def runTests( testDir, verbosity=1 ):
     # discover all tests in testDir
     testSuite = defaultTestLoader.discover( testDir )
     # run tests
-    success = TextTestRunner( verbosity=verbosity ).run( testSuite ).wasSuccessful()
+    success = ( TextTestRunner( verbosity=verbosity )
+                .run( testSuite ).wasSuccessful() )
     sys.exit( 0 if success else 1 )
 
 if __name__ == '__main__':
