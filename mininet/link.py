@@ -530,9 +530,8 @@ class OVSLink( Link ):
        than ~64 OVS patch links should be used in row."""
 
     def __init__( self, node1, node2, **kwargs ):
-        from mininet.node import OVSSwitch
-
         "See Link.__init__() for options"
+        from mininet.node import OVSSwitch
         self.isPatchLink = False
         if ( isinstance( node1, OVSSwitch ) and
              isinstance( node2, OVSSwitch ) ):
