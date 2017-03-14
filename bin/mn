@@ -89,8 +89,8 @@ LINKS = { 'default': Link,  # Note: overridden below
 
 
 # Names of tests that are Mininet() methods
-TESTNAMES = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all', 'iperfudp',
-              'none' ]
+TESTNAMES = [ 'cli', 'build', 'pingall', 'pingpair', 'iperf', 'all',
+              'iperfudp', 'none' ]
 
 # Map to alternate functions and/or spellings of Mininet() methods
 TESTS = { 'pingall': 'pingAll',

@@ -31,7 +31,7 @@ rate includes buffering.
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
-from mininet.util import custom, waitListening, pmonitor
+from mininet.util import custom, waitListening
 from mininet.log import setLogLevel, info
 
 
@@ -67,7 +67,8 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
             # the client's buffer fill rate
             popen = server.popen( 'iperf -yc -s -p 5001' )
             waitListening( client, server, 5001 )
-            popen.stdout.readline()  # ignore empty result from waitListening/telnet
+            # ignore empty result from waitListening/telnet
+            popen.stdout.readline()
             client.cmd( 'iperf -yc -t %s -c %s' % ( seconds, server.IP() ) )
             result = popen.stdout.readline().split( ',' )
             bps = float( result[ -1 ] )

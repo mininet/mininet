@@ -95,7 +95,8 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         # Third pattern is a local interface beginning with 'eth' or 'en'
-        interfaces = [ 'h1-eth0', 's1-eth1', '[^-](eth|en)\w*\d', 'lo', self.prompt ]
+        interfaces = [ 'h1-eth0', 's1-eth1', r'[^-](eth|en)\w*\d', 'lo',
+                       self.prompt ]
         # h1 ifconfig
         p.sendline( 'h1 ifconfig -a' )
         ifcount = 0
