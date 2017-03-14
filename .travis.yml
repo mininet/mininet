@@ -13,6 +13,7 @@ before_install:
 - sudo apt-get install -qq vlan
 
 install:
+- make codecheck
 - sudo util/install.sh -fnvw
 
 script:
