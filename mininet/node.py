@@ -695,7 +695,7 @@ class CPULimitedHost( Host ):
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         # Sometimes cgdelete returns a resource busy error but still
         # deletes the group; next attempt will give "no such file"
-        return exitcode == 0  or ( 'no such file' in _err.lower() )
+        return exitcode == 0 or ( 'no such file' in _err.lower() )
 
     def popen( self, *args, **kwargs ):
         """Return a Popen() object in node's namespace
