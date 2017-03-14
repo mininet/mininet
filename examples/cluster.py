@@ -478,7 +478,6 @@ class RemoteSSHLink( RemoteLink ):
         RemoteLink.__init__( self, node1, node2, **kwargs )
 
 
-
 class RemoteGRELink( RemoteLink ):
     "Remote link using GRE tunnels"
 
