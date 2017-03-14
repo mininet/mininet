@@ -287,7 +287,7 @@ class RemoteMixin( object ):
         return super( RemoteMixin, self).popen( *args, tt=False, **kwargs )
 
     def addIntf( self, *args, **kwargs ):
-        # "Override: use RemoteLink.moveIntf"
+        "Override: use RemoteLink.moveIntf"
         # kwargs.update( moveIntfFn=RemoteLink.moveIntf )
         return super( RemoteMixin, self).addIntf( *args, **kwargs )
 
@@ -393,12 +393,11 @@ class RemoteLink( Link ):
         return self.tunnel
 
     @staticmethod
-    def moveIntf( intf, node, printError=True ):
+    def moveIntf( intf, node ):
         """Move remote interface from root ns to node
             intf: string, interface
             dstNode: destination Node
-            srcNode: source Node or None (default) for root ns
-            printError: if true, print error"""
+            srcNode: source Node or None (default) for root ns"""
         intf = str( intf )
         cmd = 'ip link set %s netns %s' % ( intf, node.pid )
         result = node.rcmd( cmd )
@@ -474,12 +473,17 @@ class RemoteLink( Link ):
 
 
 class RemoteSSHLink( RemoteLink ):
+    "Remote link using SSH tunnels"
     def __init__(self, node1, node2, **kwargs):
         RemoteLink.__init__( self, node1, node2, **kwargs )
 
 
-GRE_KEY = 0
+
 class RemoteGRELink( RemoteLink ):
+    "Remote link using GRE tunnels"
+
+    GRE_KEY = 0
+
     def __init__(self, node1, node2, **kwargs):
         RemoteLink.__init__( self, node1, node2, **kwargs )
 
@@ -535,13 +539,13 @@ class RemoteGRELink( RemoteLink ):
                ' == ' + node2.server + ':' + intfname2 )
         tun1 = 'local ' + IP1 + ' remote ' + IP2
         tun2 = 'local ' + IP2 + ' remote ' + IP1
-        global GRE_KEY
-        GRE_KEY += 1
+        self.__class__.GRE_KEY += 1
         for (node, intfname, addr, tun) in [(node1, intfname1, addr1, tun1),
                                             (node2, intfname2, addr2, tun2)]:
             node.rcmd('ip link delete ' + intfname)
             result = node.rcmd('ip link add name ' + intfname + ' type gretap '
-                               + tun + ' ttl 64 key ' + str(GRE_KEY))
+                               + tun + ' ttl 64 key '
+                               + str( self.__class__.GRE_KEY) )
             if result:
                 raise Exception('error creating gretap on %s: %s'
                                 % (node, result))
