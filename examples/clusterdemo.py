@@ -2,9 +2,9 @@
 
 "clusterdemo.py: demo of Mininet Cluster Edition prototype"
 
-from mininet.examples.cluster import MininetCluster, SwitchBinPlacer
-from cluster import RemoteLink
-# Could also use: RemoteSSHLink, RemoteGRELink
+from mininet.examples.cluster import ( MininetCluster, SwitchBinPlacer,
+                                       RemoteLink )
+# ^ Could also use: RemoteSSHLink, RemoteGRELink
 from mininet.topolib import TreeTopo
 from mininet.log import setLogLevel
 from mininet.examples.clustercli import ClusterCLI as CLI
