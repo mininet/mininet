@@ -19,9 +19,12 @@ from mininet.log import setLogLevel, info
 
 from sys import argv
 
-class SingleSwitchTopo(Topo):
+# It would be nice if we didn't have to do this:
+# pylint: disable=arguments-differ
+
+class SingleSwitchTopo( Topo ):
     "Single switch connected to n hosts."
-    def build(self, n=2, lossy=True ):
+    def build( self, n=2, lossy=True ):
         switch = self.addSwitch('s1')
         for h in range(n):
             # Each host gets 50%/n of system CPU
