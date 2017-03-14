@@ -21,8 +21,7 @@ if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
 
 from mininet.clean import cleanup
-from mininet.cli import CLI
-CLI  # workaround for pylint "CLI unused" error
+import mininet.cli
 from mininet.log import lg, LEVELS, info, debug, warn, error, output
 from mininet.net import Mininet, MininetWithControlNet, VERSION
 from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
@@ -102,9 +101,11 @@ def allTest( net ):
     net.start()
     net.ping()
     net.iperf()
-def nullTest( net ):
+
+def nullTest( _net ):
     "Null 'test' (does nothing)"
     pass
+
 TESTS.update( all=allTest, none=nullTest, build=nullTest )
 
 # Map to alternate spellings of Mininet() methods
@@ -343,7 +344,6 @@ class MininetRunner( object ):
                                      opts.switch )
 
 
-
         topo = buildTopo( TOPOS, opts.topo )
         switch = customClass( SWITCHES, opts.switch )
         host = customClass( HOSTS, opts.host )
@@ -374,8 +374,7 @@ class MininetRunner( object ):
             host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
             Net = partial( MininetCluster, servers=servers,
                            placement=PLACEMENT[ opts.placement ] )
-            global CLI
-            CLI = ClusterCLI
+            mininet.cli.CLI = ClusterCLI
 
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller, link=link,
@@ -386,6 +385,8 @@ class MininetRunner( object ):
 
         if opts.ensure_value( 'nat', False ):
             mn.addNAT( *opts.nat_args, **opts.nat_kwargs ).configDefault()
+
+        CLI = mininet.cli.CLI
 
         if opts.pre:
             CLI( mn, script=opts.pre )
