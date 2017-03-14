@@ -13,8 +13,8 @@ before_install:
 - sudo apt-get install -qq vlan
 
 install:
-- make codecheck
 - sudo util/install.sh -fnvw
+- [ `lsb_release -rs` == '14.04' ] && make codecheck
 
 script:
 - sudo mn --test pingall
