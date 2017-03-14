@@ -343,7 +343,6 @@ class MininetRunner( object ):
                                      "for switch %s" %
                                      opts.switch )
 
-
         topo = buildTopo( TOPOS, opts.topo )
         switch = customClass( SWITCHES, opts.switch )
         host = customClass( HOSTS, opts.host )
