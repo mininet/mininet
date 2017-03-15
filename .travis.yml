@@ -10,7 +10,8 @@ matrix:
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq vlan pyflakes pylint
+- sudo apt-get install -qq vlan
+- sudo util/install.sh -n
 
 install:
 - bash -c "[ `lsb_release -rs` == '14.04' ] && make codecheck"
