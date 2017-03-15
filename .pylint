@@ -44,7 +44,7 @@ load-plugins=
 disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
         too-many-instance-attributes, too-few-public-methods, too-many-arguments,
         too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
-        locally-disabled
+        locally-disabled, locally-enabled, bad-continuation, wrong-import-order
 
 [REPORTS]
 
