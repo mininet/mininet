@@ -44,7 +44,9 @@ load-plugins=
 disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
         too-many-instance-attributes, too-few-public-methods, too-many-arguments,
         too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
-        locally-disabled, locally-enabled, bad-continuation, wrong-import-order
+        locally-disabled, locally-enabled
+
+# bad-continuation, wrong-import-order
 
 [REPORTS]
 
@@ -61,7 +63,7 @@ include-ids=yes
 # written in a file name "pylint_global.[txt|html]".
 files-output=no
 
-# Tells wether to display a full report or only the messages
+# Tells whether to display a full report or only the messages
 reports=no
 
 # Python expression which should return a note less than 10 (10 is the highes
@@ -111,10 +113,10 @@ const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
 class-rgx=[A-Z_][a-zA-Z0-9]+$
 
 # Regular expression which should only match correct function names
-function-rgx=[a-z_][a-z0-9_]{2,30}$
+function-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct method names
-method-rgx=[a-z_][a-z0-9_]{2,30}$
+method-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct instance attribute names
 attr-rgx=[a-z_][a-z0-9_]{2,30}$
@@ -123,7 +125,7 @@ attr-rgx=[a-z_][a-z0-9_]{2,30}$
 argument-rgx=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression which should only match correct variable names
-variable-rgx=[a-z_][a-z0-9_]{2,30}$
+variable-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct list comprehension /
 # generator expression variable names
