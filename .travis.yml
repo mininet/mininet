@@ -14,7 +14,7 @@ before_install:
 
 install:
 - sudo util/install.sh -fnvw
-- [ `lsb_release -rs` == '14.04' ] && make codecheck
+- bash -c "[ `lsb_release -rs` == '14.04' ] && make codecheck"
 
 script:
 - sudo mn --test pingall
