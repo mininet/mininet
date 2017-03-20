@@ -402,7 +402,7 @@ class RemoteLink( Link ):
         cmd = 'ip link set %s netns %s' % ( intf, node.pid )
         node.rcmd( cmd )
         links = node.cmd( 'ip link show' )
-        if not ' %s:' % intf in links:
+        if not re.search( r' %s[:@]' % intf, links ):
             if printError:
                 error( '*** Error: RemoteLink.moveIntf: ' + intf +
                        ' not successfully moved to ' + node.name + '\n' )
