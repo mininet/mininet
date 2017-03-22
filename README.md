@@ -126,8 +126,7 @@ hard work that Mininet continues to grow and improve.
 Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
-Bob Lantz
-
+Bob Lantz  
 Mininet Core Team
 
 [1]: https://travis-ci.org/mininet/mininet.svg?branch=master
