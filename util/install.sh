@@ -475,7 +475,7 @@ function ryu {
     cd ryu
 
     # install ryu
-    sudo python ./setup.py install
+    sudo pip install .
 
     # Add symbolic link to /usr/bin
     sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
