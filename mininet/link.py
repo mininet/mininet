@@ -42,6 +42,7 @@ class Intf( object ):
         self.name = name
         self.link = link
         self.mac = mac
+        self.enabled = False
         self.ip, self.prefixLen = None, None
 
         # if interface is lo, we know the ip is 127.0.0.1.
@@ -65,7 +66,12 @@ class Intf( object ):
 
     def ifconfig( self, *args ):
         "Configure ourselves using ifconfig"
-        return self.cmd( 'ifconfig', self.name, *args )
+        result = self.cmd( 'ifconfig', self.name, *args )
+        self.enabled = "UP" in result
+        # result is empty on successful up/down
+        if len(args) > 1:
+            self.isUp()
+        return result
 
     def setIP( self, ipstr, prefixLen=None ):
         """Set our IP address"""
@@ -139,9 +145,13 @@ class Intf( object ):
                 error( "Error setting %s up: %s " % ( self.name, cmdOutput ) )
                 return False
             else:
+                self.enabled = True
                 return True
         else:
-            return "UP" in self.ifconfig()
+            cmdOutput = self.ifconfig()
+            result = "UP" in cmdOutput
+            self.enabled = result
+            return result 
 
     def rename( self, newname ):
         "Rename interface"
