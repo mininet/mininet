@@ -696,7 +696,7 @@ class Mininet( object ):
         m = re.search( r, pingOutput )
         if m is not None:
             return errorTuple
-        r = r'(\d+) packets transmitted, (\d+) received'
+        r = r'(\d+) packets transmitted, (\d+)( packets)? received'
         m = re.search( r, pingOutput )
         if m is None:
             error( '*** Error: could not parse ping output: %s\n' %
@@ -827,7 +827,7 @@ class Mininet( object ):
         debug( 'Client output: %s\n' % cliout )
         servout = ''
         # We want the last *b/sec from the iperf server output
-        # for TCP, there are two fo them because of waitListening
+        # for TCP, there are two of them because of waitListening
         count = 2 if l4Type == 'TCP' else 1
         while len( re.findall( '/sec', servout ) ) < count:
             servout += server.monitor( timeoutms=5000 )
@@ -846,7 +846,6 @@ class Mininet( object ):
         duration: test duration in seconds (integer)
         returns a single list of measured CPU fractions as floats.
         """
-        cores = int( quietRun( 'nproc' ) )
         pct = cpu * 100
         info( '*** Testing CPU %.0f%% bandwidth limit\n' % pct )
         hosts = self.hosts
