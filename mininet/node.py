@@ -57,6 +57,7 @@ import pty
 import re
 import signal
 import select
+import pipes
 from subprocess import Popen, PIPE
 from time import sleep
 
@@ -105,6 +106,7 @@ class Node( object ):
         # Start command interpreter shell
         self.startShell()
         self.mountPrivateDirs()
+        self.setHostname()
 
     # File descriptor to node mapping support
     # Class variables and methods
@@ -191,6 +193,11 @@ class Node( object ):
                 self.cmd( 'umount ', directory[ 0 ] )
             else:
                 self.cmd( 'umount ', directory )
+
+    def setHostname( self ):
+        "Set the hostname to the node name"
+        if self.inNamespace:
+            self.cmd( 'hostname %s' % pipes.quote( self.name ) )
 
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process

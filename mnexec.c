@@ -5,7 +5,7 @@
  *
  *  - closing all file descriptors except stdin/out/error
  *  - detaching from a controlling tty using setsid
- *  - running in network and mount namespaces
+ *  - running in network, mount, and UTS namespaces
  *  - printing out the pid of a process so we can identify it later
  *  - attaching to a namespace and cgroup
  *  - setting RT scheduling
@@ -36,9 +36,9 @@ void usage(char *name)
            "Options:\n"
            "  -c: close all file descriptors except stdin/out/error\n"
            "  -d: detach from tty by calling setsid()\n"
-           "  -n: run in new network and mount namespaces\n"
+           "  -n: run in new network, mount, and UTS namespaces\n"
            "  -p: print ^A + pid\n"
-           "  -a pid: attach to pid's network and mount namespaces\n"
+           "  -a pid: attach to pid's network, mount, and UTS namespaces\n"
            "  -g group: add to cgroup\n"
            "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
            "  -v: print version\n",
@@ -125,8 +125,8 @@ int main(int argc, char *argv[])
             setsid();
             break;
         case 'n':
-            /* run in network and mount namespaces */
-            if (unshare(CLONE_NEWNET|CLONE_NEWNS) == -1) {
+            /* run in network, mount, and UTS namespaces */
+            if (unshare(CLONE_NEWNET|CLONE_NEWNS|CLONE_NEWUTS) == -1) {
                 perror("unshare");
                 return 1;
             }
@@ -178,6 +178,17 @@ int main(int argc, char *argv[])
             /* chdir to correct working directory */
             if (chdir(cwd) != 0) {
                 perror(cwd);
+                return 1;
+            }
+            /* Attach to pid's UTS namespace */
+            sprintf(path, "/proc/%d/ns/uts", pid);
+            nsid = open(path, O_RDONLY);
+            if (nsid < 0) {
+                perror(path);
+                return 1;
+            }
+            if (setns(nsid, 0) != 0) {
+                perror("setns");
                 return 1;
             }
             break;
