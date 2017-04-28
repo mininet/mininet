@@ -33,6 +33,21 @@ ARCH=`uname -m`
 if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
 if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
+
+
+
+
+test -e /etc/centos-release && DIST="Raspbian"
+if [ "$DIST" = "Raspbian" ]; then
+    install='sudo apt-get -y -q install'
+    remove='sudo  apt-get -y -q remove'
+    pkginst='sudo dpkg -i'
+    # Prereqs for this script
+    if ! which lsb_release &> /dev/null; then
+        $install redhat-lsb-core
+    fi
+fi
+
 test -e /etc/debian_version && DIST="Debian"
 grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
@@ -65,7 +80,7 @@ if [ "$DIST" = "SUSE Linux" ]; then
     pkginst='sudo rpm -ivh'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-		$install openSUSE-release
+        $install openSUSE-release
     fi
 fi
 if which lsb_release &> /dev/null; then
@@ -80,7 +95,7 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'; then
+if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX|Raspbian'; then
     echo "Install.sh currently only supports Ubuntu, Debian, RedHat and Fedora."
     exit 1
 fi
@@ -141,10 +156,10 @@ function mn_deps {
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man pyflakes pylint python-pep8 python-pexpect
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install gcc make socat psmisc xterm openssh iperf \
-			iproute telnet python-setuptools libcgroup-tools \
-			ethtool help2man python-pyflakes python3-pylint python-pep8 python-pexpect
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install gcc make socat psmisc xterm openssh iperf \
+            iproute telnet python-setuptools libcgroup-tools \
+            ethtool help2man python-pyflakes python3-pylint python-pep8 python-pexpect
     else
         $install gcc make socat psmisc xterm ssh iperf iproute telnet \
             python-setuptools cgroup-bin ethtool help2man \
@@ -176,7 +191,7 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
        $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
@@ -248,8 +263,8 @@ function install_wireshark {
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
             $install wireshark wireshark-gnome
-		elif [ "$DIST" = "SUSE LINUX"  ]; then
-			$install wireshark
+        elif [ "$DIST" = "SUSE LINUX"  ]; then
+            $install wireshark
         else
             $install wireshark tshark
         fi
@@ -487,7 +502,7 @@ function nox {
 
     # Install NOX deps:
     $install autoconf automake g++ libtool python python-twisted \
-		swig libssl-dev make
+        swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
@@ -588,8 +603,8 @@ function cbench {
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install net-snmp-devel libpcap-devel libconfig-devel
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install net-snmp-devel libpcap-devel libconfig-devel
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
