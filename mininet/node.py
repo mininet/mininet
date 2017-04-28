@@ -1001,9 +1001,6 @@ class UserSwitch( Switch ):
         """Start OpenFlow reference user datapath.
            Log to /tmp/sN-{ofd,ofp}.log.
            controllers: list of controller objects"""
-        # Add controllers
-        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
-                            for c in controllers ] )
         ofdlog = '/tmp/' + self.name + '-ofd.log'
         ofplog = '/tmp/' + self.name + '-ofp.log'
         intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
@@ -1011,10 +1008,12 @@ class UserSwitch( Switch ):
                   ' punix:/tmp/' + self.name + ' -d %s ' % self.dpid +
                   self.dpopts +
                   ' 1> ' + ofdlog + ' 2> ' + ofdlog + ' &' )
-        self.cmd( 'ofprotocol unix:/tmp/' + self.name +
-                  ' ' + clist +
-                  ' --fail=closed ' + self.opts +
-                  ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
+        # Run multiple ofprotocol instances for simulatenous connections
+        for c in controllers:
+            self.cmd( 'ofprotocol unix:/tmp/' + self.name +
+                      ' ' +  'tcp:%s:%d' % (c.IP(), c.port)  +
+                      ' --fail=closed ' + self.opts +
+                      ' 1> ' + ofplog + ' 2>' + ofplog + ' &' )
         if "no-slicing" not in self.dpopts:
             # Only TCReapply if slicing is enable
             sleep(1)  # Allow ofdatapath to start before re-arranging qdisc's
