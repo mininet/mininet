@@ -80,8 +80,12 @@ echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 KERNEL_NAME=`uname -r`
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
-if ! echo $DIST | egrep 'Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'; then
-    echo "Install.sh currently only supports Ubuntu, Debian, RedHat and Fedora."
+# Treat Raspbian as Debian
+[ "$DIST" = 'Raspbian' ] && DIST='Debian'
+
+DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
+if ! echo $DIST | egrep "$DISTS" >/dev/null; then
+    echo "Install.sh currently only supports $DISTS."
     exit 1
 fi
 
