@@ -702,8 +702,11 @@ class CPULimitedHost( Host ):
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
         # Tell mnexec to execute command in our cgroup
-        mncmd = [ 'mnexec', '-g', self.name,
-                  '-da', str( self.pid ) ]
+        if 'mncmd' in kwargs:
+            mncmd = kwargs['mncmd']
+        else:
+            mncmd = [ 'mnexec', '-g', self.name,
+                      '-da', str( self.pid ) ]
         # if our cgroup is not given any cpu time,
         # we cannot assign the RR Scheduler.
         if self.sched == 'rt':
