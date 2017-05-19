@@ -462,24 +462,19 @@ function ryu {
     # install Ryu dependencies"
     $install autoconf automake g++ libtool python make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
-        $install libxml2 libxslt-dev python-pip python-dev
-        sudo pip install --upgrade gevent pbr webob routes paramiko \\
-            oslo.config
+        $install gcc python-pip python-dev libffi-dev libssl-dev \
+            libxml2-dev libxslt1-dev zlib1g-dev
     fi
 
-    # if needed, update python-six
-    SIX_VER=`pip show six | grep Version | awk '{print $2}'`
-    if version_ge 1.7.0 $SIX_VER; then
-        echo "Installing python-six version 1.7.0..."
-        sudo pip install -I six==1.7.0
-    fi
     # fetch RYU
     cd $BUILD_DIR/
     git clone git://github.com/osrg/ryu.git ryu
     cd ryu
 
     # install ryu
-    sudo pip install .
+    sudo pip install -r tools/pip-requires -r tools/optional-requires \
+        -r tools/test-requires
+    sudo python setup.py install
 
     # Add symbolic link to /usr/bin
     sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
