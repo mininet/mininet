@@ -50,11 +50,12 @@ class Intf( object ):
             self.ip = '127.0.0.1'
             self.prefixLen = 8
         # Add to node (and move ourselves if necessary )
-        moveIntfFn = params.pop( 'moveIntfFn', None )
-        if moveIntfFn:
-            node.addIntf( self, port=port, moveIntfFn=moveIntfFn )
-        else:
-            node.addIntf( self, port=port )
+        if node:
+            moveIntfFn = params.pop( 'moveIntfFn', None )
+            if moveIntfFn:
+                node.addIntf( self, port=port, moveIntfFn=moveIntfFn )
+            else:
+                node.addIntf( self, port=port )
         # Save params for future reference
         self.params = params
         self.config( **params )
