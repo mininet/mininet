@@ -14,7 +14,7 @@ before_install:
 - sudo util/install.sh -n
 
 install:
-- bash -c "[ `lsb_release -rs` == '14.04' ] && make codecheck"
+- bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
 - sudo util/install.sh -fnvw
 
 script:
