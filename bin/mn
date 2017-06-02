@@ -314,6 +314,8 @@ class MininetRunner( object ):
     def begin( self ):
         "Create and run mininet."
 
+        global CLI
+
         opts = self.options
 
         if opts.cluster:
@@ -385,7 +387,8 @@ class MininetRunner( object ):
         if opts.ensure_value( 'nat', False ):
             mn.addNAT( *opts.nat_args, **opts.nat_kwargs ).configDefault()
 
-        CLI = mininet.cli.CLI
+        # --custom files can set CLI or change mininet.cli.CLI
+        globals().setdefault( 'CLI', mininet.cli.CLI )
 
         if opts.pre:
             CLI( mn, script=opts.pre )
