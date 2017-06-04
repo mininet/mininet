@@ -98,7 +98,7 @@ from math import ceil
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
+from mininet.node import ( Node, Host, Agent, OVSKernelSwitch, DefaultController,
                            Controller )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
@@ -113,7 +113,8 @@ VERSION = "2.3.0d1"
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
-    def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
+    # new-18.12
+    def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host, agent=Agent,
                   controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
                   inNamespace=False,
@@ -139,6 +140,7 @@ class Mininet( object ):
         self.topo = topo
         self.switch = switch
         self.host = host
+        self.agent = agent # new-18.12
         self.controller = controller
         self.link = link
         self.intf = intf
@@ -159,6 +161,7 @@ class Mininet( object ):
         self.waitConn = waitConnected
 
         self.hosts = []
+        self.agents = []
         self.switches = []
         self.controllers = []
         self.links = []
@@ -245,6 +248,24 @@ class Mininet( object ):
     def delHost( self, host ):
         "Delete a host"
         self.delNode( host, nodes=self.hosts )
+
+    # new-22.12
+    def addAgent(self, name, cls=None):
+        """Add agent.
+           name: name of agent to add
+           cls: custom agent class/constructor (optional)"""
+        if not cls:
+            cls = self.agent
+        a = cls(name)
+        self.agents.append(a)
+        self.nameToNode[name] = a
+        return a
+
+    # new-22.12
+    def delAgent( self, agent ):
+        "Delete a agent"
+        self.delNode( agent, nodes=self.agents )
+
 
     def addSwitch( self, name, cls=None, **params ):
         """Add switch.

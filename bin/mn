@@ -24,7 +24,8 @@ from mininet.clean import cleanup
 import mininet.cli
 from mininet.log import lg, LEVELS, info, debug, warn, error, output
 from mininet.net import Mininet, MininetWithControlNet, VERSION
-from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
+# new-22.12
+from mininet.node import ( Host, Agent, CPULimitedHost, Controller, OVSController,
                            Ryu, NOX, RemoteController, findController,
                            DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,
@@ -71,6 +72,10 @@ HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
           'rt': specialClass( CPULimitedHost, defaults=dict( sched='rt' ) ),
           'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
+
+# new-22.12
+AGENTDEF = 'default'
+AGENTS = { 'default': Agent}
 
 CONTROLLERDEF = 'default'
 CONTROLLERS = { 'ref': Controller,
@@ -233,6 +238,7 @@ class MininetRunner( object ):
         opts = OptionParser( description=desc, usage=usage )
         addDictOption( opts, SWITCHES, SWITCHDEF, 'switch' )
         addDictOption( opts, HOSTS, HOSTDEF, 'host' )
+        addDictOption( opts, AGENTS, AGENTDEF, 'agent') #new-22.12
         addDictOption( opts, CONTROLLERS, [], 'controller', action='append' )
         addDictOption( opts, LINKS, LINKDEF, 'link' )
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
@@ -348,6 +354,7 @@ class MininetRunner( object ):
         topo = buildTopo( TOPOS, opts.topo )
         switch = customClass( SWITCHES, opts.switch )
         host = customClass( HOSTS, opts.host )
+        agent = customClass(AGENTS, opts.agent)  # new-22.12
         controller = [ customClass( CONTROLLERS, c )
                        for c in opts.controller ]
 
@@ -377,8 +384,9 @@ class MininetRunner( object ):
                            placement=PLACEMENT[ opts.placement ] )
             mininet.cli.CLI = ClusterCLI
 
+        #new-22.12
         mn = Net( topo=topo,
-                  switch=switch, host=host, controller=controller, link=link,
+                  switch=switch, host=host, agent=agent, controller=controller, link=link,
                   ipBase=opts.ipbase, inNamespace=opts.innamespace,
                   xterms=opts.xterms, autoSetMacs=opts.mac,
                   autoStaticArp=opts.arp, autoPinCpus=opts.pin,
