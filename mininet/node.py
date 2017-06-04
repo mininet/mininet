@@ -836,6 +836,12 @@ class CPULimitedHost( Host ):
         mountCgroups()
         cls.inited = True
 
+# new-18.12
+class Agent(Node):
+    def __init__(self, name, **params):
+        print("agent")
+        Node.__init__(self, name, **params)
+
 
 # Some important things to note:
 #
@@ -909,7 +915,7 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                    self.name )
 
-    def connected( self ):
+    def connected( self ): #todo connect switch to agent? trough here or by link topo?i think this only checks we are connected to a controller
         "Is the switch connected to a controller? (override this method)"
         # Assume that we are connected by default to whatever we need to
         # be connected to. This should be overridden by any OpenFlow
