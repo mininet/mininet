@@ -1688,6 +1688,7 @@ class MiniEdit( Frame ):
 
             f.write("#!/usr/bin/python\n")
             f.write("\n")
+            f.write("import os\n")
             f.write("from mininet.net import Mininet\n")
             f.write("from mininet.node import Controller, RemoteController, OVSController\n")
             f.write("from mininet.node import CPULimitedHost, Host, Node\n")
@@ -2002,6 +2003,7 @@ class MiniEdit( Frame ):
                     f.write("    call('"+sflowCmd+sflowSwitches+"', shell=True)\n")
 
             f.write("\n")
+            f.write("    net.start()\n")
             f.write("    CLI(net)\n")
             for widget in self.widgetToItem:
                 name = widget[ 'text' ]
@@ -2017,11 +2019,11 @@ class MiniEdit( Frame ):
                     if 'stopCommand' in opts:
                         f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
 
-            f.write("    net.stop()\n")
             f.write("\n")
             f.write("if __name__ == '__main__':\n")
             f.write("    setLogLevel( 'info' )\n")
             f.write("    myNetwork()\n")
+            f.write("    os.system('sudo mn -c')\n")
             f.write("\n")
 
 
