@@ -231,6 +231,10 @@ class Topo( object ):
         if dport is None:
             dst_base = 1 if self.isSwitch( dst ) else 0
             dport = len( ports[ dst ] ) + dst_base
+            """if link is loopback cable (attached to different
+               ports of the same switch - increment dport"""
+            if src == dst:
+                dport += 1
         ports[ src ][ sport ] = ( dst, dport )
         ports[ dst ][ dport ] = ( src, sport )
         return sport, dport
