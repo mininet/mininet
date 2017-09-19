@@ -26,7 +26,6 @@ Link: basic link class for creating veth pairs
 
 from mininet.log import info, error, debug
 from mininet.util import makeIntfPair
-import mininet.node
 import re
 
 class Intf( object ):
@@ -51,11 +50,12 @@ class Intf( object ):
             self.ip = '127.0.0.1'
             self.prefixLen = 8
         # Add to node (and move ourselves if necessary )
-        moveIntfFn = params.pop( 'moveIntfFn', None )
-        if moveIntfFn:
-            node.addIntf( self, port=port, moveIntfFn=moveIntfFn )
-        else:
-            node.addIntf( self, port=port )
+        if node:
+            moveIntfFn = params.pop( 'moveIntfFn', None )
+            if moveIntfFn:
+                node.addIntf( self, port=port, moveIntfFn=moveIntfFn )
+            else:
+                node.addIntf( self, port=port )
         # Save params for future reference
         self.params = params
         self.config( **params )
@@ -135,9 +135,8 @@ class Intf( object ):
         "Return whether interface is up"
         if setUp:
             cmdOutput = self.ifconfig( 'up' )
-            # no output / command output indicates success
-            if (len(cmdOutput) > 0
-                    and "ifconfig" not in cmdOutput):
+            # no output indicates success
+            if cmdOutput:
                 error( "Error setting %s up: %s " % ( self.name, cmdOutput ) )
                 return False
             else:
@@ -203,10 +202,8 @@ class Intf( object ):
         # if self.node.inNamespace:
         # Link may have been dumped into root NS
         # quietRun( 'ip link del ' + self.name )
-
-        # call detach if we have a OVSSwitch (just to be sure)
-        if isinstance( self.node, mininet.node.OVSSwitch ):
-            self.node.detach(self)
+        self.node.delIntf( self )
+        self.link = None
 
     def status( self ):
         "Return intf status as a string"
@@ -256,7 +253,7 @@ class TCIntf( Intf ):
                           + 'rate %fMbit ul rate %fMbit' % ( bw, bw ) ]
             elif use_tbf:
                 if latency_ms is None:
-                    latency_ms = 15 * 8 / bw
+                    latency_ms = 15.0 * 8 / bw
                 cmds += [ '%s qdisc add dev %s root handle 5: tbf ' +
                           'rate %fMbit burst 15000 latency %fms' %
                           ( bw, latency_ms ) ]
@@ -299,7 +296,7 @@ class TCIntf( Intf ):
             netemargs = '%s%s%s%s' % (
                 'delay %s ' % delay if delay is not None else '',
                 '%s ' % jitter if jitter is not None else '',
-                'loss %d ' % loss if loss is not None else '',
+                'loss %.5f ' % loss if loss is not None else '',
                 'limit %d' % max_queue_size if max_queue_size is not None
                 else '' )
             if netemargs:
@@ -316,16 +313,40 @@ class TCIntf( Intf ):
         return self.cmd( c )
 
     def config( self, bw=None, delay=None, jitter=None, loss=None,
-                disable_gro=True, speedup=0, use_hfsc=False, use_tbf=False,
+                gro=False, txo=True, rxo=True,
+                speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
                 max_queue_size=None, **params ):
-        "Configure the port and set its properties."
+        """Configure the port and set its properties.
+           bw: bandwidth in b/s (e.g. '10m')
+           delay: transmit delay (e.g. '1ms' )
+           jitter: jitter (e.g. '1ms')
+           loss: loss (e.g. '1%' )
+           gro: enable GRO (False)
+           txo: enable transmit checksum offload (True)
+           rxo: enable receive checksum offload (True)
+           speedup: experimental switch-side bw option
+           use_hfsc: use HFSC scheduling
+           use_tbf: use TBF scheduling
+           latency_ms: TBF latency parameter
+           enable_ecn: enable ECN (False)
+           enable_red: enable RED (False)
+           max_queue_size: queue limit parameter for netem"""
+
+        # Support old names for parameters
+        gro = not params.pop( 'disable_gro', not gro )
 
         result = Intf.config( self, **params)
 
-        # Disable GRO
-        if disable_gro:
-            self.cmd( 'ethtool -K %s gro off' % self )
+        def on( isOn ):
+            "Helper method: bool -> 'on'/'off'"
+            return 'on' if isOn else 'off'
+
+        # Set offload parameters with ethool
+        self.cmd( 'ethtool -K', self,
+                  'gro', on( gro ),
+                  'tx', on( txo ),
+                  'rx', on( rxo ) )
 
         # Optimization: return if nothing else to configure
         # Question: what happens if we want to reset things?
@@ -335,7 +356,7 @@ class TCIntf( Intf ):
 
         # Clear existing configuration
         tcoutput = self.tc( '%s qdisc show dev %s' )
-        if "priomap" not in tcoutput:
+        if "priomap" not in tcoutput and "noqueue" not in tcoutput:
             cmds = [ '%s qdisc del dev %s root' ]
         else:
             cmds = []
@@ -359,7 +380,7 @@ class TCIntf( Intf ):
         stuff = ( ( [ '%.2fMbit' % bw ] if bw is not None else [] ) +
                   ( [ '%s delay' % delay ] if delay is not None else [] ) +
                   ( [ '%s jitter' % jitter ] if jitter is not None else [] ) +
-                  ( ['%d%% loss' % loss ] if loss is not None else [] ) +
+                  ( ['%.5f%% loss' % loss ] if loss is not None else [] ) +
                   ( [ 'ECN' ] if enable_ecn else [ 'RED' ]
                     if enable_red else [] ) )
         info( '(' + ' '.join( stuff ) + ') ' )
@@ -368,7 +389,7 @@ class TCIntf( Intf ):
         debug("at map stage w/cmds: %s\n" % cmds)
         tcoutputs = [ self.tc(cmd) for cmd in cmds ]
         for output in tcoutputs:
-            if output != '' and output != 'RTNETLINK answers: No such file or directory\r\n':
+            if output != '':
                 error( "*** Error: %s" % output )
         debug( "cmds:", cmds, '\n' )
         debug( "outputs:", tcoutputs, '\n' )
@@ -476,7 +497,9 @@ class Link( object ):
     def delete( self ):
         "Delete this link"
         self.intf1.delete()
+        self.intf1 = None
         self.intf2.delete()
+        self.intf2 = None
 
     def stop( self ):
         "Override to stop and clean up link as needed"
@@ -509,9 +532,10 @@ class OVSLink( Link ):
 
     def __init__( self, node1, node2, **kwargs ):
         "See Link.__init__() for options"
+        from mininet.node import OVSSwitch
         self.isPatchLink = False
-        if ( isinstance( node1, mininet.node.OVSSwitch ) and
-             isinstance( node2, mininet.node.OVSSwitch ) ):
+        if ( isinstance( node1, OVSSwitch ) and
+             isinstance( node2, OVSSwitch ) ):
             self.isPatchLink = True
             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
         Link.__init__( self, node1, node2, **kwargs )
@@ -537,30 +561,17 @@ class TCLink( Link ):
                        params1=params,
                        params2=params )
 
-class AsymTCLink( Link ):
-     "Link with potential asymmetric TC interfaces configured via opts"
-     def __init__( self, node1, node2, port1=None, port2=None,
-                   intfName1=None, intfName2=None,
-                   addr1=None, addr2=None, **params):
-         p1 = {}
-         p2 = {}
-         if 'params1' in params:
-             p1 = params['params1']
-             del params['params1']
-         if 'params2' in params:
-             p2 = params['params2']
-             del params['params2']
 
-         par1 = params.copy()
-         par1.update(p1)
+class TCULink( TCLink ):
+    """TCLink with default settings optimized for UserSwitch
+       (txo=rxo=0/False).  Unfortunately with recent Linux kernels,
+       enabling TX and RX checksum offload on veth pairs doesn't work
+       well with UserSwitch: either it gets terrible performance or
+       TCP packets with bad checksums are generated, forwarded, and
+       *dropped* due to having bad checksums! OVS and LinuxBridge seem
+       to cope with this somehow, but it is likely to be an issue with
+       many software Ethernet bridges."""
 
-         par2 = params.copy()
-         par2.update(p2)
-
-         Link.__init__(self, node1, node2, port1=port1, port2=port2,
-                       intfName1=intfName1, intfName2=intfName2,
-                       cls1=TCIntf,
-                       cls2=TCIntf,
-                       addr1=addr1, addr2=addr2,
-                       params1=par1,
-                       params2=par2)
+    def __init__( self, *args, **kwargs ):
+        kwargs.update( txo=False, rxo=False )
+        TCLink.__init__( self, *args, **kwargs )
