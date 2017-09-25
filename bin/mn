@@ -93,6 +93,7 @@ LINKS = { 'default': Link,  # Note: overridden below
 TESTS = { name: True
           for name in ( 'pingall', 'pingpair', 'iperf', 'iperfudp' ) }
 
+CLI = None  # Set below if needed
 
 # Locally defined tests
 def allTest( net ):
@@ -309,7 +310,7 @@ class MininetRunner( object ):
         lg.setLogLevel( self.options.verbosity )
 
     # Maybe we'll reorganize this someday...
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,global-statement
 
     def begin( self ):
         "Create and run mininet."
@@ -388,7 +389,7 @@ class MininetRunner( object ):
             mn.addNAT( *opts.nat_args, **opts.nat_kwargs ).configDefault()
 
         # --custom files can set CLI or change mininet.cli.CLI
-        globals().setdefault( 'CLI', mininet.cli.CLI )
+        CLI = mininet.cli.CLI if CLI is None else CLI
 
         if opts.pre:
             CLI( mn, script=opts.pre )
