@@ -474,7 +474,7 @@ class CLI( Cmd ):
 
 def parsePingOptions( command, line ):
     parser = argparse.ArgumentParser(prog=command, usage='%(prog)s [options]')
-    parser.add_argument("-timeout", "-t", help="timeout for ping", type=int)
+    parser.add_argument("-timeout", "-t", help="Time to wait for a response, in seconds", type=int)
     parser.add_argument("-count", "-c", help="Stop after sending count ECHO_REQUEST packets", type=int, default=1)
     try:
         return parser.parse_args(line.split())
