@@ -219,7 +219,7 @@ function of13 {
     fi
 
     # Install netbee
-    # It must come from "git clone https://github.com/netgroup-polito/netbee.git"   
+    # It must come from "git clone https://github.com/netgroup-polito/netbee.git" 
     NBEEDIR="netbee"
     cd $BUILD_DIR/
     git clone https://github.com/netgroup-polito/netbee.git
