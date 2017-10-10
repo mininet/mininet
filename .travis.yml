@@ -5,8 +5,11 @@ matrix:
   include:
     - dist: trusty
       env: dist="14.04 LTS trusty"
-    - dist: xenial
-      env: dist="16.04 LTS xenial"
+#    - dist: xenial
+#      env: dist="16.04 LTS xenial"
+# Travis-CI only proposes 14.04 LTS Trusty and there is no plan to update to 16.04 xenial
+# (c.f. https://github.com/travis-ci/travis-ci/issues/5821)
+# It is useless to add a second job because it will run in the same Ubuntu version (14.04)
 
 before_install:
 - sudo apt-get update -qq
