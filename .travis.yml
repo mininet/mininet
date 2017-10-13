@@ -1,12 +1,11 @@
 language: python
+
+dist: trusty
 sudo: required
 
 env:
-  global:
-    - dist="14.04 LTS trusty"
-  matrix:
-    - openflow = "-3nfvw"
-    - openflow = "-nfvw"
+  - dist="14.04 LTS trusty" openflow="-3nfvw"
+  - dist="14.04 LTS trusty" openflow="-nfvw"
     
 #matrix:
 #  include:
