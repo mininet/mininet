@@ -21,7 +21,7 @@ before_install:
 
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
-- bash -c "if [ "$openflow" == '1.3' ] ; then sudo util/install.sh -3fnvw; else sudo util/install.sh -fnvw; fi"
+- bash -c "if [ "$openflow" == '1.3' ] ; then sudo util/install.sh -3fnvw; echo "Openflow 1.3"; else sudo util/install.sh -fnvw; echo "Openflow 1.0" fi"
 
 script:
 - sudo mn --test pingall
