@@ -4,7 +4,10 @@ sudo: required
 matrix:
   include:
     - dist: trusty
-      env: dist="14.04 LTS trusty"
+      env: dist="14.04 LTS trusty" openflow="1.3"
+    - dist: trusty
+      env: dist="14.04 LTS trusty" openflow="1.0"
+
 #    - dist: xenial
 #      env: dist="16.04 LTS xenial"
 # Travis-CI only proposes 14.04 LTS Trusty and there is no plan to update to 16.04 xenial
@@ -18,7 +21,7 @@ before_install:
 
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
-- sudo util/install.sh -fnvw
+- bash -c "if [ "$openflow" == '1.3' ] ; then sudo util/install.sh -3fnvw; else sudo util/install.sh -fnvw; fi"
 
 script:
 - sudo mn --test pingall
