@@ -102,6 +102,10 @@ to the Python API, is available on the
 There is also a wiki which you are encouraged to read and to
 contribute to, particularly the Frequently Asked Questions (FAQ.)
 
+#### Developement
+
+For instructions about easier development check [this helper file](doc/dev_help.md).
+
 ### Support
 
 Mininet is community-supported. We encourage you to join the
