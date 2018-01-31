@@ -636,7 +636,7 @@ class Node( object ):
             cls.setup()
             cls.isSetup = True
             # Make pylint happy
-            cls = getattr( type( cls ), '__base__', None )
+            cls = getattr( cls, '__base__', None )
 
     @classmethod
     def setup( cls ):
@@ -863,6 +863,9 @@ class Switch( Node ):
 
     portBase = 1  # Switches start with port 1 in OpenFlow
     dpidLen = 16  # digits in dpid passed to switch
+    
+    # Prevent superclass from skipping switch setup
+    isSetup = False 
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
         """dpid: dpid hex string (or None to derive from name, e.g. s1 -> 1)
@@ -1080,7 +1083,7 @@ class OVSSwitch( Switch ):
 
     @classmethod
     def isOldOVS( cls ):
-        "Is OVS ersion < 1.10?"
+        "Is OVS version < 1.10?"
         return ( StrictVersion( cls.OVSVersion ) <
                  StrictVersion( '1.10' ) )
 
