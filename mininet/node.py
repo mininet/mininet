@@ -863,9 +863,9 @@ class Switch( Node ):
 
     portBase = 1  # Switches start with port 1 in OpenFlow
     dpidLen = 16  # digits in dpid passed to switch
-    
+
     # Prevent superclass from skipping switch setup
-    isSetup = False 
+    isSetup = False
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
         """dpid: dpid hex string (or None to derive from name, e.g. s1 -> 1)
