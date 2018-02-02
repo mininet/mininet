@@ -4,6 +4,7 @@
    Test creation and all-pairs ping for each included mininet topo type."""
 
 import unittest
+import sys
 from functools import partial
 
 from mininet.net import Mininet
@@ -12,6 +13,7 @@ from mininet.node import UserSwitch, OVSSwitch, IVSSwitch
 from mininet.topo import SingleSwitchTopo, LinearTopo
 from mininet.log import setLogLevel
 from mininet.util import quietRun
+from mininet.clean import cleanup
 
 # Tell pylint not to complain about calls to other class
 # pylint: disable=E1101
@@ -19,18 +21,25 @@ from mininet.util import quietRun
 class testSingleSwitchCommon( object ):
     "Test ping with single switch topology (common code)."
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
+
+    @staticmethod
+    def tearDown():
+        "Clean up if necessary"
+        if sys.exc_info != ( None, None, None ):
+            cleanup()
 
     def testMinimal( self ):
         "Ping test on minimal topology"
-        mn = Mininet( SingleSwitchTopo(), self.switchClass, Host, Controller )
+        mn = Mininet( SingleSwitchTopo(), self.switchClass, Host, Controller,
+                      waitConnected=True )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 
     def testSingle5( self ):
         "Ping test on 5-host single-switch topology"
         mn = Mininet( SingleSwitchTopo( k=5 ), self.switchClass, Host,
-                      Controller )
+                      Controller, waitConnected=True )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 
@@ -50,7 +59,7 @@ class testSingleSwitchIVS( testSingleSwitchCommon, unittest.TestCase ):
     switchClass = IVSSwitch
 
 @unittest.skipUnless( quietRun( 'which ofprotocol' ),
-                     'Reference user switch is not installed' )
+                      'Reference user switch is not installed' )
 class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
     "Test ping with single switch topology (Userspace switch)."
     switchClass = UserSwitch
@@ -62,11 +71,12 @@ class testSingleSwitchUserspace( testSingleSwitchCommon, unittest.TestCase ):
 class testLinearCommon( object ):
     "Test all-pairs ping with LinearNet (common code)."
 
-    switchClass = None # overridden in subclasses
+    switchClass = None  # overridden in subclasses
 
     def testLinear5( self ):
         "Ping test on a 5-switch topology"
-        mn = Mininet( LinearTopo( k=5 ), self.switchClass, Host, Controller )
+        mn = Mininet( LinearTopo( k=5 ), self.switchClass, Host,
+                      Controller, waitConnected=True )
         dropped = mn.run( mn.ping )
         self.assertEqual( dropped, 0 )
 

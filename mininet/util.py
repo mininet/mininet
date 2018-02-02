@@ -1,5 +1,6 @@
 "Utility functions for Mininet."
 
+
 from mininet.log import output, info, error, warn, debug
 
 from time import sleep
@@ -10,6 +11,7 @@ import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
+from functools import partial
 
 # Command execution support
 
@@ -24,7 +26,7 @@ def checkRun( cmd ):
     return check_call( cmd.split( ' ' ) )
 
 # pylint doesn't understand explicit type checking
-# pylint: disable-msg=E1103
+# pylint: disable=maybe-no-member
 
 def oldQuietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
@@ -55,18 +57,13 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
+# pylint: disable=too-many-branches
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
        stderr: STDOUT to merge stderr with stdout
        shell: run command using shell
        echo: monitor output to console"""
-    # Allow passing in a list or a string
-    if len( cmd ) == 1:
-        cmd = cmd[ 0 ]
-        if isinstance( cmd, str ):
-            cmd = cmd.split( ' ' )
-    cmd = [ str( arg ) for arg in cmd ]
     # By default we separate stderr, don't run in a shell, and don't echo
     stderr = kwargs.get( 'stderr', PIPE )
     shell = kwargs.get( 'shell', False )
@@ -74,6 +71,15 @@ def errRun( *cmd, **kwargs ):
     if echo:
         # cmd goes to stderr, output goes to stdout
         info( cmd, '\n' )
+    if len( cmd ) == 1:
+        cmd = cmd[ 0 ]
+    # Allow passing in a list or a string
+    if isinstance( cmd, str ) and not shell:
+        cmd = cmd.split( ' ' )
+        cmd = [ str( arg ) for arg in cmd ]
+    elif isinstance( cmd, list ) and shell:
+        cmd = " ".join( arg for arg in cmd )
+    debug( '*** errRun:', cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
@@ -88,21 +94,31 @@ def errRun( *cmd, **kwargs ):
         errDone = False
     while not outDone or not errDone:
         readable = poller.poll()
-        for fd, _event in readable:
+        for fd, event in readable:
             f = fdtofile[ fd ]
-            data = f.read( 1024 )
-            if echo:
-                output( data )
-            if f == popen.stdout:
-                out += data
-                if data == '':
+            if event & POLLIN:
+                data = f.read( 1024 )
+                if echo:
+                    output( data )
+                if f == popen.stdout:
+                    out += data
+                    if data == '':
+                        outDone = True
+                elif f == popen.stderr:
+                    err += data
+                    if data == '':
+                        errDone = True
+            else:  # POLLHUP or something unexpected
+                if f == popen.stdout:
                     outDone = True
-            elif f == popen.stderr:
-                err += data
-                if data == '':
+                elif f == popen.stderr:
                     errDone = True
+                poller.unregister( fd )
+
     returncode = popen.wait()
+    debug( out, err, returncode )
     return out, err, returncode
+# pylint: enable=too-many-branches
 
 def errFail( *cmd, **kwargs ):
     "Run a command using errRun and raise exception on nonzero exit"
@@ -116,8 +132,7 @@ def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
-# pylint: enable-msg=E1103
-# pylint: disable-msg=E1101
+# pylint: enable=maybe-no-member
 
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
@@ -129,8 +144,6 @@ def isShellBuiltin( cmd ):
     return cmd in isShellBuiltin.builtIns
 
 isShellBuiltin.builtIns = None
-
-# pylint: enable-msg=E1101
 
 # Interface management
 #
@@ -145,17 +158,41 @@ isShellBuiltin.builtIns = None
 # live in the root namespace and thus do not have to be
 # explicitly moved.
 
-def makeIntfPair( intf1, intf2 ):
-    """Make a veth pair connecting intf1 and intf2.
-       intf1: string, interface
-       intf2: string, interface
-       returns: success boolean"""
-    # Delete any old interfaces with the same names
-    quietRun( 'ip link del ' + intf1 )
-    quietRun( 'ip link del ' + intf2 )
+def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
+                  deleteIntfs=True, runCmd=None ):
+    """Make a veth pair connnecting new interfaces intf1 and intf2
+       intf1: name for interface 1
+       intf2: name for interface 2
+       addr1: MAC address for interface 1 (optional)
+       addr2: MAC address for interface 2 (optional)
+       node1: home node for interface 1 (optional)
+       node2: home node for interface 2 (optional)
+       deleteIntfs: delete intfs before creating them
+       runCmd: function to run shell commands (quietRun)
+       raises Exception on failure"""
+    if not runCmd:
+        runCmd = quietRun if not node1 else node1.cmd
+        runCmd2 = quietRun if not node2 else node2.cmd
+    if deleteIntfs:
+        # Delete any old interfaces with the same names
+        runCmd( 'ip link del ' + intf1 )
+        runCmd2( 'ip link del ' + intf2 )
     # Create new pair
-    cmd = 'ip link add name ' + intf1 + ' type veth peer name ' + intf2
-    return quietRun( cmd )
+    netns = 1 if not node2 else node2.pid
+    if addr1 is None and addr2 is None:
+        cmdOutput = runCmd( 'ip link add name %s '
+                            'type veth peer name %s '
+                            'netns %s' % ( intf1, intf2, netns ) )
+    else:
+        cmdOutput = runCmd( 'ip link add name %s '
+                            'address %s '
+                            'type veth peer name %s '
+                            'address %s '
+                            'netns %s' %
+                            (  intf1, addr1, intf2, addr2, netns ) )
+    if cmdOutput:
+        raise Exception( "Error creating interface pair (%s,%s): %s " %
+                         ( intf1, intf2, cmdOutput ) )
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.
@@ -171,35 +208,32 @@ def retry( retries, delaySecs, fn, *args, **keywords ):
         error( "*** gave up after %i retries\n" % tries )
         exit( 1 )
 
-def moveIntfNoRetry( intf, dstNode, srcNode=None, printError=False ):
+def moveIntfNoRetry( intf, dstNode, printError=False ):
     """Move interface to node, without retrying.
        intf: string, interface
         dstNode: destination Node
-        srcNode: source Node or None (default) for root ns
         printError: if true, print error"""
     intf = str( intf )
     cmd = 'ip link set %s netns %s' % ( intf, dstNode.pid )
-    if srcNode:
-        srcNode.cmd( cmd )
-    else:
-        quietRun( cmd )
-    links = dstNode.cmd( 'ip link show' )
-    if not ( ' %s:' % intf ) in links:
+    cmdOutput = quietRun( cmd )
+    # If ip link set does not produce any output, then we can assume
+    # that the link has been moved successfully.
+    if cmdOutput:
         if printError:
             error( '*** Error: moveIntf: ' + intf +
-                   ' not successfully moved to ' + dstNode.name + '\n' )
+                   ' not successfully moved to ' + dstNode.name + ':\n',
+                   cmdOutput )
         return False
     return True
 
-def moveIntf( intf, dstNode, srcNode=None, printError=False,
-             retries=3, delaySecs=0.001 ):
+def moveIntf( intf, dstNode, printError=True,
+              retries=3, delaySecs=0.001 ):
     """Move interface to node, retrying on failure.
        intf: string, interface
        dstNode: destination Node
-       srcNode: source Node or None (default) for root ns
        printError: if true, print error"""
     retry( retries, delaySecs, moveIntfNoRetry, intf, dstNode,
-          srcNode=srcNode, printError=printError )
+           printError=printError )
 
 # Support for dumping network
 
@@ -226,6 +260,15 @@ def dumpNetConnections( net ):
     "Dump connections in network"
     nodes = net.controllers + net.switches + net.hosts
     dumpNodeConnections( nodes )
+
+def dumpPorts( switches ):
+    "dump interface to openflow port mappings for each switch"
+    for switch in switches:
+        output( '%s ' % switch.name )
+        for intf in switch.intfList():
+            port = switch.ports[ intf ]
+            output( '%s:%d ' % ( intf, port ) )
+        output( '\n' )
 
 # IP and Mac address formatting and parsing
 
@@ -269,7 +312,7 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
        ipBaseNum: option base IP address as int
        returns IP address as string"""
     imax = 0xffffffff >> prefixLen
-    assert i <= imax
+    assert i <= imax, 'Not enough IP addresses in the subnet'
     mask = 0xffffffff ^ imax
     ipnum = ( ipBaseNum & mask ) + i
     return ipStr( ipnum )
@@ -277,6 +320,8 @@ def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
     args = [ int( arg ) for arg in ip.split( '.' ) ]
+    while len(args) < 4:
+        args.insert( len(args) - 1, 0 )
     return ipNum( *args )
 
 def netParse( ipstr ):
@@ -286,6 +331,10 @@ def netParse( ipstr ):
     if '/' in ipstr:
         ip, pf = ipstr.split( '/' )
         prefixLen = int( pf )
+    #if no prefix is specified, set the prefix to 24
+    else:
+        ip = ipstr
+        prefixLen = 24
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):
@@ -363,7 +412,7 @@ def sysctlTestAndSet( name, limit ):
     #read limit
     with open( name, 'r' ) as readFile:
         oldLimit = readFile.readline()
-        if type( limit ) is int:
+        if isinstance( limit, int ):
             #compare integer limits before overriding
             if int( oldLimit ) < limit:
                 with open( name, 'w' ) as writeFile:
@@ -402,9 +451,12 @@ def fixLimits():
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
         #Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
-    except:
+    # pylint: disable=broad-except
+    except Exception:
         warn( "*** Error setting resource limits. "
               "Mininet's performance may be affected.\n" )
+    # pylint: enable=broad-except
+
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
@@ -423,7 +475,7 @@ def natural( text ):
     def num( s ):
         "Convert text segment to int if necessary"
         return int( s ) if s.isdigit() else s
-    return [  num( s ) for s in re.split( r'(\d+)', text ) ]
+    return [  num( s ) for s in re.split( r'(\d+)', str( text ) ) ]
 
 def naturalSeq( t ):
     "Natural sort key function for sequences"
@@ -472,31 +524,54 @@ def splitArgs( argstr ):
         kwargs[ key ] = makeNumeric( val )
     return fn, args, kwargs
 
-def customConstructor( constructors, argStr ):
-    """Return custom constructor based on argStr
-    The args and key/val pairs in argsStr will be automatically applied
-    when the generated constructor is later used.
+def customClass( classes, argStr ):
+    """Return customized class based on argStr
+    The args and key/val pairs in argStr will be automatically applied
+    when the generated class is later used.
     """
-    cname, newargs, kwargs = splitArgs( argStr )
-    constructor = constructors.get( cname, None )
-
-    if not constructor:
+    cname, args, kwargs = splitArgs( argStr )
+    cls = classes.get( cname, None )
+    if not cls:
         raise Exception( "error: %s is unknown - please specify one of %s" %
-                         ( cname, constructors.keys() ) )
+                         ( cname, classes.keys() ) )
+    if not args and not kwargs:
+        return cls
 
-    def customized( name, *args, **params ):
-        "Customized constructor, useful for Node, Link, and other classes"
-        params = params.copy()
-        params.update( kwargs )
-        if not newargs:
-            return constructor( name, *args, **params )
-        if args:
-            warn( 'warning: %s replacing %s with %s\n' % (
-                  constructor, args, newargs ) )
-        return constructor( name, *newargs, **params )
+    return specialClass( cls, append=args, defaults=kwargs )
 
-    customized.__name__ = 'customConstructor(%s)' % argStr
-    return customized
+def specialClass( cls, prepend=None, append=None,
+                  defaults=None, override=None ):
+    """Like functools.partial, but it returns a class
+       prepend: arguments to prepend to argument list
+       append: arguments to append to argument list
+       defaults: default values for keyword arguments
+       override: keyword arguments to override"""
+
+    if prepend is None:
+        prepend = []
+
+    if append is None:
+        append = []
+
+    if defaults is None:
+        defaults = {}
+
+    if override is None:
+        override = {}
+
+    class CustomClass( cls ):
+        "Customized subclass with preset args/params"
+        def __init__( self, *args, **params ):
+            newparams = defaults.copy()
+            newparams.update( params )
+            newparams.update( override )
+            cls.__init__( self, *( list( prepend ) + list( args ) +
+                                   list( append ) ),
+                          **newparams )
+
+    CustomClass.__name__ = '%s%s' % ( cls.__name__, defaults )
+    return CustomClass
+
 
 def buildTopo( topos, topoStr ):
     """Create topology from string with format (object, arg1, arg2,...).
@@ -513,6 +588,33 @@ def ensureRoot():
     Probably we should only sudo when needed as per Big Switch's patch.
     """
     if os.getuid() != 0:
-        print "*** Mininet must run as root."
+        error( '*** Mininet must run as root.\n' )
         exit( 1 )
     return
+
+def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
+    """Wait until server is listening on port.
+       returns True if server is listening"""
+    runCmd = ( client.cmd if client else
+               partial( quietRun, shell=True ) )
+    if not runCmd( 'which telnet' ):
+        raise Exception('Could not find telnet' )
+    # pylint: disable=maybe-no-member
+    serverIP = server if isinstance( server, basestring ) else server.IP()
+    cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
+    time = 0
+    result = runCmd( cmd )
+    while 'Connected' not in result:
+        if 'No route' in result:
+            rtable = runCmd( 'route' )
+            error( 'no route to %s:\n%s' % ( server, rtable ) )
+            return False
+        if timeout and time >= timeout:
+            error( 'could not connect to %s on port %d\n' % ( server, port ) )
+            return False
+        debug( 'waiting for', server, 'to listen on port', port, '\n' )
+        info( '.' )
+        sleep( .5 )
+        time += .5
+        result = runCmd( cmd )
+    return True

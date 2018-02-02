@@ -9,9 +9,22 @@ TODO: missing xterm test
 import unittest
 import pexpect
 import os
+import re
 from mininet.util import quietRun
+from distutils.version import StrictVersion
+from time import sleep
+
+def tsharkVersion():
+    "Return tshark version"
+    versionStr = quietRun( 'tshark -v' )
+    versionMatch = re.findall( r'TShark[^\d]*(\d+.\d+.\d+)', versionStr )
+    return versionMatch[ 0 ]
+
+# pylint doesn't understand pexpect.match, unfortunately!
+# pylint:disable=maybe-no-member
 
 class testWalkthrough( unittest.TestCase ):
+    "Test Mininet walkthrough"
 
     prompt = 'mininet>'
 
@@ -24,12 +37,19 @@ class testWalkthrough( unittest.TestCase ):
 
     def testWireshark( self ):
         "Use tshark to test the of dissector"
-        tshark = pexpect.spawn( 'tshark -i lo -R of' )
-        tshark.expect( 'Capturing on lo' )
+        # Satisfy pylint
+        assert self
+        if StrictVersion( tsharkVersion() ) < StrictVersion( '1.12.0' ):
+            tshark = pexpect.spawn( 'tshark -i lo -R of' )
+        else:
+            tshark = pexpect.spawn( 'tshark -i lo -Y openflow_v1' )
+        tshark.expect( [ 'Capturing on lo', "Capturing on 'Loopback'" ] )
         mn = pexpect.spawn( 'mn --test pingall' )
         mn.expect( '0% dropped' )
-        tshark.expect( 'OFP 74 Hello' )
+        tshark.expect( [ '74 Hello', '74 of_hello', '74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
+        mn.expect( pexpect.EOF )
+        tshark.expect( pexpect.EOF )
 
     def testBasic( self ):
         "Test basic CLI commands (help, nodes, net, dump)"
@@ -41,7 +61,7 @@ class testWalkthrough( unittest.TestCase ):
         self.assertEqual( index, 0, 'No output for "help" command')
         # nodes command
         p.sendline( 'nodes' )
-        p.expect( '([chs]\d ?){4}' )
+        p.expect( r'([chs]\d ?){4}' )
         nodes = p.match.group( 0 ).split()
         self.assertEqual( len( nodes ), 4, 'No nodes in "nodes" command')
         p.expect( self.prompt )
@@ -57,14 +77,15 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( self.prompt )
         # dump command
         p.sendline( 'dump' )
-        expected = [ '<\w+ (%s)' % n for n in nodes ]
+        expected = [ r'<\w+ (%s)' % n for n in nodes ]
         actual = []
         for _ in nodes:
             index = p.expect( expected )
             node = p.match.group( 1 )
             actual.append( node )
             p.expect( '\n' )
-        self.assertEqual( actual.sort(), nodes.sort(), '"nodes" and "dump" differ' ) 
+        self.assertEqual( actual.sort(), nodes.sort(),
+                          '"nodes" and "dump" differ' )
         p.expect( self.prompt )
         p.sendline( 'exit' )
         p.wait()
@@ -73,7 +94,9 @@ class testWalkthrough( unittest.TestCase ):
         "Test ifconfig and ps on h1 and s1"
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
-        interfaces = [ 'h1-eth0', 's1-eth1', '[^-]eth0', 'lo', self.prompt ]
+        # Third pattern is a local interface beginning with 'eth' or 'en'
+        interfaces = [ 'h1-eth0', 's1-eth1', r'[^-](eth|en)\w*\d', 'lo',
+                       self.prompt ]
         # h1 ifconfig
         p.sendline( 'h1 ifconfig -a' )
         ifcount = 0
@@ -99,19 +122,22 @@ class testWalkthrough( unittest.TestCase ):
                 ifcount += 1
             else:
                 break
-        self.assertEqual( ifcount, 3, 'Missing interfaces on s1')
+        self.assertTrue( ifcount >= 3, 'Missing interfaces on s1')
         # h1 ps
-        p.sendline( 'h1 ps -a' )
+        p.sendline( "h1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         h1Output = p.before
         # s1 ps
-        p.sendline( 's1 ps -a' )
+        p.sendline( "s1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
         s1Output = p.before
-        # strip command from ps output
-        h1Output = h1Output.split( '\n', 1 )[ 1 ]
-        s1Output = s1Output.split( '\n', 1 )[ 1 ]
-        self.assertEqual( h1Output, s1Output, 'h1 and s1 "ps" output differs')
+        # strip command from ps output and compute diffs
+        h1Output = h1Output.split( '\n' )[ 1: ]
+        s1Output = s1Output.split( '\n' )[ 1: ]
+        diffs = set( h1Output ).difference( set( s1Output ) )
+        # allow up to two diffs to account for daemons, etc.
+        self.assertTrue( len( diffs ) <= 2,
+                         'h1 and s1 "ps" output differ too much: %s' % diffs )
         p.sendline( 'exit' )
         p.wait()
 
@@ -133,6 +159,11 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn' )
         p.expect( self.prompt )
         p.sendline( 'h1 python -m SimpleHTTPServer 80 &' )
+        # The walkthrough doesn't specify a delay here, and
+        # we also don't read the output (also a possible problem),
+        # but for now let's wait a couple of seconds to make
+        # it less likely to fail due to the race condition.
+        sleep( 2 )
         p.expect( self.prompt )
         p.sendline( ' h2 wget -O - h1' )
         p.expect( '200 OK' )
@@ -151,7 +182,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( pexpect.EOF )
         # test iperf
         p = pexpect.spawn( 'mn --test iperf' )
-        p.expect( "Results: \['([\d\.]+) .bits/sec'," )
+        p.expect( r"Results: \['([\d\.]+) .bits/sec'," )
         bw = float( p.match.group( 1 ) )
         self.assertTrue( bw > 0 )
         p.expect( pexpect.EOF )
@@ -160,7 +191,7 @@ class testWalkthrough( unittest.TestCase ):
         "Test pingall on single,3 and linear,4 topos"
         # testing single,3
         p = pexpect.spawn( 'mn --test pingall --topo single,3' )
-        p.expect( '(\d+)/(\d+) received')
+        p.expect( r'(\d+)/(\d+) received')
         received = int( p.match.group( 1 ) )
         sent = int( p.match.group( 2 ) )
         self.assertEqual( sent, 6, 'Wrong number of pings sent in single,3' )
@@ -168,7 +199,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( pexpect.EOF )
         # testing linear,4
         p = pexpect.spawn( 'mn --test pingall --topo linear,4' )
-        p.expect( '(\d+)/(\d+) received')
+        p.expect( r'(\d+)/(\d+) received')
         received = int( p.match.group( 1 ) )
         sent = int( p.match.group( 2 ) )
         self.assertEqual( sent, 12, 'Wrong number of pings sent in linear,4' )
@@ -181,14 +212,15 @@ class testWalkthrough( unittest.TestCase ):
         # test bw
         p.expect( self.prompt )
         p.sendline( 'iperf' )
-        p.expect( "Results: \['([\d\.]+) Mbits/sec'," )
+        p.expect( r"Results: \['([\d\.]+) Mbits/sec'," )
         bw = float( p.match.group( 1 ) )
-        self.assertTrue( bw < 10.1, 'Bandwidth > 10 Mb/s')
-        self.assertTrue( bw > 9.0, 'Bandwidth < 9 Mb/s')
+        self.assertTrue( bw < 10.1, 'Bandwidth %.2f >= 10.1 Mb/s' % bw )
+        self.assertTrue( bw > 9.0, 'Bandwidth %.2f <= 9 Mb/s' % bw )
         p.expect( self.prompt )
         # test delay
         p.sendline( 'h1 ping -c 4 h2' )
-        p.expect( 'rtt min/avg/max/mdev = ([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms' )
+        p.expect( r'rtt min/avg/max/mdev = '
+                  r'([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms' )
         delay = float( p.match.group( 2 ) )
         self.assertTrue( delay > 40, 'Delay < 40ms' )
         self.assertTrue( delay < 45, 'Delay > 40ms' )
@@ -208,14 +240,17 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn -v debug --test none' )
         p.expect( pexpect.EOF )
         lines = p.before.split( '\n' )
-        self.assertTrue( len( lines ) > 100, "Debug output is too short" )
+        self.assertTrue( len( lines ) > 70, "Debug output is too short" )
 
     def testCustomTopo( self ):
         "Start Mininet using a custom topo, then run pingall"
+        # Satisfy pylint
+        assert self
         custom = os.path.dirname( os.path.realpath( __file__ ) )
         custom = os.path.join( custom, '../../custom/topo-2sw-2host.py' )
         custom = os.path.normpath( custom )
-        p = pexpect.spawn( 'mn --custom %s --topo mytopo --test pingall' % custom )
+        p = pexpect.spawn(
+            'mn --custom %s --topo mytopo --test pingall' % custom )
         p.expect( '0% dropped' )
         p.expect( pexpect.EOF )
 
@@ -227,13 +262,15 @@ class testWalkthrough( unittest.TestCase ):
             p.sendline( 'h%d ifconfig' % i )
             p.expect( 'HWaddr 00:00:00:00:00:0%d' % i )
             p.expect( self.prompt )
+        p.sendline( 'exit' )
+        p.expect( pexpect.EOF )
 
     def testSwitches( self ):
         "Run iperf test using user and ovsk switches"
         switches = [ 'user', 'ovsk' ]
         for sw in switches:
             p = pexpect.spawn( 'mn --switch %s --test iperf' % sw )
-            p.expect( "Results: \['([\d\.]+) .bits/sec'," )
+            p.expect( r"Results: \['([\d\.]+) .bits/sec'," )
             bw = float( p.match.group( 1 ) )
             self.assertTrue( bw > 0 )
             p.expect( pexpect.EOF )
@@ -241,7 +278,7 @@ class testWalkthrough( unittest.TestCase ):
     def testBenchmark( self ):
         "Run benchmark and verify that it takes less than 2 seconds"
         p = pexpect.spawn( 'mn --test none' )
-        p.expect( 'completed in ([\d\.]+) seconds' )
+        p.expect( r'completed in ([\d\.]+) seconds' )
         time = float( p.match.group( 1 ) )
         self.assertTrue( time < 2, 'Benchmark takes more than 2 seconds' )
 
@@ -265,7 +302,7 @@ class testWalkthrough( unittest.TestCase ):
         self.assertEqual( ifcount, 2, 'Missing interfaces on s1' )
         # verify that all hosts a reachable
         p.sendline( 'pingall' )
-        p.expect( '(\d+)% dropped' )
+        p.expect( r'(\d+)% dropped' )
         dropped = int( p.match.group( 1 ) )
         self.assertEqual( dropped, 0, 'pingall failed')
         p.expect( self.prompt )
@@ -317,15 +354,20 @@ class testWalkthrough( unittest.TestCase ):
                           'Github is not reachable; cannot download Pox' )
     def testRemoteController( self ):
         "Test Mininet using Pox controller"
+        # Satisfy pylint
+        assert self
         if not os.path.exists( '/tmp/pox' ):
-            p = pexpect.spawn( 'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
+            p = pexpect.spawn(
+                'git clone https://github.com/noxrepo/pox.git /tmp/pox' )
             p.expect( pexpect.EOF )
         pox = pexpect.spawn( '/tmp/pox/pox.py forwarding.l2_learning' )
-        net = pexpect.spawn( 'mn --controller=remote,ip=127.0.0.1,port=6633 --test pingall' )
+        net = pexpect.spawn(
+            'mn --controller=remote,ip=127.0.0.1,port=6633 --test pingall' )
         net.expect( '0% dropped' )
         net.expect( pexpect.EOF )
         pox.sendintr()
         pox.wait()
+
 
 if __name__ == '__main__':
     unittest.main()

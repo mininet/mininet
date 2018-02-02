@@ -327,7 +327,7 @@ class ConsoleApp( Frame ):
         elif units[0] == 'b':
             val *= 10 ** -9
         self.updates += 1
-        self.bw +=  val
+        self.bw += val
         if self.updates >= self.hostCount:
             self.graph.addBar( self.bw )
             self.bw = 0

@@ -6,21 +6,18 @@ Tests for baresshd.py
 
 import unittest
 import pexpect
-from time import sleep
 from mininet.clean import cleanup, sh
 
 class testBareSSHD( unittest.TestCase ):
 
-    opts = [ '\(yes/no\)\?', 'Welcome to h1', 'refused', pexpect.EOF, pexpect.TIMEOUT ]
+    opts = [ 'Welcome to h1', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self ):
         "Log into ssh server, check banner, then exit"
-        p = pexpect.spawn( 'ssh 10.0.0.1 -i /tmp/ssh/test_rsa exit' )
+        p = pexpect.spawn( 'ssh 10.0.0.1 -o StrictHostKeyChecking=no -i /tmp/ssh/test_rsa exit' )
         while True:
             index = p.expect( self.opts )
             if index == 0:
-                p.sendline( 'yes' )
-            elif index == 1:
                 return True
             else:
                 return False
@@ -37,18 +34,23 @@ class testBareSSHD( unittest.TestCase ):
         cmd = ( 'python -m mininet.examples.baresshd '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no' )
-        sh( cmd )
+        p = pexpect.spawn( cmd )
+        runOpts = [ 'You may now ssh into h1 at 10.0.0.1',
+                    'after 5 seconds, h1 is not listening on port 22',
+                    pexpect.EOF, pexpect.TIMEOUT ]
+        while True:
+            index = p.expect( runOpts )
+            if index == 0:
+                break
+            else:
+                self.tearDown()
+                self.fail( 'sshd failed to start in host h1' )
 
     def testSSH( self ):
         "Simple test to verify that we can ssh into h1"
         result = False
         # try to connect up to 3 times; sshd can take a while to start
-        for _ in range( 3 ):
-            result = self.connected()
-            if result:
-                break
-            else:
-                sleep( 1 )
+        result = self.connected()
         self.assertTrue( result )
 
     def tearDown( self ):

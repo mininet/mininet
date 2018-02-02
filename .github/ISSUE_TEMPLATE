@@ -1,0 +1,19 @@
+Mininet uses GitHub issues for bug reports and feature requests only.
+These issues can be viewed at bugs.mininet.org
+
+If you have a question that is not a bug report or a feature request,
+please use the documentation at docs.mininet.org, the FAQ
+at faq.mininet.org, and the mininet-discuss mailing list.
+
+For bug reports, please fill in the following information in detail,
+and also feel free to include additional information such as debug
+output from mn -v debug, etc.
+--- Cut Here ---
+### Expected/Desired Behavior:
+
+### Actual Behavior:
+
+### Detailed Steps to Reproduce the Behavior:
+
+### Additional Information:
+

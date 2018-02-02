@@ -69,7 +69,7 @@ class Singleton( type ):
     def __call__( cls, *args, **kw ):
         if cls.instance is None:
             cls.instance = super( Singleton, cls ).__call__( *args, **kw )
-            return cls.instance
+        return cls.instance
 
 
 class MininetLogger( Logger, object ):
@@ -124,8 +124,8 @@ class MininetLogger( Logger, object ):
         self.setLevel( level )
         self.handlers[ 0 ].setLevel( level )
 
-    # pylint: disable-msg=E0202
-    # "An attribute inherited from mininet.log hide this method"
+    # pylint: disable=method-hidden
+    # "An attribute inherited from mininet.log hide this method" (sic)
     # Not sure why this is occurring - this function definitely gets called.
 
     # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
@@ -142,7 +142,7 @@ class MininetLogger( Logger, object ):
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
 
-    # pylint: enable-msg=E0202
+    # pylint: enable=method-hidden
 
 lg = MininetLogger()
 
@@ -160,7 +160,7 @@ def makeListCompatible( fn ):
         "Generated function. Closure-ish."
         if len( args ) == 1:
             return fn( *args )
-        args = ' '.join( [ str( arg ) for arg in args ] )
+        args = ' '.join( str( arg ) for arg in args )
         return fn( args )
 
     # Fix newfn's name and docstring
@@ -168,9 +168,10 @@ def makeListCompatible( fn ):
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
 
-info, output, warn, error, debug = (
-    lg.info, lg.output, lg.warn, lg.error, lg.debug ) = [
-        makeListCompatible( f ) for f in
-            lg.info, lg.output, lg.warn, lg.error, lg.debug ]
+_loggers = lg.info, lg.output, lg.warn, lg.error, lg.debug
+_loggers = tuple( makeListCompatible( logger )
+                  for logger in _loggers )
+lg.info, lg.output, lg.warn, lg.error, lg.debug = _loggers
+info, output, warn, error, debug = _loggers
 
 setLogLevel = lg.setLogLevel

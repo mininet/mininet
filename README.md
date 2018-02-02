@@ -1,9 +1,10 @@
 Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
-
 *The best way to emulate almost any network on your laptop!*
 
-Version 2.1.0+
+Mininet 2.3.0d1
+
+[![Build Status][1]](https://travis-ci.org/mininet/mininet)
 
 ### What is Mininet?
 
@@ -66,35 +67,31 @@ Mininet includes:
 
   `mn -c`
 
-### New features in 2.1.0+
+### New features in this release
 
-Mininet 2.1.0+ provides a number of bug fixes as well as
-several new features, including:
+This is primarily a performance improvement and bug fix release.
 
-* Convenient access to `Mininet()` as a dict of nodes
-* X11 tunneling (wireshark in Mininet hosts, finally!)
-* Accurate reflection of the `Mininet()` object in the CLI
-* Automatically detecting and adjusting resource limits
-* Automatic cleanup on failure of the `mn` command
-* Preliminary support for running OVS in user space mode
-* Preliminary support (`IVSSwitch()`) for the Indigo Virtual Switch
-* support for installing the OpenFlow 1.3 versions of the reference
-  user switch and NOX from CPqD
-* The ability to import modules from `mininet.examples`
+- Batch startup has been implemented for Open vSwitch, improving
+  startup performance.
+
+- OVS patch links have been implemented via OVSLink and --link ovs
+
+  Warning! These links have *serious limitations* compared to
+  virtual Ethernet pairs: they are not attached to real Linux
+  interfaces so you cannot use tcpdump or wireshark with them;
+  they also cannot be used in long chains - we don't recommend more
+  than 64 OVSLinks, for example --linear,64. However, they can offer
+  significantly better performance than veth pairs, for certain
+  configurations.
+
 * Support for installing the
   [LINC-Switch](https://github.com/FlowForwarding/LINC-Switch)
   that supports OpenFlow 1.3.2
 
-We have provided several new examples (which can easily be
-imported to provide useful functionality) including:
+- You can now easily install Mininet on a Raspberry Pi ;-)
 
-* Modeling separate control and data networks: `mininet.examples.controlnet`
-* Connecting Mininet hosts the internet (or a LAN) using NAT: `mininet.examples.nat`
-* Creating per-host custom directories using bind mounts: `mininet.examples.bind`
-
-Note that examples contain experimental features which might
-"graduate" into mainline Mininet in the future, but they should 
-not be considered a stable part of the Mininet API!
+- Additional information for this release and previous releases
+  may be found in the release notes on docs.mininet.org
 
 ### Installation
 
@@ -116,21 +113,24 @@ Mininet mailing list, `mininet-discuss` at:
 
 <https://mailman.stanford.edu/mailman/listinfo/mininet-discuss>
 
-### Contributing
+### Join Us
+
+Thanks again to all of the Mininet contributors!
 
 Mininet is an open source project and is currently hosted
 at <https://github.com/mininet>.  You are encouraged to download
 the code, examine it, modify it, and submit bug reports, bug fixes,
 feature requests, new features and other issues and pull requests.
-Thanks to everyone who has contributed to the project
-(see CONTRIBUTORS for more info!)
+Thanks to everyone who has contributed code to the Mininet project
+(see CONTRIBUTORS for more info!) It is because of everyone's
+hard work that Mininet continues to grow and improve.
+
+### Enjoy Mininet
 
 Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
-### Credits
+Bob Lantz  
+Mininet Core Team
 
-The Mininet 2.1.0+ Team:
-
-* Bob Lantz
-* Brian O'Connor
+[1]: https://travis-ci.org/mininet/mininet.svg?branch=master

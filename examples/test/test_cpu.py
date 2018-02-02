@@ -2,6 +2,16 @@
 
 """
 Test for cpu.py
+
+results format:
+
+sched	cpu	received bits/sec
+cfs	50%	8.14e+09
+cfs	40%	6.48e+09
+cfs	30%	4.56e+09
+cfs	20%	2.84e+09
+cfs	10%	1.29e+09
+
 """
 
 import unittest
@@ -15,19 +25,23 @@ class testCPU( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
-        p = pexpect.spawn( 'python -m mininet.examples.cpu' )
-        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.]+)', pexpect.EOF ]
+        p = pexpect.spawn( 'python -m mininet.examples.cpu', timeout=300 )
+        # matches each line from results( shown above )
+        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.e\+]+)',
+                 pexpect.EOF ]
         scheds = []
         while True:
-            index = p.expect( opts, timeout=600 )
+            index = p.expect( opts )
             if index == 0:
-                sched = p.match.group( 1 ) 
+                sched = p.match.group( 1 )
                 cpu = float( p.match.group( 2 ) )
                 bw = float( p.match.group( 3 ) )
                 if sched not in scheds:
                     scheds.append( sched )
-                    previous_bw = 10 ** 4 # 10 GB/s
-                self.assertTrue( bw < previous_bw )
+                else:
+                    self.assertTrue( bw < previous_bw,
+                                     "%e should be less than %e\n" %
+                                     ( bw, previous_bw ) )
                 previous_bw = bw
             else:
                 break

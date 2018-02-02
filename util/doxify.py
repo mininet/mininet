@@ -30,7 +30,7 @@ def fixParam( line ):
 def fixReturns( line ):
     "Change returns: foo to @return foo"
     return re.sub( 'returns:', r'@returns', line )
-    
+
 def fixLine( line ):
     global comment
     match = spaces.match( line )
@@ -69,7 +69,7 @@ def funTest():
     ).splitlines( True )
 
     fixLines( testFun )
-    
+
 def fixLines( lines, fid ):
     for line in lines:
         os.write( fid, fixLine( line ) )
@@ -86,4 +86,4 @@ if __name__ == '__main__':
 
 
 
-    
+

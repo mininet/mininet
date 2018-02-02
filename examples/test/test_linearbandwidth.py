@@ -15,13 +15,12 @@ class testLinearBandwidth( unittest.TestCase ):
         "Verify that bandwidth is monotonically decreasing as # of hops increases"
         p = pexpect.spawn( 'python -m mininet.examples.linearbandwidth' )
         count = 0
-        opts = [ '\*\*\* Linear network results', 
-                 '(\d+)\s+([\d\.]+) (.bits)', 
+        opts = [ '\*\*\* Linear network results',
+                 '(\d+)\s+([\d\.]+) (.bits)',
                  pexpect.EOF ]
         while True:
             index = p.expect( opts, timeout=600 )
             if index == 0:
-                previous_bw = 10 ** 10 # 10 Gbits
                 count += 1
             elif index == 1:
                 n = int( p.match.group( 1 ) )
@@ -33,11 +32,17 @@ class testLinearBandwidth( unittest.TestCase ):
                     bw *= 10 ** 6
                 elif unit[ 0 ] == 'G':
                     bw *= 10 ** 9
-                self.assertTrue( bw < previous_bw )
-                previous_bw = bw
+                # check that we have a previous result to compare to
+                if n != 1:
+                    info = ( 'bw: %.2e bits/s across %d switches, '
+                             'previous: %.2e bits/s across %d switches' %
+                             ( bw, n, previous_bw, previous_n ) )
+                    self.assertTrue( bw < previous_bw, info )
+                previous_bw, previous_n = bw, n
             else:
                 break
 
+        # verify that we received results from at least one switch
         self.assertTrue( count > 0 )
 
 if __name__ == '__main__':

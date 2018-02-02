@@ -16,7 +16,7 @@ class testMultiPoll( unittest.TestCase ):
                  "(h\d+): \d+ bytes from",
                  "Monitoring output for (\d+) seconds",
                  pexpect.EOF ]
-        pings = {}
+        pings, seconds = {}, -1
         while True:
             index = p.expect( opts )
             if index == 0:
@@ -32,7 +32,8 @@ class testMultiPoll( unittest.TestCase ):
         self.assertTrue( len( pings ) > 0 )
         # make sure we have received at least one ping per second
         for count in pings.values():
-            self.assertTrue( count >= seconds )
+            self.assertTrue( count >= seconds,
+                             '%d pings < %d seconds' % ( count, seconds ) )
 
 if __name__ == '__main__':
     unittest.main()

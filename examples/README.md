@@ -11,9 +11,34 @@ Mininet's Python API.
 This example uses Mininet's medium-level API to create an sshd
 process running in a namespace. Doesn't use OpenFlow.
 
+#### bind.py:
+
+This example shows how you can create private directories for each
+node in a Mininet topology.
+
+#### cluster.py:
+
+This example contains all of the code for experimental cluster
+edition. Remote classes and MininetCluster can be imported from
+here to create a topology with nodes on remote machines.
+
+#### clusterSanity.py:
+
+This example runs cluster edition locally as a sanity check to test
+basic functionality.
+
+#### clustercli.py:
+
+This example contains a CLI for experimental cluster edition.
+
+#### clusterdemo.py:
+
+This example is a basic demo of cluster edition on 3 servers with
+a tree topology of depth 3 and fanout 3.
+
 #### consoles.py:
 
-This example creates a grid of console windows, one for each node, 
+This example creates a grid of console windows, one for each node,
 and allows interaction with and monitoring of each console, including
 graphical monitoring.
 
@@ -47,6 +72,11 @@ topology object) and adding nodes to it.
 This example shows how to add an interface (for example a real
 hardware interface) to a network after the network is created.
 
+#### intfoptions.py:
+
+This example reconfigures a TCIntf during runtime with different
+traffic control commands to test bandwidth, loss, and delay.
+
 #### limit.py:
 
 This example shows how to use link and CPU limits.
@@ -56,13 +86,28 @@ This example shows how to use link and CPU limits.
 This example shows how to create a custom topology programatically
 by subclassing Topo, and how to run a series of tests on it.
 
+#### linuxrouter.py:
+
+This example shows how to create and configure a router in Mininet
+that uses Linux IP forwarding.
+
 #### miniedit.py:
 
 This example demonstrates creating a network via a graphical editor.
 
+#### mobility.py:
+
+This example demonstrates detaching an interface from one switch and
+attaching it another as a basic way to move a host around a network.
+
+#### multiLink.py:
+
+This example demonstrates the creation of multiple links between
+nodes using a custom Topology class.
+
 #### multiping.py:
 
-This example demonstrates one method for 
+This example demonstrates one method for
 monitoring output from multiple hosts, using `node.monitor()`.
 
 #### multipoll.py:
@@ -78,6 +123,16 @@ This example creates a network and runs multiple tests on it.
 This example shows how to connect a Mininet network to the Internet
 using NAT. It also answers the eternal question "why can't I ping
 `google.com`?"
+
+#### natnet.py:
+
+This example demonstrates how to create a network using a NAT node
+to connect hosts to the internet.
+
+#### numberedports.py:
+
+This example verifies the mininet ofport numbers match up to the ovs port numbers.
+It also verifies that the port numbers match up to the interface numbers
 
 #### popen.py:
 
@@ -117,3 +172,8 @@ memory and `sysctl` configuration (see `INSTALL`.)
 
 This example creates a 64-host tree network, and attempts to check full
 connectivity using `ping`, for different switch/datapath types.
+
+#### vlanhost.py:
+
+An example of how to subclass Host to use a VLAN on its primary interface.
+

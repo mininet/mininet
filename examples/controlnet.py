@@ -27,15 +27,22 @@ from mininet.log import setLogLevel, info
 
 class DataController( Controller ):
     """Data Network Controller.
-       patched to avoid checkListening error"""
+       patched to avoid checkListening error and to delete intfs"""
+
     def checkListening( self ):
         "Ignore spurious error"
         pass
 
+    def stop( self, *args, **kwargs ):
+        "Make sure intfs are deleted"
+        kwargs.update( deleteIntfs=True )
+        super( DataController, self ).stop( *args, **kwargs )
+
+
 class MininetFacade( object ):
     """Mininet object facade that allows a single CLI to
        talk to one or more networks"""
-    
+
     def __init__( self, net, *args, **kwargs ):
         """Create MininetFacade object.
            net: Primary Mininet object
@@ -114,7 +121,7 @@ class ControlNetwork( Topo ):
 
 def run():
     "Create control and data networks, and invoke the CLI"
-    
+
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )
     cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )

@@ -41,16 +41,21 @@ load-plugins=
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-disable=W0704,C0103,W0231,E1102,W0511,W0142,R0902,R0903,R0904,R0913,R0914,R0801,I0011
+disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
+        too-many-instance-attributes, too-few-public-methods, too-many-arguments,
+        too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
+        locally-disabled, locally-enabled
 
+# bad-continuation, wrong-import-order
 
 [REPORTS]
 
 # Set the output format. Available formats are text, parseable, colorized, msvs
 # (visual studio) and html
 output-format=colorized
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
-# Include message's id in outpu
+# Include message's id in output
 include-ids=yes
 
 # Put messages in a separate file for each module / package specified on the
@@ -58,7 +63,7 @@ include-ids=yes
 # written in a file name "pylint_global.[txt|html]".
 files-output=no
 
-# Tells wether to display a full report or only the messages
+# Tells whether to display a full report or only the messages
 reports=no
 
 # Python expression which should return a note less than 10 (10 is the highes
@@ -108,10 +113,10 @@ const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
 class-rgx=[A-Z_][a-zA-Z0-9]+$
 
 # Regular expression which should only match correct function names
-function-rgx=[a-z_][a-z0-9_]{2,30}$
+function-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct method names
-method-rgx=[a-z_][a-z0-9_]{2,30}$
+method-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct instance attribute names
 attr-rgx=[a-z_][a-z0-9_]{2,30}$
@@ -120,7 +125,7 @@ attr-rgx=[a-z_][a-z0-9_]{2,30}$
 argument-rgx=[a-z_][a-z0-9_]{2,30}$
 
 # Regular expression which should only match correct variable names
-variable-rgx=[a-z_][a-z0-9_]{2,30}$
+variable-rgx=[a-z_][a-z0-9]{2,30}$
 
 # Regular expression which should only match correct list comprehension /
 # generator expression variable names
@@ -191,7 +196,7 @@ additional-builtins=
 ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
-defining-attr-methods=__init__,__new__,setUp
+defining-attr-methods=__init__,__new__,setUp,build
 
 
 # checks for sign of poor/misdesign:
@@ -264,7 +269,8 @@ int-import-graph=
 max-line-length=80
 
 # Maximum number of lines in a module
-max-module-lines=1500
+# XXX 1500 -> 4000 for miniedit.py
+max-module-lines=4000
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).

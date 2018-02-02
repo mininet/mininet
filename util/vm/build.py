@@ -52,7 +52,9 @@ LogToConsole = False        # VM output to console rather than log file
 SaveQCOW2 = False           # Save QCOW2 image rather than deleting it
 NoKVM = False               # Don't use kvm and use emulation instead
 Branch = None               # Branch to update and check out before testing
-Zip = False                  # Archive .ovf and .vmdk into a .zip file
+Zip = False                 # Archive .ovf and .vmdk into a .zip file
+Forward = []                # VM port forwarding options (-redir)
+Chown = ''                  # Build directory owner
 
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
@@ -61,28 +63,28 @@ Prompt = '\$ '              # Shell prompt that pexpect will wait for
 isoURLs = {
     'precise32server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
-    'ubuntu-12.04.3-server-i386.iso',
+    'ubuntu-12.04.5-server-i386.iso',
     'precise64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
-    'ubuntu-12.04.3-server-amd64.iso',
-    'quantal32server':
-    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
-    'ubuntu-12.10-server-i386.iso',
-    'quantal64server':
-    'http://mirrors.kernel.org/ubuntu-releases/12.10/'
-    'ubuntu-12.10-server-amd64.iso',
-    'raring32server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
-    'ubuntu-13.04-server-i386.iso',
-    'raring64server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.04/'
-    'ubuntu-13.04-server-amd64.iso',
-    'saucy32server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
-    'ubuntu-13.10-server-i386.iso',
-    'saucy64server':
-    'http://mirrors.kernel.org/ubuntu-releases/13.10/'
-    'ubuntu-13.10-server-amd64.iso',
+    'ubuntu-12.04.5-server-amd64.iso',
+    'trusty32server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.04/'
+    'ubuntu-14.04.4-server-i386.iso',
+    'trusty64server':
+    'http://mirrors.kernel.org/ubuntu-releases/14.04/'
+    'ubuntu-14.04.4-server-amd64.iso',
+    'wily32server':
+    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
+    'ubuntu-15.10-server-i386.iso',
+    'wily64server':
+    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
+    'ubuntu-15.10-server-amd64.iso',
+    'xenial32server':
+    'http://mirrors.kernel.org/ubuntu-releases/16.04/'
+    'ubuntu-16.04.1-server-i386.iso',
+    'xenial64server':
+    'http://mirrors.kernel.org/ubuntu-releases/16.04/'
+    'ubuntu-16.04.1-server-amd64.iso',
 }
 
 
@@ -91,6 +93,18 @@ def OSVersion( flavor ):
     urlbase = path.basename( isoURLs.get( flavor, 'unknown' ) )
     return path.splitext( urlbase )[ 0 ]
 
+def OVFOSNameID( flavor ):
+    "Return OVF-specified ( OS Name, ID ) for flavor"
+    version = OSVersion( flavor )
+    arch = archFor( flavor )
+    if 'ubuntu' in version:
+        map = { 'i386': ( 'Ubuntu', 93 ),
+                'x86_64': ( 'Ubuntu 64-bit', 94 ) }
+    else:
+        map = { 'i386': ( 'Linux', 36 ),
+                'x86_64': ( 'Linux 64-bit', 101 ) }
+    osname, osid = map[ arch ]
+    return osname, osid
 
 LogStartTime = time()
 LogFile = None
@@ -104,9 +118,9 @@ def log( *args, **kwargs ):
     msg = ' '.join( str( arg ) for arg in args )
     output = '%s [ %.3f ] %s' % ( clocktime, elapsed, msg )
     if cr:
-        print output
+        print( output )
     else:
-        print output,
+        print( output, )
     # Optionally mirror to LogFile
     if type( LogFile ) is file:
         if cr:
@@ -137,10 +151,10 @@ def srun( cmd, **kwargs ):
 def depend():
     "Install package dependencies"
     log( '* Installing package dependencies' )
-    run( 'sudo apt-get -y update' )
-    run( 'sudo apt-get install -y'
+    run( 'sudo apt-get -qy update' )
+    run( 'sudo apt-get -qy install'
          ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
-         ' e2fsprogs dnsmasq'
+         ' e2fsprogs curl'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
 
@@ -168,7 +182,10 @@ def findiso( flavor ):
     if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
         log( '* Retrieving', url )
         run( 'curl -C - -o %s %s' % ( iso, url ) )
-        if 'ISO' not in run( 'file ' + iso ):
+        # Make sure the file header/type is something reasonable like
+        # 'ISO' or 'x86 boot sector', and not random html or text
+        result = run( 'file ' + iso )
+        if 'ISO' not in result and 'boot' not in result:
             os.remove( iso )
             raise Exception( 'findiso: could not download iso from ' + url )
         # Write-protect iso, signaling it is complete
@@ -191,7 +208,7 @@ def attachNBD( cow, flags='' ):
             continue
         srun( 'modprobe nbd max-part=64' )
         srun( 'qemu-nbd %s -c %s %s' % ( flags, nbd, cow ) )
-        print
+        print()
         return nbd
     raise Exception( "Error: could not find unused /dev/nbdX device" )
 
@@ -210,11 +227,14 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
         return kernel, initrd
     log( '* Extracting kernel to', kernel )
     nbd = attachNBD( image, flags='-r' )
-    print srun( 'partx ' + nbd )
+    try:
+        print( srun( 'partx ' + nbd ) )
+    except:
+        log( 'Warning - partx failed with error' )
     # Assume kernel is in partition 1/boot/vmlinuz*generic for now
     part = nbd + 'p1'
     mnt = mkdtemp()
-    srun( 'mount -o ro %s %s' % ( part, mnt  ) )
+    srun( 'mount -o ro,noload %s %s' % ( part, mnt  ) )
     kernsrc = glob( '%s/boot/vmlinuz*generic' % mnt )[ 0 ]
     initrdsrc = glob( '%s/boot/initrd*generic' % mnt )[ 0 ]
     srun( 'cp %s %s' % ( initrdsrc, initrd ) )
@@ -234,8 +254,9 @@ def findBaseImage( flavor, size='8G' ):
         # Detect race condition with multiple builds
         perms = stat( image )[ ST_MODE ] & 0777
         if perms != 0444:
-            raise Exception( 'Error - %s is writable ' % image +
-                            '; are multiple builds running?' )
+            raise Exception( 'Error - base image %s is writable.' % image +
+                             ' Are multiple builds running? if not,'
+                             ' remove %s and try again.' % image )
     else:
         # We create VMImageDir here since we are called first
         run( 'mkdir -p %s' % VMImageDir )
@@ -295,7 +316,7 @@ zerombr yes
 clearpart --all --initlabel
 #Automatic partitioning
 autopart
-#System authorization infomation
+#System authorization information
 auth  --useshadow  --enablemd5
 #Firewall configuration
 firewall --disabled
@@ -305,9 +326,11 @@ skipx
 
 # Tell the Ubuntu/Debian installer to stop asking stupid questions
 
-PreseedText = """
-d-i mirror/country string manual
-d-i mirror/http/hostname string mirrors.kernel.org
+PreseedText = ( """
+"""
+#d-i mirror/country string manual
+#d-i mirror/http/hostname string mirrors.kernel.org
+"""
 d-i mirror/http/directory string /ubuntu
 d-i mirror/http/proxy string
 d-i partman/confirm_write_new_label boolean true
@@ -317,7 +340,7 @@ d-i partman/confirm_nooverwrite boolean true
 d-i user-setup/allow-password-weak boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
-"""
+""" )
 
 def makeKickstartFloppy():
     "Create and return kickstart floppy, kickstart, preseed"
@@ -365,6 +388,10 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
         accel = 'tcg'
     else:
         accel = 'kvm'
+        try:
+            run( 'kvm-ok' )
+        except:
+            raise Exception( 'kvm-ok failed; try using --nokvm' )
     cmd = [ 'sudo', kvm,
            '-machine', 'accel=%s' % accel,
            '-nographic',
@@ -405,16 +432,22 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
     log( '* Ubuntu installation completed in %.2f seconds' % elapsed )
 
 
-def boot( cow, kernel, initrd, logfile, memory=1024 ):
+def boot( cow, kernel, initrd, logfile, memory=1024, cpuCores=1 ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
        logfile: log file for pexpect object
        memory: memory size in MB
+       cpuCores: number of CPU cores to use
        returns: pexpect object to qemu process"""
     # pexpect might not be installed until after depend() is called
     global pexpect
-    import pexpect
+    if not pexpect:
+        import pexpect
+    class Spawn( pexpect.spawn ):
+        "Subprocess is sudo, so we have to sudo kill it"
+        def close( self, force=False ):
+            srun( 'kill %d' % self.pid )
     arch = archFor( kernel )
     log( '* Detected kernel architecture', arch )
     if NoKVM:
@@ -432,29 +465,48 @@ def boot( cow, kernel, initrd, logfile, memory=1024 ):
             '-initrd', initrd,
             '-drive file=%s,if=virtio' % cow,
             '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
+    if Forward:
+        cmd += sum( [ [ '-redir', f ] for f in Forward ], [] )
+    if cpuCores > 1:
+        cmd += [ '-smp cores=%s' % cpuCores ]
     cmd = ' '.join( cmd )
     log( '* BOOTING VM FROM', cow )
     log( cmd )
-    vm = pexpect.spawn( cmd, timeout=TIMEOUT, logfile=logfile )
+    vm = Spawn( cmd, timeout=TIMEOUT, logfile=logfile )
     return vm
 
 
-def login( vm ):
+def login( vm, user='mininet', password='mininet' ):
     "Log in to vm (pexpect object)"
     log( '* Waiting for login prompt' )
     vm.expect( 'login: ' )
     log( '* Logging in' )
-    vm.sendline( 'mininet' )
+    vm.sendline( user )
     log( '* Waiting for password prompt' )
     vm.expect( 'Password: ' )
     log( '* Sending password' )
-    vm.sendline( 'mininet' )
+    vm.sendline( password )
     log( '* Waiting for login...' )
+
+
+def removeNtpd( vm, prompt=Prompt, ntpPackage='ntp' ):
+    "Remove ntpd and set clock immediately"
+    log( '* Removing ntpd' )
+    vm.sendline( 'sudo -n apt-get -qy remove ' + ntpPackage )
+    vm.expect( prompt )
+    # Try to make sure that it isn't still running
+    vm.sendline( 'sudo -n pkill ntpd' )
+    vm.expect( prompt )
+    log( '* Getting seconds since epoch from this server' )
+    # Note r'date +%s' specifies a format for 'date', not python!
+    seconds = int( run( r'date +%s' ) )
+    log( '* Setting VM clock' )
+    vm.sendline( 'sudo -n date -s @%d' % seconds )
 
 
 def sanityTest( vm ):
     "Run Mininet sanity test (pingall) in vm"
-    vm.sendline( 'sudo mn --test pingall' )
+    vm.sendline( 'sudo -n mn --test pingall' )
     if vm.expect( [ ' 0% dropped', pexpect.TIMEOUT ], timeout=45 ) == 0:
         log( '* Sanity check OK' )
     else:
@@ -466,9 +518,9 @@ def sanityTest( vm ):
 def coreTest( vm, prompt=Prompt ):
     "Run core tests (make test) in VM"
     log( '* Making sure cgroups are mounted' )
-    vm.sendline( 'sudo service cgroup-lite restart' )
+    vm.sendline( 'sudo -n service cgroup-lite restart' )
     vm.expect( prompt )
-    vm.sendline( 'sudo cgroups-mount' )
+    vm.sendline( 'sudo -n cgroups-mount' )
     vm.expect( prompt )
     log( '* Running make test' )
     vm.sendline( 'cd ~/mininet; sudo make test' )
@@ -477,43 +529,71 @@ def coreTest( vm, prompt=Prompt ):
     # know the time for each test, which means that this
     # script will have to change as we add more tests.
     for test in range( 0, 2 ):
-        if vm.expect( [ 'OK', 'FAILED', pexpect.TIMEOUT ], timeout=180 ) == 0:
+        if vm.expect( [ 'OK.*\r\n', 'FAILED.*\r\n', pexpect.TIMEOUT ], timeout=180 ) == 0:
             log( '* Test', test, 'OK' )
         else:
             log( '* Test', test, 'FAILED' )
             log( '* Test', test, 'output:' )
             log( vm.before )
 
-def noneTest( vm ):
+
+def installPexpect( vm, prompt=Prompt ):
+    "install pexpect"
+    vm.sendline( 'sudo -n apt-get -qy install python-pexpect' )
+    vm.expect( prompt )
+
+
+def noneTest( vm, prompt=Prompt ):
     "This test does nothing"
+    installPexpect( vm, prompt )
     vm.sendline( 'echo' )
+
 
 def examplesquickTest( vm, prompt=Prompt ):
     "Quick test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v -quick' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v -quick' )
 
 
 def examplesfullTest( vm, prompt=Prompt ):
     "Full (slow) test of mininet examples"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/examples/test/runner.py -v' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/examples/test/runner.py -v' )
 
 
 def walkthroughTest( vm, prompt=Prompt ):
     "Test mininet walkthrough"
-    vm.sendline( 'sudo apt-get install python-pexpect' )
-    vm.expect( prompt )
-    vm.sendline( 'sudo python ~/mininet/mininet/test/test_walkthrough.py -v' )
+    installPexpect( vm, prompt )
+    vm.sendline( 'sudo -n python ~/mininet/mininet/test/test_walkthrough.py -v' )
 
+
+def useTest( vm, prompt=Prompt ):
+    "Use VM interactively - exit by pressing control-]"
+    old = vm.logfile
+    if old == stdout:
+        # Avoid doubling every output character!
+        log( '* Temporarily disabling logging to stdout' )
+        vm.logfile = None
+    log( '* Switching to interactive use - press control-] to exit' )
+    vm.interact()
+    if old == stdout:
+        log( '* Restoring logging to stdout' )
+        vm.logfile = stdout
+
+# A convenient alias for use - 'run'; we might want to allow
+# 'run' to take a parameter
+runTest = useTest
 
 def checkOutBranch( vm, branch, prompt=Prompt ):
-    vm.sendline( 'cd ~/mininet; git fetch; git pull --rebase; git checkout '
-                 + branch )
+    # This is a bit subtle; it will check out an existing branch (e.g. master)
+    # if it exists; otherwise it will create a detached branch.
+    # The branch will be rebased to its parent on origin.
+    # This probably doesn't matter since we're running on a COW disk
+    # anyway.
+    vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
+                 + branch + '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
-    vm.sendline( 'sudo make install' )
+    vm.sendline( 'sudo -n make install' )
 
 
 def interact( vm, tests, pre='', post='', prompt=Prompt ):
@@ -526,12 +606,16 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Waiting for output' )
     vm.expect( prompt )
     log( '* Fetching Mininet VM install script' )
+    branch = Branch if Branch else 'master'
     vm.sendline( 'wget '
-                 'https://raw.github.com/mininet/mininet/master/util/vm/'
-                 'install-mininet-vm.sh' )
+                 'https://raw.github.com/mininet/mininet/%s/util/vm/'
+                 'install-mininet-vm.sh' % branch )
     vm.expect( prompt )
     log( '* Running VM install script' )
-    vm.sendline( 'bash install-mininet-vm.sh' )
+    installcmd = 'bash -v install-mininet-vm.sh'
+    if Branch:
+        installcmd += ' ' + Branch
+    vm.sendline( installcmd )
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
     log( '* Waiting for script to complete... ' )
@@ -544,6 +628,13 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Mininet version: ', version )
     log( '* Testing Mininet' )
     runTests( vm, tests=tests, pre=pre, post=post )
+    # Ubuntu adds this because we install via a serial console,
+    # but we want the VM to boot via the VM console. Otherwise
+    # we get the message 'error: terminal "serial" not found'
+    log( '* Disabling serial console' )
+    vm.sendline( "sudo sed -i -e 's/^GRUB_TERMINAL=serial/#GRUB_TERMINAL=serial/' "
+                "/etc/default/grub; sudo update-grub" )
+    vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
     log( '* Waiting for EOF/shutdown' )
@@ -580,13 +671,13 @@ OVFTemplate = """<?xml version="1.0"?>
     xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <References>
-<File ovf:href="%s" ovf:id="file1" ovf:size="%d"/>
+<File ovf:href="%(diskname)s" ovf:id="file1" ovf:size="%(filesize)d"/>
 </References>
 <DiskSection>
 <Info>Virtual disk information</Info>
-<Disk ovf:capacity="%d" ovf:capacityAllocationUnits="byte"
+<Disk ovf:capacity="%(disksize)d" ovf:capacityAllocationUnits="byte"
     ovf:diskId="vmdisk1" ovf:fileRef="file1"
-    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html"/>
+    ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
 </DiskSection>
 <NetworkSection>
 <Info>The list of logical networks</Info>
@@ -594,26 +685,30 @@ OVFTemplate = """<?xml version="1.0"?>
 <Description>The nat  network</Description>
 </Network>
 </NetworkSection>
-<VirtualSystem ovf:id="Mininet-VM">
-<Info>A Mininet Virtual Machine (%s)</Info>
-<Name>mininet-vm</Name>
+<VirtualSystem ovf:id="%(vmname)s">
+<Info>%(vminfo)s (%(name)s)</Info>
+<Name>%(vmname)s</Name>
+<OperatingSystemSection ovf:id="%(osid)d">
+<Info>The kind of installed guest operating system</Info>
+<Description>%(osname)s</Description>
+</OperatingSystemSection>
 <VirtualHardwareSection>
 <Info>Virtual hardware requirements</Info>
 <Item>
 <rasd:AllocationUnits>hertz * 10^6</rasd:AllocationUnits>
 <rasd:Description>Number of Virtual CPUs</rasd:Description>
-<rasd:ElementName>1 virtual CPU(s)</rasd:ElementName>
+<rasd:ElementName>%(cpus)s virtual CPU(s)</rasd:ElementName>
 <rasd:InstanceID>1</rasd:InstanceID>
 <rasd:ResourceType>3</rasd:ResourceType>
-<rasd:VirtualQuantity>1</rasd:VirtualQuantity>
+<rasd:VirtualQuantity>%(cpus)s</rasd:VirtualQuantity>
 </Item>
 <Item>
 <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
 <rasd:Description>Memory Size</rasd:Description>
-<rasd:ElementName>%dMB of memory</rasd:ElementName>
+<rasd:ElementName>%(mem)dMB of memory</rasd:ElementName>
 <rasd:InstanceID>2</rasd:InstanceID>
 <rasd:ResourceType>4</rasd:ResourceType>
-<rasd:VirtualQuantity>%d</rasd:VirtualQuantity>
+<rasd:VirtualQuantity>%(mem)d</rasd:VirtualQuantity>
 </Item>
 <Item>
 <rasd:Address>0</rasd:Address>
@@ -656,16 +751,24 @@ OVFTemplate = """<?xml version="1.0"?>
 """
 
 
-def generateOVF( name, diskname, disksize, mem=1024 ):
+def generateOVF( name, osname, osid, diskname, disksize, mem=1024, cpus=1,
+                 vmname='Mininet-VM', vminfo='A Mininet Virtual Machine' ):
     """Generate (and return) OVF file "name.ovf"
        name: root name of OVF file to generate
+       osname: OS name for OVF (Ubuntu | Ubuntu 64-bit)
+       osid: OS ID for OVF (93 | 94 )
        diskname: name of disk file
        disksize: size of virtual disk in bytes
-       mem: VM memory size in MB"""
+       mem: VM memory size in MB
+       cpus: # of virtual CPUs
+       vmname: Name for VM (default name when importing)
+       vmimfo: Brief description of VM for OVF"""
     ovf = name + '.ovf'
     filesize = stat( diskname )[ ST_SIZE ]
-    # OVFTemplate uses the memory size twice in a row
-    xmltext = OVFTemplate % ( diskname, filesize, disksize, name, mem, mem )
+    params = dict( osname=osname, osid=osid, diskname=diskname,
+                   filesize=filesize, disksize=disksize, name=name,
+                   mem=mem, cpus=cpus, vmname=vmname, vminfo=vminfo )
+    xmltext = OVFTemplate % params
     with open( ovf, 'w+' ) as f:
         f.write( xmltext )
     return ovf
@@ -673,9 +776,12 @@ def generateOVF( name, diskname, disksize, mem=1024 ):
 
 def qcow2size( qcow2 ):
     "Return virtual disk size (in bytes) of qcow2 image"
-    output = check_output( [ 'file', qcow2 ] )
-    assert 'QCOW' in output
-    bytes = int( re.findall( '(\d+) bytes', output )[ 0 ] )
+    output = check_output( [ 'qemu-img', 'info', qcow2 ] )
+    try:
+        assert 'format: qcow' in output
+        bytes = int( re.findall( '(\d+) bytes', output )[ 0 ] )
+    except:
+        raise Exception( 'Could not determine size of %s' % qcow2 )
     return bytes
 
 
@@ -686,16 +792,20 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
        post: command line to run in VM after tests
        prompt: shell prompt (default '$ ')
        memory: memory size in MB"""
-    global LogFile, Zip
+    global LogFile, Zip, Chown
     start = time()
     lstart = localtime()
     date = strftime( '%y%m%d-%H-%M-%S', lstart)
     ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
+    if Branch:
+        dirname = 'mn-%s-%s-%s' % ( Branch, flavor, date )
     try:
-        os.mkdir( dir )
+        os.mkdir( dir)
     except:
         raise Exception( "Failed to create build directory %s" % dir )
+    if Chown:
+        run( 'chown %s %s' % ( Chown, dir ) )
     os.chdir( dir )
     LogFile = open( 'build.log', 'w' )
     log( '* Logging to', abspath( LogFile.name ) )
@@ -713,13 +823,16 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     vm = boot( volume, kernel, initrd, logfile, memory=memory )
     version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
-    vmdk = convert( volume, basename='mininet-vm-' + archFor( flavor ) )
+    arch = archFor( flavor )
+    vmdk = convert( volume, basename='mininet-vm-' + arch )
     if not SaveQCOW2:
         log( '* Removing qcow2 volume', volume )
         os.remove( volume )
     log( '* Converted VM image stored as', abspath( vmdk ) )
     ovfname = 'mininet-%s-%s-%s' % ( version, ovfdate, OSVersion( flavor ) )
-    ovf = generateOVF( diskname=vmdk, disksize=size, name=ovfname )
+    osname, osid = OVFOSNameID( flavor )
+    ovf = generateOVF( name=ovfname, osname=osname, osid=osid,
+                       diskname=vmdk, disksize=size )
     log( '* Generated OVF descriptor file', ovf )
     if Zip:
         log( '* Generating .zip file' )
@@ -732,8 +845,17 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     os.chdir( '..' )
 
 
-def runTests( vm, tests=None, pre='', post='', prompt=Prompt ):
+def runTests( vm, tests=None, pre='', post='', prompt=Prompt, uninstallNtpd=False ):
     "Run tests (list) in vm (pexpect object)"
+    # We disable ntpd and set the time so that ntpd won't be
+    # messing with the time during tests. Set to true for a COW
+    # disk and False for a non-COW disk.
+    if uninstallNtpd:
+        removeNtpd( vm )
+        vm.expect( prompt )
+    if Branch:
+        checkOutBranch( vm, branch=Branch )
+        vm.expect( prompt )
     if not tests:
         tests = []
     if pre:
@@ -764,14 +886,15 @@ def getMininetVersion( vm ):
     return version
 
 
-def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
-                     memory=1024, outputFile=None ):
+def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
+                runFunction=None, **runArgs ):
     """Boot and test VM
        tests: list of tests to run
        pre: command line to run in VM before tests
        post: command line to run in VM after tests
        prompt: shell prompt (default '$ ')
-       memory: VM memory size in MB"""
+       memory: VM memory size in MB
+       cpuCores: number of CPU cores to use"""
     bootTestStart = time()
     basename = path.basename( image )
     image = abspath( image )
@@ -789,17 +912,15 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile,
-               memory=memory )
+               memory=memory, cpuCores=cpuCores )
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
-    if Branch:
-        checkOutBranch( vm, branch=Branch )
-        vm.expect( prompt )
-    runTests( vm, tests=tests, pre=pre, post=post )
-    # runTests eats its last prompt, but maybe it shouldn't...
+    # runFunction should begin with sendline and should eat its last prompt
+    if runFunction:
+        runFunction( vm, **runArgs )
     log( '* Shutting down' )
-    vm.sendline( 'sudo shutdown -h now ' )
+    vm.sendline( 'sudo -n shutdown -h now ' )
     log( '* Waiting for shutdown' )
     vm.wait()
     if outputFile:
@@ -813,7 +934,7 @@ def bootAndRunTests( image, tests=None, pre='', post='', prompt=Prompt,
 
 def buildFlavorString():
     "Return string listing valid build flavors"
-    return 'valid build flavors: ( %s )' % ' '.join( sorted( isoURLs ) )
+    return 'valid build flavors: %s' % ' '.join( sorted( isoURLs ) )
 
 
 def testDict():
@@ -829,15 +950,16 @@ def testDict():
 
 def testString():
     "Return string listing valid tests"
-    return 'valid tests: ( %s )' % ' '.join( testDict().keys() )
+    tests = [ '%s <%s>' % ( name, func.__doc__ )
+              for name, func in testDict().iteritems() ]
+    return 'valid tests: %s' % ', '.join( tests )
 
 
 def parseArgs():
     "Parse command line arguments and run"
-    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT
+    global LogToConsole, NoKVM, Branch, Zip, TIMEOUT, Forward, Chown
     parser = argparse.ArgumentParser( description='Mininet VM build script',
-                                      epilog=buildFlavorString() + ' ' +
-                                      testString() )
+                                      epilog='' )
     parser.add_argument( '-v', '--verbose', action='store_true',
                         help='send VM output to console rather than log file' )
     parser.add_argument( '-d', '--depend', action='store_true',
@@ -857,7 +979,7 @@ def parseArgs():
                          help='Boot and test an existing VM image' )
     parser.add_argument( '-t', '--test', metavar='test', default=[],
                          action='append',
-                         help='specify a test to run' )
+                         help='specify a test to run; ' + testString() )
     parser.add_argument( '-w', '--timeout', metavar='timeout', type=int,
                             default=0, help='set expect timeout' )
     parser.add_argument( '-r', '--run', metavar='cmd', default='',
@@ -865,19 +987,22 @@ def parseArgs():
     parser.add_argument( '-p', '--post', metavar='cmd', default='',
                          help='specify a command line to run after tests' )
     parser.add_argument( '-b', '--branch', metavar='branch',
-                         help='For an existing VM image, check out and install'
-                         ' this branch before testing' )
+                         help='branch to install and/or check out and test' )
     parser.add_argument( 'flavor', nargs='*',
-                         help='VM flavor(s) to build (e.g. raring32server)' )
+                         help='VM flavor(s) to build; ' + buildFlavorString() )
     parser.add_argument( '-z', '--zip', action='store_true',
                          help='archive .ovf and .vmdk into .zip file' )
-    parser.add_argument( '-o', '--out', 
+    parser.add_argument( '-o', '--out',
                          help='output file for test image (vmdk)' )
+    parser.add_argument( '-f', '--forward', default=[], action='append',
+                         help='forward VM ports to local server, e.g. tcp:5555::22' )
+    parser.add_argument( '-u', '--chown', metavar='user',
+                         help='specify an owner for build directory' )
     args = parser.parse_args()
     if args.depend:
         depend()
     if args.list:
-        print buildFlavorString()
+        print( buildFlavorString() )
     if args.clean:
         cleanup()
     if args.verbose:
@@ -890,12 +1015,16 @@ def parseArgs():
         Zip = True
     if args.timeout:
         TIMEOUT = args.timeout
+    if args.forward:
+        Forward = args.forward
     if not args.test and not args.run and not args.post:
         args.test = [ 'sanity', 'core' ]
+    if args.chown:
+        Chown = args.chown
     for flavor in args.flavor:
         if flavor not in isoURLs:
-            print "Unknown build flavor:", flavor
-            print buildFlavorString()
+            print( "Unknown build flavor:", flavor )
+            print( buildFlavorString() )
             break
         try:
             build( flavor, tests=args.test, pre=args.run, post=args.post,
@@ -904,9 +1033,9 @@ def parseArgs():
             log( '* BUILD FAILED with exception: ', e )
             exit( 1 )
     for image in args.image:
-        bootAndRunTests( image, tests=args.test, pre=args.run,
-                         post=args.post, memory=args.memory, 
-                         outputFile=args.out )
+        bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,
+                    post=args.post, memory=args.memory, outputFile=args.out,
+                    uninstallNtpd=True  )
     if not ( args.depend or args.list or args.clean or args.flavor
              or args.image ):
         parser.print_help()

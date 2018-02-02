@@ -6,7 +6,6 @@ Test for sshd.py
 
 import unittest
 import pexpect
-from time import sleep
 from mininet.clean import sh
 
 class testSSHD( unittest.TestCase ):
@@ -15,19 +14,19 @@ class testSSHD( unittest.TestCase ):
 
     def connected( self, ip ):
         "Log into ssh server, check banner, then exit"
-        # Note: this test will fail if "Welcome" is not in the sshd banner 
+        # Note: this test will fail if "Welcome" is not in the sshd banner
         # and '#'' or '$'' are not in the prompt
         p = pexpect.spawn( 'ssh -i /tmp/ssh/test_rsa %s' % ip, timeout=10 )
         while True:
             index = p.expect( self.opts )
             if index == 0:
-                print p.match.group(0)
+                print( p.match.group(0) )
                 p.sendline( 'yes' )
             elif index == 1:
                 return False
             elif index == 2:
                 p.sendline( 'exit' )
-                p.wait()    
+                p.wait()
                 return True
             else:
                 return False

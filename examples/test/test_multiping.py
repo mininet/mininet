@@ -11,7 +11,7 @@ from collections import defaultdict
 class testMultiPing( unittest.TestCase ):
 
     def testMultiPing( self ):
-        """Verify that each target is pinged at least once, and 
+        """Verify that each target is pinged at least once, and
            that pings to 'real' targets are successful and unknown targets fail"""
         p = pexpect.spawn( 'python -m mininet.examples.multiping' )
         opts = [ "Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d\. ]+)",

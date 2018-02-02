@@ -5,12 +5,14 @@ Test for hwintf.py
 """
 
 import unittest
-import pexpect
 import re
+
+import pexpect
+
 from mininet.log import setLogLevel
-from mininet.net import Mininet
 from mininet.node import Node
-from mininet.link import Link, Intf
+from mininet.link import Link
+
 
 class testHwintf( unittest.TestCase ):
 
@@ -55,8 +57,8 @@ class testHwintf( unittest.TestCase ):
         p.wait()
 
     def tearDown( self ):
-        self.h3.terminate()
-        self.n0.terminate()
+        self.h3.stop( deleteIntfs=True )
+        self.n0.stop( deleteIntfs=True )
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )

@@ -9,7 +9,7 @@ else
   host=$1
 fi
 
-pid=`ps ax | grep "mininet:$host$" | grep bash | awk '{print $1};'`
+pid=`ps ax | grep "mininet:$host$" | grep bash | grep -v mnexec | awk '{print $1};'`
 
 if echo $pid | grep -q ' '; then
   echo "Error: found multiple mininet:$host processes"
@@ -40,5 +40,5 @@ if [ -d $rootdir -a -x $rootdir/bin/bash ]; then
     cmd="chroot $rootdir /bin/bash -c $cmd"
 fi
 
-cmd="exec sudo mnexec -a $pid $cg $cmd"
+cmd="exec sudo mnexec $cg -a $pid $cmd"
 eval $cmd
