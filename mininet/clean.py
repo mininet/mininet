@@ -114,13 +114,24 @@ class Cleanup( object ):
         for callback in cls.callbacks:
             callback()
 
-        info( "*** Cleanup complete.\n" )
+        lincCleanup()
+
+    info( "*** Cleanup complete.\n" )
 
     @classmethod
     def addCleanupCallback( cls, callback ):
         "Add cleanup callback"
         if callback not in cls.callbacks:
             cls.callbacks.append( callback )
+
+
+def lincCleanup():
+    "Clean up stuff related with LINC-Switch"
+
+    getPidsCmd = "pgrep -f linc"
+    sh('kill `' + getPidsCmd + '` 2> /dev/null')
+    sh('kill -9`' + getPidsCmd + '` 2> /dev/null')
+    sh('linc_rel -D')
 
 
 cleanup = Cleanup.cleanup

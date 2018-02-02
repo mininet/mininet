@@ -84,6 +84,10 @@ This is primarily a performance improvement and bug fix release.
   significantly better performance than veth pairs, for certain
   configurations.
 
+* Support for installing the
+  [LINC-Switch](https://github.com/FlowForwarding/LINC-Switch)
+  that supports OpenFlow 1.3.2
+
 - You can now easily install Mininet on a Raspberry Pi ;-)
 
 - Additional information for this release and previous releases

@@ -23,6 +23,12 @@ Switch: superclass for switch nodes.
 UserSwitch: a switch using the user-space switch from the OpenFlow
     reference implementation.
 
+LincSwitch: an OpenFlow user-space switch implemented entirely in Erlang
+    currently supporting OF protocol v. 1.3.1.
+
+KernelSwitch: a switch using the kernel switch from the OpenFlow reference
+    implementation.
+
 OVSSwitch: a switch using the Open vSwitch OpenFlow-compatible switch
     implementation (openvswitch.org).
 
@@ -1028,6 +1034,150 @@ class UserSwitch( Switch ):
         self.cmd( 'kill %ofdatapath' )
         self.cmd( 'kill %ofprotocol' )
         super( UserSwitch, self ).stop( deleteIntfs )
+        self.deleteIntfs()
+
+
+class LincSwitch(Switch):
+    "User-space LINC-Switch implemented in Erlang."
+
+    configGenCmd = "linc_config_gen {swName} {configArgs}"
+    startCmd = "linc {swName} start"
+    stopCmd = "linc {swName} stop"
+    relCreateCmd = "linc_rel -c {swName}"
+    relDeleteCmd = "linc_rel -d {swName}"
+    listenAddress = "127.0.0.1"
+
+    def _init_(self, name, **kwargs):
+        Switch._init_(self, name, **kwargs)
+
+    def start(self, controllers):
+        self.setupLincSwitch(controllers)
+        self.cmd('linc ' + self.name + ' start')
+
+    def stop(self):
+        for intf in self.lincIntfs + self.bridges:
+            self.deletInterface(intf)
+        self.cmd(self.stopCmd.format(swName = self.name))
+        self.cmd(self.relDeleteCmd.format(swName = self.name))
+        # Will stop the epmd daemon only if there are no nodes registered.
+        # So this command takes effect only if the last switch instance is being
+        # stopped.
+        self.cmd('epmd -kill')
+
+    def dpctl(self, *args):
+        if not self.listenPort:
+            return "can't run dpctl without passive listening port"
+        return self.cmd('dpctl tcp:{0}:{1} '.format(
+          self.listenAddress, self.listenPort) + ' '.join(args))
+
+    @classmethod
+    def setup(cls):
+        pathCheck('linc', 'linc_config_gen', 'linc_rel',
+                  moduleName='the user-space OpenFlow LINC-Switch'
+                  + ' (https://github.com/FlowForwarding/LINC-Switch)')
+
+    def setupLincSwitch(self, controllers):
+        hostsIntfs = [str( i ) for i in self.intfList() if not i.IP()]
+        self.lincIntfs = self.setupInterfacesForLinc(hostsIntfs)
+        self.bridges = self.setupBridges(zip(hostsIntfs, self.lincIntfs))
+        self.cmd(self.relCreateCmd.format(swName = self.name))
+        self.generateConfig(self.lincIntfs, controllers)
+
+    def generateConfig(self, interfaces, controllers):
+        configArgs =  self.formConfigGenLogicalSwitchIdArg(0) \
+          + " " + " ".join(interfaces) \
+          + " " + self.formConfigGenControllersArg(controllers) \
+          + " " + self.formConfigGenControllersListenerArg()
+        self.cmd(self.configGenCmd.format(swName = self.name,
+                                            configArgs = configArgs))
+
+    def formConfigGenLogicalSwitchIdArg(self, logicalSwitchId):
+        return "-s " + str(logicalSwitchId)
+
+    def formConfigGenControllersArg(self, controllers):
+        return "-c " +  " ".join(['tcp:{0}:{1}'.format(c.IP(), c.port)
+                                  for c in controllers])
+
+    def formConfigGenControllersListenerArg(self):
+        return "-l " + "127.0.0.1:{0}".format(self.listenPort)
+
+    def setupInterfacesForLinc(self, hostsIntfs):
+        lincIntfs = [ "tap-" + intf for intf in hostsIntfs ]
+        for intf in lincIntfs:
+            self.cmd('tunctl -t {0}'.format(intf))
+            self.bringInterfaceUp(intf)
+        return lincIntfs
+
+    def setupBridges(self, bridgesIntfs):
+        bridges = []
+        for idx, intfsPair in enumerate(bridgesIntfs):
+            bridgeName = 'br-{0}-{1}'.format(self.name, idx)
+            bridges.append(bridgeName)
+            self.cmd('brctl addbr {0}'.format(bridgeName))
+            for intf in intfsPair:
+                self.addInterfaceToBridge(bridgeName, intf)
+            self.bringInterfaceUp(bridgeName)
+        return bridges
+
+    def addInterfaceToBridge(self, bridge, interface):
+        self.cmd('brctl addif {0} {1}'.format(bridge, interface))
+
+    def bringInterfaceUp(self, interface):
+        self.cmd('ip link set dev {0} up'.format(interface))
+
+    def deletInterface(self, interface):
+        self.cmd('ip link delete {0}'.format(interface))
+
+
+class OVSLegacyKernelSwitch( Switch ):
+    """Open VSwitch legacy kernel-space switch using ovs-openflowd.
+       Currently only works in the root namespace."""
+
+    def __init__( self, name, dp=None, **kwargs ):
+        """Init.
+           name: name for switch
+           dp: netlink id (0, 1, 2, ...)
+           defaultMAC: default MAC as unsigned int; random value if None"""
+        Switch.__init__( self, name, **kwargs )
+        self.dp = dp if dp else self.name
+        self.intf = self.dp
+        if self.inNamespace:
+            error( "OVSKernelSwitch currently only works"
+                   " in the root namespace.\n" )
+            exit( 1 )
+
+    @classmethod
+    def setup( cls ):
+        "Ensure any dependencies are loaded; if not, try to load them."
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd',
+                   moduleName='Open vSwitch (openvswitch.org)')
+        moduleDeps( subtract=OF_KMOD, add=OVS_KMOD )
+
+    def start( self, controllers ):
+        "Start up kernel datapath."
+        ofplog = '/tmp/' + self.name + '-ofp.log'
+        quietRun( 'ifconfig lo up' )
+        # Delete local datapath if it exists;
+        # then create a new one monitoring the given interfaces
+        self.cmd( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'ovs-dpctl add-dp ' + self.dp )
+        intfs = [ str( i ) for i in self.intfList() if not i.IP() ]
+        self.cmd( 'ovs-dpctl', 'add-if', self.dp, ' '.join( intfs ) )
+        # Run protocol daemon
+        clist = ','.join( [ 'tcp:%s:%d' % ( c.IP(), c.port )
+                            for c in controllers ] )
+        self.cmd( 'ovs-openflowd ' + self.dp +
+                  ' ' + clist +
+                  ' --fail=secure ' + self.opts +
+                  ' --datapath-id=' + self.dpid +
+                  ' 1>' + ofplog + ' 2>' + ofplog + '&' )
+        self.execed = False
+
+    def stop( self ):
+        "Terminate kernel datapath."
+        quietRun( 'ovs-dpctl del-dp ' + self.dp )
+        self.cmd( 'kill %ovs-openflowd' )
+        self.deleteIntfs()
 
 
 class OVSSwitch( Switch ):

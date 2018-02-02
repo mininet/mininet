@@ -115,6 +115,7 @@ OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.t
 OVS_TAG=v$OVS_RELEASE
 
 OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
+LINC_SWITCH_REV=${LINC_SWITCH_REV:-""}
 
 
 function kernel {
@@ -228,6 +229,8 @@ function of13 {
 
     NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
     wget -nc ${NBEEURL}${NBEESRC}.zip
+    # Remove existing directory, if any
+    rm -rf ${NBEESRC}
     unzip ${NBEESRC}.zip
     cd ${NBEEDIR}/src
     cmake .
@@ -246,6 +249,81 @@ function of13 {
     cd $BUILD_DIR
 }
 
+function linc_switch {
+    echo "Installing LINC-Switch"
+    cd $BUILD_DIR/
+    set +o nounset
+
+    sudo apt-get update
+    $install git-core make uml-utilities bridge-utils libpcap-dev libssl-dev libncurses5-dev
+
+    ERL_RELEASE="R15B02"
+    ERL_DESTINATION="/usr/local/lib/$ERL_RELEASE"
+    install_erlang $ERL_RELEASE $ERL_DESTINATION
+    . $ERL_DESTINATION/activate
+
+    LINC_SWITCH_DIR=$BUILD_DIR/"LINC-Switch"
+
+    if [ -d $LINC_SWITCH_DIR ]; then
+        rm -rf $LINC_SWITCH_DIR
+    fi
+
+    git clone https://github.com/FlowForwarding/LINC-Switch.git
+    cd $LINC_SWITCH_DIR
+
+    if [[ -n "$LINC_SWITCH_REV" ]]; then
+        git checkout ${LINC_SWITCH_REV}
+    fi
+
+    REL_DIR=$LINC_SWITCH_DIR/rel
+    cp $REL_DIR/files/sys.config.orig $REL_DIR/files/sys.config
+    make rel
+
+    LINC_REL_COMMAND=$(echo "#!/usr/bin/env bash"\
+                            "\n$LINC_SWITCH_DIR/scripts/rel_copy.sh \$@")
+    install_command "$LINC_REL_COMMAND" $REL_DIR/linc_rel.sh linc_rel
+
+    LINC_RUN_USAGE="Usage: \$0 SWITCH_NAME {start|stop|restart|reboot|ping|console|console_clean|attach}"
+    LINC_RUN_SWITCH_DOWN="Switch \$REL_SUFFIX is not running."
+    LINC_RUN_COMMAND=$(echo "#!/usr/bin/env bash"\
+                            "\ntest \$# -lt 2 && echo \"$LINC_RUN_USAGE\" && exit 1"\
+                            "\nREL_SUFFIX=\$1"\
+                            "\ntest ! -d $REL_DIR/linc_\$REL_SUFFIX"\
+                            "&& echo \"$LINC_RUN_SWITCH_DOWN\" && exit 1"\
+                            "\n$REL_DIR/linc_\$REL_SUFFIX/bin/linc \${@:2}")
+    install_command "$LINC_RUN_COMMAND" $REL_DIR/linc_runner.sh linc
+
+    CONFIG_GEN_COMMAND=$(echo "#!/usr/bin/env bash"\
+                              "\n. $ERL_DESTINATION/activate"\
+                              "\nREL_SUFFIX=\$1"\
+                              "\n$LINC_SWITCH_DIR/scripts/config_gen \${@:2} "\
+                              "-o $REL_DIR/linc_\$REL_SUFFIX/releases/*/sys.config")
+    install_command "$CONFIG_GEN_COMMAND" $REL_DIR/linc_config_gen.sh \
+        linc_config_gen
+
+    LINC_CONTROLLER_COMMAND=$(echo "#!/usr/bin/env bash"\
+                                   "\n. $ERL_DESTINATION/activate"\
+                                   "\ncd $LINC_SWITCH_DIR/scripts/"\
+                                   "\n./of_controller_v4.sh \$@")
+    install_command "$LINC_CONTROLLER_COMMAND" $REL_DIR/linc_controller.sh linc_controller
+
+    set -o nounset
+    cd $BUILD_DIR/
+}
+
+function wireshark_version_check {
+    # Check Wireshark version
+    WS=$(which wireshark)
+    WS_VER_PATCH=(1 10) # targetting wireshark 1.10.0
+    WS_VER=($($WS --version | sed 's/[a-z ]*\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1 \2 \3/'))
+    if [ "${WS_VER[0]}" -lt "${WS_VER_PATCH[0]}" ] ||
+       [[ "${WS_VER[0]}" -le "${WS_VER_PATCH[0]}" && "${WS_VER[1]}" -lt "${WS_VER_PATCH[1]}" ]]
+    then
+        # pre-1.10.0 wireshark
+        echo "Setting revision: pre-ws-1.10.0"
+        WS_DISSECTOR_REV="pre-ws-1.10.0" 
+    fi
+}
 
 function install_wireshark {
     if ! which wireshark; then
@@ -545,6 +623,7 @@ function nox13 {
 
     # Fetch NOX destiny
     cd $BUILD_DIR/
+    rm -rf nox13oflib
     git clone https://github.com/CPqD/nox13oflib.git
     cd nox13oflib
 
@@ -566,6 +645,7 @@ function nox13 {
 function pox {
     echo "Installing POX into $BUILD_DIR/pox..."
     cd $BUILD_DIR
+    rm -rf pox
     git clone https://github.com/noxrepo/pox.git
 }
 
@@ -578,6 +658,7 @@ function oftest {
 
     # Install oftest:
     cd $BUILD_DIR/
+    rm -rf oftest
     git clone git://github.com/floodlight/oftest
 }
 
@@ -773,6 +854,44 @@ exit 0
 
 }
 
+function install_erlang {
+    ERL_RELEASE=$1
+    ERL_DESTINATION=$2
+    ERL_RELEASE_NAME=$ERL_RELEASE
+
+    if [ ! `which kerl` ]; then
+        KERL_DESTINATION="/usr/local/bin/kerl"
+        curl --fail -o $KERL_DESTINATION -O https://raw.githubusercontent.com/spawngrid/kerl/master/kerl
+        chmod a+x $KERL_DESTINATION
+    fi
+
+    if [ ! `kerl list builds | grep $ERL_RELEASE` ]; then
+        kerl build $ERL_RELEASE $ERL_RELEASE_NAME
+        kerl install $ERL_RELEASE_NAME $ERL_DESTINATION
+    fi
+}
+
+# Install a command to /usr/bin directory for easy access.
+# The function takes three argument in the following order:
+# 1. Command - the command to be executed
+# 2. CommandPath - the file in which the command should be placed
+# 3. CommandName - the name of the command under which it will be available
+#    in the /usr/bin directory
+function install_command {
+    COMMAND=$1
+    COMMAND_PATH=$2
+    COMMAND_NAME=$3
+
+    echo -e $COMMAND > $COMMAND_PATH
+    chmod u+x $COMMAND_PATH
+
+    if [ `which $COMMAND_NAME` ]; then
+        sudo update-alternatives --remove-all $COMMAND_NAME > /dev/null 2>&1
+    fi
+    sudo update-alternatives --install /usr/bin/$COMMAND_NAME $COMMAND_NAME \
+        $COMMAND_PATH 0 > /dev/null  2>&1
+}
+
 function usage {
     printf '\nUsage: %s [-abcdfhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
@@ -805,6 +924,7 @@ function usage {
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
+    printf -- ' -L: install LINC-Switch\n' >&2
     exit 2
 }
 
@@ -850,6 +970,7 @@ else
       y)    ryu;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
+      L)    linc_switch;;
       ?)    usage;;
       esac
     done
