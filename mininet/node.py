@@ -1160,6 +1160,7 @@ class OVSSwitch( Switch ):
             opts += ' protocols=%s' % self.protocols
         if self.stp and self.failMode == 'standalone':
             opts += ' stp_enable=true'
+        opts += ' other-config:dp-desc=%s' % self.name
         return opts
 
     def start( self, controllers ):
