@@ -45,7 +45,7 @@ class MultiGraph( object ):
         entry = self.edge[ dst ][ src ] = self.edge[ src ][ dst ]
         # If no key, pick next ordinal number
         if key is None:
-            keys = [ k for k in entry.keys() if isinstance( k, int ) ]
+            keys = [ k for k in list(entry.keys()) if isinstance( k, int ) ]
             key = max( [ 0 ] + keys ) + 1
         entry[ key ] = attr_dict
         return key
@@ -53,16 +53,16 @@ class MultiGraph( object ):
     def nodes( self, data=False):
         """Return list of graph nodes
            data: return list of ( node, attrs)"""
-        return self.node.items() if data else self.node.keys()
+        return list(self.node.items()) if data else list(self.node.keys())
 
     def edges_iter( self, data=False, keys=False ):
         "Iterator: return graph edges"
-        for src, entry in self.edge.iteritems():
-            for dst, keys in entry.iteritems():
+        for src, entry in list(self.edge.items()):
+            for dst, keys in list(entry.items()):
                 if src > dst:
                     # Skip duplicate edges
                     continue
-                for k, attrs in keys.iteritems():
+                for k, attrs in list(keys.items()):
                     if data:
                         if keys:
                             yield( src, dst, k, attrs )
@@ -246,7 +246,7 @@ class Topo( object ):
             Note that you can also look up ports using linkInfo()"""
         # A bit ugly and slow vs. single-link implementation ;-(
         ports = [ ( sport, entry[ 1 ] )
-                  for sport, entry in self.ports[ src ].items()
+                  for sport, entry in list(self.ports[ src ].items())
                   if entry[ 0 ] == dst ]
         return ports if len( ports ) != 1 else ports[ 0 ]
 

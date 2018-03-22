@@ -99,7 +99,7 @@ class Intf( object ):
         # backgrounded output from the cli.
         ifconfig, _err, _exitCode = self.node.pexec(
             'ifconfig %s' % self.name )
-        ips = self._ipMatchRegex.findall( ifconfig )
+        ips = self._ipMatchRegex.findall( ifconfig.decode() )
         self.ip = ips[ 0 ] if ips else None
         return self.ip
 
@@ -164,7 +164,7 @@ class Intf( object ):
            method: config method name
            param: arg=value (ignore if value=None)
            value may also be list or dict"""
-        name, value = param.items()[ 0 ]
+        name, value = list(param.items())[ 0 ]
         f = getattr( self, method, None )
         if not f or value is None:
             return

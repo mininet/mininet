@@ -97,7 +97,7 @@ def errRun( *cmd, **kwargs ):
         for fd, event in readable:
             f = fdtofile[ fd ]
             if event & POLLIN:
-                data = f.read( 1024 )
+                data = f.read( 1024 ).decode()
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -374,7 +374,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
        terminates: when all EOFs received"""
     poller = poll()
     fdToHost = {}
-    for host, popen in popens.iteritems():
+    for host, popen in list(popens.items()):
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
         poller.register( fd, POLLIN )
@@ -494,7 +494,7 @@ def numCores():
 def irange(start, end):
     """Inclusive range from start to end (vs. Python insanity.)
        irange(1,5) -> 1, 2, 3, 4, 5"""
-    return range( start, end + 1 )
+    return list(range( start, end + 1))
 
 def custom( cls, **params ):
     "Returns customized constructor for class cls."
@@ -533,7 +533,7 @@ def customClass( classes, argStr ):
     cls = classes.get( cname, None )
     if not cls:
         raise Exception( "error: %s is unknown - please specify one of %s" %
-                         ( cname, classes.keys() ) )
+                         ( cname, list(classes.keys()) ) )
     if not args and not kwargs:
         return cls
 
@@ -600,7 +600,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
-    serverIP = server if isinstance( server, basestring ) else server.IP()
+    serverIP = server if isinstance( server, str ) else server.IP()
     cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )
