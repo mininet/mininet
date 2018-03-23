@@ -20,38 +20,25 @@ OpenFlow icon from https://www.opennetworking.org/
 
 MINIEDIT_VERSION = '2.2.0.1'
 
+import sys
 from optparse import OptionParser
-try:
-    from Tkinter import *
-except ImportError:
-    from tkinter import *
-#from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
-#                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
-#                      Scrollbar, Wm, TclError, StringVar, IntVar,
-#                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
-#                      RIGHT, LEFT, BOTH, TRUE, FALSE )
-try:
-    from ttk import Notebook
-except ImportError:
-    from tkinter.ttk import Notebook
-
-try:
-    from tkMessageBox import showerror
-except ImportError:
-    from tkinter.messagebox import showerror
 from subprocess import call
-try:
-    import tkFont
-except ImportError:
-    from tkinter import font as tkFont
-try:
-    import tkFileDialog
-except ImportError:
-    from tkinter import filedialog as tkFileDialog
-try:
+
+from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
+                      Scrollbar, Wm, TclError, StringVar, IntVar,
+                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
+                      RIGHT, LEFT, BOTH, TRUE, FALSE )
+from tkinter.ttk import Notebook
+from tkinter.messagebox import showerror
+from tkinter import font as tkFont
+
+if sys.version_info[0] == 2:
     import tkSimpleDialog
-except ImportError:
+    import tkFileDialog
+elif sys.version_info[0] == 3:
     from tkinter import simpledialog as tkSimpleDialog
+    from tkinter import filedialog as tkFileDialog
 
 import re
 import json
