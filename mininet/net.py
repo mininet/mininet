@@ -190,7 +190,7 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            if time > timeout and timeout is not None:
+            if (timeout is not None) and (time > timeout):
                 break
             sleep( delay )
             time += delay
@@ -549,7 +549,7 @@ class Mininet( object ):
             switch.start( self.controllers )
         started = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=lambda x:type(x).__name__), type ):
+                sorted( self.switches, key=lambda x: type(x).__name__), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchStartup' ):
                 success = swclass.batchStartup( switches )
@@ -576,7 +576,7 @@ class Mininet( object ):
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         stopped = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=lambda x:type(x).__name__), type ):
+                sorted( self.switches, key=lambda x: type(x).__name__), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchShutdown' ):
                 success = swclass.batchShutdown( switches )

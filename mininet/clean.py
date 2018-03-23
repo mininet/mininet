@@ -21,7 +21,8 @@ from mininet.term import cleanUpScreens
 def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
-    return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ].decode()
+    return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE )\
+                .communicate()[ 0 ].decode('utf-8')
 
 def killprocs( pattern ):
     "Reliably terminate processes matching a pattern (including args)"
