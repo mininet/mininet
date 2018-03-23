@@ -6,6 +6,7 @@ Test for multiping.py
 
 import unittest
 import pexpect
+import sys
 from collections import defaultdict
 
 class testMultiPing( unittest.TestCase ):
@@ -13,9 +14,9 @@ class testMultiPing( unittest.TestCase ):
     def testMultiPing( self ):
         """Verify that each target is pinged at least once, and
            that pings to 'real' targets are successful and unknown targets fail"""
-        p = pexpect.spawn( 'python -m mininet.examples.multiping' )
-        opts = [ "Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d\. ]+)",
-                 "(h\d+): ([\d.]+) -> ([\d.]+) \d packets transmitted, (\d) received",
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.multiping', encoding='utf-8' )
+        opts = [ u"Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d\. ]+)",
+                 u"(h\d+): ([\d.]+) -> ([\d.]+) \d packets transmitted, (\d) received",
                  pexpect.EOF ]
         pings = defaultdict( list )
         while True:

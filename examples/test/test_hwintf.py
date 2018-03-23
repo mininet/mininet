@@ -6,6 +6,7 @@ Test for hwintf.py
 
 import unittest
 import re
+import sys
 
 import pexpect
 
@@ -16,7 +17,7 @@ from mininet.link import Link
 
 class testHwintf( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     def setUp( self ):
         self.h3 = Node( 't0', ip='10.0.0.3/8' )
@@ -26,10 +27,11 @@ class testHwintf( unittest.TestCase ):
 
     def testLocalPing( self ):
         "Verify connectivity between virtual hosts using pingall"
-        p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.hwintf %s' % self.n0.intf(),
+                           encoding='utf-8')
         p.expect( self.prompt )
         p.sendline( 'pingall' )
-        p.expect ( '(\d+)% dropped' )
+        p.expect ( u'(\d+)% dropped' )
         percent = int( p.match.group( 1 ) ) if p.match else -1
         self.assertEqual( percent, 0 )
         p.expect( self.prompt )
@@ -38,10 +40,11 @@ class testHwintf( unittest.TestCase ):
 
     def testExternalPing( self ):
         "Verify connnectivity between virtual host and virtual-physical 'external' host "
-        p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.hwintf %s' % self.n0.intf(),
+                           encoding='utf-8')
         p.expect( self.prompt )
         # test ping external to internal
-        expectStr = '(\d+) packets transmitted, (\d+) received'
+        expectStr = u'(\d+) packets transmitted, (\d+) received'
         m = re.search( expectStr, self.h3.cmd( 'ping -v -c 1 10.0.0.1' ) )
         tx = m.group( 1 )
         rx = m.group( 2 )

@@ -7,16 +7,17 @@ validates mininet interfaces against systems interfaces
 
 import unittest
 import pexpect
+import sys
 
 class testMultiLink( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     def testMultiLink(self):
-        p = pexpect.spawn( 'python -m mininet.examples.multilink' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.multilink', encoding='utf-8' )
         p.expect( self.prompt )
         p.sendline( 'intfs' )
-        p.expect( 's(\d): lo' )
+        p.expect( u's(\d): lo' )
         intfsOutput = p.before
         # parse interfaces from mininet intfs, and store them in a list
         hostToIntfs = intfsOutput.split( '\r\n' )[ 1:3 ]
@@ -27,7 +28,7 @@ class testMultiLink( unittest.TestCase ):
 
         # get interfaces from system by running ifconfig on every host
         sysIntfList = []
-        opts = [ 'h(\d)-eth(\d)', self.prompt ]
+        opts = [ u'h(\d)-eth(\d)', self.prompt ]
         p.expect( self.prompt )
 
         p.sendline( 'h1 ifconfig' )

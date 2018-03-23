@@ -20,24 +20,30 @@ OpenFlow icon from https://www.opennetworking.org/
 
 MINIEDIT_VERSION = '2.2.0.1'
 
+import sys
 from optparse import OptionParser
-# from Tkinter import *
-from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+from subprocess import call
+
+from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
                       Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
                       Scrollbar, Wm, TclError, StringVar, IntVar,
                       E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
                       RIGHT, LEFT, BOTH, TRUE, FALSE )
-from ttk import Notebook
-from tkMessageBox import showerror
-from subprocess import call
-import tkFont
-import tkFileDialog
-import tkSimpleDialog
+from tkinter.ttk import Notebook
+from tkinter.messagebox import showerror
+from tkinter import font as tkFont
+
+if sys.version_info[0] == 2:
+    import tkSimpleDialog
+    import tkFileDialog
+elif sys.version_info[0] == 3:
+    from tkinter import simpledialog as tkSimpleDialog
+    from tkinter import filedialog as tkFileDialog
+
 import re
 import json
 from distutils.version import StrictVersion
 import os
-import sys
 from functools import partial
 
 if 'PYTHONPATH' in os.environ:

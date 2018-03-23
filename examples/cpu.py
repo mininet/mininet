@@ -70,7 +70,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
             # ignore empty result from waitListening/telnet
             popen.stdout.readline()
             client.cmd( 'iperf -yc -t %s -c %s' % ( seconds, server.IP() ) )
-            result = popen.stdout.readline().split( ',' )
+            result = popen.stdout.readline().decode('utf-8').split( ',' )
             bps = float( result[ -1 ] )
             popen.terminate()
             net.stop()

@@ -15,6 +15,7 @@ from optparse import OptionParser
 import os
 import sys
 import time
+import collections
 
 # Fix setuptools' evil madness, and open up (more?) security holes
 if 'PYTHONPATH' in os.environ:
@@ -124,14 +125,14 @@ def runTests( mn, options ):
             test, args, kwargs = splitArgs( test )
             test = ALTSPELLING.get( test.lower(), test )
             testfn = TESTS.get( test, test )
-            if callable( testfn ):
+            if isinstance( testfn, collections.Callable):
                 testfn( mn, *args, **kwargs )
             elif hasattr( mn, test ):
                 mn.waitConnected()
                 getattr( mn, test )( *args, **kwargs )
             else:
                 raise Exception( 'Test %s is unknown - please specify one of '
-                                 '%s ' % ( test, TESTS.keys() ) )
+                                 '%s ' % ( test, list(TESTS.keys()) ) )
 
 
 def addDictOption( opts, choicesDict, default, name, **kwargs ):
@@ -144,7 +145,7 @@ def addDictOption( opts, choicesDict, default, name, **kwargs ):
     helpStr = ( '|'.join( sorted( choicesDict.keys() ) ) +
                 '[,param=value...]' )
     helpList = [ '%s=%s' % ( k, v.__name__ )
-                 for k, v in choicesDict.items() ]
+                 for k, v in list(choicesDict.items()) ]
     helpStr += ' ' + ( ' '.join( helpList ) )
     params = dict( type='string', default=default, help=helpStr )
     params.update( **kwargs )
@@ -186,8 +187,10 @@ class MininetRunner( object ):
         for fileName in files:
             customs = {}
             if os.path.isfile( fileName ):
-                execfile( fileName, customs, customs )
-                for name, val in customs.iteritems():
+                # pylint: disable=exec-used
+                exec(compile(open( fileName ).read(), fileName, 'exec'),
+                     customs, customs)
+                for name, val in list(customs.items()):
                     self.setCustom( name, val )
             else:
                 raise Exception( 'could not find custom file: %s' % fileName )
@@ -246,7 +249,7 @@ class MininetRunner( object ):
                          help='read custom classes or params from .py file(s)'
                          )
         opts.add_option( '--test', default=[], action='append',
-                         dest='test', help='|'.join( TESTS.keys() ) )
+                         dest='test', help='|'.join( list(TESTS.keys()) ) )
         opts.add_option( '--xterms', '-x', action='store_true',
                          default=False, help='spawn xterms for each node' )
         opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
@@ -256,8 +259,8 @@ class MininetRunner( object ):
         opts.add_option( '--arp', action='store_true',
                          default=False, help='set all-pairs ARP entries' )
         opts.add_option( '--verbosity', '-v', type='choice',
-                         choices=LEVELS.keys(), default = 'info',
-                         help = '|'.join( LEVELS.keys() )  )
+                         choices=list(LEVELS.keys()), default = 'info',
+                         help = '|'.join( list(LEVELS.keys()) )  )
         opts.add_option( '--innamespace', action='store_true',
                          default=False, help='sw and ctrl in namespace?' )
         opts.add_option( '--listenport', type='int', default=6654,
@@ -286,7 +289,7 @@ class MininetRunner( object ):
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
         opts.add_option( '--placement', type='choice',
-                         choices=PLACEMENT.keys(), default='block',
+                         choices=list(PLACEMENT.keys()), default='block',
                          metavar='block|random',
                          help=( 'node placement for --cluster '
                                 '(experimental!) ' ) )

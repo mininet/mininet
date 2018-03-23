@@ -19,7 +19,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
     "Monitor set of files and return [(host, line)...]"
     devnull = open( '/dev/null', 'w' )
     tails, fdToFile, fdToHost = {}, {}, {}
-    for h, outfile in outfiles.iteritems():
+    for h, outfile in outfiles.items():
         tail = Popen( [ 'tail', '-f', outfile ],
                       stdout=PIPE, stderr=devnull )
         fd = tail.stdout.fileno()
@@ -28,7 +28,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
         fdToHost[ fd ] = h
     # Prepare to poll output files
     readable = poll()
-    for t in tails.values():
+    for t in list(tails.values()):
         readable.register( t.stdout.fileno(), POLLIN )
     # Run until a set number of seconds have elapsed
     endTime = time() + seconds
@@ -39,12 +39,12 @@ def monitorFiles( outfiles, seconds, timeoutms ):
                 f = fdToFile[ fd ]
                 host = fdToHost[ fd ]
                 # Wait for a line of output
-                line = f.readline().strip()
+                line = f.readline().decode('utf-8').strip()
                 yield host, line
         else:
             # If we timed out, return nothing
             yield None, ''
-    for t in tails.values():
+    for t in list(tails.values()):
         t.terminate()
     devnull.close()  # Not really necessary
 

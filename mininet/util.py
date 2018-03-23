@@ -12,6 +12,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+from six import string_types
 
 # Command execution support
 
@@ -74,16 +75,29 @@ def errRun( *cmd, **kwargs ):
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
     # Allow passing in a list or a string
-    if isinstance( cmd, str ) and not shell:
-        cmd = cmd.split( ' ' )
-        cmd = [ str( arg ) for arg in cmd ]
-    elif isinstance( cmd, list ) and shell:
-        cmd = " ".join( arg for arg in cmd )
+    if not shell:
+        if isinstance( cmd, string_types ):
+            cmd = cmd.split(' ')
+            cmd = [str(arg) for arg in cmd]
+        # else:
+        #     cmd = cmd.decode('utf-8').split(' ')
+        #     cmd = [str(arg) for arg in cmd]
+    else:
+        if isinstance(cmd, list):
+            cmd = " ".join(arg for arg in cmd)
+
+    # if isinstance( cmd, str ) and not shell:
+    #     cmd = cmd.split( ' ' )
+    #     cmd = [ str( arg ) for arg in cmd ]
+    # elif isinstance( cmd, list ) and shell:
+    #     cmd = " ".join( arg for arg in cmd )
+    # elif isinstance( cmd, unicode ) and not shell:
+
     debug( '*** errRun:', cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
-    out, err = '', ''
+    out, err = u'', u''
     poller = poll()
     poller.register( popen.stdout, POLLIN )
     fdtofile = { popen.stdout.fileno(): popen.stdout }
@@ -97,7 +111,7 @@ def errRun( *cmd, **kwargs ):
         for fd, event in readable:
             f = fdtofile[ fd ]
             if event & POLLIN:
-                data = f.read( 1024 )
+                data = f.read( 1024 ).decode('utf-8')
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -374,7 +388,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
        terminates: when all EOFs received"""
     poller = poll()
     fdToHost = {}
-    for host, popen in popens.iteritems():
+    for host, popen in list(popens.items()):
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
         poller.register( fd, POLLIN )
@@ -388,18 +402,24 @@ def pmonitor(popens, timeoutms=500, readline=True,
             for fd, event in fds:
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
+
+                if readline:
+                    # Attempt to read a line of output
+                    # This blocks until we receive a newline!
+                    line = popen.stdout.readline()
+                else:
+                    line = popen.stdout.read( readmax )
+
                 if event & POLLIN:
-                    if readline:
-                        # Attempt to read a line of output
-                        # This blocks until we receive a newline!
-                        line = popen.stdout.readline()
-                    else:
-                        line = popen.stdout.read( readmax )
-                    yield host, line
+                    yield host, line.decode('utf-8')
                 # Check for EOF
                 elif event & POLLHUP:
-                    poller.unregister( fd )
-                    del popens[ host ]
+                    if line == b'':
+                        poller.unregister( fd )
+                        del popens[ host ]
+                    else:
+                        yield host, line.decode('utf-8')
+
         else:
             yield None, ''
 
@@ -494,7 +514,7 @@ def numCores():
 def irange(start, end):
     """Inclusive range from start to end (vs. Python insanity.)
        irange(1,5) -> 1, 2, 3, 4, 5"""
-    return range( start, end + 1 )
+    return list(range( start, end + 1))
 
 def custom( cls, **params ):
     "Returns customized constructor for class cls."
@@ -533,7 +553,7 @@ def customClass( classes, argStr ):
     cls = classes.get( cname, None )
     if not cls:
         raise Exception( "error: %s is unknown - please specify one of %s" %
-                         ( cname, classes.keys() ) )
+                         ( cname, list(classes.keys()) ) )
     if not args and not kwargs:
         return cls
 
@@ -600,7 +620,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
-    serverIP = server if isinstance( server, basestring ) else server.IP()
+    serverIP = server if isinstance( server, str ) else server.IP()
     cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )

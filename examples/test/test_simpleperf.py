@@ -18,10 +18,10 @@ class testSimplePerf( unittest.TestCase ):
         "Run the example and verify iperf results"
         # 10 Mb/s, plus or minus 20% tolerance
         BW = 10
-	TOLERANCE = .2 
-        p = pexpect.spawn( 'python -m mininet.examples.simpleperf testmode' )
+        TOLERANCE = .2
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.simpleperf testmode', encoding='utf-8' )
         # check iperf results
-        p.expect( "Results: \['10M', '([\d\.]+) .bits/sec", timeout=480 )
+        p.expect( u"Results: \['10M', '([\d\.]+) .bits/sec", timeout=480 )
         measuredBw = float( p.match.group( 1 ) )
         lowerBound = BW * ( 1 - TOLERANCE )
         upperBound = BW + ( 1 + TOLERANCE )

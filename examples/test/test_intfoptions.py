@@ -12,12 +12,12 @@ class testIntfOptions( unittest.TestCase ):
 
     def testIntfOptions( self ):
         "verify that intf.config is correctly limiting traffic"
-        p = pexpect.spawn( 'python -m mininet.examples.intfoptions ' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.intfoptions ', encoding='utf-8' )
         tolerance = .2  # plus or minus 20%
-        opts = [ "Results: \['([\d\.]+) .bits/sec",
-                 "Results: \['10M', '([\d\.]+) .bits/sec",
-                 "h(\d+)->h(\d+): (\d)/(\d),"
-                 "rtt min/avg/max/mdev ([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms",
+        opts = [ u"Results: \['([\d\.]+) .bits/sec",
+                 u"Results: \['10M', '([\d\.]+) .bits/sec",
+                 u"h(\d+)->h(\d+): (\d)/(\d),"
+                 u"rtt min/avg/max/mdev ([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms",
                  pexpect.EOF ]
         while True:
             index = p.expect( opts, timeout=600 )

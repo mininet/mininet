@@ -20,14 +20,15 @@ import sys
 
 class testCPU( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
-        p = pexpect.spawn( 'python -m mininet.examples.cpu', timeout=300 )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.cpu', timeout=300,
+                           encoding='utf-8' )
         # matches each line from results( shown above )
-        opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.e\+]+)',
+        opts = [ u'([a-z]+)\t([\d\.]+)%\t([\d\.e\+]+)',
                  pexpect.EOF ]
         scheds = []
         while True:
