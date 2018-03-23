@@ -402,22 +402,18 @@ def pmonitor(popens, timeoutms=500, readline=True,
             for fd, event in fds:
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
+
+                if readline:
+                    # Attempt to read a line of output
+                    # This blocks until we receive a newline!
+                    line = popen.stdout.readline()
+                else:
+                    line = popen.stdout.read( readmax )
+
                 if event & POLLIN:
-                    if readline:
-                        # Attempt to read a line of output
-                        # This blocks until we receive a newline!
-                        line = popen.stdout.readline()
-                    else:
-                        line = popen.stdout.read( readmax )
                     yield host, line.decode('utf-8')
                 # Check for EOF
                 elif event & POLLHUP:
-                    # Differentiate '\n' from EOF in Python 3
-                    if readline:
-                        line = popen.stdout.readline()
-                    else:
-                        line = popen.stdout.read( readmax )
-
                     if line == b'':
                         poller.unregister( fd )
                         del popens[ host ]

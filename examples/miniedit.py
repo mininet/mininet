@@ -44,7 +44,6 @@ import re
 import json
 from distutils.version import StrictVersion
 import os
-import sys
 from functools import partial
 
 if 'PYTHONPATH' in os.environ:
