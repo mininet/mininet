@@ -37,7 +37,8 @@ setup(
     keywords='networking emulator protocol Internet OpenFlow SDN',
     license='BSD',
     install_requires=[
-        'setuptools'
+        'setuptools',
+        'future',
     ],
     scripts=scripts,
 )
