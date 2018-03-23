@@ -6,11 +6,12 @@ Test for sshd.py
 
 import unittest
 import pexpect
+import sys
 from mininet.clean import sh
 
 class testSSHD( unittest.TestCase ):
 
-    opts = [ '\(yes/no\)\?', 'refused', 'Welcome|\$|#', pexpect.EOF, pexpect.TIMEOUT ]
+    opts = [ u'\(yes/no\)\?', 'refused', 'Welcome|\$|#', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self, ip ):
         "Log into ssh server, check banner, then exit"
@@ -37,12 +38,12 @@ class testSSHD( unittest.TestCase ):
         sh( 'mkdir /tmp/ssh' )
         sh( "ssh-keygen -t rsa -P '' -f /tmp/ssh/test_rsa" )
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
-        cmd = ( 'python -m mininet.examples.sshd -D '
+        cmd = ( sys.executable + ' -m mininet.examples.sshd -D '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no -o UseDNS=no -u0' )
         # run example with custom sshd args
-        self.net = pexpect.spawn( cmd )
-        self.net.expect( 'mininet>' )
+        self.net = pexpect.spawn( cmd, encoding='utf-8' )
+        self.net.expect( u'mininet>' )
 
     def testSSH( self ):
         "Verify that we can ssh into all hosts (h1 to h4)"

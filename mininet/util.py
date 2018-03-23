@@ -12,6 +12,7 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+from six import string_types
 
 # Command execution support
 
@@ -74,16 +75,29 @@ def errRun( *cmd, **kwargs ):
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
     # Allow passing in a list or a string
-    if isinstance( cmd, str ) and not shell:
-        cmd = cmd.split( ' ' )
-        cmd = [ str( arg ) for arg in cmd ]
-    elif isinstance( cmd, list ) and shell:
-        cmd = " ".join( arg for arg in cmd )
+    if not shell:
+        if isinstance( cmd, string_types ):
+            cmd = cmd.split(' ')
+            cmd = [str(arg) for arg in cmd]
+        # else:
+        #     cmd = cmd.decode('utf-8').split(' ')
+        #     cmd = [str(arg) for arg in cmd]
+    else:
+        if isinstance(cmd, list):
+            cmd = " ".join(arg for arg in cmd)
+
+    # if isinstance( cmd, str ) and not shell:
+    #     cmd = cmd.split( ' ' )
+    #     cmd = [ str( arg ) for arg in cmd ]
+    # elif isinstance( cmd, list ) and shell:
+    #     cmd = " ".join( arg for arg in cmd )
+    # elif isinstance( cmd, unicode ) and not shell:
+
     debug( '*** errRun:', cmd, '\n' )
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either
-    out, err = '', ''
+    out, err = u'', u''
     poller = poll()
     poller.register( popen.stdout, POLLIN )
     fdtofile = { popen.stdout.fileno(): popen.stdout }
@@ -97,7 +111,7 @@ def errRun( *cmd, **kwargs ):
         for fd, event in readable:
             f = fdtofile[ fd ]
             if event & POLLIN:
-                data = f.read( 1024 ).decode()
+                data = f.read( 1024 ).decode('utf-8')
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -395,11 +409,21 @@ def pmonitor(popens, timeoutms=500, readline=True,
                         line = popen.stdout.readline()
                     else:
                         line = popen.stdout.read( readmax )
-                    yield host, line
+                    yield host, line.decode('utf-8')
                 # Check for EOF
                 elif event & POLLHUP:
-                    poller.unregister( fd )
-                    del popens[ host ]
+                    # Differentiate '\n' from EOF in Python 3
+                    if readline:
+                        line = popen.stdout.readline()
+                    else:
+                        line = popen.stdout.read( readmax )
+
+                    if line == b'':
+                        poller.unregister( fd )
+                        del popens[ host ]
+                    else:
+                        yield host, line.decode('utf-8')
+
         else:
             yield None, ''
 

@@ -6,25 +6,26 @@ Tests for controllers.py and controllers2.py
 
 import unittest
 import pexpect
+import sys
 
 class testControllers( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     def connectedTest( self, name, cmap ):
         "Verify that switches are connected to the controller specified by cmap"
-        p = pexpect.spawn( 'python -m %s' % name )
+        p = pexpect.spawn( sys.executable + ' -m %s' % name, encoding='utf-8' )
         p.expect( self.prompt )
         # but first a simple ping test
         p.sendline( 'pingall' )
-        p.expect ( '(\d+)% dropped' )
+        p.expect ( u'(\d+)% dropped' )
         percent = int( p.match.group( 1 ) ) if p.match else -1
         self.assertEqual( percent, 0 )
         p.expect( self.prompt )
         # verify connected controller
         for switch in cmap:
             p.sendline( 'sh ovs-vsctl get-controller %s' % switch )
-            p.expect( 'tcp:([\d.:]+)')
+            p.expect( u'tcp:([\d.:]+)')
             actual = p.match.group(1)
             expected = cmap[ switch ]
             self.assertEqual( actual, expected )

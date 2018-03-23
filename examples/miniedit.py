@@ -21,18 +21,38 @@ OpenFlow icon from https://www.opennetworking.org/
 MINIEDIT_VERSION = '2.2.0.1'
 
 from optparse import OptionParser
-# from Tkinter import *
-from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
-                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
-                      Scrollbar, Wm, TclError, StringVar, IntVar,
-                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
-                      RIGHT, LEFT, BOTH, TRUE, FALSE )
-from ttk import Notebook
-from tkMessageBox import showerror
+try:
+    from Tkinter import *
+except ImportError:
+    from tkinter import *
+#from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+#                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
+#                      Scrollbar, Wm, TclError, StringVar, IntVar,
+#                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
+#                      RIGHT, LEFT, BOTH, TRUE, FALSE )
+try:
+    from ttk import Notebook
+except ImportError:
+    from tkinter.ttk import Notebook
+
+try:
+    from tkMessageBox import showerror
+except ImportError:
+    from tkinter.messagebox import showerror
 from subprocess import call
-import tkFont
-import tkFileDialog
-import tkSimpleDialog
+try:
+    import tkFont
+except ImportError:
+    from tkinter import font as tkFont
+try:
+    import tkFileDialog
+except ImportError:
+    from tkinter import filedialog as tkFileDialog
+try:
+    import tkSimpleDialog
+except ImportError:
+    from tkinter import simpledialog as tkSimpleDialog
+
 import re
 import json
 from distutils.version import StrictVersion
