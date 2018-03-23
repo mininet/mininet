@@ -38,6 +38,7 @@ setup(
     license='BSD',
     install_requires=[
         'setuptools',
+        'six',
         'future',
     ],
     scripts=scripts,
