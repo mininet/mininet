@@ -22,14 +22,17 @@ MINIEDIT_VERSION = '2.2.0.1'
 
 from optparse import OptionParser
 try:
-    from Tkinter import *
+    from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+                          Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
+                          Scrollbar, Wm, TclError, StringVar, IntVar,
+                          E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
+                          RIGHT, LEFT, BOTH, TRUE, FALSE )
 except ImportError:
-    from tkinter import *
-#from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
-#                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
-#                      Scrollbar, Wm, TclError, StringVar, IntVar,
-#                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
-#                      RIGHT, LEFT, BOTH, TRUE, FALSE )
+    from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
+                          Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
+                          Scrollbar, Wm, TclError, StringVar, IntVar,
+                          E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
+                          RIGHT, LEFT, BOTH, TRUE, FALSE )
 try:
     from ttk import Notebook
 except ImportError:
