@@ -178,11 +178,11 @@ class testWalkthrough( unittest.TestCase ):
         "Test pingpair (0% drop) and iperf (bw > 0) regression tests"
         # test pingpair
         p = pexpect.spawn( 'mn --test pingpair', encoding='utf-8' )
-        p.expect( u'0% dropped' )
+        p.expect( '0% dropped' )
         p.expect( pexpect.EOF )
         # test iperf
         p = pexpect.spawn( 'mn --test iperf', encoding='utf-8' )
-        p.expect( u"Results: \['([\d\.]+) .bits/sec'," )
+        p.expect( "Results: \['([\d\.]+) .bits/sec'," )
         bw = float( p.match.group( 1 ) )
         self.assertTrue( bw > 0 )
         p.expect( pexpect.EOF )
@@ -249,6 +249,7 @@ class testWalkthrough( unittest.TestCase ):
         custom = os.path.dirname( os.path.realpath( __file__ ) )
         custom = os.path.join( custom, '../../custom/topo-2sw-2host.py' )
         custom = os.path.normpath( custom )
+        print(custom)
         p = pexpect.spawn(
             'mn --custom %s --topo mytopo --test pingall' % custom,
             encoding='utf-8' )
