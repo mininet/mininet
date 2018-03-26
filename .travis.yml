@@ -3,13 +3,13 @@ sudo: required
 
 python:
   - "2.7"
-  - "3.4"
   - "3.5"
 
 matrix:
   include:
     - dist: trusty
       env: dist="14.04 LTS trusty"
+
 #    - dist: xenial
 #      env: dist="16.04 LTS xenial"
 # Travis-CI only proposes 14.04 LTS Trusty and there is no plan to update to 16.04 xenial

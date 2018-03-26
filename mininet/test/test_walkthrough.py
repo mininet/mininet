@@ -14,6 +14,9 @@ from mininet.util import quietRun
 from distutils.version import StrictVersion
 from time import sleep
 
+# allow Unicode for re patterns
+# pylint:disable=anomalous-backslash-in-string
+
 def tsharkVersion():
     "Return tshark version"
     versionStr = quietRun( 'tshark -v' )
@@ -42,11 +45,13 @@ class testWalkthrough( unittest.TestCase ):
         if StrictVersion( tsharkVersion() ) < StrictVersion( '1.12.0' ):
             tshark = pexpect.spawn( 'tshark -i lo -R of', encoding='utf-8' )
         else:
-            tshark = pexpect.spawn( 'tshark -i lo -Y openflow_v1', encoding='utf-8' )
+            tshark = pexpect.spawn( 'tshark -i lo -Y openflow_v1',
+                                    encoding='utf-8' )
         tshark.expect( [ u'Capturing on lo', u"Capturing on 'Loopback'" ] )
         mn = pexpect.spawn( 'mn --test pingall', encoding='utf-8' )
         mn.expect( u'0% dropped' )
-        tshark.expect( [ u'74 Hello', u'74 of_hello', u'74 Type: OFPT_HELLO' ] )
+        tshark.expect( [ u'74 Hello', u'74 of_hello',
+                         u'74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
         mn.expect( pexpect.EOF )
         tshark.expect( pexpect.EOF )
@@ -178,11 +183,11 @@ class testWalkthrough( unittest.TestCase ):
         "Test pingpair (0% drop) and iperf (bw > 0) regression tests"
         # test pingpair
         p = pexpect.spawn( 'mn --test pingpair', encoding='utf-8' )
-        p.expect( '0% dropped' )
+        p.expect( u'0% dropped' )
         p.expect( pexpect.EOF )
         # test iperf
         p = pexpect.spawn( 'mn --test iperf', encoding='utf-8' )
-        p.expect( "Results: \['([\d\.]+) .bits/sec'," )
+        p.expect( u"Results: \['([\d\.]+) .bits/sec'," )
         bw = float( p.match.group( 1 ) )
         self.assertTrue( bw > 0 )
         p.expect( pexpect.EOF )
@@ -190,7 +195,8 @@ class testWalkthrough( unittest.TestCase ):
     def testTopoChange( self ):
         "Test pingall on single,3 and linear,4 topos"
         # testing single,3
-        p = pexpect.spawn( 'mn --test pingall --topo single,3', encoding='utf-8' )
+        p = pexpect.spawn( 'mn --test pingall --topo single,3',
+                           encoding='utf-8' )
         p.expect( u'(\d+)/(\d+) received')
         received = int( p.match.group( 1 ) )
         sent = int( p.match.group( 2 ) )
@@ -198,7 +204,8 @@ class testWalkthrough( unittest.TestCase ):
         self.assertEqual( sent, received, u'Dropped packets in single,3')
         p.expect( pexpect.EOF )
         # testing linear,4
-        p = pexpect.spawn( 'mn --test pingall --topo linear,4', encoding='utf-8' )
+        p = pexpect.spawn( 'mn --test pingall --topo linear,4',
+                           encoding='utf-8' )
         p.expect( u'(\d+)/(\d+) received')
         received = int( p.match.group( 1 ) )
         sent = int( p.match.group( 2 ) )
@@ -249,7 +256,6 @@ class testWalkthrough( unittest.TestCase ):
         custom = os.path.dirname( os.path.realpath( __file__ ) )
         custom = os.path.join( custom, '../../custom/topo-2sw-2host.py' )
         custom = os.path.normpath( custom )
-        print(custom)
         p = pexpect.spawn(
             'mn --custom %s --topo mytopo --test pingall' % custom,
             encoding='utf-8' )
@@ -290,7 +296,11 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn --innamespace --switch user'
                            , encoding='utf-8')
         p.expect( self.prompt )
-        interfaces = [ u'h1-eth0', u's1-eth1', u'[^-]eth0', u'lo', self.prompt ]
+        interfaces = [ u'h1-eth0',
+                       u's1-eth1',
+                       u'[^-]eth0',
+                       u'lo',
+                       self.prompt ]
         p.sendline( 's1 ifconfig -a' )
         ifcount = 0
         while True:
