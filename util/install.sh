@@ -150,7 +150,7 @@ function mn_deps {
 			iproute telnet python-setuptools libcgroup-tools \
 			ethtool help2man python-pyflakes python3-pylint python-pep8 python-pexpect
     else
-        $install gcc make socat psmisc xterm ssh iperf iproute telnet \
+        $install gcc make socat psmisc xterm ssh iperf iproute2 telnet \
             python-setuptools cgroup-bin ethtool help2man \
             pyflakes pylint pep8 python-pexpect
     fi
