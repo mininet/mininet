@@ -8,8 +8,8 @@ PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
 MANPAGES = mn.1 mnexec.1
 P8IGN = E251,E201,E302,E202,E126,E127,E203,E226
-BINDIR = /usr/bin
-MANDIR = /usr/share/man/man1
+BINDIR ?= $(PREFIX)/bin
+MANDIR ?= $(PREFIX)/share/man/man1
 DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
@@ -46,9 +46,12 @@ slowtest: $(MININET)
 mnexec: mnexec.c $(MN) mininet/net.py
 	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
 
-install: $(MNEXEC) $(MANPAGES)
-	install $(MNEXEC) $(BINDIR)
+install-man:
+	mkdir -p $(MANDIR)
 	install $(MANPAGES) $(MANDIR)
+
+install: $(MNEXEC) $(MANPAGES) install-man
+	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
 	python setup.py install
 
 develop: $(MNEXEC) $(MANPAGES)
