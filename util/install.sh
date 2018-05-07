@@ -340,6 +340,17 @@ function ubuntuOvs {
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
             DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
+
+    # Checking OVS version,
+    # if version 2.8.0 or above, it will execute
+    # $pkginst libopenvswitch*.deb
+    IFS='.' read -ra VERS <<< "$OVS_RELEASE"
+    if [ "${VERS[0]}${VERS[1]}" -ge 28 ]
+    then
+        echo "Installing libopenvswitch*.deb"
+        $pkginst libopenvswitch*.deb
+    fi
+
     for pkg in common datapath-dkms pki switch; do
         pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
         echo "Installing $pkg"
