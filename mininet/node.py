@@ -74,9 +74,10 @@ class Node( object ):
 
     portBase = 0  # Nodes always start with eth0/port0, even in OF 1.0
 
-    def __init__( self, name, inNamespace=True, **params ):
+    def __init__( self, name, inNamespace=True, setHostname=False, **params ):
         """name: name of node
            inNamespace: in network namespace?
+           setHostname: in uts namespace?
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
 
@@ -86,6 +87,7 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
+        self.setHostname = params.get( 'setHostname', setHostname )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -127,15 +129,19 @@ class Node( object ):
             error( "%s: shell is already running\n" % self.name )
             return
         # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace
-        opts = '-cd' if mnopts is None else mnopts
+        # (p)rint pid, run in (n)amespace, unshare (u)ts with a hostname
+        mnexec = ['mnexec']
+        mnexec.append('-cd' if not mnopts else mnopts)
         if self.inNamespace:
-            opts += 'n'
+            mnexec.append('-n')
+        if self.setHostname:
+            mnexec.extend(['-u', self.name])
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
-                'bash', '--norc', '-is', 'mininet:' + self.name ]
+        bash = [ 'env', 'PS1=' + chr( 127 ),
+                 'bash', '--norc', '-is', 'mininet:' + self.name ]
+        cmd = mnexec + bash
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
