@@ -204,45 +204,18 @@ function of {
 function of13 {
     echo "Installing OpenFlow 1.3 soft switch implementation..."
     cd $BUILD_DIR/
-    $install  git-core autoconf automake autotools-dev pkg-config \
-        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
-        unzip libpcre3-dev flex bison libboost-dev
+    $install git-core 
 
     if [ ! -d "ofsoftswitch13" ]; then
         git clone https://github.com/CPqD/ofsoftswitch13.git
         if [[ -n "$OF13_SWITCH_REV" ]]; then
             cd ofsoftswitch13
             git checkout ${OF13_SWITCH_REV}
-            cd ..
         fi
     fi
 
-    # Install netbee
-    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 14.04; then
-        NBEESRC="nbeesrc-feb-24-2015"
-        NBEEDIR="netbee"
-    else
-        NBEESRC="nbeesrc-jan-10-2013"
-        NBEEDIR="nbeesrc-jan-10-2013"
-    fi
+    $BUILD_DIR/ofsoftswitch13/install.sh
 
-    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
-    wget -nc ${NBEEURL}${NBEESRC}.zip
-    unzip ${NBEESRC}.zip
-    cd ${NBEEDIR}/src
-    cmake .
-    make
-    cd $BUILD_DIR/
-    sudo cp ${NBEEDIR}/bin/libn*.so /usr/local/lib
-    sudo ldconfig
-    sudo cp -R ${NBEEDIR}/include/ /usr/
-
-    # Resume the install:
-    cd $BUILD_DIR/ofsoftswitch13
-    ./boot.sh
-    ./configure
-    make
-    sudo make install
     cd $BUILD_DIR
 }
 
