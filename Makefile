@@ -10,6 +10,7 @@ MANPAGES = mn.1 mnexec.1
 P8IGN = E251,E201,E302,E202,E126,E127,E203,E226
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man/man1
+PYTHONDIR ?= $(PREFIX)/
 DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
 
@@ -52,7 +53,7 @@ install-man:
 
 install: $(MNEXEC) $(MANPAGES) install-man
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
-	python setup.py install
+	python setup.py install --prefix=$(PYTHONDIR)
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well

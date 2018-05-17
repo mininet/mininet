@@ -589,7 +589,7 @@ def ensureRoot():
     """
     if os.getuid() != 0:
         error( '*** Mininet must run as root.\n' )
-        exit( 1 )
+        # exit( 1 )
     return
 
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
