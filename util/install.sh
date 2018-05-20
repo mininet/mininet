@@ -204,8 +204,9 @@ function of {
 function of13 {
     echo "Installing OpenFlow 1.3 soft switch implementation..."
     cd $BUILD_DIR/
+    # Modify libxerces-c2-dev to libxerces-c3-dev since it is obsolete
     $install  git-core autoconf automake autotools-dev pkg-config \
-        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
+        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c3-dev  \
         unzip libpcre3-dev flex bison libboost-dev
 
     if [ ! -d "ofsoftswitch13" ]; then
@@ -218,17 +219,10 @@ function of13 {
     fi
 
     # Install netbee
-    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 14.04; then
-        NBEESRC="nbeesrc-feb-24-2015"
-        NBEEDIR="netbee"
-    else
-        NBEESRC="nbeesrc-jan-10-2013"
-        NBEEDIR="nbeesrc-jan-10-2013"
-    fi
-
-    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
-    wget -nc ${NBEEURL}${NBEESRC}.zip
-    unzip ${NBEESRC}.zip
+    # It must come from "git clone https://github.com/netgroup-polito/netbee.git" 
+    NBEEDIR="netbee"
+    cd $BUILD_DIR/
+    git clone https://github.com/netgroup-polito/netbee.git
     cd ${NBEEDIR}/src
     cmake .
     make

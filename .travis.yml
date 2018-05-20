@@ -1,10 +1,17 @@
 language: python
+
+dist: trusty
 sudo: required
 
-matrix:
-  include:
-    - dist: trusty
-      env: dist="14.04 LTS trusty"
+env:
+  - dist="14.04 LTS trusty" openflow="-3nfvw"
+  - dist="14.04 LTS trusty" openflow="-nfvw"
+    
+#matrix:
+#  include:
+#    - dist: trusty
+#      env: dist="14.04 LTS trusty"
+
 #    - dist: xenial
 #      env: dist="16.04 LTS xenial"
 # Travis-CI only proposes 14.04 LTS Trusty and there is no plan to update to 16.04 xenial
@@ -18,7 +25,9 @@ before_install:
 
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
-- sudo util/install.sh -fnvw
+- echo "Openflow:" $openflow
+- sudo util/install.sh $openflow
+
 
 script:
 - sudo mn --test pingall
