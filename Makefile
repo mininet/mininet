@@ -2,7 +2,7 @@ MININET = mininet/*.py
 TEST = mininet/test/*.py
 EXAMPLES = mininet/examples/*.py
 MN = bin/mn
-PYMN = python -B bin/mn
+PYMN ?= $(PYTHON) -B bin/mn
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
@@ -13,6 +13,8 @@ MANDIR ?= $(PREFIX)/share/man/man1
 PYTHONDIR ?= $(PREFIX)/
 DOCDIRS = doc/html doc/latex
 PDF = doc/latex/refman.pdf
+VERSION ?= "2.2.2"
+PYTHON ?= python
 
 CFLAGS += -Wall -Wextra
 
@@ -45,7 +47,8 @@ slowtest: $(MININET)
 	mininet/examples/test/runner.py -v
 
 mnexec: mnexec.c $(MN) mininet/net.py
-	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
+	# cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
+	cc $(CFLAGS) $(LDFLAGS) -DVERSION=$(VERSION) $< -o $@
 
 install-man:
 	mkdir -p $(MANDIR)
@@ -53,13 +56,13 @@ install-man:
 
 install: $(MNEXEC) $(MANPAGES) install-man
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
-	python setup.py install --prefix=$(PYTHONDIR)
+	$(PYTHON) setup.py install --prefix="$(PYTHONDIR)"
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	python setup.py develop
+	$(PYTHON) setup.py develop
 
 man: $(MANPAGES)
 
