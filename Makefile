@@ -56,7 +56,7 @@ install-man:
 
 install: $(MNEXEC) $(MANPAGES) install-man
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
-	$(PYTHON) setup.py install --prefix="$(PYTHONDIR)"
+	$(PYTHON) setup.py install  --root="/" --prefix="$(PYTHONDIR)"
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
