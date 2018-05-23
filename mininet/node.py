@@ -135,7 +135,8 @@ class Node( object ):
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
         cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
-                'bash', '--norc', '-is', 'mininet:' + self.name ]
+                'bash', '--norc', '--noediting', '-is', 'mininet:' + self.name ]
+        info("cmd: %s" % cmd)
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
@@ -291,7 +292,7 @@ class Node( object ):
             cmd += ' printf "\\001%d\\012" $! '
         elif printPid and not isShellBuiltin( cmd ):
             cmd = 'mnexec -p ' + cmd
-        log("MATT: will run" +  cmd + '\n' )
+        info("MATT: will run: " +  cmd + '\n' )
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
