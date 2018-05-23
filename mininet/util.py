@@ -182,16 +182,22 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
     if addr1 is None and addr2 is None:
         cmdOutput = runCmd( 'ip link add name %s '
                             'type veth peer name %s '
-                            'netns %s' % ( intf1, intf2, netns ) )
+                             % ( intf1, intf2,  ) )
+
     else:
         cmdOutput = runCmd( 'ip link add name %s '
                             'address %s '
                             'type veth peer name %s '
-                            'address %s '
-                            'netns %s' %
-                            (  intf1, addr1, intf2, addr2, netns ) )
+                            'address %s ' %
+                            (  intf1, addr1, intf2, addr2, ) )
     if cmdOutput:
-        raise Exception( "Error creating interface pair (%s,%s): %s " %
+        raise Exception( "Error creating interface pair (%s,%s): [%r] " %
+                         ( intf1, intf2, cmdOutput ) )
+
+    cmdOutput = runCmd( 'ip link set %s '
+                        'netns %s' % ( intf1,  netns ) )
+    if cmdOutput:
+        raise Exception( "Error setting netns  (%s,%s): '%r' " %
                          ( intf1, intf2, cmdOutput ) )
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
@@ -589,7 +595,7 @@ def ensureRoot():
     """
     if os.getuid() != 0:
         error( '*** Mininet must run as root.\n' )
-        exit( 1 )
+        # exit( 1 )
     return
 
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):

@@ -135,11 +135,13 @@ class Node( object ):
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
         cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
-                'bash', '--norc', '-is', 'mininet:' + self.name ]
+                'bash', '--norc', '--noediting', '-is', 'mininet:' + self.name ]
+        info("cmd: %s" % cmd)
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
         master, slave = pty.openpty()
+        info ("MATT: Starting shell [%s]" % (' '.join(cmd)))
         self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
                                   close_fds=False )
         self.stdin = os.fdopen( master, 'rw' )
@@ -147,6 +149,8 @@ class Node( object ):
         self.pid = self.shell.pid
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
+
+        info ("shell wth pid [%d]" % (self.shell.pid, ))
         # Maintain mapping between file descriptors and nodes
         # This is useful for monitoring multiple nodes
         # using select.poll()
@@ -290,6 +294,7 @@ class Node( object ):
             cmd += ' printf "\\001%d\\012" $! '
         elif printPid and not isShellBuiltin( cmd ):
             cmd = 'mnexec -p ' + cmd
+        info("sendCmd: " +  ' '.join(cmd) + '\n' )
         self.write( cmd + '\n' )
         self.lastPid = None
         self.waiting = True
@@ -1539,7 +1544,7 @@ class RemoteController( Controller ):
         else:
             return True
 
-DefaultControllers = ( Controller, OVSController )
+DefaultControllers = ( OVSController, Controller )
 
 def findController( controllers=DefaultControllers ):
     "Return first available controller from list, if any"
