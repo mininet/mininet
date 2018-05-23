@@ -140,6 +140,7 @@ class Node( object ):
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
         master, slave = pty.openpty()
+        info ("MATT: Starting shell [%s]" % cmd)
         self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
                                   close_fds=False )
         self.stdin = os.fdopen( master, 'rw' )
