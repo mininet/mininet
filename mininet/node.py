@@ -13,7 +13,7 @@ Host: a virtual host. By default, a host is simply a shell; commands
     monitor(). Examples of how to run experiments using this
     functionality are provided in the examples/ directory. By default,
     hosts share the root file system, but they may also specify private
-    directories.
+    directories or overlayed directories.
 
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
@@ -63,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups )
-from mininet.moduledeps import moduleDeps, pathCheck, TUN
+from mininet.moduledeps import moduleDeps, pathCheck, TUN, OVERLAY
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
@@ -78,6 +78,7 @@ class Node( object ):
         """name: name of node
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
+           overlayDirs: list of overlay directory strings or tuples
            params: Node parameters (see config() for details)"""
 
         # Make sure class actually works
@@ -85,6 +86,7 @@ class Node( object ):
 
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
+        self.overlayDirs = params.get( 'overlayDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Stash configuration parameters for future reference
@@ -104,6 +106,7 @@ class Node( object ):
 
         # Start command interpreter shell
         self.startShell()
+        self.mountOverlayDirs()
         self.mountPrivateDirs()
 
     # File descriptor to node mapping support
@@ -130,11 +133,12 @@ class Node( object ):
         # (p)rint pid, and run in (n)amespace
         opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
+            opts = '-H %s %s' % (self.name, opts)
             opts += 'n'
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
+        cmd = [ 'mnexec' ] + opts.split() + [ 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '-is', 'mininet:' + self.name ]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
@@ -165,6 +169,48 @@ class Node( object ):
         self.waiting = False
         # +m: disable job control notification
         self.cmd( 'unset HISTFILE; stty -echo; set +m' )
+
+    def mountOverlayDirs( self ):
+        "mount overlay directories"
+        # Avoid expanding a string into a list of chars
+        assert not isinstance( self.overlayDirs, basestring )
+        if self.overlayDirs:
+            moduleDeps( add=OVERLAY )
+
+        for directory in self.overlayDirs:
+            if isinstance( directory, tuple ):
+                # mount given overlay directory
+                overlayDir = directory[ 1 ] % self.__dict__
+                mountPoint = directory[ 0 ]
+            else:
+                # mount temporary filesystem on directory
+                tmpDir = '/tmp/mininet/%s%s' % (self, directory)
+                overlayDir = tmpDir + '/overlay'
+
+                mountPoint = directory
+                self.cmd( 'mkdir -p %s' % tmpDir )
+                self.cmd( 'mount -n -t tmpfs tmpfs %s' % tmpDir )
+                self.cmd( 'mkdir -p %s' % overlayDir )
+
+            workDir = overlayDir + '.work'
+            self.cmd( 'mkdir -p %s %s %s' % (mountPoint, workDir, overlayDir) )
+            self.cmd( 'mount -t overlay overlay -o lowerdir=%s,upperdir=%s,workdir=%s %s' %
+                        ( mountPoint, overlayDir, workDir, mountPoint ) )
+
+    def unmountOverlayDirs( self ):
+        "mount overlay directories"
+        for directory in self.overlayDirs:
+            if isinstance( directory, tuple ):
+                mountPoint = directory[ 0 ]
+                overlayDir = directory[ 1 ] % self.__dict__
+                workDir = overlayDir + '.work'
+                self.cmd( 'umount ', mountPoint )
+                self.cmd( 'rmdir %s/work %s' % (workDir, workDir) )
+            else:
+                mountPoint = directory
+                self.cmd( 'umount ', mountPoint )
+                self.cmd( 'umount ', '/tmp/mininet/%s/%s' % (self, directory) )
+                self.cmd( 'rmdir /tmp/mininet/%s%s /tmp/mininet/%s /tmp/mininet' % (self, directory, self) )
 
     def mountPrivateDirs( self ):
         "mount private directories"
@@ -245,6 +291,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         self.unmountPrivateDirs()
+        self.unmountOverlayDirs()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )

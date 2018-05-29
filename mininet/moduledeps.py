@@ -21,6 +21,7 @@ def modprobe( mod ):
 OF_KMOD = 'ofdatapath'
 OVS_KMOD = 'openvswitch_mod'  # Renamed 'openvswitch' in OVS 1.7+/Linux 3.5+
 TUN = 'tun'
+OVERLAY = 'overlay'
 
 def moduleDeps( subtract=None, add=None ):
     """Handle module dependencies.

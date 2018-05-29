@@ -24,6 +24,8 @@
 #include <sched.h>
 #include <ctype.h>
 #include <sys/mount.h>
+#include <sys/param.h>
+#include <string.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -102,8 +104,22 @@ int main(int argc, char *argv[])
     char *cwd = get_current_dir_name();
 
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
+    while ((c = getopt(argc, argv, "+H:cdnpa:g:r:vh")) != -1)
         switch(c) {
+        case 'H':
+            /* rename if we have a hostname */
+            if (*optarg) {
+                if (unshare(CLONE_NEWUTS) == -1) {
+                    perror("unshare");
+                    return 1;
+                }
+
+                if (sethostname(optarg, MIN(strlen(optarg), HOST_NAME_MAX)) == -1) {
+                    perror("sethostname");
+                    return 1;
+                }
+            }
+            break;
         case 'c':
             /* close file descriptors except stdin/out/error */
             for (fd = getdtablesize(); fd > 2; fd--)
