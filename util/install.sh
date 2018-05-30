@@ -225,10 +225,8 @@ function of13 {
         NBEESRC="nbeesrc-jan-10-2013"
         NBEEDIR="nbeesrc-jan-10-2013"
     fi
-
-    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
-    wget -nc ${NBEEURL}${NBEESRC}.zip
-    unzip ${NBEESRC}.zip
+   
+    git clone https://github.com/jjones646/netbee -o ${NBEEDIR}
     cd ${NBEEDIR}/src
     cmake .
     make
