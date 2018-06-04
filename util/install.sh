@@ -204,10 +204,14 @@ function of {
 function of13 {
     echo "Installing OpenFlow 1.3 soft switch implementation..."
     cd $BUILD_DIR/
-    $install  git-core autoconf automake autotools-dev pkg-config \
-        make gcc g++ libtool libc6-dev cmake libpcap-dev libxerces-c2-dev  \
+    $install git-core autoconf automake autotools-dev pkg-config \
+        make gcc g++ libtool libc6-dev cmake libpcap-dev  \
         unzip libpcre3-dev flex bison libboost-dev
-
+    if [ "$DIST" = "Ubuntu" ] && version_le $RELEASE 16.04; then
+        $install libxerces-c2-dev
+    else
+        $install libxerces-c-dev
+    fi
     if [ ! -d "ofsoftswitch13" ]; then
         git clone https://github.com/CPqD/ofsoftswitch13.git
         if [[ -n "$OF13_SWITCH_REV" ]]; then
@@ -218,24 +222,17 @@ function of13 {
     fi
 
     # Install netbee
-    if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 14.04; then
-        NBEESRC="nbeesrc-feb-24-2015"
-        NBEEDIR="netbee"
-    else
-        NBEESRC="nbeesrc-jan-10-2013"
-        NBEEDIR="nbeesrc-jan-10-2013"
+    if [ ! -d "netbee" ]; then
+        git clone https://github.com/netgroup-polito/netbee.git
     fi
-
-    NBEEURL=${NBEEURL:-http://www.nbee.org/download/}
-    wget -nc ${NBEEURL}${NBEESRC}.zip
-    unzip ${NBEESRC}.zip
-    cd ${NBEEDIR}/src
+    cd netbee/src
     cmake .
     make
-    cd $BUILD_DIR/
-    sudo cp ${NBEEDIR}/bin/libn*.so /usr/local/lib
+
+    cd $BUILD_DIR
+    sudo cp netbee/bin/libn*.so /usr/local/lib
     sudo ldconfig
-    sudo cp -R ${NBEEDIR}/include/ /usr/
+    sudo cp -R netbee/include/ /usr/
 
     # Resume the install:
     cd $BUILD_DIR/ofsoftswitch13
