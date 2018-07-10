@@ -63,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups, BaseString, decode,
-                           encode, Python3 )
+                           encode, Python3, which )
 from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
@@ -1447,7 +1447,7 @@ class Controller( Node ):
     @classmethod
     def isAvailable( cls ):
         "Is controller available?"
-        return quietRun( 'which controller' )
+        return which( 'controller' )
 
 
 class OVSController( Controller ):
@@ -1459,9 +1459,9 @@ class OVSController( Controller ):
 
     @classmethod
     def isAvailable( cls ):
-        return ( quietRun( 'which ovs-controller' ) or
-                 quietRun( 'which test-controller' ) or
-                 quietRun( 'which ovs-testcontroller' ) ).strip()
+        return (which( 'ovs-controller' ) or
+                which( 'test-controller' ) or
+                which( 'ovs-testcontroller' ))
 
 class NOX( Controller ):
     "Controller to run a NOX application."
