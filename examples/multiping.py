@@ -45,7 +45,7 @@ def multiping( netsize, chunksize, seconds):
 
     # Create network and identify subnets
     topo = SingleSwitchTopo( netsize )
-    net = Mininet( topo=topo )
+    net = Mininet( topo=topo, waitConnected=True )
     net.start()
     hosts = net.hosts
     subnets = chunks( hosts, chunksize )
