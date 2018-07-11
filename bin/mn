@@ -256,7 +256,7 @@ class MininetRunner( object ):
         opts.add_option( '--arp', action='store_true',
                          default=False, help='set all-pairs ARP entries' )
         opts.add_option( '--verbosity', '-v', type='choice',
-                         choices=LEVELS.keys(), default = 'info',
+                         choices=list( LEVELS.keys() ), default = 'info',
                          help = '|'.join( LEVELS.keys() )  )
         opts.add_option( '--innamespace', action='store_true',
                          default=False, help='sw and ctrl in namespace?' )
@@ -286,7 +286,7 @@ class MininetRunner( object ):
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
         opts.add_option( '--placement', type='choice',
-                         choices=PLACEMENT.keys(), default='block',
+                         choices=list( PLACEMENT.keys() ), default='block',
                          metavar='block|random',
                          help=( 'node placement for --cluster '
                                 '(experimental!) ' ) )

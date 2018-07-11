@@ -12,6 +12,18 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+import sys
+
+# Python 2/3 compatibility
+Python3 = sys.version_info[0] == 3
+BaseString = str if Python3 else basestring
+Encoding = 'utf-8' if Python3 else None
+def decode( s ):
+    "Decode a byte string if needed for Python 3"
+    return s.decode( Encoding ) if Python3 else s
+def encode( s ):
+    "Encode a byte string if needed for Python 3"
+    return s.encode( Encoding ) if Python3 else s
 
 # Command execution support
 
@@ -98,6 +110,8 @@ def errRun( *cmd, **kwargs ):
             f = fdtofile[ fd ]
             if event & POLLIN:
                 data = f.read( 1024 )
+                if Python3:
+                    data = data.decode( Encoding )
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -374,7 +388,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
        terminates: when all EOFs received"""
     poller = poll()
     fdToHost = {}
-    for host, popen in popens.iteritems():
+    for host, popen in popens.items():
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
         poller.register( fd, POLLIN )

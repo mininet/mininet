@@ -104,7 +104,7 @@ from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
                            macColonHex, ipStr, ipParse, netParse, ipAdd,
-                           waitListening )
+                           waitListening, BaseString )
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
@@ -383,8 +383,8 @@ class Mininet( object ):
             params: additional link params (optional)
             returns: link object"""
         # Accept node objects or names
-        node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
-        node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
+        node1 = node1 if not isinstance( node1, BaseString ) else self[ node1 ]
+        node2 = node2 if not isinstance( node2, BaseString ) else self[ node2 ]
         options = dict( params )
         # Port is optional
         if port1 is not None:
