@@ -6,15 +6,16 @@ Test for multipoll.py
 
 import unittest
 import pexpect
+import sys
 
 class testMultiPoll( unittest.TestCase ):
 
     def testMultiPoll( self ):
         "Verify that we receive one ping per second per host"
-        p = pexpect.spawn( 'python -m mininet.examples.multipoll' )
-        opts = [ "\*\*\* (h\d) :" ,
-                 "(h\d+): \d+ bytes from",
-                 "Monitoring output for (\d+) seconds",
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.multipoll', encoding='utf-8' )
+        opts = [ u"\*\*\* (h\d) :" ,
+                 u"(h\d+): \d+ bytes from",
+                 u"Monitoring output for (\d+) seconds",
                  pexpect.EOF ]
         pings, seconds = {}, -1
         while True:

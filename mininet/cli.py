@@ -93,7 +93,7 @@ class CLI( Cmd ):
         while True:
             try:
                 # Make sure no nodes are still waiting
-                for node in self.mn.values():
+                for node in list(self.mn.values()):
                     while node.waiting:
                         info( 'stopping', node, '\n' )
                         node.sendInt()
@@ -156,7 +156,7 @@ class CLI( Cmd ):
 
     def do_net( self, _line ):
         "List network connections."
-        dumpNodeConnections( self.mn.values() )
+        dumpNodeConnections( list(self.mn.values()) )
 
     def do_sh( self, line ):
         """Run an external shell command
@@ -254,13 +254,13 @@ class CLI( Cmd ):
 
     def do_intfs( self, _line ):
         "List interfaces."
-        for node in self.mn.values():
+        for node in list(self.mn.values()):
             output( '%s: %s\n' %
                     ( node.name, ','.join( node.intfNames() ) ) )
 
     def do_dump( self, _line ):
         "Dump node info."
-        for node in self.mn.values():
+        for node in list(self.mn.values()):
             output( '%s\n' % repr( node ) )
 
     def do_link( self, line ):

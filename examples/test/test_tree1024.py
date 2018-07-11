@@ -10,15 +10,15 @@ import sys
 
 class testTree1024( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testTree1024( self ):
         "Run the example and do a simple ping test from h1 to h1024"
-        p = pexpect.spawn( 'python -m mininet.examples.tree1024' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.tree1024', encoding='utf-8' )
         p.expect( self.prompt, timeout=6000 ) # it takes awhile to set up
         p.sendline( 'h1 ping -c 20 h1024' )
-        p.expect ( '(\d+)% packet loss' )
+        p.expect ( u'(\d+)% packet loss' )
         packetLossPercent = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )

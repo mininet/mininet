@@ -3,6 +3,7 @@
 import logging
 from logging import Logger
 import types
+import six
 
 # Create a new loglevel, 'CLI info', which enables a Mininet user to see only
 # the output of the commands they execute, plus any errors or warnings.  This
@@ -72,7 +73,8 @@ class Singleton( type ):
         return cls.instance
 
 
-class MininetLogger( Logger, object ):
+@six.add_metaclass(Singleton)
+class MininetLogger(Logger, object):
     """Mininet-specific logger
        Enable each mininet .py file to with one import:
 
@@ -92,8 +94,6 @@ class MininetLogger( Logger, object ):
        via Filterer( object ): rather than Filterer, we wouldn't need this.
 
        Use singleton pattern to ensure only one logger is ever created."""
-
-    __metaclass__ = Singleton
 
     def __init__( self ):
 

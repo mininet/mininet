@@ -6,18 +6,19 @@ Test for linuxrouter.py
 
 import unittest
 import pexpect
+import sys
 from mininet.util import quietRun
 
 class testLinuxRouter( unittest.TestCase ):
 
-    prompt = 'mininet>'
+    prompt = u'mininet>'
 
     def testPingall( self ):
         "Test connectivity between hosts"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.linuxrouter', encoding='utf-8' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
-        p.expect ( '(\d+)% dropped' )
+        p.expect ( u'(\d+)% dropped' )
         percent = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )
@@ -26,10 +27,10 @@ class testLinuxRouter( unittest.TestCase ):
 
     def testRouterPing( self ):
         "Test connectivity from h1 to router"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.linuxrouter', encoding='utf-8' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 r0' )
-        p.expect ( '(\d+)% packet loss' )
+        p.expect ( u'(\d+)% packet loss' )
         percent = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )
@@ -38,10 +39,10 @@ class testLinuxRouter( unittest.TestCase ):
 
     def testTTL( self ):
         "Verify that the TTL is decremented"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( sys.executable + ' -m mininet.examples.linuxrouter', encoding='utf-8' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 h2' )
-        p.expect ( 'ttl=(\d+)' )
+        p.expect ( u'ttl=(\d+)' )
         ttl = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
         p.sendline( 'exit' )

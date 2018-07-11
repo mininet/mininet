@@ -190,7 +190,7 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            if time > timeout and timeout is not None:
+            if (timeout is not None) and (time > timeout):
                 break
             sleep( delay )
             time += delay
@@ -364,7 +364,7 @@ class Mininet( object ):
 
     def items( self ):
         "return (key,value) tuple list for every node in net"
-        return zip( self.keys(), self.values() )
+        return list(zip( list(self.keys()), list(self.values()) ))
 
     @staticmethod
     def randMac():
@@ -383,8 +383,8 @@ class Mininet( object ):
             params: additional link params (optional)
             returns: link object"""
         # Accept node objects or names
-        node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
-        node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
+        node1 = node1 if not isinstance( node1, str ) else self[ node1 ]
+        node2 = node2 if not isinstance( node2, str ) else self[ node2 ]
         options = dict( params )
         # Port is optional
         if port1 is not None:
@@ -549,7 +549,7 @@ class Mininet( object ):
             switch.start( self.controllers )
         started = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=type ), type ):
+                sorted( self.switches, key=lambda x: type(x).__name__), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchStartup' ):
                 success = swclass.batchStartup( switches )
@@ -576,7 +576,7 @@ class Mininet( object ):
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         stopped = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=type ), type ):
+                sorted( self.switches, key=lambda x: type(x).__name__), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchShutdown' ):
                 success = swclass.batchShutdown( switches )
@@ -781,7 +781,7 @@ class Mininet( object ):
         r = r'([\d\.]+ \w+/sec)'
         m = re.findall( r, iperfOutput )
         if m:
-            return m[-1]
+            return str(m[-1])
         else:
             # was: raise Exception(...)
             error( 'could not parse iperf output: ' + iperfOutput )
@@ -875,11 +875,11 @@ class Mininet( object ):
                 outputs[ host ].append( ( ( readTime - time[ host ] )
                                         / 1000000000 ) / cores * 100 )
                 time[ host ] = readTime
-        for h, pids in pids.items():
+        for h, pids in list(pids.items()):
             for pid in pids:
                 h.cmd( 'kill -9 %s' % pid )
         cpu_fractions = []
-        for _host, outputs in outputs.items():
+        for _host, outputs in list(outputs.items()):
             for pct in outputs:
                 cpu_fractions.append( pct )
         output( '*** Results: %s\n' % cpu_fractions )

@@ -6,14 +6,15 @@ Test for popen.py and popenpoll.py
 
 import unittest
 import pexpect
+import sys
 
 class testPopen( unittest.TestCase ):
 
     def pingTest( self, name ):
         "Verify that there are no dropped packets for each host"
-        p = pexpect.spawn( 'python -m %s' % name )
-        opts = [ "<(h\d+)>: PING ",
-                 "<(h\d+)>: (\d+) packets transmitted, (\d+) received",
+        p = pexpect.spawn( sys.executable + ' -m %s' % name, encoding='utf-8' )
+        opts = [ u"<(h\d+)>: PING ",
+                 u"<(h\d+)>: (\d+) packets transmitted, (\d+) received",
                  pexpect.EOF ]
         pings = {}
         while True:

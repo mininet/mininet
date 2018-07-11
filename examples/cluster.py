@@ -246,7 +246,7 @@ class RemoteMixin( object ):
         result = ''
         while True:
             poll = popen.poll()
-            result += popen.stdout.read()
+            result += popen.stdout.read().decode()
             if poll is not None:
                 break
         return result

@@ -6,15 +6,17 @@ Tests for baresshd.py
 
 import unittest
 import pexpect
+import sys
 from mininet.clean import cleanup, sh
 
 class testBareSSHD( unittest.TestCase ):
 
-    opts = [ 'Welcome to h1', pexpect.EOF, pexpect.TIMEOUT ]
+    opts = [ u'Welcome to h1', pexpect.EOF, pexpect.TIMEOUT ]
 
     def connected( self ):
         "Log into ssh server, check banner, then exit"
-        p = pexpect.spawn( 'ssh 10.0.0.1 -o StrictHostKeyChecking=no -i /tmp/ssh/test_rsa exit' )
+        p = pexpect.spawn( 'ssh 10.0.0.1 -o StrictHostKeyChecking=no -i /tmp/ssh/test_rsa exit',
+                           encoding='utf-8' )
         while True:
             index = p.expect( self.opts )
             if index == 0:
@@ -31,12 +33,12 @@ class testBareSSHD( unittest.TestCase ):
         sh( "ssh-keygen -t rsa -P '' -f /tmp/ssh/test_rsa" )
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
         # run example with custom sshd args
-        cmd = ( 'python -m mininet.examples.baresshd '
+        cmd = ( sys.executable + ' -m mininet.examples.baresshd '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no' )
         p = pexpect.spawn( cmd )
-        runOpts = [ 'You may now ssh into h1 at 10.0.0.1',
-                    'after 5 seconds, h1 is not listening on port 22',
+        runOpts = [ u'You may now ssh into h1 at 10.0.0.1',
+                    u'after 5 seconds, h1 is not listening on port 22',
                     pexpect.EOF, pexpect.TIMEOUT ]
         while True:
             index = p.expect( runOpts )

@@ -49,7 +49,7 @@ class MininetFacade( object ):
            args: unnamed networks passed as arguments
            kwargs: named networks passed as arguments"""
         self.net = net
-        self.nets = [ net ] + list( args ) + kwargs.values()
+        self.nets = [ net ] + list( args ) + list(kwargs.values())
         self.nameToNet = kwargs
         self.nameToNet['net'] = net
 
@@ -82,7 +82,7 @@ class MininetFacade( object ):
 
     def __contains__( self, key ):
         "returns True if node is a member of any net"
-        return key in self.keys()
+        return key in list(self.keys())
 
     def keys( self ):
         "returns a list of all node names in all networks"
@@ -94,7 +94,7 @@ class MininetFacade( object ):
 
     def items( self ):
         "returns (key,value) tuple list for every node in all networks"
-        return zip( self.keys(), self.values() )
+        return list(zip( list(self.keys()), list(self.values()) ))
 
 # A real control network!
 

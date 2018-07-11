@@ -144,7 +144,7 @@ class Node( object ):
         master, slave = pty.openpty()
         self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
                                   close_fds=False )
-        self.stdin = os.fdopen( master, 'rw' )
+        self.stdin = os.fdopen( master, 'r' )
         self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
@@ -171,7 +171,7 @@ class Node( object ):
     def mountPrivateDirs( self ):
         "mount private directories"
         # Avoid expanding a string into a list of chars
-        assert not isinstance( self.privateDirs, basestring )
+        assert not isinstance( self.privateDirs, str )
         for directory in self.privateDirs:
             if isinstance( directory, tuple ):
                 # mount given private directory
@@ -218,7 +218,7 @@ class Node( object ):
            maxbytes: maximum number of bytes to return"""
         count = len( self.readbuf )
         if count < maxbytes:
-            data = os.read( self.stdout.fileno(), maxbytes - count )
+            data = os.read( self.stdout.fileno(), maxbytes - count ).decode()
             self.readbuf += data
         if maxbytes >= len( self.readbuf ):
             result = self.readbuf
@@ -242,7 +242,8 @@ class Node( object ):
     def write( self, data ):
         """Write data to node.
            data: string"""
-        os.write( self.stdin.fileno(), data )
+
+        os.write( self.stdin.fileno(), data.encode() )
 
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
@@ -376,7 +377,7 @@ class Node( object ):
             if isinstance( args[ 0 ], list ):
                 # popen([cmd, arg1, arg2...])
                 cmd = args[ 0 ]
-            elif isinstance( args[ 0 ], basestring ):
+            elif isinstance( args[ 0 ], str ):
                 # popen("cmd arg1 arg2...")
                 cmd = args[ 0 ].split()
             else:
@@ -444,7 +445,7 @@ class Node( object ):
 
     def defaultIntf( self ):
         "Return interface for lowest port"
-        ports = self.intfs.keys()
+        ports = list(self.intfs.keys())
         if ports:
             return self.intfs[ min( ports ) ]
         else:
@@ -462,7 +463,7 @@ class Node( object ):
         """
         if not intf:
             return self.defaultIntf()
-        elif isinstance( intf, basestring):
+        elif isinstance( intf, str):
             return self.nameToIntf[ intf ]
         else:
             return intf
@@ -489,7 +490,7 @@ class Node( object ):
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
-        for intf in self.intfs.values():
+        for intf in list(self.intfs.values()):
             # Protect against deleting hardware interfaces
             if ( self.name in intf.name ) or ( not checkName ):
                 intf.delete()
@@ -514,7 +515,7 @@ class Node( object ):
         """Set the default route to go through intf.
            intf: Intf or {dev <intfname> via <gw-ip> ...}"""
         # Note setParam won't call us if intf is none
-        if isinstance( intf, basestring ) and ' ' in intf:
+        if isinstance( intf, str ) and ' ' in intf:
             params = intf
         else:
             params = 'dev %s' % intf
@@ -561,7 +562,7 @@ class Node( object ):
            method: config method name
            param: arg=value (ignore if value=None)
            value may also be list or dict"""
-        name, value = param.items()[ 0 ]
+        name, value = list(param.items())[ 0 ]
         if value is None:
             return
         f = getattr( self, method, None )
@@ -610,7 +611,7 @@ class Node( object ):
 
     def intfList( self ):
         "List of our interfaces sorted by port number"
-        return [ self.intfs[ p ] for p in sorted( self.intfs.iterkeys() ) ]
+        return [ self.intfs[ p ] for p in sorted( self.intfs.keys() ) ]
 
     def intfNames( self ):
         "The names of our interfaces sorted by port number"
@@ -1232,7 +1233,7 @@ class OVSSwitch( Switch ):
             run( cmds, shell=True )
         # Reapply link config if necessary...
         for switch in switches:
-            for intf in switch.intfs.itervalues():
+            for intf in list(switch.intfs.values()):
                 if isinstance( intf, TCIntf ):
                     intf.config( **intf.params )
         return switches
@@ -1321,7 +1322,7 @@ class IVSSwitch( Switch ):
         args.extend( ['--dpid', self.dpid] )
         if self.verbose:
             args.extend( ['--verbose'] )
-        for intf in self.intfs.values():
+        for intf in list(self.intfs.values()):
             if not intf.IP():
                 args.extend( ['-i', intf.name] )
         for c in controllers:
