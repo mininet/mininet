@@ -190,7 +190,7 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            if time > timeout and timeout is not None:
+            if timeout is not None and time > timeout:
                 break
             sleep( delay )
             time += delay
