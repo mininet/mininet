@@ -5,7 +5,7 @@ Test for tree1024.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 
 class testTree1024( unittest.TestCase ):

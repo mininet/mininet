@@ -5,7 +5,7 @@ Test for intfOptions.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 
 class testIntfOptions( unittest.TestCase ):

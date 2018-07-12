@@ -5,7 +5,7 @@ Test for sshd.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from mininet.clean import sh
 
 class testSSHD( unittest.TestCase ):

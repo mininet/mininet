@@ -5,7 +5,7 @@ Test for simpleperf.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 from mininet.log import setLogLevel
 

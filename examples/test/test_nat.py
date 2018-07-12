@@ -5,7 +5,7 @@ Test for nat.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from mininet.util import quietRun
 
 destIP = '8.8.8.8' # Google DNS

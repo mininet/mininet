@@ -5,7 +5,7 @@ Test for emptynet.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testEmptyNet( unittest.TestCase ):
 
