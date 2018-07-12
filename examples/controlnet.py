@@ -49,7 +49,7 @@ class MininetFacade( object ):
            args: unnamed networks passed as arguments
            kwargs: named networks passed as arguments"""
         self.net = net
-        self.nets = [ net ] + list( args ) + kwargs.values()
+        self.nets = [ net ] + list( args ) + list( kwargs.values() )
         self.nameToNet = kwargs
         self.nameToNet['net'] = net
 
