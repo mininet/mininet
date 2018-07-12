@@ -32,8 +32,8 @@ try:
         "Let pexpect work with Python3 utf-8 strings"
         if Python3:
             kwargs.update( encoding='utf-8'  )
-            return oldspawn( self, *args, **kwargs )
-        oldpexpect.spawn = spawn
+        return oldspawn( self, *args, **kwargs )
+    oldpexpect.spawn = spawn
 except:
     pass
 
