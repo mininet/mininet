@@ -901,6 +901,7 @@ class Switch( Node ):
             if nums:
                 dpid = hex( int( nums[ 0 ] ) )[ 2: ]
             else:
+                self.terminate()  # Python 3.6 crash workaround
                 raise Exception( 'Unable to derive default datapath ID - '
                                  'please either specify a dpid or use a '
                                  'canonical switch name such as s23.' )
