@@ -59,7 +59,7 @@ class testBareSSHD( unittest.TestCase ):
 
     def tearDown( self ):
         # kill the ssh process
-        sh( "ps aux | grep 'ssh.*Banner' | awk '{ print $2 }' | xargs kill" )
+        sh( "ps aux | grep ssh |grep Banner| awk '{ print $2 }' | xargs kill" )
         cleanup()
         # remove public key pair
         sh( 'rm -rf /tmp/ssh' )
