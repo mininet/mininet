@@ -24,6 +24,18 @@ def decode( s ):
 def encode( s ):
     "Encode a byte string if needed for Python 3"
     return s.encode( Encoding ) if Python3 else s
+# Make pexpect compatible with Python 3 strings
+try:
+    import pexpect as oldpexpect
+    pexpect, oldspawn = oldpexpect, oldpexpect.spawn
+    def spawn( self, *args, **kwargs):
+        "Let pexpect work with Python3 utf-8 strings"
+        if Python3:
+            kwargs.update( encoding='utf-8'  )
+            return oldspawn( self, *args, **kwargs )
+        oldpexpect.spawn = spawn
+except:
+    pass
 
 # Command execution support
 
