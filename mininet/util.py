@@ -412,6 +412,11 @@ def pmonitor(popens, timeoutms=500, readline=True,
             # Use non-blocking reads
             flags = fcntl( fd, F_GETFL )
             fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+    def readit( f ):
+        "Helper function - read line or data"
+        # Note this will block if readline is True
+        line = f.readline() if readline else f.read( readmax )
+        return decode( line )
     while popens:
         fds = poller.poll( timeoutms )
         if fds:
@@ -419,15 +424,15 @@ def pmonitor(popens, timeoutms=500, readline=True,
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
                 if event & POLLIN:
-                    if readline:
-                        # Attempt to read a line of output
-                        # This blocks until we receive a newline!
-                        line = decode( popen.stdout.readline() )
-                    else:
-                        line = decode( popen.stdout.read( readmax ) )
+                    line = readit( popen.stdout )
                     yield host, line
-                # Check for EOF
-                elif event & POLLHUP:
+                if event & POLLHUP:
+                    while True:
+                        # Drain buffer
+                        line = readit( popen.stdout )
+                        yield host, line
+                        if line == '':
+                            break
                     poller.unregister( fd )
                     del popens[ host ]
         else:
