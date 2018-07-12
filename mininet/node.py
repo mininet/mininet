@@ -63,7 +63,7 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups, BaseString, decode,
-                           encode )
+                           encode, Python3 )
 from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
@@ -87,6 +87,9 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
+
+        # Python 3 complains if we don't wait for shell exit
+        self.waitExited = params.get( 'waitExited', Python3==True )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -203,7 +206,9 @@ class Node( object ):
             params: parameters to Popen()"""
         # Leave this is as an instance method for now
         assert self
-        return Popen( cmd, **params )
+        popen = Popen( cmd, **params )
+        debug( '_popen', cmd,  popen.pid )
+        return popen
 
     def cleanup( self ):
         "Help python collect its garbage."
@@ -212,6 +217,9 @@ class Node( object ):
         # for intfName in self.intfNames():
         # if self.name in intfName:
         # quietRun( 'ip link del ' + intfName )
+        if self.waitExited and self.shell:
+            debug( 'waiting for', self.pid, 'to terminate\n' )
+            self.shell.wait()
         self.shell = None
 
     # Subshell I/O, commands and control
@@ -723,6 +731,7 @@ class CPULimitedHost( Host ):
         "Clean up Node, then clean up our cgroup"
         super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=.1, fn=self.cgroupDel )
+
 
     _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
 
@@ -1261,7 +1270,7 @@ class OVSSwitch( Switch ):
         pids = ' '.join( str( switch.pid ) for switch in switches )
         run( 'kill -HUP ' + pids )
         for switch in switches:
-            switch.shell = None
+            switch.terminate()
         return switches
 
 
