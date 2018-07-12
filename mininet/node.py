@@ -411,7 +411,7 @@ class Node( object ):
         # Warning: this can fail with large numbers of fds!
         out, err = popen.communicate()
         exitcode = popen.wait()
-        return out, err, exitcode
+        return decode( out ), decode( err ), exitcode
 
     # Interface management, configuration, and routing
 
@@ -500,7 +500,7 @@ class Node( object ):
         # explicitly so that we won't get errors if we run before they
         # have been removed by the kernel. Unfortunately this is very slow,
         # at least with Linux kernels before 2.6.33
-        for intf in self.intfs.values():
+        for intf in list( self.intfs.values() ):
             # Protect against deleting hardware interfaces
             if ( self.name in intf.name ) or ( not checkName ):
                 intf.delete()
