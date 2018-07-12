@@ -422,9 +422,9 @@ def pmonitor(popens, timeoutms=500, readline=True,
                     if readline:
                         # Attempt to read a line of output
                         # This blocks until we receive a newline!
-                        line = popen.stdout.readline()
+                        line = decode( popen.stdout.readline() )
                     else:
-                        line = popen.stdout.read( readmax )
+                        line = decode( popen.stdout.read( readmax ) )
                     yield host, line
                 # Check for EOF
                 elif event & POLLHUP:
