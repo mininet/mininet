@@ -130,6 +130,10 @@ def errRun( *cmd, **kwargs ):
                 poller.unregister( fd )
 
     returncode = popen.wait()
+    # Python 3 complains if we don't explicitly close these
+    popen.stdout.close()
+    if stderr == PIPE:
+        popen.stderr.close()
     debug( out, err, returncode )
     return out, err, returncode
 # pylint: enable=too-many-branches
