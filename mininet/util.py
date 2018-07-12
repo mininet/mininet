@@ -495,7 +495,7 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'cat /proc/mounts' )
+    mounts = quietRun( 'grep cgroup /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
     if ('cgroup %s' % cgdir not in mounts and
