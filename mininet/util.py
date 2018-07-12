@@ -618,7 +618,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
-    serverIP = server if isinstance( server, basestring ) else server.IP()
+    serverIP = server if isinstance( server, BaseString ) else server.IP()
     cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )
