@@ -1,14 +1,19 @@
 #!/usr/bin/python
 
 from subprocess import check_output as co
-from sys import exit
+from sys import exit, version_info
+
+def run(*args, **kwargs):
+    "Run co and decode for python3"
+    result = co(*args, **kwargs)
+    return result.decode() if version_info[ 0 ] >= 3 else result
 
 # Actually run bin/mn rather than importing via python path
-version = 'Mininet ' + co( 'PYTHONPATH=. bin/mn --version 2>&1', shell=True )
+version = 'Mininet ' + run( 'PYTHONPATH=. bin/mn --version 2>&1', shell=True )
 version = version.strip()
 
 # Find all Mininet path references
-lines = co( "egrep -or 'Mininet [0-9\.\+]+\w*' *", shell=True )
+lines = run( "egrep -or 'Mininet [0-9\.\+]+\w*' *", shell=True )
 
 error = False
 
