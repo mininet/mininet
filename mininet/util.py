@@ -16,7 +16,7 @@ import sys
 
 # Python 2/3 compatibility
 Python3 = sys.version_info[0] == 3
-BaseString = str if Python3 else basestring
+BaseString = str if Python3 else str.__base__
 Encoding = 'utf-8' if Python3 else None
 def decode( s ):
     "Decode a byte string if needed for Python 3"
@@ -24,18 +24,21 @@ def decode( s ):
 def encode( s ):
     "Encode a byte string if needed for Python 3"
     return s.encode( Encoding ) if Python3 else s
-# Make pexpect compatible with Python 3 strings
 try:
     import pexpect as oldpexpect
-    pexpect, oldspawn = oldpexpect, oldpexpect.spawn
-    def spawn( self, *args, **kwargs):
-        "Let pexpect work with Python3 utf-8 strings"
-        if Python3:
-            kwargs.update( encoding='utf-8'  )
-        return oldspawn( self, *args, **kwargs )
-    oldpexpect.spawn = spawn
+    class Pexpect( object ):
+        "Custom pexpect that is compatible with str"
+        def spawn( self, *args, **kwargs):
+            "pexpect.spawn that is compatible with str"
+            if Python3 and 'encoding' not in kwargs:
+                kwargs.update( encoding='utf-8'  )
+            return oldpexpect.spawn( *args, **kwargs )
+        def __getattr__( self, name ):
+            return getattr( oldpexpect, name )
+    pexpect = Pexpect()
 except:
     pass
+
 
 # Command execution support
 
