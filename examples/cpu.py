@@ -31,9 +31,9 @@ rate includes buffering.
 from mininet.net import Mininet
 from mininet.node import CPULimitedHost
 from mininet.topolib import TreeTopo
-from mininet.util import custom, waitListening
+from mininet.util import custom, waitListening, decode
 from mininet.log import setLogLevel, info
-
+from mininet.clean import cleanup
 
 def bwtest( cpuLimits, period_us=100000, seconds=10 ):
     """Example/test of link and CPU bandwidth limits
@@ -55,7 +55,8 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
                 net = Mininet( topo=topo, host=host )
             # pylint: disable=bare-except
             except:
-                info( '*** Skipping scheduler %s\n' % sched )
+                info( '*** Skipping scheduler %s and cleaning up\n' % sched )
+                cleanup()
                 break
             net.start()
             net.pingAll()
@@ -70,7 +71,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
             # ignore empty result from waitListening/telnet
             popen.stdout.readline()
             client.cmd( 'iperf -yc -t %s -c %s' % ( seconds, server.IP() ) )
-            result = popen.stdout.readline().split( ',' )
+            result = decode( popen.stdout.readline() ).split( ',' )
             bps = float( result[ -1 ] )
             popen.terminate()
             net.stop()

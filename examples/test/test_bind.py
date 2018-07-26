@@ -5,7 +5,7 @@ Tests for bind.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testBind( unittest.TestCase ):
 

@@ -126,7 +126,7 @@ class ClusterCleanup( object ):
     def cleanup( cls ):
         "Clean up"
         info( '*** Cleaning up cluster\n' )
-        for server, user in cls.serveruser.iteritems():
+        for server, user in cls.serveruser.items():
             if server == 'localhost':
                 # Handled by mininet.clean.cleanup()
                 continue

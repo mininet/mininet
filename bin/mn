@@ -186,8 +186,10 @@ class MininetRunner( object ):
         for fileName in files:
             customs = {}
             if os.path.isfile( fileName ):
-                execfile( fileName, customs, customs )
-                for name, val in customs.iteritems():
+                # pylint: disable=exec-used
+                exec( compile( open( fileName ).read(), fileName, 'exec' ),
+                      customs, customs )
+                for name, val in customs.items():
                     self.setCustom( name, val )
             else:
                 raise Exception( 'could not find custom file: %s' % fileName )
@@ -256,7 +258,7 @@ class MininetRunner( object ):
         opts.add_option( '--arp', action='store_true',
                          default=False, help='set all-pairs ARP entries' )
         opts.add_option( '--verbosity', '-v', type='choice',
-                         choices=LEVELS.keys(), default = 'info',
+                         choices=list( LEVELS.keys() ), default = 'info',
                          help = '|'.join( LEVELS.keys() )  )
         opts.add_option( '--innamespace', action='store_true',
                          default=False, help='sw and ctrl in namespace?' )
@@ -286,7 +288,7 @@ class MininetRunner( object ):
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
         opts.add_option( '--placement', type='choice',
-                         choices=PLACEMENT.keys(), default='block',
+                         choices=list( PLACEMENT.keys() ), default='block',
                          metavar='block|random',
                          help=( 'node placement for --cluster '
                                 '(experimental!) ' ) )

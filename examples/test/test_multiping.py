@@ -5,7 +5,7 @@ Test for multiping.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from collections import defaultdict
 
 class testMultiPing( unittest.TestCase ):

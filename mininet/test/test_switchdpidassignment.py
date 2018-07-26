@@ -30,10 +30,10 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
     def testDefaultDpid( self ):
         """Verify that the default dpid is assigned using a valid provided
         canonical switchname if no dpid is passed in switch creation."""
-        switch = Mininet( Topo(),
-                          self.switchClass,
-                          Host, Controller ).addSwitch( 's1' )
+        net = Mininet( Topo(), self.switchClass, Host, Controller )
+        switch = net.addSwitch( 's1' )
         self.assertEqual( switch.defaultDpid(), switch.dpid )
+        net.stop()
 
     def dpidFrom( self, num ):
         "Compute default dpid from number"
@@ -44,31 +44,34 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         """Verify that Switch dpid is the actual dpid assigned if dpid is
         passed in switch creation."""
         dpid = self.dpidFrom( 0xABCD )
-        switch = Mininet( Topo(), self.switchClass,
-                          Host, Controller ).addSwitch(
-                            's1', dpid=dpid )
+        net = Mininet( Topo(), self.switchClass, Host, Controller )
+        switch = net.addSwitch( 's1', dpid=dpid )
         self.assertEqual( switch.dpid, dpid )
+        net.stop()
 
     def testDefaultDpidAssignmentFailure( self ):
         """Verify that Default dpid assignment raises an Exception if the
         name of the switch does not contin a digit. Also verify the
         exception message."""
+        net = Mininet( Topo(), self.switchClass, Host, Controller )
         with self.assertRaises( Exception ) as raises_cm:
-            Mininet( Topo(), self.switchClass,
-                     Host, Controller ).addSwitch( 'A' )
-        self.assertEqual(raises_cm.exception.message, 'Unable to derive '
+            net.addSwitch( 'A' )
+        self.assertTrue( 'Unable to derive '
                          'default datapath ID - please either specify a dpid '
-                         'or use a canonical switch name such as s23.')
+                         'or use a canonical switch name such as s23.'
+                         in str( raises_cm.exception ) )
+        net.stop()
 
     def testDefaultDpidLen( self ):
         """Verify that Default dpid length is 16 characters consisting of
         16 - len(hex of first string of contiguous digits passed in switch
         name) 0's followed by hex of first string of contiguous digits passed
         in switch name."""
-        switch = Mininet( Topo(), self.switchClass,
-                          Host, Controller ).addSwitch( 's123' )
-
+        net = Mininet( Topo(), self.switchClass, Host, Controller )
+        switch = net.addSwitch( 's123' )
         self.assertEqual( switch.dpid, self.dpidFrom( 123 ) )
+        net.stop()
+
 
 class OVSUser( OVSSwitch):
     "OVS User Switch convenience class"
@@ -95,3 +98,4 @@ class testSwitchUserspace( TestSwitchDpidAssignmentOVS ):
 if __name__ == '__main__':
     setLogLevel( 'warning' )
     unittest.main()
+    cleanup()

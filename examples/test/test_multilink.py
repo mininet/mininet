@@ -6,7 +6,7 @@ validates mininet interfaces against systems interfaces
 '''
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testMultiLink( unittest.TestCase ):
 

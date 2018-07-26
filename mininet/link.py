@@ -164,7 +164,7 @@ class Intf( object ):
            method: config method name
            param: arg=value (ignore if value=None)
            value may also be list or dict"""
-        name, value = param.items()[ 0 ]
+        name, value = list( param.items() )[ 0 ]
         f = getattr( self, method, None )
         if not f or value is None:
             return
@@ -285,11 +285,7 @@ class TCIntf( Intf ):
                    loss=None, max_queue_size=None ):
         "Internal method: return tc commands for delay and loss"
         cmds = []
-        if delay and delay < 0:
-            error( 'Negative delay', delay, '\n' )
-        elif jitter and jitter < 0:
-            error( 'Negative jitter', jitter, '\n' )
-        elif loss and ( loss < 0 or loss > 100 ):
+        if loss and ( loss < 0 or loss > 100 ):
             error( 'Bad loss percentage', loss, '%%\n' )
         else:
             # Delay/jitter/loss/max queue size

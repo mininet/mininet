@@ -5,7 +5,7 @@ Test for controlnet.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testControlNet( unittest.TestCase ):
 

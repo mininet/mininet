@@ -16,12 +16,13 @@ import time
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
-
+from mininet.util import decode
 
 def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
-    return Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+    result = Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+    return decode( result )
 
 def killprocs( pattern ):
     "Reliably terminate processes matching a pattern (including args)"
@@ -76,7 +77,6 @@ class Cleanup( object ):
         for dp in dps:
             if dp:
                 sh( 'dpctl deldp ' + dp )
-
         info( "***  Removing OVS datapaths\n" )
         dps = sh("ovs-vsctl --timeout=1 list-br").strip().splitlines()
         if dps:

@@ -5,7 +5,7 @@ A simple sanity check test for cluster edition
 '''
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class clusterSanityCheck( unittest.TestCase ):
 

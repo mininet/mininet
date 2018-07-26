@@ -4,28 +4,32 @@ sudo: required
 matrix:
   include:
     - dist: trusty
+      python: 2.7
       env: dist="14.04 LTS trusty"
-#    - dist: xenial
-#      env: dist="16.04 LTS xenial"
-# Travis-CI only proposes 14.04 LTS Trusty and there is no plan to update to 16.04 xenial
-# (c.f. https://github.com/travis-ci/travis-ci/issues/5821)
-# It is useless to add a second job because it will run in the same Ubuntu version (14.04)
+    - dist: trusty
+      python: 3.6
+      env: dist="14.04 LTS trusty"
 
 before_install:
 - sudo apt-get update -qq
 - sudo apt-get install -qq vlan
-- sudo util/install.sh -n
+- PYTHON=`which python` util/install.sh -n
 
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
-- sudo util/install.sh -fnvw
+- pip install pexpect || pip3 install pexpect
+- util/install.sh -nfvw
 
 script:
-- sudo mn --test pingall
-- sudo python mininet/test/runner.py -v -quick
-- sudo python examples/test/runner.py -v -quick
+- alias sudo="sudo env PATH=$PATH"
+- export PYTHON=`which python`
+- echo 'px import sys; print(sys.version_info)' | sudo $PYTHON bin/mn -v output
+- sudo $PYTHON bin/mn --test pingall
+- sudo $PYTHON mininet/test/runner.py -v -quick
+- sudo $PYTHON examples/test/runner.py -v -quick
 
 notifications:
   email:
     on_success: never
-# More details: https://docs.travis-ci.com/user/notifications#Configuring-email-notifications
+
+# More details: https://docs.travis-ci.com/user/notifications

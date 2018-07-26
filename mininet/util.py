@@ -12,6 +12,39 @@ from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
 import os
 from functools import partial
+import sys
+
+# Python 2/3 compatibility
+Python3 = sys.version_info[0] == 3
+BaseString = str if Python3 else getattr( str, '__base__' )
+Encoding = 'utf-8' if Python3 else None
+def decode( s ):
+    "Decode a byte string if needed for Python 3"
+    return s.decode( Encoding ) if Python3 else s
+def encode( s ):
+    "Encode a byte string if needed for Python 3"
+    return s.encode( Encoding ) if Python3 else s
+try:
+    # pylint: disable=import-error
+    oldpexpect = None
+    import pexpect as oldpexpect
+    # pylint: enable=import-error
+
+    class Pexpect( object ):
+        "Custom pexpect that is compatible with str"
+        @staticmethod
+        def spawn( *args, **kwargs):
+            "pexpect.spawn that is compatible with str"
+            if Python3 and 'encoding' not in kwargs:
+                kwargs.update( encoding='utf-8'  )
+            return oldpexpect.spawn( *args, **kwargs )
+
+        def __getattr__( self, name ):
+            return getattr( oldpexpect, name )
+    pexpect = Pexpect()
+except ImportError:
+    pass
+
 
 # Command execution support
 
@@ -57,7 +90,7 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches,too-many-statements
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
@@ -98,6 +131,8 @@ def errRun( *cmd, **kwargs ):
             f = fdtofile[ fd ]
             if event & POLLIN:
                 data = f.read( 1024 )
+                if Python3:
+                    data = data.decode( Encoding )
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -116,6 +151,10 @@ def errRun( *cmd, **kwargs ):
                 poller.unregister( fd )
 
     returncode = popen.wait()
+    # Python 3 complains if we don't explicitly close these
+    popen.stdout.close()
+    if stderr == PIPE:
+        popen.stderr.close()
     debug( out, err, returncode )
     return out, err, returncode
 # pylint: enable=too-many-branches
@@ -374,7 +413,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
        terminates: when all EOFs received"""
     poller = poll()
     fdToHost = {}
-    for host, popen in popens.iteritems():
+    for host, popen in popens.items():
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
         poller.register( fd, POLLIN )
@@ -382,6 +421,13 @@ def pmonitor(popens, timeoutms=500, readline=True,
             # Use non-blocking reads
             flags = fcntl( fd, F_GETFL )
             fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+
+    def readit( f ):
+        "Helper function - read line or data"
+        # Note this will block if readline is True
+        line = f.readline() if readline else f.read( readmax )
+        return decode( line )
+
     while popens:
         fds = poller.poll( timeoutms )
         if fds:
@@ -389,15 +435,15 @@ def pmonitor(popens, timeoutms=500, readline=True,
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
                 if event & POLLIN:
-                    if readline:
-                        # Attempt to read a line of output
-                        # This blocks until we receive a newline!
-                        line = popen.stdout.readline()
-                    else:
-                        line = popen.stdout.read( readmax )
+                    line = readit( popen.stdout )
                     yield host, line
-                # Check for EOF
-                elif event & POLLHUP:
+                if event & POLLHUP:
+                    while True:
+                        # Drain buffer
+                        line = readit( popen.stdout )
+                        yield host, line
+                        if line == '':
+                            break
                     poller.unregister( fd )
                     del popens[ host ]
         else:
@@ -460,7 +506,7 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'cat /proc/mounts' )
+    mounts = quietRun( 'grep cgroup /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
     if ('cgroup %s' % cgdir not in mounts and
@@ -600,7 +646,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
-    serverIP = server if isinstance( server, basestring ) else server.IP()
+    serverIP = server if isinstance( server, BaseString ) else server.IP()
     cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )

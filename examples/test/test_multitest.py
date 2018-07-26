@@ -5,7 +5,7 @@ Test for multitest.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testMultiTest( unittest.TestCase ):
 

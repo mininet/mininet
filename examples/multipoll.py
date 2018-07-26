@@ -9,6 +9,7 @@ monitoring them
 from mininet.topo import SingleSwitchTopo
 from mininet.net import Mininet
 from mininet.log import info, setLogLevel
+from mininet.util import decode
 
 from time import time
 from select import poll, POLLIN
@@ -19,7 +20,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
     "Monitor set of files and return [(host, line)...]"
     devnull = open( '/dev/null', 'w' )
     tails, fdToFile, fdToHost = {}, {}, {}
-    for h, outfile in outfiles.iteritems():
+    for h, outfile in outfiles.items():
         tail = Popen( [ 'tail', '-f', outfile ],
                       stdout=PIPE, stderr=devnull )
         fd = tail.stdout.fileno()
@@ -40,7 +41,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
                 host = fdToHost[ fd ]
                 # Wait for a line of output
                 line = f.readline().strip()
-                yield host, line
+                yield host, decode( line )
         else:
             # If we timed out, return nothing
             yield None, ''
