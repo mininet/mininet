@@ -20,6 +20,7 @@ install:
 - sudo util/install.sh -fnvw
 
 script:
+- echo "px import sys; print(sys.version_info)" | sudo mn -v output
 - sudo mn --test pingall
 - sudo python mininet/test/runner.py -v -quick
 - sudo python examples/test/runner.py -v -quick
