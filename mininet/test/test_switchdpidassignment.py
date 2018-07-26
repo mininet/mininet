@@ -35,7 +35,6 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         self.assertEqual( switch.defaultDpid(), switch.dpid )
         net.stop()
 
-
     def dpidFrom( self, num ):
         "Compute default dpid from number"
         fmt = ( '%0' + str( self.switchClass.dpidLen ) + 'x' )
@@ -49,7 +48,6 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         switch = net.addSwitch( 's1', dpid=dpid )
         self.assertEqual( switch.dpid, dpid )
         net.stop()
-
 
     def testDefaultDpidAssignmentFailure( self ):
         """Verify that Default dpid assignment raises an Exception if the

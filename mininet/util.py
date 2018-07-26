@@ -16,7 +16,7 @@ import sys
 
 # Python 2/3 compatibility
 Python3 = sys.version_info[0] == 3
-BaseString = str if Python3 else str.__base__
+BaseString = str if Python3 else getattr( str, '__base__' )
 Encoding = 'utf-8' if Python3 else None
 def decode( s ):
     "Decode a byte string if needed for Python 3"
@@ -26,17 +26,20 @@ def encode( s ):
     return s.encode( Encoding ) if Python3 else s
 try:
     import pexpect as oldpexpect
+
     class Pexpect( object ):
         "Custom pexpect that is compatible with str"
-        def spawn( self, *args, **kwargs):
+        @staticmethod
+        def spawn( *args, **kwargs):
             "pexpect.spawn that is compatible with str"
             if Python3 and 'encoding' not in kwargs:
                 kwargs.update( encoding='utf-8'  )
             return oldpexpect.spawn( *args, **kwargs )
+
         def __getattr__( self, name ):
             return getattr( oldpexpect, name )
     pexpect = Pexpect()
-except:
+except ImportError:
     pass
 
 
@@ -84,7 +87,7 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches,too-many-statements
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
@@ -415,11 +418,13 @@ def pmonitor(popens, timeoutms=500, readline=True,
             # Use non-blocking reads
             flags = fcntl( fd, F_GETFL )
             fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+
     def readit( f ):
         "Helper function - read line or data"
         # Note this will block if readline is True
         line = f.readline() if readline else f.read( readmax )
         return decode( line )
+
     while popens:
         fds = poller.poll( timeoutms )
         if fds:

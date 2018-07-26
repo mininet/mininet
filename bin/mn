@@ -186,7 +186,8 @@ class MininetRunner( object ):
         for fileName in files:
             customs = {}
             if os.path.isfile( fileName ):
-                exec( compile ( open( fileName ).read(), fileName, 'exec' ),
+                # pylint: disable=exec-used
+                exec( compile( open( fileName ).read(), fileName, 'exec' ),
                       customs, customs )
                 for name, val in customs.items():
                     self.setCustom( name, val )

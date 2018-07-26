@@ -89,7 +89,7 @@ class Node( object ):
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Python 3 complains if we don't wait for shell exit
-        self.waitExited = params.get( 'waitExited', Python3==True )
+        self.waitExited = params.get( 'waitExited', Python3 == True )
 
         # Stash configuration parameters for future reference
         self.params = params
@@ -207,7 +207,7 @@ class Node( object ):
         # Leave this is as an instance method for now
         assert self
         popen = Popen( cmd, **params )
-        debug( '_popen', cmd,  popen.pid )
+        debug( '_popen', cmd, popen.pid )
         return popen
 
     def cleanup( self ):
@@ -731,7 +731,6 @@ class CPULimitedHost( Host ):
         "Clean up Node, then clean up our cgroup"
         super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=.1, fn=self.cgroupDel )
-
 
     _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
 
