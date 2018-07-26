@@ -25,7 +25,10 @@ def encode( s ):
     "Encode a byte string if needed for Python 3"
     return s.encode( Encoding ) if Python3 else s
 try:
+    # pylint: disable=import-error
+    oldpexpect = None
     import pexpect as oldpexpect
+    # pylint: enable=import-error
 
     class Pexpect( object ):
         "Custom pexpect that is compatible with str"
