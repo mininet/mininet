@@ -24,6 +24,7 @@ import sys
 from optparse import OptionParser
 from subprocess import call
 
+# pylint: disable=import-error
 if sys.version_info[0] == 2:
     from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu,
                           Checkbutton, Menu, Toplevel, Button, BitmapImage,
@@ -32,11 +33,9 @@ if sys.version_info[0] == 2:
                           CENTER, RIGHT, LEFT, BOTH, TRUE, FALSE )
     from ttk import Notebook
     from tkMessageBox import showerror
-    from subprocess import call
     import tkFont
     import tkFileDialog
     import tkSimpleDialog
-    import tkFileDialog
 else:
     from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu,
                           Checkbutton, Menu, Toplevel, Button, BitmapImage,
@@ -48,6 +47,7 @@ else:
     from tkinter import font as tkFont
     from tkinter import simpledialog as tkSimpleDialog
     from tkinter import filedialog as tkFileDialog
+# pylint: enable=import-error
 
 import re
 import json

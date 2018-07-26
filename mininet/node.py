@@ -89,7 +89,7 @@ class Node( object ):
         self.inNamespace = params.get( 'inNamespace', inNamespace )
 
         # Python 3 complains if we don't wait for shell exit
-        self.waitExited = params.get( 'waitExited', Python3 == True )
+        self.waitExited = params.get( 'waitExited', Python3 )
 
         # Stash configuration parameters for future reference
         self.params = params
