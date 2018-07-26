@@ -24,19 +24,28 @@ import sys
 from optparse import OptionParser
 from subprocess import call
 
-from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu, Checkbutton,
-                      Menu, Toplevel, Button, BitmapImage, PhotoImage, Canvas,
-                      Scrollbar, Wm, TclError, StringVar, IntVar,
-                      E, W, EW, NW, Y, VERTICAL, SOLID, CENTER,
-                      RIGHT, LEFT, BOTH, TRUE, FALSE )
-from tkinter.ttk import Notebook
-from tkinter.messagebox import showerror
-from tkinter import font as tkFont
-
 if sys.version_info[0] == 2:
+    from Tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu,
+                          Checkbutton, Menu, Toplevel, Button, BitmapImage,
+                          PhotoImage, Canvas, Scrollbar, Wm, TclError,
+                          StringVar, IntVar, E, W, EW, NW, Y, VERTICAL, SOLID,
+                          CENTER, RIGHT, LEFT, BOTH, TRUE, FALSE )
+    from ttk import Notebook
+    from tkMessageBox import showerror
+    from subprocess import call
+    import tkFont
+    import tkFileDialog
     import tkSimpleDialog
     import tkFileDialog
-elif sys.version_info[0] == 3:
+else:
+    from tkinter import ( Frame, Label, LabelFrame, Entry, OptionMenu,
+                          Checkbutton, Menu, Toplevel, Button, BitmapImage,
+                          PhotoImage, Canvas, Scrollbar, Wm, TclError,
+                          StringVar, IntVar, E, W, EW, NW, Y, VERTICAL, SOLID,
+                          CENTER, RIGHT, LEFT, BOTH, TRUE, FALSE )
+    from tkinter.ttk import Notebook
+    from tkinter.messagebox import showerror
+    from tkinter import font as tkFont
     from tkinter import simpledialog as tkSimpleDialog
     from tkinter import filedialog as tkFileDialog
 
@@ -1414,7 +1423,7 @@ class MiniEdit( Frame ):
     def convertJsonUnicode(self, text):
         "Some part of Mininet don't like Unicode"
         if isinstance(text, dict):
-            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.iteritems()}
+            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
         elif isinstance(text, list):
             return [self.convertJsonUnicode(element) for element in text]
         elif isinstance(text, unicode):
@@ -1841,7 +1850,7 @@ class MiniEdit( Frame ):
 
             # Save Links
             f.write("    info( '*** Add links\\n')\n")
-            for key,linkDetail in self.links.iteritems():
+            for key,linkDetail in self.links.items():
                 tags = self.canvas.gettags(key)
                 if 'data' in tags:
                     optsExist = False
@@ -2881,7 +2890,7 @@ class MiniEdit( Frame ):
     def buildLinks( self, net):
         # Make links
         info( "Getting Links.\n" )
-        for key,link in self.links.iteritems():
+        for key,link in self.links.items():
             tags = self.canvas.gettags(key)
             if 'data' in tags:
                 src=link['src']
@@ -3217,7 +3226,7 @@ class MiniEdit( Frame ):
         customs = {}
         if os.path.isfile( fileName ):
             execfile( fileName, customs, customs )
-            for name, val in customs.iteritems():
+            for name, val in customs.items():
                 self.setCustom( name, val )
         else:
             raise Exception( 'could not find custom file: %s' % fileName )
