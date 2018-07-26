@@ -228,7 +228,7 @@ class testWalkthrough( unittest.TestCase ):
                   r'([\d\.]+)/([\d\.]+)/([\d\.]+)/([\d\.]+) ms' )
         delay = float( p.match.group( 2 ) )
         self.assertTrue( delay >= 40, 'Delay < 40ms' )
-        self.assertTrue( delay <= 50, 'Delay > 50s' )
+        self.assertTrue( delay <= 50, 'Delay > 50ms' )
         p.expect( self.prompt )
         p.sendline( 'exit' )
         p.wait()
