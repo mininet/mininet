@@ -416,34 +416,27 @@ def pmonitor(popens, timeoutms=500, readline=True,
     for host, popen in popens.items():
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
-        poller.register( fd, POLLIN )
-        if not readline:
-            # Use non-blocking reads
-            flags = fcntl( fd, F_GETFL )
-            fcntl( fd, F_SETFL, flags | O_NONBLOCK )
-
-    def readit( f ):
-        "Helper function - read line or data"
-        # Note this will block if readline is True
-        line = f.readline() if readline else f.read( readmax )
-        return decode( line )
-
+        poller.register( fd, POLLIN | POLLHUP )
+        flags = fcntl( fd, F_GETFL )
+        fcntl( fd, F_SETFL, flags | O_NONBLOCK )
     while popens:
         fds = poller.poll( timeoutms )
         if fds:
             for fd, event in fds:
                 host = fdToHost[ fd ]
                 popen = popens[ host ]
-                if event & POLLIN:
-                    line = readit( popen.stdout )
-                    yield host, line
-                if event & POLLHUP:
+                if event & POLLIN or event & POLLHUP:
                     while True:
-                        # Drain buffer
-                        line = readit( popen.stdout )
-                        yield host, line
+                        try:
+                            f = popen.stdout
+                            line = decode( f.readline() if readline
+                                           else f.read( readmax ) )
+                        except IOError:
+                            line = ''
                         if line == '':
                             break
+                        yield host, line
+                if event & POLLHUP:
                     poller.unregister( fd )
                     del popens[ host ]
         else:
