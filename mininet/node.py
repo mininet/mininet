@@ -18,6 +18,9 @@ Host: a virtual host. By default, a host is simply a shell; commands
 CPULimitedHost: a virtual host whose CPU bandwidth is limited by
     RT or CFS bandwidth limiting.
 
+XIAHost: (eXpressive Internet Architecture Host) a virtual host with
+    pre-configured XIA identifiers or XIDs.
+
 Switch: superclass for switch nodes.
 
 UserSwitch: a switch using the user-space switch from the OpenFlow
@@ -853,6 +856,141 @@ class CPULimitedHost( Host ):
         "Initialization for CPULimitedHost class"
         mountCgroups()
         cls.inited = True
+
+class XIAHost( Host ):
+    "eXpressive Internet Architecture host"
+
+    def __init__( self, name, **kwargs ):
+        pathCheck( 'xip', moduleName='XIA' )
+        Host.__init__( self, name, **kwargs )
+
+    def config( self, ad=None, ethid=None, hid=None, lpm=None,
+                u4id=None, zfid=None, xdp=False, **params ):
+        """ad: list of Autonomous Domain IDs.
+           ethid: list of interface names.
+           hid: list of private key file names for Host Identifiers.
+           lpm: list of lpm inputs in id/prefixLen form.
+           u4id: dictionary of inputs for tunneling.
+           xdp: set True to load the xdp module.
+           zfid: list of zFilter identifiers.
+           params: parameters for Node.config()"""
+        r = Node.config( self, **params )
+        if xdp is True:
+            moduleDeps( add='xia_ppal_xdp' )
+        self.setParam( r, 'setAD', ad=ad )
+        self.setParam( r, 'setEthID', ethid=ethid )
+        self.setParam( r, 'setHID', hid=hid )
+        self.setParam( r, 'setLPM', lpm=lpm )
+        self.setParam( r, 'setU4ID', u4id=u4id )
+        self.setParam( r, 'setZFID', zfid=zfid )
+        return r
+
+    @staticmethod
+    def validate( xid, base, length=-1 ):
+        """Checks if the XID parameter passed is valid.
+           xid: the XID parameter being examined.
+           base: allowed characters for XID parameter, eg. 2 for binary.
+           length: expected length of the xid. This test can be skipped"""
+        checkLength = False if length == -1 else True
+        if checkLength and len( xid ) != length:
+            return False
+        try:
+            if int( xid, base) > 0:
+                return True
+        except ValueError:
+            return False
+
+    def setAD( self, *ad ):
+        """Assign a host to Autonomous Domain.
+           Similar to BGP's Autonomous System. """
+        moduleDeps( add='xia_ppal_ad' )
+        for a in ad:
+            if self.validate( xid=a, base=16, length=40 ):
+                self.cmd( 'xip ad addlocal', a )
+            else:
+                error( 'Not a valid AD: %s \n' % a )
+
+    def setEthID( self, *ethid ):
+        "Assign ether ID(s) to the node."
+        # Load the required module
+        moduleDeps( add='xia_ppal_ether' )
+        # Performs actual ether ID configuration
+        for intf in ethid:
+            self.intf( intf ).setEthID()
+
+    def setHID( self, *hid ):
+        "Assign HID(s) to the node."
+        # Load the required module
+        moduleDeps( add='xia_ppal_hid' )
+        # Performs actual HID configuration
+        for p in hid:
+            self.cmd( 'xip hid new', p )
+            self.cmd( 'xip hid addaddr', p )
+
+    def setLPM( self, *lpm ):
+        """Set routes with Longest Prefix Match.
+           Extends CIDR abilities to XIA."""
+        moduleDeps( add='xia_ppal_lpm' )
+        for l in lpm:
+            if '/' in l:
+                lid, prefixLen = l.split( '/' )
+                prefixLen = int( prefixLen )
+            else:
+                error( 'No prefix length provided for lpm: %s' % l )
+                return
+            # Here we do not need to test the length of lpm
+            val = True if prefixLen in range( 0, 161 ) else False
+            if self.validate( xid=lid, base=16 ) and val:
+                self.cmd( 'xip lpm addlocal', lid, prefixLen )
+            else:
+                if '.' in lid and prefixLen in range( 0, 161 ):
+                    self.cmd( 'xip lpm addlocal', lid, prefixLen )
+                else:
+                    error( 'Not a valid LPM identifier: %s or prefixLen %d \n'
+                           % ( lid, prefixLen ) )
+
+    def setU4ID( self, **u4id ):
+        "Create UDP socket for ip:port tuple"
+        moduleDeps( add='xia_ppal_u4id' )
+        ipaddr = u4id.get( 'ipaddr' )
+        port = u4id.get( 'port' )
+        tunnel = u4id.get( 'tunnel', False )
+        # UDP checksumming is set by default
+        checksum = u4id.get( 'checksum', True )
+        if any( i is None for i in [ ipaddr, port ] ):
+            error( 'Not enough inputs for U4ID configuration \n' )
+            return
+        cmd = [ 'xip u4id add' ]
+        if isinstance( ipaddr, basestring ) and '.' in ipaddr:
+            cmd.append( ipaddr )
+        else:
+            error( 'Not a valid ip for U4ID: %s \n' % ipaddr )
+            return
+        if self.validate( xid=port, base=16, length=6 ):
+            cmd.append( port )
+        if tunnel is True:
+            cmd.append( '-tunnel' )
+        if checksum is False:
+            cmd.append( '-disable_checksum' )
+        cmd = ' '.join( cmd )
+        self.cmd( cmd )
+
+    def setZFID( self, *zfid ):
+        """Configure zFilter Identifier(s) for the host
+           zfid: A string of comma separated zFilter ID(s)"""
+        moduleDeps( add='xia_ppal_zf' )
+        for z in zfid:
+            if self.validate( xid=z, base=16, length=40 ):
+                self.cmd( 'xip zf addlocal', z )
+            else:
+                error( 'Not a valid zFilter identifier: %s \n' % z )
+
+    def cleanup( self ):
+        "Unload the modules loaded by the principals."
+        moduleDeps( subtract=[ 'xia_ppal_ad', 'xia_ppal_ether', 'xia_ppal_hid',
+                               'xia_ppal_lpm', 'xia_ppal_u4id', 'xia_ppal_xdp',
+                               'xia_ppal_zf' ] )
+        super( XIAHost, self ).cleanup()
 
 
 # Some important things to note:
