@@ -107,6 +107,7 @@ class Node( object ):
         self.readbuf = ''
 
         # Start command interpreter shell
+        self.master, self.slave = None, None  # pylint
         self.startShell()
         self.mountPrivateDirs()
 
