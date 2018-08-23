@@ -145,12 +145,12 @@ class Node( object ):
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
-        master, slave = pty.openpty()
-        self.shell = self._popen( cmd, stdin=slave, stdout=slave, stderr=slave,
-                                  close_fds=False )
+        self.master, self.slave = pty.openpty()
+        self.shell = self._popen( cmd, stdin=self.slave, stdout=self.slave,
+                                  stderr=self.slave, close_fds=False )
         # XXX BL: This doesn't seem right, and we should also probably
         # close our files when we exit...
-        self.stdin = os.fdopen( master, 'r' )
+        self.stdin = os.fdopen( self.master, 'r' )
         self.stdout = self.stdin
         self.pid = self.shell.pid
         self.pollOut = select.poll()
@@ -217,9 +217,13 @@ class Node( object ):
         # for intfName in self.intfNames():
         # if self.name in intfName:
         # quietRun( 'ip link del ' + intfName )
-        if self.waitExited and self.shell:
-            debug( 'waiting for', self.pid, 'to terminate\n' )
-            self.shell.wait()
+        if self.shell:
+            # Close ptys
+            self.stdin.close()
+            os.close(self.slave)
+            if self.waitExited:
+                debug( 'waiting for', self.pid, 'to terminate\n' )
+                self.shell.wait()
         self.shell = None
 
     # Subshell I/O, commands and control
