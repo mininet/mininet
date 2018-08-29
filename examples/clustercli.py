@@ -30,7 +30,7 @@ class ClusterCLI( CLI ):
         global nx, plt, graphviz_layout
         if not nx:
             try:
-                # pylint: disable=import-error
+                # pylint: disable=import-error,no-member
                 import networkx
                 nx = networkx  # satisfy pylint
                 from matplotlib import pyplot
@@ -42,7 +42,7 @@ class ClusterCLI( CLI ):
                     graphviz_layout = nx.graphviz_layout
                 else:
                     graphviz_layout = nx.drawing.nx_agraph.graphviz_layout
-                # pylint: enable=import-error
+                # pylint: enable=import-error,no-member
             except ImportError:
                 error( 'plot requires networkx, matplotlib and pygraphviz - '
                        'please install them and try again\n' )
