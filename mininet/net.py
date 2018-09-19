@@ -18,7 +18,7 @@ A virtual console (pipes to a shell)
 A virtual interfaces (half of a veth pair)
 A parent shell (and possibly some child processes) in a namespace
 
-Hosts have a network interface which is configured via ifconfig/ip
+Hosts have a network interface which is configured via ip addr/ip
 link/etc.
 
 This version supports both the kernel and user space datapaths
@@ -905,10 +905,10 @@ class Mininet( object ):
             if len( connections ) == 0:
                 error( 'src and dst not connected: %s %s\n' % ( src, dst) )
             for srcIntf, dstIntf in connections:
-                result = srcIntf.ifconfig( status )
+                result = srcIntf.ipLink( status )
                 if result:
                     error( 'link src status change failed: %s\n' % result )
-                result = dstIntf.ifconfig( status )
+                result = dstIntf.ipLink( status )
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 
