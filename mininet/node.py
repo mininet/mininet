@@ -1188,11 +1188,6 @@ class OVSSwitch( Switch ):
             raise Exception(
                 'OVS kernel switch does not work in a namespace' )
         int( self.dpid, 16 )  # DPID must be a hex string
-        # Command to add interfaces
-        intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
-                         self.intfOpts( intf )
-                         for intf in self.intfList()
-                         if self.ports[ intf ] and not intf.IP() )
         # Command to create controller entries
         clist = [ ( self.name + c.name, '%s:%s:%d' %
                   ( c.protocol, c.IP(), c.port ) )
@@ -1214,8 +1209,14 @@ class OVSSwitch( Switch ):
         self.vsctl( cargs +
                     ' -- add-br %s' % self +
                     ' -- set bridge %s controller=[%s]' % ( self, cids  ) +
-                    self.bridgeOpts() +
-                    intfs )
+                    self.bridgeOpts())
+        # Command to add interfaces
+        for i in range(0,len(self.intfList()),50):
+            intfs = ''.join( ' -- add-port %s %s' % ( self, intf ) +
+                             self.intfOpts( intf )
+                             for intf in self.intfList()[i:i+50]
+                             if self.ports[ intf ] and not intf.IP() )
+            self.vsctl(' -- set bridge %s controller=[%s]' % (self,cids) + intfs)
         # If necessary, restore TC config overwritten by OVS
         if not self.batch:
             for intf in self.intfList():
