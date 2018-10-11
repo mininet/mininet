@@ -146,6 +146,9 @@ class Intf( object ):
 
     def rename( self, newname ):
         "Rename interface"
+        if self.node and self.name in self.node.nameToIntf:
+            # rename intf in node's nameToIntf
+            self.node.nameToIntf[newname] = self.node.nameToIntf.pop(self.name)
         self.ifconfig( 'down' )
         result = self.cmd( 'ip link set', self.name, 'name', newname )
         self.name = newname
