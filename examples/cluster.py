@@ -855,10 +855,10 @@ class MininetCluster( Mininet ):
         remoteIP = serverIPs[ 0 ]
         # Route should contain 'dev <intfname>'
         route = controller.cmd( 'ip route get', remoteIP,
-                        '| egrep -o "dev\s[^[:space:]]+"' )
+                                r'| egrep -o "dev\s[^[:space:]]+"' )
         if not route:
-            raise Exception('addController: no route from', c0, 'to',
-                             remoteIP )
+            raise Exception('addController: no route from', controller,
+                            'to', remoteIP )
         intf = route.split()[ 1 ].strip()
         debug( 'adding', intf, 'to', controller )
         Intf( intf, node=controller ).updateIP()
