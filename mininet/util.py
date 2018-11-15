@@ -66,7 +66,7 @@ def oldQuietRun( *cmd ):
        cmd: list of command params"""
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
-        if isinstance( cmd, str ):
+        if isinstance( cmd, BaseString ):
             cmd = cmd.split( ' ' )
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
@@ -107,7 +107,7 @@ def errRun( *cmd, **kwargs ):
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
     # Allow passing in a list or a string
-    if isinstance( cmd, str ) and not shell:
+    if isinstance( cmd, BaseString ) and not shell:
         cmd = cmd.split( ' ' )
         cmd = [ str( arg ) for arg in cmd ]
     elif isinstance( cmd, list ) and shell:
