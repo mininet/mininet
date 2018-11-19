@@ -91,6 +91,7 @@ import re
 import select
 import signal
 import random
+import subprocess
 
 from time import sleep
 from itertools import chain, groupby
@@ -558,6 +559,27 @@ class Mininet( object ):
         info( '\n' )
         if self.waitConn:
             self.waitConnected()
+
+    def dilateEmulation( self, tdf ):
+        "Dilate all hosts to a time factor of tdf"
+        pids_str = ''
+        pids_list = []
+        for host in self.hosts:
+            pids_str += ' %s' % host.pid
+            pids_list.append(int(host.pid))
+        cmd_str = 'dilate_all_procs -t %d -p %s' % (tdf * 1000, pids_str)
+        subprocess.check_output(cmd_str, shell=True)
+        info( '*** Check dilate result:\n' )
+        for pid in pids_list:
+            info( '> cat /proc/%d/dilation => ' % pid )
+            subprocess.call('cat /proc/%d/dilation' % pid, shell=True)
+	info( '*** Dilate mininet with TDF %d\n' % tdf)
+
+    def showDilation( self ):
+        info( '*** Dilation * 1000 for network hosts\n' )
+        for host in self.hosts:
+            subprocess.check_call('cat /proc/%d/dilation' % host.pid, shell=True)
+        info('\n')
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
