@@ -159,9 +159,10 @@ function mn_deps {
 			ethtool help2man python-pyflakes python3-pylint \
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
-        $install gcc make socat psmisc xterm ssh iperf iproute2 telnet \
+        $install gcc make socat psmisc xterm ssh iperf telnet \
                  cgroup-bin ethtool help2man pyflakes pylint pep8 \
                  ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
+        $install iproute2 || $install iproute
     fi
 
     echo "Installing Mininet core"
