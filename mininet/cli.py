@@ -29,6 +29,8 @@ from subprocess import call
 from cmd import Cmd
 from os import isatty
 from select import poll, POLLIN
+import select
+import errno
 import sys
 import time
 import os
@@ -459,6 +461,13 @@ class CLI( Cmd ):
                 # it's possible to interrupt ourselves after we've
                 # read data but before it has been printed.
                 node.sendInt()
+            except select.error as e:
+                # pylint: disable=unpacking-non-sequence
+                errno_, errmsg = e.args
+                # pylint: enable=unpacking-non-sequence
+                if errno_ != errno.EINTR:
+                    error( "select.error: %d, %s" % (errno_, errmsg) )
+                    node.sendInt()
 
     def precmd( self, line ):
         "allow for comments in the cli"
