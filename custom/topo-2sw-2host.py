@@ -13,11 +13,8 @@ from mininet.topo import Topo
 class MyTopo( Topo ):
     "Simple topology example."
 
-    def __init__( self ):
+    def build( self ):
         "Create custom topo."
-
-        # Initialize topology
-        Topo.__init__( self )
 
         # Add hosts and switches
         leftHost = self.addHost( 'h1' )
