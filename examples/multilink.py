@@ -21,7 +21,7 @@ def runMultiLink():
 class simpleMultiLinkTopo( Topo ):
     "Simple topology with multiple links"
 
-    def build( self, n, **kwargs ):
+    def build( self, n, **_kwargs ):
         h1, h2 = self.addHost( 'h1' ), self.addHost( 'h2' )
         s1 = self.addSwitch( 's1' )
 

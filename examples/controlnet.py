@@ -100,7 +100,7 @@ class MininetFacade( object ):
 
 class ControlNetwork( Topo ):
     "Control Network Topology"
-    def build( self, n, dataController=DataController, **kwargs ):
+    def build( self, n, dataController=DataController, **_kwargs ):
         """n: number of data network controller nodes
            dataController: class for data network controllers"""
         # Connect everything to a single switch
