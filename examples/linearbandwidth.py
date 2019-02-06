@@ -38,11 +38,7 @@ flush = sys.stdout.flush
 class LinearTestTopo( Topo ):
     "Topology for a string of N hosts and N-1 switches."
 
-    def __init__( self, N, **params ):
-
-        # Initialize topology
-        Topo.__init__( self, **params )
-
+    def build( self, N, **params ):
         # Create switches and hosts
         hosts = [ self.addHost( 'h%s' % h )
                   for h in irange( 1, N ) ]
