@@ -347,15 +347,20 @@ function ubuntuOvs {
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
             DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
+    # Install packages
+    if [ -e libopenvswitch_$OVS_RELEASE*.deb ]; then
+        $pkginst libopenvswitch_$OVS_RELEASE*.deb 2>/dev/null
+    fi
     for pkg in common datapath-dkms pki switch; do
         pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
         echo "Installing $pkg"
         $pkginst $pkg
     done
-    if $pkginst openvswitch-controller_$OVS_RELEASE*.deb 2>/dev/null; then
-        echo "Ignoring error installing openvswitch-controller"
+    if [ -e openvswitch-controller_$OVS_RELEASE*.deb ]; then
+        $pkginst openvswitch-controller_$OVS_RELEASE*.deb 2>/dev/null
     fi
-
+    # Ubuntu/Debian will mask a service if you uninstall it
+    sudo systemctl unmask openvswitch-switch || true
     /sbin/modinfo openvswitch
     sudo ovs-vsctl show
     # Switch can run on its own, but
