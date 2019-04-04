@@ -388,6 +388,10 @@ class MininetRunner( object ):
                   listenPort=opts.listenport )
 
         if opts.ensure_value( 'nat', False ):
+            with open( '/etc/resolv.conf' ) as f:
+                if 'nameserver 127.' in f.read():
+                    warn( '*** Warning: loopback address in /etc/resolv.conf '
+                          'may break host DNS over NAT\n')
             mn.addNAT( *opts.nat_args, **opts.nat_kwargs ).configDefault()
 
         # --custom files can set CLI or change mininet.cli.CLI
