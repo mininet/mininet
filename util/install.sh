@@ -409,7 +409,7 @@ function ovs {
         # Switch can run on its own, but
         # Mininet should control the controller
         # This appears to only be an issue on Ubuntu/Debian
-        if sudo service $OVSC stop; then
+        if sudo service $OVSC stop 2>/dev/null; then
             echo "Stopped running controller"
         fi
         if [ -e /etc/init.d/$OVSC ]; then
