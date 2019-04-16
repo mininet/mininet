@@ -171,6 +171,11 @@ def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
+def which(cmd, **kwargs ):
+    "Run a command and return merged stdout and stderr"
+    out, _, ret = errRun( ["which", cmd], stderr=STDOUT, **kwargs )
+    return out.rstrip() if ret == 0 else None
+
 # pylint: enable=maybe-no-member
 
 def isShellBuiltin( cmd ):
