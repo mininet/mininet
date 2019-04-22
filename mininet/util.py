@@ -181,7 +181,13 @@ def which(cmd, **kwargs ):
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
     if isShellBuiltin.builtIns is None:
-        isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
+        r = quietRun( 'bash -c enable' )
+        isShellBuiltin.builtIns = []
+        _builtIns = r.split('\n')
+        for item in _builtIns:
+            space = item.find( ' ' )
+            if space > 0:
+                isShellBuiltin.builtIns.append(item[space+1:])
     space = cmd.find( ' ' )
     if space > 0:
         cmd = cmd[ :space]
