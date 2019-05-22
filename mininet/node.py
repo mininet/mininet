@@ -370,6 +370,11 @@ class Node( object ):
         log = info if verbose else debug
         log( '*** %s : %s\n' % ( self.name, args ) )
         if self.shell:
+            self.shell.poll()
+            if self.shell.returncode is not None:
+                warn(" cmd: shell died on %s\n" % self.name)
+                self.shell = None
+                self.startShell()
             self.sendCmd( *args, **kwargs )
             return self.waitOutput( verbose )
         else:
