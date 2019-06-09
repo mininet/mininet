@@ -295,7 +295,7 @@ class TCIntf( Intf ):
             netemargs = '%s%s%s%s' % (
                 'delay %s ' % delay if delay is not None else '',
                 '%s ' % jitter if jitter is not None else '',
-                'loss %.5f ' % loss if loss is not None else '',
+                'loss %.5f ' % loss if (loss is not None and loss > 0) else '',
                 'limit %d' % max_queue_size if max_queue_size is not None
                 else '' )
             if netemargs:
