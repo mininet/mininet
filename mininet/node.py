@@ -460,7 +460,7 @@ class Node( object ):
 
     def defaultIntf( self ):
         "Return interface for lowest port"
-        ports = self.intfs.keys()
+        ports = [i for i in self.intfs.keys() if self.intfs[i].isUp()]
         if ports:
             return self.intfs[ min( ports ) ]
         else:
