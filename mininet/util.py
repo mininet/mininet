@@ -7,6 +7,7 @@ from time import sleep
 from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
+import shlex
 import re
 from fcntl import fcntl, F_GETFL, F_SETFL
 from os import O_NONBLOCK
@@ -222,21 +223,29 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
         runCmd( 'ip link del ' + intf1 )
         runCmd2( 'ip link del ' + intf2 )
     # Create new pair
-    netns = 1 if not node2 else node2.pid
+    netns1 = node1.pid
+    netns2 = 1 if not node2 else node2.pid
     if addr1 is None and addr2 is None:
-        cmdOutput = runCmd( 'ip link add name %s '
-                            'type veth peer name %s '
-                            'netns %s' % ( intf1, intf2, netns ) )
+        cmd = 'ip link add name %s netns %s ' \
+              'type veth peer name %s netns %s ' \
+              % ( intf1, netns1, intf2, netns2 )
     else:
-        cmdOutput = runCmd( 'ip link add name %s '
-                            'address %s '
-                            'type veth peer name %s '
-                            'address %s '
-                            'netns %s' %
-                            (  intf1, addr1, intf2, addr2, netns ) )
-    if cmdOutput:
+        cmd = 'ip link add name %s address %s netns %s ' \
+              'type veth peer name %s address %s netns %s ' \
+              % ( intf1, addr1, netns1, intf2, addr2, netns2 )
+    _, err, ret = errRun(shlex.split(cmd))
+    # iproute2 changes behaviour in release 5.1
+    # the following workaround should be removed when issue
+    # in iproute2 was fixed
+    # [1] https://github.com/mininet/mininet/issues/884
+    # [2] https://lwn.net/Articles/783494/
+    if "No such device" in err:
+        debug( "Ignored error creating interface pair (%s,%s): %s " %
+                         ( intf1, intf2, err ) )
+        ret = 0
+    if ret:
         raise Exception( "Error creating interface pair (%s,%s): %s " %
-                         ( intf1, intf2, cmdOutput ) )
+                         ( intf1, intf2, err ) )
 
 def retry( retries, delaySecs, fn, *args, **keywords ):
     """Try something several times before giving up.
