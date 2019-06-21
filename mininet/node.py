@@ -57,6 +57,7 @@ import pty
 import re
 import signal
 import select
+import shlex
 from subprocess import Popen, PIPE
 from time import sleep
 
@@ -126,23 +127,23 @@ class Node( object ):
         return node or cls.inToNode.get( fd )
 
     # Command support via shell process in namespace
-    def startShell( self, mnopts=None ):
+    def startShell( self, mnopts=None, cmd=None ):
         "Start a shell process for running commands"
         if self.shell:
             error( "%s: shell is already running\n" % self.name )
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
-        # (p)rint pid, and run in (n)amespace
-        opts = '-cd' if mnopts is None else mnopts
-        if self.inNamespace:
-            opts += 'n'
-        # bash -i: force interactive
-        # -s: pass $* to shell, and make process easy to find in ps
-        # prompt is set to sentinel chr( 127 )
-        cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
+        if cmd is None:
+            # mnexec: (c)lose descriptors, (d)etach from tty,
+            # (p)rint pid, and run in (n)amespace
+            opts = '-cd' if mnopts is None else mnopts
+            if self.inNamespace:
+                opts += 'n'
+            # bash -i: force interactive
+            # -s: pass $* to shell, and make process easy to find in ps
+            # prompt is set to sentinel chr( 127 )
+            cmd = [ 'mnexec', opts, 'env', 'PS1=' + chr( 127 ),
                 'bash', '--norc', '--noediting',
                 '-is', 'mininet:' + self.name ]
-
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
@@ -854,6 +855,122 @@ class CPULimitedHost( Host ):
         mountCgroups()
         cls.inited = True
 
+class DockerHost(Node):
+    """
+    This class provides docker containers to be used as host
+    in the emulated network
+
+    The images should have the following packages installed:
+    - iproute2
+    - iperf
+    """
+
+    from docker import from_env
+    _dcli = from_env()
+
+    _docker_args_default = {
+        "image": "alpine",
+        "tty": True,
+        "detach": True,
+        "stdin_open": True,
+        "auto_remove": True,
+        "network_mode": "bridge",
+    }
+
+    _shell_cmd_default = ["sh", "-is"]
+
+    @classmethod
+    def setDefaultDockerArgs(cls, **kwargs):
+        """
+        Set the default values for all keyword arguments supported
+        by function 'run' [1] of docker-py library
+        [1] https://docker-py.readthedocs.io/en/stable/containers.html
+        """
+        cls._docker_args_default.update(kwargs)
+
+    @classmethod
+    def setDefaultShellCmd(cls, cmd):
+        """
+        Set the default shell command to be launched inside the container
+        when spawning a new shell
+        :param cmd: command line as string
+        """
+        cls._shell_cmd_default = shlex.split(cmd)
+
+    def __init__(self, name, shell_cmd=None, image=None, docker_args=None, **kwargs):
+        if shell_cmd is None:
+            self.shell_cmd = list(self.__class__._shell_cmd_default)
+        else:
+            self.shell_cmd = shlex.split(shell_cmd)
+
+        self.docker_args = dict(self.__class__._docker_args_default)
+
+        if docker_args is not None:
+            self.docker_args.update(docker_args)
+
+        if image is not None:
+            self.docker_args["image"] = image
+
+        if self.docker_args["image"] is None:
+            raise ValueError("No image name specified!")
+
+        self.container = None
+        self.startContainer(name)
+        info("Started container for host " + str(name)+ "\n")
+
+        super().__init__(name, **kwargs)
+
+    def startContainer(self, name=None):
+        """
+        Start a new container and wait for it to start successfully, the default
+        image to be used can be specified via 'setDefaultDockerArgs' as an
+        optional constructor argument
+        """
+        self.container = self.__class__._dcli.containers.run(**self.docker_args)
+        debug("Waiting for container " + name + " to start up")
+        while not self.container.attrs["State"]["Running"]:
+            sleep(0.1)
+            self.container.reload()  # refresh information in 'attrs'
+
+    def startShell(self):
+        """
+        Spawn a shell, use 'setDefaultShellCmd' to modify the shell command line
+        """
+        pid = self.container.attrs["State"]["Pid"]
+        # TODO: look'ee here!
+        # cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd + ["mininet:", self.name]
+        cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd
+        super().startShell(cmd=cmd)
+
+    def read(self, *args, **kwargs):
+        # The default shell of alpine linux (ash) sends '\x1b[6n' (get
+        # cursor position) after PS1, the following code strips all characters
+        # after the sentinel chr(127) as a workaround for the inherited 
+        # functions of class 'Node'
+        buffer = super().read(*args, **kwargs)
+        i = buffer.rfind(chr(127)) + 1
+        return buffer[0:i] if i else buffer
+
+    def cmd(self, *args, **kwargs):
+        # Using 'ifconfig' for bringing devices up in subprocesses leads
+        # to the activation of ax25 network devices on some systems,
+        # iproute2 doesn't have this issue, we use the following workaround
+        # until mininet is fully refactored to use iproute2
+        if args[-1].endswith("up"):
+            args = shlex.split(" ".join(args))
+            if len(args) == 4:
+                args = shlex.split("ip link set " + args[1] + " up && ip addr add " + args[2] + " dev " + args[1])
+            elif len(args) == 3:
+                args = shlex.split("ip link set " + args[1] + " up")
+        return super().cmd(*args, **kwargs)
+
+    def terminate(self):
+        from docker.errors import NotFound
+        try:
+            self.container.stop()
+        except NotFound:
+            pass
+        super().terminate()
 
 # Some important things to note:
 #
