@@ -165,8 +165,6 @@ function mn_deps {
         $install iproute2 || $install iproute
     fi
 
-    eval ${PYTHON} -m pip install docker
-
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
     sudo PYTHON=${PYTHON} make install
