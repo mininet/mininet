@@ -12,7 +12,7 @@ matrix:
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq vlan
+- sudo apt-get install -qq vlan python-docker python3-docker
 - PYTHON=`which python` util/install.sh -n
 
 install:

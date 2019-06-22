@@ -207,7 +207,8 @@ int main(int argc, char *argv[])
             ns[2] = "uts";
             ns[3] = "net";
             ns[4] = "mnt";
-            for (int i=0; i<5; ++i) {
+            int i;
+            for (i=0; i<5; ++i) {
                 if (nsenter(pid, ns[i]) != 0) {
                     return 1;
                 }
