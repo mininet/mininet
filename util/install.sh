@@ -164,7 +164,8 @@ function mn_deps {
                  ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
         $install iproute2 || $install iproute
     fi
-    ${PYTHON} -m pip install docker
+
+    eval ${PYTHON} -m pip install docker
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
