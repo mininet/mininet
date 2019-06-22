@@ -19,7 +19,6 @@ before_install:
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
 - pip install pexpect || pip3 install pexpect
-- pip install docker
 - util/install.sh -nfvw
 
 script:
