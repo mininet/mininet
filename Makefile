@@ -26,14 +26,14 @@ codecheck: $(PYSRC)
 	-echo "Running code check"
 	util/versioncheck.py
 	pyflakes $(PYSRC)
-	python `which pylint` --rcfile=.pylint $(PYSRC)
+	pylint --rcfile=.pylint $(PYSRC)
 #	Exclude miniedit from pep8 checking for now
 	pep8 --repeat --ignore=$(P8IGN) `ls $(PYSRC) | grep -v miniedit.py`
 
 errcheck: $(PYSRC)
 	-echo "Running check for errors only"
 	pyflakes $(PYSRC)
-	python `which pylint` -E --rcfile=.pylint $(PYSRC)
+	pylint -E --rcfile=.pylint $(PYSRC)
 
 test: $(MININET) $(TEST)
 	-echo "Running tests"
