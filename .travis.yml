@@ -1,6 +1,9 @@
 language: python
 sudo: required
 
+virtualenv:
+  system_site_packages: true
+
 matrix:
   include:
     - dist: trusty
