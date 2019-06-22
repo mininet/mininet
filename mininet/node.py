@@ -866,9 +866,9 @@ class DockerHost(Node):
     """
 
     from docker import from_env
-    _dcli = from_env()
+    dcli = from_env()
 
-    _docker_args_default = {
+    docker_args_default = {
         "image": "alpine",
         "tty": True,
         "detach": True,
@@ -877,7 +877,7 @@ class DockerHost(Node):
         "network_mode": "bridge",
     }
 
-    _shell_cmd_default = ["sh", "-is"]
+    shell_cmd_default = ["sh", "-is"]
 
     @classmethod
     def setDefaultDockerArgs(cls, **kwargs):
@@ -886,7 +886,7 @@ class DockerHost(Node):
         by function 'run' [1] of docker-py library
         [1] https://docker-py.readthedocs.io/en/stable/containers.html
         """
-        cls._docker_args_default.update(kwargs)
+        cls.docker_args_default.update(kwargs)
 
     @classmethod
     def setDefaultShellCmd(cls, cmd):
@@ -895,15 +895,16 @@ class DockerHost(Node):
         when spawning a new shell
         :param cmd: command line as string
         """
-        cls._shell_cmd_default = shlex.split(cmd)
+        cls.shell_cmd_default = shlex.split(cmd)
 
-    def __init__(self, name, shell_cmd=None, image=None, docker_args=None, **kwargs):
+    def __init__(self, name, shell_cmd=None, image=None, 
+                 docker_args=None, **kwargs):
         if shell_cmd is None:
-            self.shell_cmd = list(self.__class__._shell_cmd_default)
+            self.shell_cmd = list(self.__class__.shell_cmd_default)
         else:
             self.shell_cmd = shlex.split(shell_cmd)
 
-        self.docker_args = dict(self.__class__._docker_args_default)
+        self.docker_args = dict(self.__class__.docker_args_default)
 
         if docker_args is not None:
             self.docker_args.update(docker_args)
@@ -922,12 +923,12 @@ class DockerHost(Node):
 
     def startContainer(self, name=None):
         """
-        Start a new container and wait for it to start successfully, the default
-        image to be used can be specified via 'setDefaultDockerArgs' as an
-        optional constructor argument
+        Start a new container and wait for it to start successfully, the
+        default image to be used can be specified via 'setDefaultDockerArgs'
+        as an optional constructor argument
         """
-        self.__class__._dcli.images.get(self.docker_args["image"])  # raises docker.errors.ImageNotFound
-        self.container = self.__class__._dcli.containers.run(**self.docker_args)
+        self.__class__.dcli.images.get(self.docker_args["image"])
+        self.container = self.__class__.dcli.containers.run(**self.docker_args)
         debug("Waiting for container " + name + " to start up")
         while not self.container.attrs["State"]["Running"]:
             sleep(0.1)
@@ -935,10 +936,12 @@ class DockerHost(Node):
 
     def startShell(self):
         """
-        Spawn a shell, use 'setDefaultShellCmd' to modify the shell command line
+        Spawn a shell, use 'setDefaultShellCmd' to modify
+        the shell command line
         """
         pid = self.container.attrs["State"]["Pid"]
-        cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd
+        cmd = ["mnexec", "-cd", "-e", str(pid), 
+               "env", "PS1=" + chr(127)] + self.shell_cmd
         super(DockerHost, self).startShell(cmd=cmd)
 
     def read(self, *args, **kwargs):
@@ -958,7 +961,9 @@ class DockerHost(Node):
         if args[-1].endswith("up"):
             args = shlex.split(" ".join(args))
             if len(args) == 4:
-                args = shlex.split("ip link set " + args[1] + " up && ip addr add " + args[2] + " dev " + args[1])
+                args = shlex.split("ip link set " + args[1]
+                                   + " up && ip addr add " + args[2] 
+                                   + " dev " + args[1])
             elif len(args) == 3:
                 args = shlex.split("ip link set " + args[1] + " up")
         return super(DockerHost, self).cmd(*args, **kwargs)
