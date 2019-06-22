@@ -12,12 +12,13 @@ matrix:
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq vlan python-docker python3-docker
+- sudo apt-get install -qq vlan
 - PYTHON=`which python` util/install.sh -n
 
 install:
 - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
 - pip install pexpect || pip3 install pexpect
+- pip install docker || pip3 install docker
 - util/install.sh -nfvw
 
 script:
