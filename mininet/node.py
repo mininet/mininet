@@ -926,6 +926,7 @@ class DockerHost(Node):
         image to be used can be specified via 'setDefaultDockerArgs' as an
         optional constructor argument
         """
+        self.__class__._dcli.images.get(self.docker_args["image"])  # raises docker.errors.ImageNotFound
         self.container = self.__class__._dcli.containers.run(**self.docker_args)
         debug("Waiting for container " + name + " to start up")
         while not self.container.attrs["State"]["Running"]:
@@ -937,15 +938,13 @@ class DockerHost(Node):
         Spawn a shell, use 'setDefaultShellCmd' to modify the shell command line
         """
         pid = self.container.attrs["State"]["Pid"]
-        # TODO: look'ee here!
-        # cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd + ["mininet:", self.name]
         cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd
         super().startShell(cmd=cmd)
 
     def read(self, *args, **kwargs):
         # The default shell of alpine linux (ash) sends '\x1b[6n' (get
         # cursor position) after PS1, the following code strips all characters
-        # after the sentinel chr(127) as a workaround for the inherited 
+        # after the sentinel chr(127) as a workaround for the inherited
         # functions of class 'Node'
         buffer = super().read(*args, **kwargs)
         i = buffer.rfind(chr(127)) + 1
