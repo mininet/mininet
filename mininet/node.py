@@ -918,7 +918,7 @@ class DockerHost(Node):
         self.startContainer(name)
         info("Started container for host " + str(name)+ "\n")
 
-        super().__init__(name, **kwargs)
+        super(DockerHost, self).__init__(name, **kwargs)
 
     def startContainer(self, name=None):
         """
@@ -939,14 +939,14 @@ class DockerHost(Node):
         """
         pid = self.container.attrs["State"]["Pid"]
         cmd = ["mnexec", "-cd", "-e", str(pid), "env", "PS1=" + chr(127)] + self.shell_cmd
-        super().startShell(cmd=cmd)
+        super(DockerHost, self).startShell(cmd=cmd)
 
     def read(self, *args, **kwargs):
         # The default shell of alpine linux (ash) sends '\x1b[6n' (get
         # cursor position) after PS1, the following code strips all characters
         # after the sentinel chr(127) as a workaround for the inherited
         # functions of class 'Node'
-        buffer = super().read(*args, **kwargs)
+        buffer = super(DockerHost, self).read(*args, **kwargs)
         i = buffer.rfind(chr(127)) + 1
         return buffer[0:i] if i else buffer
 
@@ -961,7 +961,7 @@ class DockerHost(Node):
                 args = shlex.split("ip link set " + args[1] + " up && ip addr add " + args[2] + " dev " + args[1])
             elif len(args) == 3:
                 args = shlex.split("ip link set " + args[1] + " up")
-        return super().cmd(*args, **kwargs)
+        return super(DockerHost, self).cmd(*args, **kwargs)
 
     def terminate(self):
         from docker.errors import NotFound
@@ -969,7 +969,7 @@ class DockerHost(Node):
             self.container.stop()
         except NotFound:
             pass
-        super().terminate()
+        super(DockerHost, self).terminate()
 
 # Some important things to note:
 #
