@@ -17,8 +17,7 @@ before_install:
 - PYTHON=`which python` util/install.sh -n
 
 install:
-- pip install docker
-- bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
+# - bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
 - pip install pexpect || pip3 install pexpect
 - util/install.sh -nfvw
 

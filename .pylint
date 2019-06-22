@@ -13,7 +13,7 @@
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-init-hook="import sys, os; sys.path.insert(0, os.environ['VIRTUAL_ENV']); f=os.sep.join((os.environ['VIRTUAL_ENV'], 'bin', 'activate_this.py')); exec(open(f).read(), dict(__file__=f))"
+#init-hook=
 
 # Profiled execution.
 profile=no
