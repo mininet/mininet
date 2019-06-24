@@ -234,6 +234,17 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
                             'address %s '
                             'netns %s' %
                             (  intf1, addr1, intf2, addr2, netns ) )
+
+    # iproute2 changes behaviour in release 5.1
+    # the following workaround should be removed when
+    # issue in iproute2 was fixed
+    # [1] https://github.com/mininet/mininet/issues/884
+    # [2] https://lwn.net/Articles/783494/
+    if "No such device" in cmdOutput:
+        debug( "Ignored error creating interface pair (%s,%s): %s " %
+                         ( intf1, intf2, cmdOutput ) )
+        cmdOutput = ""
+
     if cmdOutput:
         raise Exception( "Error creating interface pair (%s,%s): %s " %
                          ( intf1, intf2, cmdOutput ) )
