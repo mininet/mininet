@@ -46,7 +46,8 @@ class CLI( Cmd ):
 
     prompt = 'mininet> '
 
-    def __init__( self, mininet, stdin=sys.stdin, script=None ):
+    def __init__( self, mininet, stdin=sys.stdin, script=None,
+                  *args, **kwargs ):
         """Start and run interactive or batch mode CLI
            mininet: Mininet network object
            stdin: standard input for CLI
@@ -55,11 +56,10 @@ class CLI( Cmd ):
         # Local variable bindings for py command
         self.locals = { 'net': mininet }
         # Attempt to handle input
-        self.stdin = stdin
         self.inPoller = poll()
         self.inPoller.register( stdin )
         self.inputFile = script
-        Cmd.__init__( self )
+        Cmd.__init__( self, *args, stdin=stdin, **kwargs )
         info( '*** Starting CLI:\n' )
 
         if self.inputFile:
