@@ -881,7 +881,7 @@ class CPULimitedHost( Host ):
 class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
-    
+
     isSetup = False # Automatic class setup support
     portBase = 1  # Switches start with port 1 in OpenFlow
     dpidLen = 16  # digits in dpid passed to switch
