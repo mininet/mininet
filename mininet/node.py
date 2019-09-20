@@ -864,7 +864,7 @@ class Switch( Node ):
     portBase = 1  # Switches start with port 1 in OpenFlow
     dpidLen = 16  # digits in dpid passed to switch
 
-    # Prevent superclass from skipping switch setup
+    # Prevents superclass from skipping OVSSwitch setup() call
     isSetup = False
 
     def __init__( self, name, dpid=None, opts='', listenPort=None, **params):
@@ -1035,6 +1035,9 @@ class UserSwitch( Switch ):
 
 class OVSSwitch( Switch ):
     "Open vSwitch switch. Depends on ovs-vsctl."
+
+    # Prevents superclass from skipping setup() call
+    isSetup = False
 
     def __init__( self, name, failMode='secure', datapath='kernel',
                   inband=False, protocols=None,
