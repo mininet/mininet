@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Mininet install script for Ubuntu (and Debian Wheezy+)
-# Brandon Heller (brandonh@stanford.edu)
+# Mininet install script for Ubuntu and Debian
+# Original author: Brandon Heller
 
 # Fail on error
 set -e
@@ -102,14 +102,26 @@ function version_ge {
     [ "$1" == "$latest" ]
 }
 
-# Attempt to identify Python version
+# Attempt to detect Python version
 PYTHON=${PYTHON:-python}
-if $PYTHON --version |& grep 'Python 2' > /dev/null; then
-    PYTHON_VERSION=2; PYPKG=python
-else
-    PYTHON_VERSION=3; PYPKG=python3
+PRINTVERSION='import sys; print(sys.version_info)'
+PYTHON_VERSION=unknown
+for python in $PYTHON python2 python3; do
+    if $python -c "$PRINTVERSION" |& grep 'major=2'; then
+        PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
+        break
+    elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
+        PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
+        break
+    fi
+done
+if [ "$PYTHON_VERSION" == unknown ]; then
+    echo "Can't find a working python command ('$PYTHON' doesn't work.)"
+    echo "You may wish to export PYTHON or install a working 'python'."
+    exit 1
 fi
-echo "${PYTHON} is version ${PYTHON_VERSION}"
+
+echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
