@@ -179,7 +179,7 @@ def findiso( flavor ):
     url = isoURLs[ flavor ]
     name = path.basename( url )
     iso = path.join( VMImageDir, name )
-    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
+    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0o777 != 0o444 ):
         log( '* Retrieving', url )
         run( 'curl -C - -o %s %s' % ( iso, url ) )
         # Make sure the file header/type is something reasonable like
