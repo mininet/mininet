@@ -47,7 +47,6 @@ else:
     from tkinter import font as tkFont
     from tkinter import simpledialog as tkSimpleDialog
     from tkinter import filedialog as tkFileDialog
-
 # pylint: enable=import-error
 
 import re
@@ -3221,7 +3220,6 @@ class MiniEdit( Frame ):
         else:
             # Add or modify global variable or class
             globals()[ name ] = value
-
 
     def parseCustomFile( self, fileName ):
         "Parse custom file and add params before parsing cmd-line options."
