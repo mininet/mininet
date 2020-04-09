@@ -157,7 +157,7 @@ def errRun( *cmd, **kwargs ):
         for fd, event in readable:
             f = fdToFile[ fd ]
             decoder = fdToDecoder[ fd ]
-            if event & POLLIN:
+            if event & ( POLLIN | POLLHUP ):
                 data = decoder.decode( f.read( 1024 ) )
                 if echo:
                     output( data )
@@ -169,7 +169,7 @@ def errRun( *cmd, **kwargs ):
                     err += data
                     if data == '':
                         errDone = True
-            else:  # POLLHUP or something unexpected
+            else:  # something unexpected
                 if f == popen.stdout:
                     outDone = True
                 elif f == popen.stderr:
