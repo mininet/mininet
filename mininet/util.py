@@ -451,7 +451,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
         fdToDecoder[ fd ] = getincrementaldecoder()
-        poller.register( fd, POLLIN | POLLHUP )
+        poller.register( fd, POLLIN )
         flags = fcntl( fd, F_GETFL )
         fcntl( fd, F_SETFL, flags | O_NONBLOCK )
     while popens:
@@ -461,7 +461,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
                 host = fdToHost[ fd ]
                 decoder = fdToDecoder[ fd ]
                 popen = popens[ host ]
-                if event & POLLIN or event & POLLHUP:
+                if event & ( POLLIN | POLLHUP ):
                     while True:
                         try:
                             f = popen.stdout
