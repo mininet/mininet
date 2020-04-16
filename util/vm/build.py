@@ -179,7 +179,7 @@ def findiso( flavor ):
     url = isoURLs[ flavor ]
     name = path.basename( url )
     iso = path.join( VMImageDir, name )
-    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
+    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0o777 != 0o444 ):
         log( '* Retrieving', url )
         run( 'curl -C - -o %s %s' % ( iso, url ) )
         # Make sure the file header/type is something reasonable like
@@ -190,7 +190,7 @@ def findiso( flavor ):
             raise Exception( 'findiso: could not download iso from ' + url )
         # Write-protect iso, signaling it is complete
         log( '* Write-protecting iso', iso)
-        os.chmod( iso, 0444 )
+        os.chmod( iso, 0o444 )
     log( '* Using iso', iso )
     return iso
 
@@ -222,7 +222,7 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
     "Extract kernel and initrd from base image"
     kernel = path.join( imageDir, flavor + '-vmlinuz' )
     initrd = path.join( imageDir, flavor + '-initrd' )
-    if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0777 ) == 0444:
+    if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0o777 ) == 0o444:
         # If kernel is there, then initrd should also be there
         return kernel, initrd
     log( '* Extracting kernel to', kernel )
@@ -252,8 +252,8 @@ def findBaseImage( flavor, size='8G' ):
     image = path.join( VMImageDir, flavor + '-base.qcow2' )
     if path.exists( image ):
         # Detect race condition with multiple builds
-        perms = stat( image )[ ST_MODE ] & 0777
-        if perms != 0444:
+        perms = stat( image )[ ST_MODE ] & 0o777
+        if perms != 0o444:
             raise Exception( 'Error - base image %s is writable.' % image +
                              ' Are multiple builds running? if not,'
                              ' remove %s and try again.' % image )
@@ -266,7 +266,7 @@ def findBaseImage( flavor, size='8G' ):
         installUbuntu( iso, image )
         # Write-protect image, also signaling it is complete
         log( '* Write-protecting image', image)
-        os.chmod( image, 0444 )
+        os.chmod( image, 0o444 )
     kernel, initrd = extractKernel( image, flavor )
     log( '* Using base image', image, 'and kernel', kernel )
     return image, kernel, initrd
