@@ -47,7 +47,7 @@ else:
     from tkinter import font as tkFont
     from tkinter import simpledialog as tkSimpleDialog
     from tkinter import filedialog as tkFileDialog
-    unicode = str
+    unicode = str # pylint: disable=redefined-builtin
 # pylint: enable=import-error
 
 import re
