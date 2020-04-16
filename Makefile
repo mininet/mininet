@@ -27,7 +27,7 @@ codecheck: $(PYSRC)
 	-echo "Running code check"
 	util/versioncheck.py
 	pyflakes $(PYSRC)
-	python -m pylint --rcfile=.pylint $(PYSRC)
+	pylint --rcfile=.pylint $(PYSRC)
 #	Exclude miniedit from pep8 checking for now
 	pep8 --repeat --ignore=$(P8IGN) `ls $(PYSRC) | grep -v miniedit.py`
 
