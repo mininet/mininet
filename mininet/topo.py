@@ -34,7 +34,7 @@ class MultiGraph( object ):
            key: optional key
            attr_dict: optional attribute dict
            attrs: more attributes
-           warning: udpates attr_dict with attrs"""
+           warning: updates attr_dict with attrs"""
         attr_dict = {} if attr_dict is None else attr_dict
         attr_dict.update( attrs )
         self.node.setdefault( src, {} )
