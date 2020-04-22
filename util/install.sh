@@ -187,7 +187,7 @@ function mn_deps {
 # Install Mininet developer dependencies
 function mn_dev {
     echo "Installing Mininet developer dependencies"
-    $install doxygen doxypy texlive-fonts-recommended
+    $install doxygen doxypypy texlive-fonts-recommended
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
