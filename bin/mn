@@ -46,6 +46,7 @@ from mininet.examples.cluster import ( MininetCluster, RemoteHost,
                                        ClusterCleanup )
 from mininet.examples.clustercli import ClusterCLI
 
+PLACEMENTDEF = 'block'
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
 # built in topologies, created only when run
@@ -239,6 +240,7 @@ class MininetRunner( object ):
         addDictOption( opts, CONTROLLERS, [], 'controller', action='append' )
         addDictOption( opts, LINKS, LINKDEF, 'link' )
         addDictOption( opts, TOPOS, TOPODEF, 'topo' )
+        addDictOption( opts, PLACEMENT, PLACEMENTDEF, 'placement' )
 
         opts.add_option( '--clean', '-c', action='store_true',
                          default=False, help='clean and exit' )
@@ -287,11 +289,6 @@ class MininetRunner( object ):
         opts.add_option( '--cluster', type='string', default=None,
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
-        opts.add_option( '--placement', type='choice',
-                         choices=list( PLACEMENT.keys() ), default='block',
-                         metavar='block|random',
-                         help=( 'node placement for --cluster '
-                                '(experimental!) ' ) )
 
         self.options, self.args = opts.parse_args()
 
@@ -372,6 +369,8 @@ class MininetRunner( object ):
             error( "Please specify --innamespace OR --cluster\n" )
             exit()
         Net = MininetWithControlNet if opts.innamespace else Mininet
+        # Import the custom placement if in the custom file
+        placement = customClass( PLACEMENT, opts.placement )
         if opts.cluster:
             warn( '*** WARNING: Experimental cluster mode!\n'
                   '*** Using RemoteHost, RemoteOVSSwitch, RemoteLink\n' )
