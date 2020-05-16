@@ -1401,7 +1401,7 @@ class MiniEdit( Frame ):
 
     def addNode( self, node, nodeNum, x, y, name=None):
         "Add a new node to our canvas."
-        if 'Switch' == node:
+        if 'Switch' == node or 'LegacySwitch' == node or 'LegacyRouter' == node:
             self.switchCount += 1
         if 'Host' == node:
             self.hostCount += 1
