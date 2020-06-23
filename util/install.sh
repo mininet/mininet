@@ -103,7 +103,7 @@ function version_ge {
 }
 
 # Attempt to detect Python version
-PYTHON=${PYTHON:-python}
+PYTHON=${PYTHON:-python3}
 PRINTVERSION='import sys; print(sys.version_info)'
 PYTHON_VERSION=unknown
 for python in $PYTHON python2 python3; do
