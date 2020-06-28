@@ -184,7 +184,7 @@ function mn_deps {
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
-    sudo make PYTHON=${PYTHON} install
+    sudo PYTHON=${PYTHON} make install
     popd
 }
 
