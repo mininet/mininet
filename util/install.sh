@@ -106,7 +106,7 @@ function version_ge {
 PYTHON=${PYTHON:-python3}
 PRINTVERSION='import sys; print(sys.version_info)'
 PYTHON_VERSION=unknown
-for python in $PYTHON python3 python2; do
+for python in $PYTHON python2 python3; do
     if $python -c "$PRINTVERSION" |& grep 'major=2'; then
         PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
         break
@@ -122,10 +122,6 @@ if [ "$PYTHON_VERSION" == unknown ]; then
 fi
 
 echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
-
-function pip {
-	$PYTHON -m pip $*
-}
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
@@ -496,9 +492,9 @@ function ryu {
     cd ryu
 
     # install ryu
-    sudo -H ${PYTHON} -m pip install -r tools/pip-requires -r tools/optional-requires \
+    sudo pip install -r tools/pip-requires -r tools/optional-requires \
         -r tools/test-requires
-    sudo ${PYTHON} setup.py install
+    sudo python setup.py install
 
     # Add symbolic link to /usr/bin
     sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
