@@ -322,7 +322,7 @@ class Mininet( object ):
     # BL: We now have four ways to look up nodes
     # This may (should?) be cleaned up in the future.
     def getNodeByName( self, *args ):
-        "Return node(s) with given name(s)"
+        "Return node(s) with given name(s). To get a single node, pass a string. To get multiple nodes, pass multiple strings as arguments"
         if len( args ) == 1:
             return self.nameToNode[ args[ 0 ] ]
         return [ self.nameToNode[ n ] for n in args ]

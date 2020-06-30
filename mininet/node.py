@@ -286,9 +286,9 @@ class Node( object ):
             return self.pollOut.poll( timeoutms )
 
     def sendCmd( self, *args, **kwargs ):
-        """Send a command, followed by a command to echo a sentinel,
+        """Send a command, after which a command to echo a sentinel is automatically sent,
            and return without waiting for the command to complete.
-           args: command and arguments, or string
+           args: command and arguments, or string. To send arguments to the command, pass them as multiple strings to sendCmd
            printPid: print command's PID? (False)"""
         assert self.shell and not self.waiting
         printPid = kwargs.get( 'printPid', False )
@@ -368,7 +368,8 @@ class Node( object ):
 
     def cmd( self, *args, **kwargs ):
         """Send a command, wait for output, and return it.
-           cmd: string"""
+           *args: one or more strings passed as arguments to cmd(). The first string is treated as the command to be executed
+           on the node and subsequent strings are treated as arguments to the command"""
         verbose = kwargs.get( 'verbose', False )
         log = info if verbose else debug
         log( '*** %s : %s\n' % ( self.name, args ) )
@@ -928,7 +929,7 @@ class Switch( Node ):
         if not self.execed:
             return Node.sendCmd( self, *cmd, **kwargs )
         else:
-            error( '*** Error: %s has execed and cannot accept commands' %
+            error( '*** Error: %s has execeed and cannot accept commands' %
                    self.name )
 
     def connected( self ):
