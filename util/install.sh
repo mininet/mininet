@@ -482,22 +482,25 @@ function ryu {
     # install Ryu dependencies"
     $install autoconf automake g++ libtool python make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
-        $install gcc python-pip python-dev libffi-dev libssl-dev \
+        $install gcc ${PYTHON}-pip ${PYTHON}-dev libffi-dev libssl-dev \
             libxml2-dev libxslt1-dev zlib1g-dev
     fi
 
-    # fetch RYU
+    # fetch RYU from faucet: they have taken over Ryu code development
     cd $BUILD_DIR/
-    git clone git://github.com/osrg/ryu.git ryu
+    git clone git://github.com/faucetsdn/ryu.git ryu
     cd ryu
 
-    # install ryu
-    sudo pip install -r tools/pip-requires -r tools/optional-requires \
-        -r tools/test-requires
-    sudo python setup.py install
+    # install ryu dependencies
+    sudo -H ${PYTHON} -m pip install -r tools/pip-requires -r tools/optional-requires \
+         -r tools/test-requires
+	# build it as user: cleanup will be easier
+    ${PYTHON} setup.py build
+	# Install it: will create link to ryu-manager
+    sudo ${PYTHON} setup.py install
 
     # Add symbolic link to /usr/bin
-    sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
+    # sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
 }
 
 # Install NOX with tutorial files
