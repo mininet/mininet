@@ -556,6 +556,10 @@ class Node( object ):
            kwargs: any additional arguments for intf.setIP"""
         return self.intf( intf ).setIP( ip, prefixLen, **kwargs )
 
+    def IP6( self, intf=None ):
+        "Return IP6 address of a node or specific interface."
+        return self.intf( intf ).IP6()
+
     def IP( self, intf=None ):
         "Return IP address of a node or specific interface."
         return self.intf( intf ).IP()

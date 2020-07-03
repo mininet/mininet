@@ -3,6 +3,8 @@
 
 from mininet.log import output, info, error, warn, debug
 
+import binascii
+import socket
 from time import sleep
 from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN, POLLHUP
@@ -70,6 +72,8 @@ try:
 except ImportError:
     pass
 
+int_type_int = type(0xff)
+int_type_long = type(0xffffffffffffffff)
 
 # Command execution support
 
@@ -362,39 +366,49 @@ def macColonHex( mac ):
        returns: macStr MAC colon-hex string"""
     return _colonHex( mac, 6 )
 
-def ipStr( ip ):
+def ipStr( ip, family=socket.AF_INET ):
     """Generate IP address string from an unsigned int.
-       ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
-       returns: ip address string w.x.y.z"""
-    w = ( ip >> 24 ) & 0xff
-    x = ( ip >> 16 ) & 0xff
-    y = ( ip >> 8 ) & 0xff
-    z = ip & 0xff
-    return "%i.%i.%i.%i" % ( w, x, y, z )
+       ip: unsigned int representing either and IPv4 or IPv6 address
+       family: socket.AF_INET (IPv4) or socket.AF_INET (IPv6)
+       returns: ip address string 192.0.2.1 or 2001:db8::1"""
 
-def ipNum( w, x, y, z ):
+    if family == socket.AF_INET:
+        maxHexDigits = 32 >> 2
+    else:
+        maxHexDigits = 128 >> 2
+    return socket.inet_ntop(family, binascii.unhexlify(('%x' % ip).zfill(maxHexDigits)))
+
+def ipNum( ip ):
     """Generate unsigned int from components of IP address
-       returns: w << 24 | x << 16 | y << 8 | z"""
-    return ( w << 24 ) | ( x << 16 ) | ( y << 8 ) | z
+       ip: string representing either and IPv4 or IPv6 address
+       returns: unsigned int representing either and IPv4 or IPv6 address"""
+    if ':' in ip:
+        family = socket.AF_INET6
+    else:
+        family = socket.AF_INET
+    return int_type_long(binascii.hexlify(socket.inet_pton(family, ip)), 16)
 
-def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000 ):
+def ipAdd( i, prefixLen=8, ipBaseNum=0x0a000000, family=socket.AF_INET ):
     """Return IP address string from ints
        i: int to be added to ipbase
        prefixLen: optional IP prefix length
        ipBaseNum: option base IP address as int
+       family: socket.AF_INET (IPv4) or socket.AF_INET (IPv6)
        returns IP address as string"""
-    imax = 0xffffffff >> prefixLen
+    if family == socket.AF_INET:
+        addressLen = 32
+    else:
+        addressLen = 128
+    allOnes = 2**addressLen - 1
+    imax = allOnes >> prefixLen
     assert i <= imax, 'Not enough IP addresses in the subnet'
-    mask = 0xffffffff ^ imax
+    mask = allOnes ^ imax
     ipnum = ( ipBaseNum & mask ) + i
-    return ipStr( ipnum )
+    return ipStr( ipnum, family )
 
 def ipParse( ip ):
     "Parse an IP address and return an unsigned int."
-    args = [ int( arg ) for arg in ip.split( '.' ) ]
-    while len(args) < 4:
-        args.insert( len(args) - 1, 0 )
-    return ipNum( *args )
+    return ipNum( ip )
 
 def netParse( ipstr ):
     """Parse an IP network specification, returning
@@ -406,7 +420,10 @@ def netParse( ipstr ):
     # if no prefix is specified, set the prefix to 24
     else:
         ip = ipstr
-        prefixLen = 24
+        if ':' in ip:
+            prefixLen = 64
+        else:
+            prefixLen = 24
     return ipParse( ip ), prefixLen
 
 def checkInt( s ):

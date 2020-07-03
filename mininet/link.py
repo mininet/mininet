@@ -43,12 +43,16 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
+        self.ip6, self.prefixLen6 = None, None
+        self.ip6ll = None
 
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
         if self.name == 'lo':
             self.ip = '127.0.0.1'
             self.prefixLen = 8
+            self.ip6 = '::1'
+            self.prefixLen = 128
         # Add to node (and move ourselves if necessary )
         if node:
             moveIntfFn = params.pop( 'moveIntfFn', None )
@@ -73,14 +77,24 @@ class Intf( object ):
         # This is a sign that we should perhaps rethink our prefix
         # mechanism and/or the way we specify IP addresses
         if '/' in ipstr:
-            self.ip, self.prefixLen = ipstr.split( '/' )
-            return self.ifconfig( ipstr, 'up' )
+            ip, prefixLen = ipstr.split( '/' )
+            args = [ ipstr, 'up' ]
         else:
             if prefixLen is None:
                 raise Exception( 'No prefix length set for IP address %s'
                                  % ( ipstr, ) )
-            self.ip, self.prefixLen = ipstr, prefixLen
-            return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
+            ip, prefixLen = ipstr, prefixLen
+            args = [ '%s/%s' % ( ipstr, prefixLen ) ]
+
+        if ':' in ip:
+            if self.ip6 is not None:
+                self.ifconfig( 'del', '%s/%s' % ( self.ip6, self.prefixLen6 ) )
+            self.ip6, self.prefixLen6 = ip, prefixLen
+            args.insert( 0, 'add' )
+        else:
+            self.ip, self.prefixLen = ip, prefixLen
+
+        return self.ifconfig( *args )
 
     def setMAC( self, macstr ):
         """Set the MAC address for an interface.
@@ -90,8 +104,9 @@ class Intf( object ):
                  self.ifconfig( 'hw', 'ether', macstr ) +
                  self.ifconfig( 'up' ) )
 
-    _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
-    _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
+    _ipMatchRegex = re.compile( r'inet\s+(\d+\.\d+\.\d+\.\d+)\s' )
+    _ip6MatchRegex = re.compile( r'inet6\s+([0-9a-fA-F:\.]+)\s.*scopeid\s.*<(global|link|host)>' )
+    _macMatchRegex = re.compile( r'ether\s+([0-9a-fA-F:]+)\s' )
 
     def updateIP( self ):
         "Return updated IP address based on ifconfig"
@@ -100,8 +115,18 @@ class Intf( object ):
         ifconfig, _err, _exitCode = self.node.pexec(
             'ifconfig %s' % self.name )
         ips = self._ipMatchRegex.findall( ifconfig )
+        ip6s = self._ip6MatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
-        return self.ip
+        self.ip6 = None
+        self.ip6ll = None
+        for addr, scope in ip6s:
+            if scope == 'link':
+                if self.ip6ll is None:
+                    self.ip6ll = addr
+            else:
+                if self.ip6 is None:
+                    self.ip6 = addr
+        return self.IP()
 
     def updateMAC( self ):
         "Return updated MAC address based on ifconfig"
@@ -118,14 +143,34 @@ class Intf( object ):
         "Return IP address and MAC address based on ifconfig."
         ifconfig = self.ifconfig()
         ips = self._ipMatchRegex.findall( ifconfig )
+        ip6s = self._ipMatchRegex.findall( ifconfig )
         macs = self._macMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
+        self.ip6 = None
+        self.ip6ll = None
+        for addr, scope in ip6s:
+            if scope == 'link':
+                if self.ip6ll is None:
+                    self.ip6ll = addr
+            else:
+                if self.ip6 is None:
+                    self.ip6 = addr
         self.mac = macs[ 0 ] if macs else None
-        return self.ip, self.mac
+        return self.IP(), self.mac
+
+    def IP6LinkLocal( self ):
+        "Return link-local IP address"
+        return self.ip6ll
+
+    def IP6( self ):
+        "Return IPv6 address"
+        return self.ip6
 
     def IP( self ):
         "Return IP address"
-        return self.ip
+        if self.ip is not None:
+            return self.ip
+        return self.ip6
 
     def MAC( self ):
         "Return MAC address"
@@ -180,11 +225,12 @@ class Intf( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None, ifconfig=None,
+    def config( self, mac=None, ip=None, ip6=None, ifconfig=None,
                 up=True, **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address
-           ip: IP address
+           ip: IPv4 address
+           ip6: IPv6 address
            ifconfig: arbitrary interface configuration
            Subclasses should override this method and call
            the parent class's config(**params)"""
@@ -194,6 +240,7 @@ class Intf( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'setIP', ip=ip6 )
         self.setParam( r, 'isUp', up=up )
         self.setParam( r, 'ifconfig', ifconfig=ifconfig )
         return r
