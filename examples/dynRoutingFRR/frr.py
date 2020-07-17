@@ -51,24 +51,25 @@ class NetworkTopo( Topo ):
 
     def build( self, **_opts ):
 
-        defaultIP1 = '10.0.3.1/24'  # IP address for r1-eth1
-        defaultIP2 = '10.0.3.2/24'  # IP address for r2-eth1 
+        # We declare the routers
+        # The ip indicated here is for the first free port, so xx-eth0
+        router1 = self.addNode( 'r1', cls=LinuxRouter, ip='10.0.1.254/24' )
+        router2 = self.addNode( 'r2', cls=LinuxRouter, ip='10.0.2.254/24' )
 
-        router1 = self.addNode( 'r1', cls=LinuxRouter, ip=defaultIP1 )
-        router2 = self.addNode( 'r2', cls=LinuxRouter, ip=defaultIP2 )
-
-        self.addLink( router1, router2, 
-                      intfName1='r1-eth1',intfName2='r2-eth1' )
-
+        # We declare the hosts
         h1 = self.addHost( 'h1', ip='10.0.1.1/24', 
                             defaultRoute='via 10.0.1.254')
         h2 = self.addHost( 'h2', ip='10.0.2.2/24', 
                             defaultRoute='via 10.0.2.254')
 
-        self.addLink( h1, router1, intfName2='r1-eth0',
-                      params2={ 'ip' : '10.0.1.254/24' } )
-        self.addLink( h2, router2, intfName2='r2-eth0', 
-                      params2={ 'ip' : '10.0.2.254/24' } )
+        # We link the hosts to their routers
+        self.addLink( h1, router1, intfName2='r1-eth0' )
+        self.addLink( h2, router2, intfName2='r2-eth0' )
+
+        # we link the routers together and set the ip of each new port used
+        self.addLink( router1, router2, 
+                    intfName1='r1-eth1', params1={'ip':'10.0.3.1/24'}, 
+                    intfName2='r2-eth1', params2={'ip':'10.0.3.2/24'}  )
 
 
 def run():
@@ -113,7 +114,7 @@ The B>* shows the remote prefix learned from r2 router by bgpd
     r1=net.getNodeByName('r1')
     r2=net.getNodeByName('r2')
 
-    info('\n*** Starting zebra and bgpd services \n')
+    info('*** Starting zebra and bgpd services \n\n')
     zebra = "/usr/lib/frr/zebra"
     bgpd = "/usr/lib/frr/bgpd"
 
