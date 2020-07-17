@@ -38,13 +38,45 @@ class LinuxRouter( Node ):
 
     def config( self, **params ):
         super( LinuxRouter, self).config( **params )
+
         # Enable forwarding on the router
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
+        # Enable loose reverse path filtering
+        self.cmd( 'sysctl net.ipv4.conf.all.rp_filter=2' )
 
-    def terminate( self ):
+        zebra = "/usr/lib/frr/zebra"
+        bgpd = "/usr/lib/frr/bgpd"
+        ospfd = "/usr/lib/frr/ospfd"
+        staticd = "/usr/lib/frr/staticd"
+
+        # do some mounts bind to make vtysh and the daemons working
+        r = self.name
+        self.cmd( "mkdir /tmp/{} && chown frr /tmp/{}".format(r, r) )
+        self.cmd( "mkdir /var/run/frr/{}".format(r) )
+        self.cmd( "chown frr /var/run/frr/{}".format(r) )
+        self.cmd( "mount --bind /var/run/frr/{} /var/run/frr".format(r) )
+        self.cmd( "mount --bind {} /etc/frr".format(r) )
+
+        # Run the daemons
+        self.cmd( "{} -f {}/zebra.conf -d \
+            > /tmp/{}/zebra.log".format(zebra, r, r) )
+        time.sleep(1)
+        self.cmd( "{} -f {}/bgpd.conf -d  \
+            > /tmp/{}/bgpd.log".format(bgpd, r, r) )
+        self.cmd( "{} -f {}/staticd.conf -d \
+            > /tmp/{}/staticd.log".format(staticd, r, r) )
+
+    def terminate( self ): 
+        r = self.name
         self.cmd( 'sysctl net.ipv4.ip_forward=0' )
-        super( LinuxRouter, self ).terminate()
+        self.cmd( 'sysctl net.ipv4.conf.all.rp_filter=0' )
 
+        self.cmd( "killall bgpd staticd zebra" )
+        self.cmd( "umount /var/run/frr" )
+        self.cmd( "umount /etc/frr" )
+        self.cmd( "rm -fr /var/run/frr/{}".format(r) )
+        self.cmd( "rm -f /tmp/{}/*.pid".format(r) )
+        super( LinuxRouter, self ).terminate()
 
 class NetworkTopo( Topo ):
     "Two FRR routers linked together and each to a host"
@@ -111,48 +143,9 @@ The B>* shows the remote prefix learned from r2 router by bgpd
     net = Mininet( topo=topo ) 
     net.start()
 
-    r1=net.getNodeByName('r1')
-    r2=net.getNodeByName('r2')
-
-    info('*** Starting zebra and bgpd services \n\n')
-    zebra = "/usr/lib/frr/zebra"
-    bgpd = "/usr/lib/frr/bgpd"
-
-    r1.cmd( "mkdir /tmp/r1 && chown frr /tmp/r1" )
-    r1.cmd( "mkdir /var/run/frr/r1 && chown frr /var/run/frr/r1" )
-
-    r1.cmd( "mount --bind /var/run/frr/r1 /var/run/frr" )
-    
-    r1.cmd( "{} -f ./r1/zebra.conf -d \
-            > /tmp/r1/zebra.log".format(zebra) )
-    time.sleep(1)
-    r1.cmd( "{} -f ./r1/bgpd.conf -d  \
-            > /tmp/r1/bgpd.log".format(bgpd) )
-    time.sleep(1)
-
-    r2.cmd( "mkdir /tmp/r2 && chown frr /tmp/r2" )
-    r2.cmd( "mkdir /var/run/frr/r2 && chown frr /var/run/frr/r2" )
-
-    r2.cmd( "mount --bind /var/run/frr/r2 /var/run/frr" )
-    
-    r2.cmd( "{} -f ./r2/zebra.conf -d \
-            > /tmp/r2/zebra.log".format(zebra) )
-    time.sleep(1)
-    r2.cmd( "{} -f ./r2/bgpd.conf -d \
-            > /tmp/r2/bgpd.log ".format(bgpd) )
-    time.sleep(1)
-
     CLI( net )
 
-    r1.cmd( "umount /var/run/frr" )
-    r2.cmd( "umount /var/run/frr" )
-    r1.cmd( "rm -fr /var/run/frr/r1" )
-    r2.cmd( "rm -fr /var/run/frr/r2" )
-    
     net.stop()
-    os.system("killall -9 bgpd zebra")
-    os.system("rm -f /tmp/r1/*.pid")
-    os.system("rm -f /tmp/r2/*.pid")
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
