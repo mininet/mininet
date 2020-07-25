@@ -79,4 +79,43 @@ class TorusTopo( Topo ):
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
 
+class LeafSpineTopo ( Topo ):
+    """Leaf-Spine topology with a given leaf number, spine number and host
+       # mn --topo leafspine,2,2,2 --mac --switch ovsk,protocols=OpenFlow13 --test pingall"""
+
+    def build( self, leaf=2, spine=2, host=2 ):
+        """Leaf-Spine Topology
+           leaf: number of switch in leaf layer
+           spine: number of switch in spine layer
+           host: numebr of hosts per leaf switch"""
+
+        self.dpid, self.hostNum = 1, 1
+        leafList, spineList = [], []
+
+        # Build spine switches
+        self.createSwitch( spine, spineList, "spine" )
+        # Build leaf switches
+        self.createSwitch( leaf, leafList, "leaf" )
+
+        # Link between leaf and spine
+        for spineSwitch in spineList:
+            for leafSwitch in leafList:
+                self.addLink( spineSwitch, leafSwitch )
+
+        # Link between leaf and host
+        for leafSwitch in leafList:
+            for _ in xrange( host ):
+                self.addLink( leafSwitch, self.addHost( 'h%s' % self.hostNum ) )
+                self.hostNum += 1
+
+    def createSwitch( self, number, switchList, switchPrefix ):
+        """ number: number of the switch
+            switchList: list of switches
+            switchPrefix: Prefix name of the switch"""
+
+        for i in range( 0, number ):
+            switchList.append( self.addSwitch( '%s%s' % ( switchPrefix, str( i + 1 ) ),
+                               dpid = '%016x' % self.dpid ) )
+            self.dpid += 1
+
 # pylint: enable=arguments-differ
