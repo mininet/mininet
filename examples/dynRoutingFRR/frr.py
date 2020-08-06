@@ -52,19 +52,21 @@ class LinuxRouter( Node ):
         # do some mounts bind to make vtysh and the daemons working
         r = self.name
         self.cmd( "mkdir /tmp/{} && chown frr /tmp/{}".format(r, r) )
-        self.cmd( "mkdir /var/run/frr/{}".format(r) )
-        self.cmd( "chown frr /var/run/frr/{}".format(r) )
-        self.cmd( "mount --bind /var/run/frr/{} /var/run/frr".format(r) )
+        self.cmd( "mount --bind /tmp/{} /var/run/frr".format(r) )
         self.cmd( "mount --bind {} /etc/frr".format(r) )
 
         # Run the daemons
         self.cmd( "{} -f {}/zebra.conf -d \
-            > /tmp/{}/zebra.log".format(zebra, r, r) )
-        time.sleep(1)
+            > /tmp/{}/zebra.log 2>&1".format(zebra, r, r) )
+        self.waitOutput()
+
         self.cmd( "{} -f {}/bgpd.conf -d  \
-            > /tmp/{}/bgpd.log".format(bgpd, r, r) )
+            > /tmp/{}/bgpd.log 2>&1".format(bgpd, r, r) )
+        self.waitOutput()
+
         self.cmd( "{} -f {}/staticd.conf -d \
-            > /tmp/{}/staticd.log".format(staticd, r, r) )
+            > /tmp/{}/staticd.log 2>&1".format(staticd, r, r) )
+        self.waitOutput()
 
     def terminate( self ): 
         r = self.name
@@ -74,8 +76,7 @@ class LinuxRouter( Node ):
         self.cmd( "killall bgpd staticd zebra" )
         self.cmd( "umount /var/run/frr" )
         self.cmd( "umount /etc/frr" )
-        self.cmd( "rm -fr /var/run/frr/{}".format(r) )
-        self.cmd( "rm -f /tmp/{}/*.pid".format(r) )
+        self.cmd( "rm -fr /tmp/{}".format(r) )
         super( LinuxRouter, self ).terminate()
 
 class NetworkTopo( Topo ):
