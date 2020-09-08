@@ -1,6 +1,6 @@
 from mininet.topo import Topo  
 class MyTopo( Topo ):  
-    "Simple topology example."
+    "Simple topology example"
     def __init__( self ):
         "Create custom topo."
 
