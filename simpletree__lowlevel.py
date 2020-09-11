@@ -1,0 +1,75 @@
+from mininet.node import Host,OVSSwitch,Controller
+from mininet.link import Link
+
+		h1 = self.addHost( 'h1' )
+		h2 = self.addHost( 'h2' )
+		h3 = self.addHost( 'h3' )
+		h4 = self.addHost( 'h4' )
+		h5 = self.addHost( 'h5' )
+		h6 = self.addHost( 'h6' )
+		h7 = self.addHost( 'h7' )
+		h8 = self.addHost( 'h8' )
+		c1 = OVSSwitch( 'c1' , inNamespace=False )
+		a1 = OVSSwitch( 'a1' , inNamespace=False )
+		a2 = OVSSwitch( 'a2' , inNamespace=False )
+		e1 = OVSSwitch( 'e1' , inNamespace=False )
+		e2 = OVSSwitch( 'e2' , inNamespace=False )
+		e3 = OVSSwitch( 'e3' , inNamespace=False )
+		e4 = OVSSwitch( 'e4' , inNamespace=False )
+		c0 = Controller( 'c0' ,inNamespace=False )
+		Link( c1, a1 )
+		Link( c1, a2 )
+	    Link( a1, e1 )
+	    Link( a1, e2 )
+	    Link( a2, e3 )
+	    Link( a2, e4 )
+	    Link( e1, h1 )
+	    Link( e1, h2 )
+	    Link( e2, h3 )
+	    Link( e2, h4 )
+	    Link( e3, h5 )
+	    Link( e3, h6 )
+	    Link( e4, h7 )
+	    Link( e4, h8 )
+	    h1.setIP( '10.0.0.1/24' )
+	    h2.setIP( '10.0.0.2/24' )
+	    h3.setIP( '10.0.0.3/24' )
+	    h4.setIP( '10.0.0.4/24' )
+	    h5.setIP( '10.0.0.5/24' )
+	    h6.setIP( '10.0.0.6/24' )
+	    h7.setIP( '10.0.0.7/24' )
+	    h8.setIP( '10.0.0.8/24' )
+	    c0.start()
+	    c1.start( [ c0 ] )
+	    a1.start( [ c0 ] )
+	    a2.start( [ c0 ] )
+	    e1.start( [ c0 ] )
+	    e2.start( [ c0 ] )
+	    e3.start( [ c0 ] )
+	    e4.start( [ c0 ] )
+	    print h1.IP
+	    print h2.IP
+	    print h3.IP
+	    print h4.IP
+	    print h5.IP
+	    print h6.IP
+	    print h7.IP
+	    print h8.IP
+	    print ' Pinging ... '
+	    print h1.cmd( 'ping -c3 ', h2.ip() )
+	    print h1.cmd( 'ping -c3 ', h3.ip() )
+	    print h1.cmd( 'ping -c3 ', h4.ip() )
+	    print h1.cmd( 'ping -c3 ', h5.ip() )
+	    print h1.cmd( 'ping -c3 ', h6.ip() )
+	    print h1.cmd( 'ping -c3 ', h7.ip() )
+	    print h1.cmd( 'ping -c3 ', h8.ip() )
+	    c1.stop()
+	    a1.stop()
+	    a2.stop()
+	    e1.stop()
+	    e2.stop()
+	    e3.stop()
+	    e4.stop()
+	    c0.stop()
+
+
