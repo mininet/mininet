@@ -19,5 +19,6 @@ RUN apt-get clean
 RUN chmod +x /root/mininet/util/docker/entrypoint.sh
 
 ENV MN_FLAGS=""
+ENV FILE_PATH=""
 
 ENTRYPOINT [ "sh", "-c", "/root/mininet/util/docker/entrypoint.sh"]

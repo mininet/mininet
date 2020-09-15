@@ -7,7 +7,7 @@ Mininet 2.3.0d6
 
 The supported installation methods for Mininet are 1) using a
 pre-built VM image, and 2) native installation on Ubuntu. You can also
-easily create your own Mininet VM image (4).
+easily create your own Mininet VM image (4) or Docker image (6).
 
 (Other distributions may be supported in the future - if you would
 like to contribute an installation script, we would welcome it!)
@@ -185,6 +185,17 @@ like to contribute an installation script, we would welcome it!)
 
           docker run --rm -it --privileged --network "host" -v $(pwd):/shared \
           -e MN_FLAGS="--controller remote --mac --switch ovsk" \
+          ghcr.io/mininet/mininet:latest
+
+     The Python API can also be used by the container. Simply adding the path of 
+     the file to the env var FILE_PATH (within the container's file system) will 
+     configure this. Note: you must make sure that the file is mounted into the 
+     container if you have not built the file into the container image. An example 
+     of this:
+
+          docker run --rm -it --privileged --network "host" \
+          -v $(pwd)/my-topo.py:/shared/topo.py \
+          -e FILE_PATH=/shared/topo.py \
           ghcr.io/mininet/mininet:latest
 
      Building your own image can be done by running the docker build command 
