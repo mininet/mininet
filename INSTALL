@@ -174,9 +174,10 @@ like to contribute an installation script, we would welcome it!)
 6. Using Docker
 
      Setting up Mininet as a container is simple, however, does come with 
-     caveats. 
+     caveats. Thus, only use this if you are willing to tackle issues that 
+     may come with your use case.
 
-     Below is an example of how to use the mininet image from Docker Hub.
+     Below is an example of how to use the mininet image from GitHub CR.
      When using, the contents of the MN_FLAGS variable should be populated 
      with any flags you would usually put after the mn command in the cli.
      This will also mount your current working directory to the /shared dir 
@@ -184,12 +185,12 @@ like to contribute an installation script, we would welcome it!)
 
           docker run --rm -it --privileged --network "host" -v $(pwd):/shared \
           -e MN_FLAGS="--controller remote --mac --switch ovsk" \
-          willfantom/mininet:v2.2.2
+          ghcr.io/mininet/mininet:latest
 
-     Building your own image can be done by running th docker build command 
+     Building your own image can be done by running the docker build command 
      from the root mininet directory:
 
-          docker build --rm -f util/docker/Dockerfile -t mininet:v2.2.2 .
+          docker build --rm -f util/docker/Dockerfile -t mininet:local .
 
 Good luck!
 
