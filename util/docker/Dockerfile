@@ -18,6 +18,6 @@ RUN apt-get clean
 
 RUN chmod +x /root/mininet/util/docker/entrypoint.sh
 
-ENV MN_FLAGS="--controller remote --mac --switch ovsk"
+ENV MN_FLAGS=""
 
 ENTRYPOINT [ "sh", "-c", "/root/mininet/util/docker/entrypoint.sh"]
