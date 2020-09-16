@@ -11,8 +11,9 @@ RUN apt-get install -yq \
     sudo \
     traceroute
 
+ARG INSTALL_FLAGS="-fnv"
 COPY . /root/mininet
-RUN sh -c "/root/mininet/util/install.sh -fnv"
+RUN sh -c "/root/mininet/util/install.sh ${INSTALL_FLAGS}"
 
 RUN apt-get clean
 
