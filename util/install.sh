@@ -34,7 +34,11 @@ if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
 if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
 test -e /etc/debian_version && DIST="Debian"
-grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
+#grep Ubuntu /etc/lsb-release &> /dev/null && DIST="Ubuntu"
+if [ -f /etc/lsb-release ]; then
+	source /etc/lsb-release
+	DIST=$DISTRIB_ID
+fi
 if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     # Truly non-interactive apt-get installation
     install='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q install'
@@ -103,10 +107,20 @@ function version_ge {
 }
 
 # Attempt to detect Python version
-PYTHON=${PYTHON:-python}
-PRINTVERSION='import sys; print(sys.version_info)'
+if [ "$DIST" == "Ubuntu" -a "$DISTRIB_CODENAME" == "focal" ]; then
+	PYTHON=${PYTHON:-python3}
+else
+	PYTHON=${PYTHON:-python}
+fi
 PYTHON_VERSION=unknown
 for python in $PYTHON python2 python3; do
+    if [ "$python" == "python3" ]; then
+        PRINTVERSION='import sys; print(sys.version_info)'
+    else
+        # either this or include 'from __future__ import print_function'
+        # for python2.x
+        PRINTVERSION='import sys; print sys.version_info'
+    fi
     if $python -c "$PRINTVERSION" |& grep 'major=2'; then
         PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
         break
