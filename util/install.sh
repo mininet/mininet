@@ -190,6 +190,9 @@ function mn_deps {
                  ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
+        if [ "$DISTRIB_CODENAME" == "focal" ];  then
+            $install net-tools
+        fi
     fi
 
     echo "Installing Mininet core"
