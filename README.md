@@ -5,6 +5,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 Mininet 2.3.0d6
 
 [![Build Status][1]](https://travis-ci.org/mininet/mininet)
+![PyPI](https://img.shields.io/pypi/v/mininet)
 
 ### What is Mininet?
 
@@ -91,7 +92,9 @@ This is primarily a performance improvement and bug fix release.
 
 ### Installation
 
-See `INSTALL` for installation instructions and details.
+```
+python3 -m pip install mininet
+```
 
 ### Documentation
 
