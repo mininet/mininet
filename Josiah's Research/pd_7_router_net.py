@@ -1,7 +1,6 @@
 import os
-
+ 
 from mininet.cli import CLI
-from mininet.link import TCLink, Intf
 from mininet.log import setLogLevel, info
 from mininet.net import Mininet
 from mininet.node import Node, Controller, CPULimitedHost
@@ -18,6 +17,7 @@ class LinuxRouter(Node):     # from the Mininet library
         super(LinuxRouter, self).terminate()
 
 def Network():
+    from mininet.link import TCLink, Intf
     info('*** Creating a network with no nodes or links\n')
     net = Mininet(host=CPULimitedHost, link=TCLink, autoStaticArp=False)
 
@@ -53,9 +53,11 @@ def Network():
         for idx, r_intf in router.intfs.items():
             local_id, peer_id = map(lambda x: x[-1], r_intf.name[1:].split("-"))
             if local_id < peer_id:
-                router.setIP(f"172.16.{local_id}{peer_id}.{local_id}/24", intf=r_intf)
+		a = "172.16.{}{}.{}/24".format(local_id, peer_id, local_id)
+		print(a)
+                router.setIP("172.16.{}{}.{}/24".format(local_id, peer_id, local_id), intf=r_intf)
             else:
-                router.setIP(f"172.16.{peer_id}{local_id}.{local_id}/24", intf=r_intf)
+                router.setIP("172.16.{}{}.{}/24".format(peer_id, local_id, local_id), intf=r_intf)
 
     info('*** Running CLI\n')
     CLI(net)
