@@ -136,7 +136,7 @@ def getifaddrdict():
 def get_ip_info(intf):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     SIOCGIFADDR    = 0x8915	# from /usr/include/linux/sockios.h
-    SIOCGIFNETMASK = 0x891b
+    SIOCGIFNETMASK = 0x891b	
     intfpack = struct.pack('256s', bytes(intf, 'ascii'))
     # ifreq, below, is like struct ifreq in /usr/include/linux/if.h
     ifreq    = fcntl.ioctl(s.fileno(), SIOCGIFADDR, intfpack)
