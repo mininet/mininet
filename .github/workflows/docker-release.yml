@@ -42,7 +42,13 @@ jobs:
         with:
           context: .
           file: util/docker/Dockerfile
-          platforms: linux/amd64,linux/arm64/v8
+          platforms: linux/amd64,linux/386,linux/arm64/v8
           push: true
           tags: ghcr.io/${{ steps.extract_owner.outputs.owner }}/mininet:${{ steps.extract_tag.outputs.tag }}
           no-cache: false
+          labels: |
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.url=${{ github.event.repository.html_url }}
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}
