@@ -599,7 +599,7 @@ class Node( object ):
         results[ name ] = result
         return result
 
-    def config( self, mac=None, ip=None,
+    def config( self, mac=None, ip=None, ip6=None,
                 defaultRoute=None, lo='up', **_params ):
         """Configure Node according to (optional) parameters:
            mac: MAC address for default interface
@@ -613,6 +613,7 @@ class Node( object ):
         r = {}
         self.setParam( r, 'setMAC', mac=mac )
         self.setParam( r, 'setIP', ip=ip )
+        self.setParam( r, 'setIP', ip=ip6 )
         self.setParam( r, 'setDefaultRoute', defaultRoute=defaultRoute )
         # This should be examined
         self.cmd( 'ifconfig lo ' + lo )
@@ -1392,6 +1393,7 @@ class Controller( Node ):
         self.cargs = cargs
         self.cdir = cdir
         # Accept 'ip:port' syntax as shorthand
+        #TODO fix this for IPv6
         if ':' in ip:
             ip, port = ip.split( ':' )
             port = int( port )
