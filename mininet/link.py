@@ -52,7 +52,7 @@ class Intf( object ):
             self.ip = '127.0.0.1'
             self.prefixLen = 8
             self.ip6 = '::1'
-            self.prefixLen = 128
+            self.prefixLen6 = 128
         # Add to node (and move ourselves if necessary )
         if node:
             moveIntfFn = params.pop( 'moveIntfFn', None )
@@ -143,7 +143,7 @@ class Intf( object ):
         "Return IP address and MAC address based on ifconfig."
         ifconfig = self.ifconfig()
         ips = self._ipMatchRegex.findall( ifconfig )
-        ip6s = self._ipMatchRegex.findall( ifconfig )
+        ip6s = self._ip6MatchRegex.findall( ifconfig )
         macs = self._macMatchRegex.findall( ifconfig )
         self.ip = ips[ 0 ] if ips else None
         self.ip6 = None
