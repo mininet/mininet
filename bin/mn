@@ -252,7 +252,11 @@ class MininetRunner( object ):
         opts.add_option( '--xterms', '-x', action='store_true',
                          default=False, help='spawn xterms for each node' )
         opts.add_option( '--ipbase', '-i', type='string', default='10.0.0.0/8',
-                         help='base IP address for hosts' )
+                         help='base IPv4 address for hosts' )
+        opts.add_option( '--ip6base', type='string', default='fd00::/64',
+                         help='base IPv6 address for hosts' )
+        opts.add_option( '--ipv6', action='store_true',
+                         default=False, help='Use IPv6 in addition to IPv6' )
         opts.add_option( '--mac', action='store_true',
                          default=False, help='automatically set host MACs' )
         opts.add_option( '--arp', action='store_true',
@@ -382,7 +386,8 @@ class MininetRunner( object ):
 
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller, link=link,
-                  ipBase=opts.ipbase, inNamespace=opts.innamespace,
+                  ipBase=opts.ipbase, useIPv6=opts.ipv6, ip6Base=opts.ip6base,
+                  inNamespace=opts.innamespace,
                   xterms=opts.xterms, autoSetMacs=opts.mac,
                   autoStaticArp=opts.arp, autoPinCpus=opts.pin,
                   listenPort=opts.listenport )
