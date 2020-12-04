@@ -710,3 +710,20 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         time += .5
         result = runCmd( cmd )
     return True
+
+def updateHostsFile( hostsFile, oldIP, newIP, newHostname ):
+    """Update the hostsFile with the ip and hostname"""
+    if hostsFile is None:
+        return
+    contents = ''
+    if os.path.exists( hostsFile ):
+        with open( hostsFile, 'r' ) as readFile:
+            for line in readFile:
+                line = line.strip()
+                ipAddr, hostnames = line.split( None, 1 )
+                if ipAddr != oldIP:
+                    contents += '%s\n' % line
+    if newIP is not None:
+        contents += '%s %s\n' % ( newIP, newHostname )
+    with open( hostsFile, 'w' ) as writeFile:
+        writeFile.write( contents )

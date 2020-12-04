@@ -3,10 +3,12 @@
 """Package: mininet
    Test functions defined in mininet.util."""
 
+import os
 import socket
+import tempfile
 import unittest
 
-from mininet.util import quietRun, ipStr, ipNum, ipAdd
+from mininet.util import quietRun, ipStr, ipNum, ipAdd, updateHostsFile
 
 class testQuietRun( unittest.TestCase ):
     """Test quietRun that runs a command and returns its merged output from
@@ -63,6 +65,36 @@ class testIPFuncs( unittest.TestCase ):
         self.assertEqual( ipAdd( 2**64 - 1, 64, 0x20010db8000000000000000000000000, socket.AF_INET6 ), "2001:db8::ffff:ffff:ffff:ffff" )
         with self.assertRaises(AssertionError):
             ipAdd( 2**64, 64, 0x20010db8000000000000000000000000, socket.AF_INET6 )
+
+class testHostsFile( unittest.TestCase ):
+
+    def testBuildHostsFile( self ):
+        output1 = '192.0.2.1 h1\n2001:db8::1 h1\n192.0.2.2 h2\n2001:db8::2 h2\n'
+        output2 = '2001:db8::1 h1\n192.0.2.2 h2\n2001:db8::22 h2\n2001:db8::1 h4\n'
+
+        tmp = tempfile.NamedTemporaryFile()
+        fileName = tmp.name
+        tmp.close()
+
+        try:
+            updateHostsFile( fileName, None, '192.0.2.1', 'h1' )
+            updateHostsFile( fileName, None, '2001:db8::1', 'h1' )
+            updateHostsFile( fileName, None, '192.0.2.2', 'h2' )
+            updateHostsFile( fileName, None, '2001:db8::2', 'h2' )
+
+            with open( fileName, 'r' ) as fh:
+                self.assertEqual( fh.read(), output1 )
+
+            updateHostsFile( fileName, '192.0.2.1', None, None )
+            updateHostsFile( fileName, '2001:db8::2', '2001:db8::22', 'h2' )
+            updateHostsFile( fileName, None, '2001:db8::1', 'h4' )
+
+            with open( fileName, 'r' ) as fh:
+                self.assertEqual( fh.read(), output2 )
+
+        finally:
+            os.unlink( tmp.name )
+
 
 if __name__ == "__main__":
     unittest.main()

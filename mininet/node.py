@@ -87,6 +87,7 @@ class Node( object ):
         self.name = params.get( 'name', name )
         self.privateDirs = params.get( 'privateDirs', [] )
         self.inNamespace = params.get( 'inNamespace', inNamespace )
+        self.hostsFile = params.get( 'hostsFile', None )
 
         # Python 3 complains if we don't wait for shell exit
         self.waitExited = params.get( 'waitExited', Python3 )
@@ -113,6 +114,7 @@ class Node( object ):
         self.master, self.slave = None, None  # pylint
         self.startShell()
         self.mountPrivateDirs()
+        self.mountHostsFile()
 
     # File descriptor to node mapping support
     # Class variables and methods
@@ -137,7 +139,7 @@ class Node( object ):
         # mnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
         opts = '-cd' if mnopts is None else mnopts
-        if self.inNamespace:
+        if self.inNamespace or self.hostsFile is not None:
             opts += 'n'
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
@@ -204,6 +206,14 @@ class Node( object ):
             else:
                 self.cmd( 'umount ', directory )
 
+    def mountHostsFile( self ):
+        if self.hostsFile is not None:
+            self.cmd( 'mount', '--bind', self.hostsFile, '/etc/hosts' )
+
+    def unmountHostsFile( self ):
+        if self.hostsFile is not None:
+            self.cmd( 'umount', '/etc/hosts' )
+
     def _popen( self, cmd, **params ):
         """Internal method: spawn and return a process
             cmd: command to run (list)
@@ -266,6 +276,7 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         self.unmountPrivateDirs()
+        self.unmountHostsFile()
         if self.shell:
             if self.shell.poll() is None:
                 os.killpg( self.shell.pid, signal.SIGHUP )

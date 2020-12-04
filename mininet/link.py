@@ -25,7 +25,7 @@ Link: basic link class for creating veth pairs
 """
 
 from mininet.log import info, error, debug
-from mininet.util import makeIntfPair
+from mininet.util import makeIntfPair, updateHostsFile
 import re
 
 class Intf( object ):
@@ -89,10 +89,16 @@ class Intf( object ):
         if ':' in ip:
             if self.ip6 is not None:
                 self.ifconfig( 'del', '%s/%s' % ( self.ip6, self.prefixLen6 ) )
+            oldIP = self.ip6
             self.ip6, self.prefixLen6 = ip, prefixLen
             args.insert( 0, 'add' )
+            if self.node.hostsFile is not None:
+                updateHostsFile( self.node.hostsFile, oldIP, self.ip6, self.node.name )
         else:
+            oldIP = self.ip
             self.ip, self.prefixLen = ip, prefixLen
+            if self.node.hostsFile is not None:
+                updateHostsFile( self.node.hostsFile, oldIP, self.ip, self.node.name )
 
         return self.ifconfig( *args )
 
@@ -116,7 +122,11 @@ class Intf( object ):
             'ifconfig %s' % self.name )
         ips = self._ipMatchRegex.findall( ifconfig )
         ip6s = self._ip6MatchRegex.findall( ifconfig )
+        oldIP = self.ip
+        oldIP6 = self.ip6
         self.ip = ips[ 0 ] if ips else None
+        if self.ip != oldIP:
+            updateHostsFile( self.node.hostsFile, oldIP, self.ip, self.node.name )
         self.ip6 = None
         self.ip6ll = None
         for addr, scope in ip6s:
@@ -126,6 +136,8 @@ class Intf( object ):
             else:
                 if self.ip6 is None:
                     self.ip6 = addr
+        if self.ip6 != oldIP6:
+            updateHostsFile( self.node.hostsFile, oldIP6, self.ip6, self.node.name )
         return self.IP()
 
     def updateMAC( self ):

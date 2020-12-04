@@ -413,13 +413,17 @@ class CLI( Cmd ):
                        % first )
                 return
             node = self.mn[ first ]
-            rest = args.split( ' ' )
-            # Substitute IP addresses for node names in command
-            # If updateIP() returns None, then use node name
-            rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
-                     if arg in self.mn else arg
-                     for arg in rest ]
-            rest = ' '.join( rest )
+
+            if self.mn.hostsFile is not None:
+                rest = args
+            else:
+                rest = args.split( ' ' )
+                # Substitute IP addresses for node names in command
+                # If updateIP() returns None, then use node name
+                rest = [ self.mn[ arg ].defaultIntf().updateIP() or arg
+                         if arg in self.mn else arg
+                         for arg in rest ]
+                rest = ' '.join( rest )
             # Run cmd on node:
             node.sendCmd( rest )
             self.waitForNode( node )

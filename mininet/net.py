@@ -91,6 +91,7 @@ import re
 import select
 import signal
 import socket
+import tempfile
 import random
 
 from time import sleep
@@ -119,7 +120,7 @@ class Mininet( object ):
                   build=True, xterms=False, cleanup=False,
                   useIPv4=True, ipBase='10.0.0.0/8',
                   useIPv6=False, ip6Base='fd00::/64',
-                  inNamespace=False,
+                  inNamespace=False, useHosts=True,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
                   listenPort=None, waitConnected=False ):
         """Create Mininet object.
@@ -137,6 +138,7 @@ class Mininet( object ):
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
+           useHosts: build an /etc/hosts for the hosts on our net?
            autoSetMacs: set MAC addrs automatically like IP addresses?
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
@@ -166,6 +168,13 @@ class Mininet( object ):
         allOnes = 2**128 - 1
         hostIP = ( allOnes >> self.prefixLen6 ) & self.ip6BaseNum
         self.nextIP6 = hostIP if hostIP > 0 else 1
+
+        if useHosts:
+            tmp = tempfile.NamedTemporaryFile( delete=False )
+            tmp.close()
+            self.hostsFile = tmp.name
+        else:
+            self.hostsFile = None
 
         self.inNamespace = inNamespace
         self.xterms = xterms
@@ -230,7 +239,7 @@ class Mininet( object ):
            params: parameters for host
            returns: added host"""
         # Default IP and MAC addresses
-        defaults = {}
+        defaults = { 'hostsFile': self.hostsFile }
         if self.useIPv4:
             defaults['ip'] = ipAdd( self.nextIP,
                                       ipBaseNum=self.ipBaseNum,
@@ -623,6 +632,10 @@ class Mininet( object ):
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
+        info( '\n' )
+        if self.hostsFile is not None:
+            info( '*** Removing hosts file %s\n' % self.hostsFile )
+            os.unlink( self.hostsFile )
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
