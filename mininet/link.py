@@ -93,12 +93,14 @@ class Intf( object ):
             self.ip6, self.prefixLen6 = ip, prefixLen
             args.insert( 0, 'add' )
             if self.node.hostsFile is not None:
-                updateHostsFile( self.node.hostsFile, oldIP, self.ip6, self.node.name )
+                updateHostsFile( self.node.hostsFile,
+                                    oldIP, self.ip6, self.node.name )
         else:
             oldIP = self.ip
             self.ip, self.prefixLen = ip, prefixLen
             if self.node.hostsFile is not None:
-                updateHostsFile( self.node.hostsFile, oldIP, self.ip, self.node.name )
+                updateHostsFile( self.node.hostsFile,
+                                    oldIP, self.ip, self.node.name )
 
         return self.ifconfig( *args )
 
@@ -111,7 +113,8 @@ class Intf( object ):
                  self.ifconfig( 'up' ) )
 
     _ipMatchRegex = re.compile( r'inet\s+(\d+\.\d+\.\d+\.\d+)\s' )
-    _ip6MatchRegex = re.compile( r'inet6\s+([0-9a-fA-F:\.]+)\s.*scopeid\s.*<(global|link|host)>' )
+    _ip6MatchRegex = re.compile( r'inet6\s+([0-9a-fA-F:\.]+)'
+                                    r'\s.*scopeid\s.*<(global|link|host)>' )
     _macMatchRegex = re.compile( r'ether\s+([0-9a-fA-F:]+)\s' )
 
     def updateIP( self ):
@@ -126,7 +129,8 @@ class Intf( object ):
         oldIP6 = self.ip6
         self.ip = ips[ 0 ] if ips else None
         if self.ip != oldIP:
-            updateHostsFile( self.node.hostsFile, oldIP, self.ip, self.node.name )
+            updateHostsFile( self.node.hostsFile,
+                                oldIP, self.ip, self.node.name )
         self.ip6 = None
         self.ip6ll = None
         for addr, scope in ip6s:
@@ -137,7 +141,8 @@ class Intf( object ):
                 if self.ip6 is None:
                     self.ip6 = addr
         if self.ip6 != oldIP6:
-            updateHostsFile( self.node.hostsFile, oldIP6, self.ip6, self.node.name )
+            updateHostsFile( self.node.hostsFile,
+                                oldIP6, self.ip6, self.node.name )
         return self.IP()
 
     def updateMAC( self ):

@@ -207,10 +207,12 @@ class Node( object ):
                 self.cmd( 'umount ', directory )
 
     def mountHostsFile( self ):
+        "mount (private) /etc/hosts"
         if self.hostsFile is not None:
             self.cmd( 'mount', '--bind', self.hostsFile, '/etc/hosts' )
 
     def unmountHostsFile( self ):
+        "unmount (private) /etc/hosts"
         if self.hostsFile is not None:
             self.cmd( 'umount', '/etc/hosts' )
 

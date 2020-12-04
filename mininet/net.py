@@ -242,16 +242,16 @@ class Mininet( object ):
         defaults = { 'hostsFile': self.hostsFile }
         if self.useIPv4:
             defaults['ip'] = ipAdd( self.nextIP,
-                                      ipBaseNum=self.ipBaseNum,
-                                      prefixLen=self.prefixLen,
-                                      family=socket.AF_INET ) + \
-                                      '/%s' % self.prefixLen
+                                    ipBaseNum=self.ipBaseNum,
+                                    prefixLen=self.prefixLen,
+                                    family=socket.AF_INET ) + \
+                                    '/%s' % self.prefixLen
         if self.useIPv6:
             defaults['ip6'] = ipAdd( self.nextIP6,
-                                      ipBaseNum=self.ip6BaseNum,
-                                      prefixLen=self.prefixLen6,
-                                      family=socket.AF_INET6 ) + \
-                                      '/%s' % self.prefixLen6
+                                        ipBaseNum=self.ip6BaseNum,
+                                        prefixLen=self.prefixLen6,
+                                        family=socket.AF_INET6 ) + \
+                                        '/%s' % self.prefixLen6
         if self.autoSetMacs:
             defaults[ 'mac' ] = macColonHex( self.nextIP )
         if self.autoPinCpus:

@@ -376,7 +376,8 @@ def ipStr( ip, family=socket.AF_INET ):
         maxHexDigits = 32 >> 2
     else:
         maxHexDigits = 128 >> 2
-    return socket.inet_ntop(family, binascii.unhexlify(('%x' % ip).zfill(maxHexDigits)))
+    ipAsHexStr = ( '%x' % ip ).zfill( maxHexDigits )
+    return socket.inet_ntop( family, binascii.unhexlify( ipAsHexStr ) )
 
 def ipNum( ip ):
     """Generate unsigned int from components of IP address
@@ -720,7 +721,7 @@ def updateHostsFile( hostsFile, oldIP, newIP, newHostname ):
         with open( hostsFile, 'r' ) as readFile:
             for line in readFile:
                 line = line.strip()
-                ipAddr, hostnames = line.split( None, 1 )
+                ipAddr, _ = line.split( None, 1 )
                 if ipAddr != oldIP:
                     contents += '%s\n' % line
     if newIP is not None:
