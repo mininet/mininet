@@ -171,10 +171,15 @@ function mn_deps {
 			ethtool help2man python-pyflakes python3-pylint \
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
-	pf=pyflakes
-	[ "$PYTHON_VERSION" = "3" ] && pf=pyflakes3
+        pf=pyflakes
+        # Starting around 20.04, installing pyflakes instead of pyflakes3
+        # causes Python 2 to be installed, which is exactly NOT what we want.
+        if [ `expr $RELEASE '>=' 20.04` = "1" ]; then
+                pf=pyflakes3
+        fi
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint pep8 \
+                 net-tools \
                  ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
