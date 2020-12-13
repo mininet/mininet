@@ -1,0 +1,32 @@
+
+name: mininet tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Mininet-tests
+    runs-on: ubuntu-18.04 ubuntu 16.04
+    steps:
+      - name: Checking out Mininet source
+        uses: actions/checkout@v2
+      - name: Installing dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq vlan
+          PYTHON=`which python` util/install.sh -n
+          pip install pexpect || pip3 install pexpect
+      - name: Code Check
+        run: |
+          bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
+      - name: Install
+        run: |
+          util/install.sh -fvw
+      - name: Building and running tests
+        run: |
+          alias sudo="sudo env PATH=$PATH"
+          export PYTHON=`which python`
+          echo 'px import sys; print(sys.version_info)' | sudo $PYTHON bin/mn -v output
+          sudo $PYTHON bin/mn --test pingall
+          sudo $PYTHON mininet/test/runner.py -v -quick
+          sudo $PYTHON examples/test/runner.py -v -quick
