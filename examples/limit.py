@@ -34,7 +34,7 @@ def limit( bw=10, cpu=.1 ):
                       'Skipping this test\n' )
                 continue
         host = custom( CPULimitedHost, sched=sched, cpu=cpu )
-        net = Mininet( topo=myTopo, intf=intf, host=host )
+        net = Mininet( topo=myTopo, intf=intf, host=host, waitConnected=True )
         net.start()
         testLinkLimit( net, bw=bw )
         net.runCpuLimitTest( cpu=cpu )
@@ -43,7 +43,7 @@ def limit( bw=10, cpu=.1 ):
 def verySimpleLimit( bw=150 ):
     "Absurdly simple limiting test"
     intf = custom( TCIntf, bw=bw )
-    net = Mininet( intf=intf )
+    net = Mininet( intf=intf, waitConnected=True )
     h1, h2 = net.addHost( 'h1' ), net.addHost( 'h2' )
     net.addLink( h1, h2 )
     net.start()

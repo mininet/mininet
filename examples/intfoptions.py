@@ -13,7 +13,7 @@ from mininet.link import TCLink
 
 def intfOptions():
     "run various traffic control commands on a single interface"
-    net = Mininet( autoStaticArp=True )
+    net = Mininet( autoStaticArp=True, waitConnected=True )
     net.addController( 'c0' )
     h1 = net.addHost( 'h1' )
     h2 = net.addHost( 'h2' )

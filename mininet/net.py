@@ -173,7 +173,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def waitConnected( self, timeout=None, delay=.5 ):
+    def waitConnected( self, timeout=5, delay=.5 ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely
