@@ -4,7 +4,9 @@ Mininet: Rapid Prototyping for Software Defined Networks
 
 Mininet 2.3.0d6
 
-[![Build Status][1]](https://travis-ci.org/mininet/mininet)
+[![Build Status][2]](https://github.com/mininet/mininet/actions)
+[![Travis Status][1]](https://travis-ci.org/mininet/mininet)
+
 
 ### What is Mininet?
 
@@ -130,3 +132,4 @@ Bob Lantz
 Mininet Core Team
 
 [1]: https://travis-ci.org/mininet/mininet.svg?branch=master
+[2]: https://github.com/mininet/mininet/workflows/mininet%20tests/badge.svg
