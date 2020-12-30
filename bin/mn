@@ -256,7 +256,7 @@ class MininetRunner( object ):
         opts.add_option( '--ip6base', type='string', default='fd00::/64',
                          help='base IPv6 address for hosts' )
         opts.add_option( '--ipv6', action='store_true',
-                         default=False, help='Use IPv6 in addition to IPv6' )
+                         default=False, help='Use IPv6 in addition to IPv4' )
         opts.add_option( '--mac', action='store_true',
                          default=False, help='automatically set host MACs' )
         opts.add_option( '--arp', action='store_true',
