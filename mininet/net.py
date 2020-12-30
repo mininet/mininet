@@ -90,6 +90,8 @@ import os
 import re
 import select
 import signal
+import socket
+import tempfile
 import random
 
 from time import sleep
@@ -115,8 +117,10 @@ class Mininet( object ):
 
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                   controller=DefaultController, link=Link, intf=Intf,
-                  build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
-                  inNamespace=False,
+                  build=True, xterms=False, cleanup=False,
+                  useIPv4=True, ipBase='10.0.0.0/8',
+                  useIPv6=False, ip6Base='fd00::/64',
+                  inNamespace=False, useHosts=True,
                   autoSetMacs=False, autoStaticArp=False, autoPinCpus=False,
                   listenPort=None, waitConnected=False ):
         """Create Mininet object.
@@ -126,11 +130,15 @@ class Mininet( object ):
            controller: default Controller class/constructor
            link: default Link class/constructor
            intf: default Intf class/constructor
-           ipBase: base IP address for hosts,
+           useIPv4: use IPv4?
+           ipBase: base IPv4 address for hosts
+           useIPv6: use IPv6?
+           ip6Base: base IPv6 address for hosts
            build: build now from topo?
            xterms: if build now, spawn xterms?
            cleanup: if build now, cleanup before creating?
            inNamespace: spawn switches and controller in net namespaces?
+           useHosts: build an /etc/hosts for the hosts on our net?
            autoSetMacs: set MAC addrs automatically like IP addresses?
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
@@ -142,11 +150,32 @@ class Mininet( object ):
         self.controller = controller
         self.link = link
         self.intf = intf
+
+        # IPv4
+        self.useIPv4 = useIPv4
         self.ipBase = ipBase
         self.ipBaseNum, self.prefixLen = netParse( self.ipBase )
-        hostIP = ( 0xffffffff >> self.prefixLen ) & self.ipBaseNum
         # Start for address allocation
+        allOnes = 2**32 - 1
+        hostIP = ( allOnes >> self.prefixLen ) & self.ipBaseNum
         self.nextIP = hostIP if hostIP > 0 else 1
+
+        # IPv6
+        self.useIPv6 = useIPv6
+        self.ip6Base = ip6Base
+        self.ip6BaseNum, self.prefixLen6 = netParse( self.ip6Base )
+        # Start for address allocation
+        allOnes = 2**128 - 1
+        hostIP = ( allOnes >> self.prefixLen6 ) & self.ip6BaseNum
+        self.nextIP6 = hostIP if hostIP > 0 else 1
+
+        if useHosts:
+            tmp = tempfile.NamedTemporaryFile( delete=False )
+            tmp.close()
+            self.hostsFile = tmp.name
+        else:
+            self.hostsFile = None
+
         self.inNamespace = inNamespace
         self.xterms = xterms
         self.cleanup = cleanup
@@ -210,16 +239,26 @@ class Mininet( object ):
            params: parameters for host
            returns: added host"""
         # Default IP and MAC addresses
-        defaults = { 'ip': ipAdd( self.nextIP,
-                                  ipBaseNum=self.ipBaseNum,
-                                  prefixLen=self.prefixLen ) +
-                                  '/%s' % self.prefixLen }
+        defaults = { 'hostsFile': self.hostsFile }
+        if self.useIPv4:
+            defaults['ip'] = ipAdd( self.nextIP,
+                                    ipBaseNum=self.ipBaseNum,
+                                    prefixLen=self.prefixLen,
+                                    family=socket.AF_INET ) + \
+                                    '/%s' % self.prefixLen
+        if self.useIPv6:
+            defaults['ip6'] = ipAdd( self.nextIP6,
+                                        ipBaseNum=self.ip6BaseNum,
+                                        prefixLen=self.prefixLen6,
+                                        family=socket.AF_INET6 ) + \
+                                        '/%s' % self.prefixLen6
         if self.autoSetMacs:
             defaults[ 'mac' ] = macColonHex( self.nextIP )
         if self.autoPinCpus:
             defaults[ 'cores' ] = self.nextCore
             self.nextCore = ( self.nextCore + 1 ) % self.numCores
         self.nextIP += 1
+        self.nextIP6 += 1
         defaults.update( params )
         if not cls:
             cls = self.host
@@ -593,6 +632,10 @@ class Mininet( object ):
         for host in self.hosts:
             info( host.name + ' ' )
             host.terminate()
+        info( '\n' )
+        if self.hostsFile is not None:
+            info( '*** Removing hosts file %s\n' % self.hostsFile )
+            os.unlink( self.hostsFile )
         info( '\n*** Done\n' )
 
     def run( self, test, *args, **kwargs ):
