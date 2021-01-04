@@ -14,6 +14,8 @@ class clusterSanityCheck( unittest.TestCase ):
     def testClusterPingAll( self ):
         p = pexpect.spawn( 'python -m mininet.examples.clusterSanity' )
         p.expect( self.prompt )
+        p.sendline( 'py net.waitConnected()' )
+        p.expect( self.prompt )
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )
         percent = int( p.match.group( 1 ) ) if p.match else -1

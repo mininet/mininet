@@ -13,7 +13,7 @@ from signal import SIGINT
 def pmonitorTest( N=3, seconds=10 ):
     "Run pings and monitor multiple hosts using pmonitor"
     topo = SingleSwitchTopo( N )
-    net = Mininet( topo )
+    net = Mininet( topo, waitConnected=True )
     net.start()
     hosts = net.hosts
     info( "Starting test...\n" )

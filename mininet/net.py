@@ -108,7 +108,7 @@ from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.3.0d6"
+VERSION = "2.3.0a1"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -173,7 +173,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def waitConnected( self, timeout=None, delay=.5 ):
+    def waitConnected( self, timeout=5, delay=.5 ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely

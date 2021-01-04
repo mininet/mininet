@@ -53,7 +53,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
 def monitorTest( N=3, seconds=3 ):
     "Run pings and monitor multiple hosts"
     topo = SingleSwitchTopo( N )
-    net = Mininet( topo )
+    net = Mininet( topo, waitConnected=True )
     net.start()
     hosts = net.hosts
     info( "Starting test...\n" )

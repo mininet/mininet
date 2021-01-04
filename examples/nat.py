@@ -12,7 +12,7 @@ from mininet.topolib import TreeNet
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info')
-    net = TreeNet( depth=1, fanout=4 )
+    net = TreeNet( depth=1, fanout=4, waitConnected=True )
     # Add NAT connectivity
     net.addNAT().configDefault()
     net.start()
