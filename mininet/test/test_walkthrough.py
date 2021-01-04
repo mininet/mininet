@@ -10,6 +10,7 @@ import unittest
 import os
 import re
 from mininet.util import quietRun, pexpect
+from mininet.clean import cleanup
 from distutils.version import StrictVersion
 from time import sleep
 
@@ -27,6 +28,11 @@ class testWalkthrough( unittest.TestCase ):
     "Test Mininet walkthrough"
 
     prompt = 'mininet>'
+
+
+    def setup( self ):
+        "Be paranoid and run cleanup() before each test"
+        cleanup()
 
     # PART 1
     def testHelp( self ):
