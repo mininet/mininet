@@ -13,7 +13,7 @@ def demo():
     "Simple Demo of Cluster Mode"
     servers = [ 'localhost', 'ubuntu2', 'ubuntu3' ]
     topo = TreeTopo( depth=3, fanout=3 )
-    net = MininetCluster( topo=topo, servers=servers, Link=RemoteLink,
+    net = MininetCluster( topo=topo, servers=servers, link=RemoteLink,
                           placement=SwitchBinPlacer )
     net.start()
     CLI( net )
