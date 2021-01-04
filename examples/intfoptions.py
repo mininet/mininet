@@ -25,10 +25,10 @@ def intfOptions():
     # flush out latency from reactive forwarding delay
     net.pingAll()
 
-    info( '\n*** Configuring one intf with bandwidth of 5 Mb\n' )
-    link1.intf1.config( bw=5 )
+    info( '\n*** Configuring one intf with bandwidth of 10 Mb\n' )
+    link1.intf1.config( bw=10 )
     info( '\n*** Running iperf to test\n' )
-    net.iperf()
+    net.iperf( seconds=10 )
 
     info( '\n*** Configuring one intf with loss of 50%\n' )
     link1.intf1.config( loss=50 )
