@@ -39,6 +39,7 @@ void usage(char *name)
            "  -n: run in new network and mount namespaces\n"
            "  -p: print ^A + pid\n"
            "  -a pid: attach to pid's network and mount namespaces\n"
+           "  -e pid: enter all namespaces used by containers\n"
            "  -g group: add to cgroup\n"
            "  -r rtprio: run with SCHED_RR (usually requires -g)\n"
            "  -v: print version\n",
@@ -49,6 +50,23 @@ void usage(char *name)
 int setns(int fd, int nstype)
 {
     return syscall(__NR_setns, fd, nstype);
+}
+
+/* Attach this process to namespace of pid */
+int nsenter(const int pid, const char* ns)
+{
+    char path[PATH_MAX];
+    sprintf(path, "/proc/%d/ns/%s", pid, ns);
+    int nsid = open(path, O_RDONLY);
+    if (nsid < 0) {
+        perror(path);
+        return 1;
+    }
+    if (setns(nsid, 0) != 0) {
+        perror("setns");
+        return 1;
+    }
+    return 0;
 }
 
 /* Validate alphanumeric path foo1/bar2/baz */
@@ -102,7 +120,7 @@ int main(int argc, char *argv[])
     char *cwd = get_current_dir_name();
 
     static struct sched_param sp;
-    while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
+    while ((c = getopt(argc, argv, "+cdnpa:e:g:r:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
@@ -179,6 +197,21 @@ int main(int argc, char *argv[])
             if (chdir(cwd) != 0) {
                 perror(cwd);
                 return 1;
+            }
+            break;
+        case 'e':
+            pid = atoi(optarg);
+            const char *ns[5];
+            ns[0] = "pid";
+            ns[1] = "ipc";
+            ns[2] = "uts";
+            ns[3] = "net";
+            ns[4] = "mnt";
+            int i;
+            for (i=0; i<5; ++i) {
+                if (nsenter(pid, ns[i]) != 0) {
+                    return 1;
+                }
             }
             break;
         case 'g':
