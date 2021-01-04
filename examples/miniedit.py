@@ -1699,7 +1699,7 @@ class MiniEdit( Frame ):
         fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Export the topology as...")
         if len(fileName ) > 0:
             # debug( "Now saving under %s\n" % fileName )
-            f = open(fileName, 'wb')
+            f = open(fileName, 'a')
 
             f.write("#!/usr/bin/python\n")
             f.write("\n")
