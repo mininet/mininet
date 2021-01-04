@@ -132,4 +132,4 @@ Bob Lantz
 Mininet Core Team
 
 [1]: https://travis-ci.org/mininet/mininet.svg?branch=master
-[2]: https://github.com/mininet/mininet/workflows/mininet%20tests/badge.svg
+[2]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg

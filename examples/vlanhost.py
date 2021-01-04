@@ -65,7 +65,7 @@ def exampleAllHosts( vlan ):
 
     # Start a basic network using our VLANHost
     topo = SingleSwitchTopo( k=2 )
-    net = Mininet( host=host, topo=topo )
+    net = Mininet( host=host, topo=topo, waitConnected=True )
     net.start()
     CLI( net )
     net.stop()
@@ -96,7 +96,7 @@ class VLANStarTopo( Topo ):
 def exampleCustomTags():
     """Simple example that exercises VLANStarTopo"""
 
-    net = Mininet( topo=VLANStarTopo() )
+    net = Mininet( topo=VLANStarTopo(), waitConnected=True )
     net.start()
     CLI( net )
     net.stop()

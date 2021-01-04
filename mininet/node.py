@@ -1382,10 +1382,12 @@ class Controller( Node ):
        OpenFlow controller."""
 
     def __init__( self, name, inNamespace=False, command='controller',
-                  cargs='-v ptcp:%d', cdir=None, ip="127.0.0.1",
-                  port=6653, protocol='tcp', **params ):
+                  cargs='ptcp:%d', cdir=None, ip="127.0.0.1",
+                  port=6653, protocol='tcp', verbose=False, **params ):
         self.command = command
         self.cargs = cargs
+        if verbose:
+            cargs = '-v ' + cargs
         self.cdir = cdir
         # Accept 'ip:port' syntax as shorthand
         if ':' in ip:

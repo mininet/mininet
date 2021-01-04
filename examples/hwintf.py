@@ -38,7 +38,7 @@ if __name__ == '__main__':
     checkIntf( intfName )
 
     info( '*** Creating network\n' )
-    net = Mininet( topo=TreeTopo( depth=1, fanout=2 ) )
+    net = Mininet( topo=TreeTopo( depth=1, fanout=2 ), waitConnected=True )
 
     switch = net.switches[ 0 ]
     info( '*** Adding hardware interface', intfName, 'to switch',

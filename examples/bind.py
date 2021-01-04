@@ -53,7 +53,7 @@ def testHostWithPrivateDirs():
                       '/var/mn' ]
     host = partial( Host,
                     privateDirs=privateDirs )
-    net = Mininet( topo=topo, host=host )
+    net = Mininet( topo=topo, host=host, waitConnected=True )
     net.start()
     directories = [ directory[ 0 ] if isinstance( directory, tuple )
                     else directory for directory in privateDirs ]
