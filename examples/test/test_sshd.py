@@ -16,7 +16,8 @@ class testSSHD( unittest.TestCase ):
         "Log into ssh server, check banner, then exit"
         # Note: this test will fail if "Welcome" is not in the sshd banner
         # and '#'' or '$'' are not in the prompt
-        p = pexpect.spawn( 'ssh -i /tmp/ssh/test_rsa %s' % ip, timeout=10 )
+        ssh = 'ssh -o StrictHostKeyChecking=no -i /tmp/ssh/test_rsa ' + ip
+        p = pexpect.spawn( ssh, timeout=5 )
         while True:
             index = p.expect( self.opts )
             if index == 0:
@@ -57,4 +58,3 @@ class testSSHD( unittest.TestCase ):
 
 if __name__ == '__main__':
     unittest.main()
-

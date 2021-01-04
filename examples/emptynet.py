@@ -14,7 +14,7 @@ def emptyNet():
 
     "Create an empty network and add nodes to it."
 
-    net = Mininet( controller=Controller )
+    net = Mininet( controller=Controller, waitConnected=True )
 
     info( '*** Adding controller\n' )
     net.addController( 'c0' )

@@ -107,7 +107,8 @@ def moveHost( host, oldSwitch, newSwitch, newPort=None ):
 def mobilityTest():
     "A simple test of mobility"
     info( '* Simple mobility test\n' )
-    net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch )
+    net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch,
+                                    waitConnected=True )
     info( '* Starting network:\n' )
     net.start()
     printConnections( net.switches )

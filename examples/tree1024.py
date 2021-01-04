@@ -9,10 +9,13 @@ and running sysctl -p. Check util/sysctl_addon.
 
 from mininet.cli import CLI
 from mininet.log import setLogLevel
-from mininet.node import OVSSwitch
+from mininet.node import OVSSwitch, Host
 from mininet.topolib import TreeNet
+from mininet.examples.treeping64 import HostV4, QuietController
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    network = TreeNet( depth=2, fanout=32, switch=OVSSwitch )
+    network = TreeNet( depth=2, fanout=32, host=HostV4,
+                       switch=OVSSwitch, controller=QuietController,
+                       waitConnected=True)
     network.run( CLI, network )

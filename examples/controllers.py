@@ -27,7 +27,7 @@ class MultiSwitch( OVSSwitch ):
         return OVSSwitch.start( self, [ cmap[ self.name ] ] )
 
 topo = TreeTopo( depth=2, fanout=2 )
-net = Mininet( topo=topo, switch=MultiSwitch, build=False )
+net = Mininet( topo=topo, switch=MultiSwitch, build=False, waitConnected=True )
 for c in [ c0, c1 ]:
     net.addController(c)
 net.build()

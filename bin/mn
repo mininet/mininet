@@ -284,6 +284,8 @@ class MininetRunner( object ):
                          " Mininet's IP subnet, see the --ipbase option." )
         opts.add_option( '--version', action='callback', callback=version,
                          help='prints the version and exits' )
+        opts.add_option( '--wait', '-w', action='store_true',
+                         default=False, help='wait for switches to connect' )
         opts.add_option( '--cluster', type='string', default=None,
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
@@ -385,6 +387,7 @@ class MininetRunner( object ):
                   ipBase=opts.ipbase, inNamespace=opts.innamespace,
                   xterms=opts.xterms, autoSetMacs=opts.mac,
                   autoStaticArp=opts.arp, autoPinCpus=opts.pin,
+                  waitConnected=opts.wait,
                   listenPort=opts.listenport )
 
         if opts.ensure_value( 'nat', False ):
