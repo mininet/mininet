@@ -2,7 +2,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.3.0d6
+Mininet 2.3.0a1
 
 [![Build Status][2]](https://github.com/mininet/mininet/actions)
 [![Travis Status][1]](https://travis-ci.org/mininet/mininet)
@@ -73,20 +73,11 @@ Mininet includes:
 
 This is primarily a performance improvement and bug fix release.
 
-- Batch startup has been implemented for Open vSwitch, improving
-  startup performance.
+- Python 3 support (Python 2 is still supported as well)
 
-- OVS patch links have been implemented via OVSLink and --link ovs
+- Support for Ubuntu 20.04
 
-  Warning! These links have *serious limitations* compared to
-  virtual Ethernet pairs: they are not attached to real Linux
-  interfaces so you cannot use tcpdump or wireshark with them;
-  they also cannot be used in long chains - we don't recommend more
-  than 64 OVSLinks, for example --linear,64. However, they can offer
-  significantly better performance than veth pairs, for certain
-  configurations.
-
-- You can now easily install Mininet on a Raspberry Pi ;-)
+- More reliable testing and CI via github actions
 
 - Additional information for this release and previous releases
   may be found in the release notes on docs.mininet.org
@@ -129,7 +120,7 @@ Best wishes, and we look forward to seeing what you can do with
 Mininet to change the networking world!
 
 Bob Lantz
-Mininet Core Team
+on behalf of the Mininet Contributors
 
 [1]: https://travis-ci.org/mininet/mininet.svg?branch=master
 [2]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg
