@@ -25,8 +25,6 @@ script:
 - export PYTHON=`which python`
 - echo 'px import sys; print(sys.version_info)' | sudo $PYTHON bin/mn -v output
 - sudo $PYTHON bin/mn --test pingall
-- sudo $PYTHON mininet/test/runner.py -v -quick
-- sudo $PYTHON examples/test/runner.py -v -quick
 
 notifications:
   email:

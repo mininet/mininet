@@ -22,7 +22,7 @@ class testIntfOptions( unittest.TestCase ):
         while True:
             index = p.expect( opts, timeout=600 )
             if index == 0:
-                BW = 5
+                BW = 10
                 bw = float( p.match.group( 1 ) )
                 self.assertGreaterEqual( bw, BW * ( 1 - tolerance ) )
                 self.assertLessEqual( bw, BW * ( 1 + tolerance ) )

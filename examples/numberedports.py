@@ -28,7 +28,7 @@ def testPortNumbering():
        mid-level API) and check that implicit and
        explicit port numbering works as expected."""
 
-    net = Mininet( controller=Controller )
+    net = Mininet( controller=Controller, waitConnected=True )
 
     info( '*** Adding controller\n' )
     net.addController( 'c0' )

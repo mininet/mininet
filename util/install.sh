@@ -171,8 +171,15 @@ function mn_deps {
 			ethtool help2man python-pyflakes python3-pylint \
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
+        pf=pyflakes
+        # Starting around 20.04, installing pyflakes instead of pyflakes3
+        # causes Python 2 to be installed, which is exactly NOT what we want.
+        if [ `expr $RELEASE '>=' 20.04` = "1" ]; then
+                pf=pyflakes3
+        fi
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man pyflakes pylint pep8 \
+                 ethtool help2man $pf pylint pep8 \
+                 net-tools \
                  ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
@@ -351,8 +358,8 @@ function ubuntuOvs {
 
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
-             pkg-config bzip2 openssl python-all procps python-qt4 \
-             python-zopeinterface python-twisted-conch dkms dh-python dh-autoreconf \
+             pkg-config bzip2 openssl ${PYPKG}-all procps ${PYPKG}-qt4 \
+             ${PYPKG}-zopeinterface ${PYPKG}-twisted-conch dkms dh-python dh-autoreconf \
              uuid-runtime
 
     # Build OVS
@@ -482,7 +489,7 @@ function ryu {
     # install Ryu dependencies"
     $install autoconf automake g++ libtool python make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
-        $install gcc python-pip python-dev libffi-dev libssl-dev \
+        $install gcc ${PYPKG}-pip ${PYPKG}-dev libffi-dev libssl-dev \
             libxml2-dev libxslt1-dev zlib1g-dev
     fi
 
@@ -505,17 +512,17 @@ function nox {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python python-twisted \
+    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
 		swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        $install python-dev libboost-dev
+        $install ${PYPKG}-dev libboost-dev
         $install libboost-filesystem-dev
         $install libboost-test-dev
     fi
     # Install NOX optional deps:
-    $install libsqlite3-dev python-simplejson
+    $install libsqlite3-dev ${PYPKG}-simplejson
 
     # Fetch NOX destiny
     cd $BUILD_DIR/
@@ -553,12 +560,12 @@ function nox13 {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python python-twisted \
+    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
         swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
-        $install python-dev libboost-dev
+        $install ${PYPKG}-dev libboost-dev
         $install libboost-filesystem-dev
         $install libboost-test-dev
     fi
@@ -594,7 +601,7 @@ function oftest {
     echo "Installing oftest..."
 
     # Install deps:
-    $install tcpdump python-scapy
+    $install tcpdump ${PYPKG}-scapy
 
     # Install oftest:
     cd $BUILD_DIR/
@@ -620,6 +627,7 @@ function cbench {
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
     ./configure --with-openflow-src-dir=$BUILD_DIR/openflow
+    make liboflops_test.la
     make
     sudo make install || true # make install fails; force past this
 }

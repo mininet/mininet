@@ -8,7 +8,7 @@ from mininet.log import setLogLevel
 
 def perf(Link):
     "Test connectivity nand performance over Link"
-    net = Mininet( host=RemoteHost, link=Link )
+    net = Mininet( host=RemoteHost, link=Link, waitConnected=True )
     h1 = net.addHost( 'h1')
     h2 = net.addHost( 'h2', server='ubuntu2' )
     net.addLink( h1, h2 )

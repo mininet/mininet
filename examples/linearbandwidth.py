@@ -83,10 +83,10 @@ def linearBandwidthTest( lengths ):
         info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        link = partial( TCLink, delay='2ms', bw=10 )
+        link = partial( TCLink, delay='30ms', bw=100 )
         net = Mininet( topo=topo, switch=Switch,
-                       controller=Controller, waitConnected=True,
-                       link=link )
+                       controller=Controller, link=link,
+                       waitConnected=True )
         net.start()
         info( "*** testing basic connectivity\n" )
         for n in lengths:
@@ -99,7 +99,7 @@ def linearBandwidthTest( lengths ):
             src.cmd( 'telnet', dst.IP(), '5001' )
             info( "testing", src.name, "<->", dst.name, '\n' )
             # serverbw = received; _clientbw = buffered
-            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=10 )
+            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=5 )
             info( serverbw, '\n' )
             flush()
             results[ datapath ] += [ ( n, serverbw ) ]
@@ -117,6 +117,6 @@ def linearBandwidthTest( lengths ):
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
-    sizes = [ 1, 10, 20, 40, 60, 80 ]
+    sizes = [ 1, 2, 3, 4 ]
     info( "*** Running linearBandwidthTest", sizes, '\n' )
     linearBandwidthTest( sizes  )

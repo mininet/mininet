@@ -875,7 +875,7 @@ class MininetCluster( Mininet ):
 
 def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
     "Test tunnels between nodes in namespaces"
-    net = Mininet( host=RemoteHost, link=link )
+    net = Mininet( host=RemoteHost, link=link, waitConnected=True )
     h1 = net.addHost( 'h1')
     h2 = net.addHost( 'h2', server=remote )
     net.addLink( h1, h2 )
@@ -891,7 +891,8 @@ def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
 def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
     "Test remote Node classes"
     info( '*** Remote Node Test\n' )
-    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link )
+    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link,
+                   waitConnected=True )
     c0 = net.addController( 'c0' )
     # Make sure controller knows its non-loopback address
     Intf( 'eth0', node=c0 ).updateIP()
