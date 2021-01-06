@@ -16,6 +16,7 @@ class testScratchNet( unittest.TestCase ):
         p = pexpect.spawn( 'python -m %s' % name )
         index = p.expect( self.opts, timeout=120 )
         self.assertEqual( index, 0 )
+        p.wait()
 
     def testPingKernel( self ):
         self.pingTest( 'mininet.examples.scratchnet' )
