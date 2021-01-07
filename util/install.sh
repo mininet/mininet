@@ -164,7 +164,7 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man pyflakes pylint python-pep8 python-pexpect
+            ethtool help2man python3-pyflakes pylint python3-pep8-naming python-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
 			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
@@ -211,25 +211,33 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
+        $install openvswitch
+        sudo systemctl enable openvswitch.service
+        sudo systemctl start openvswitch.service
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
        $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
-    # was: git clone git://openflowswitch.org/openflow.git
-    # Use our own fork on github for now:
-    git clone git://github.com/mininet/openflow
-    cd $BUILD_DIR/openflow
 
-    # Patch controller to handle more than 16 switches
-    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+    # Only try to clone-make-install if the service is not installed
+    systemctl status openvswitch.service
+    if [ $? -eq 4 ]; then
+        # was: git clone git://openflowswitch.org/openflow.git
+        # Use our own fork on github for now:
+        git clone git://github.com/mininet/openflow
+        cd $BUILD_DIR/openflow
 
-    # Resume the install:
-    ./boot.sh
-    ./configure
-    make
-    sudo make install
-    cd $BUILD_DIR
+        # Patch controller to handle more than 16 switches
+        patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+
+        # Resume the install:
+        ./boot.sh
+        ./configure
+        make
+        sudo make install
+        cd $BUILD_DIR
+    fi
 }
 
 function of13 {
@@ -397,7 +405,8 @@ function ovs {
     echo "Installing Open vSwitch..."
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install openvswitch openvswitch-controller
+        $install openvswitch
+        # We might also need openvswitch-controller
         return
     fi
 
@@ -592,9 +601,11 @@ function nox13 {
 
 # "Install" POX
 function pox {
-    echo "Installing POX into $BUILD_DIR/pox..."
-    cd $BUILD_DIR
-    git clone https://github.com/noxrepo/pox.git
+    if [ ! -d "pox" ]; then
+        echo "Installing POX into $BUILD_DIR/pox..."
+        cd $BUILD_DIR
+        git clone https://github.com/noxrepo/pox.git
+    fi
 }
 
 # Install OFtest
