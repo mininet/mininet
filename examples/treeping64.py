@@ -4,7 +4,7 @@
 
 
 from mininet.log import setLogLevel, info
-from mininet.node import UserSwitch, OVSKernelSwitch, Host, Controller
+from mininet.node import UserSwitch, OVSKernelSwitch, Host
 from mininet.topolib import TreeNet
 
 
@@ -16,8 +16,6 @@ class HostV4( Host ):
                  'default.autoconf=0', 'lo.autoconf=0' ]
         for cfg in cfgs:
             self.cmd( 'sysctl -w net.ipv6.conf.' + cfg )
-
-
 
 
 def treePing64():

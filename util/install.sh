@@ -180,7 +180,8 @@ function mn_deps {
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint pep8 \
                  net-tools \
-                 ${PYPKG}-setuptools ${PYPKG}-pexpect ${PYPKG}-tk
+                 ${PYPKG}-pexpect ${PYPKG}-tk
+        $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
     fi

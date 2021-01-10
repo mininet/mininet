@@ -42,15 +42,13 @@ jobs:
           sudo apt-get install -qq vlan
           pip install pexpect
           util/install.sh -fw
-      - name: Run tests (quick)
+      - name: Run core tests
         run: |
           export sudo="sudo env PATH=$PATH"
           export PYTHON=`which python`
-          rm -f pexpect.out
-          $sudo $PYTHON mininet/test/runner.py -v -quick
+          $sudo $PYTHON mininet/test/runner.py -v
       - name: Run examples tests (quick)
         run: |
           export sudo="sudo env PATH=$PATH"
           export PYTHON=`which python`
-          rm -f pexpect.out
           $sudo $PYTHON examples/test/runner.py -v -quick
