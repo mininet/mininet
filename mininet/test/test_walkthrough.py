@@ -12,7 +12,7 @@ import re
 from mininet.util import quietRun, pexpect
 from mininet.clean import cleanup
 from distutils.version import StrictVersion
-from time import sleep
+from sys import stdout
 
 
 def tsharkVersion():
@@ -168,14 +168,16 @@ class testWalkthrough( unittest.TestCase ):
             httpserver = 'SimpleHTTPServer'
         else:
             httpserver = 'http.server'
-        p = pexpect.spawn( 'mn -w' )
+        p = pexpect.spawn( 'mn -w', logfile=stdout )
         p.expect( self.prompt )
-        p.sendline( 'h1 python -m %s 80 &' % httpserver )
+        p.sendline( 'h1 python -m %s 80 >& /dev/null &' % httpserver )
+        p.expect( self.prompt )
         # The walkthrough doesn't specify a delay here, and
         # we also don't read the output (also a possible problem),
-        # but for now let's wait a couple of seconds to make
+        # but for now let's wait a number of seconds to make
         # it less likely to fail due to the race condition.
-        sleep( 2 )
+        p.sendline( 'px from mininet.util import waitListening;'
+                    'waitListening(h1, port=80, timeout=30)' )
         p.expect( self.prompt )
         p.sendline( ' h2 wget -O - h1' )
         p.expect( '200 OK' )
