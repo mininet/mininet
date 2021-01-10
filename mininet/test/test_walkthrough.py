@@ -29,8 +29,8 @@ class testWalkthrough( unittest.TestCase ):
 
     prompt = 'mininet>'
 
-
-    def setup( self ):
+    @staticmethod
+    def setup():
         "Be paranoid and run cleanup() before each test"
         cleanup()
 
