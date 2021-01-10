@@ -136,8 +136,6 @@ class NAT( Node ):
         # Instruct the kernel to perform forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
 
-
-
     def terminate( self ):
         "Stop NAT/forwarding between Mininet and external network"
         # Remote NAT rules

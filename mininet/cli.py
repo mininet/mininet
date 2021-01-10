@@ -399,7 +399,7 @@ class CLI( Cmd ):
                 error( 'invalid command: '
                        'switch <switch name> {start, stop}\n' )
 
-    def do_wait( self, line ):
+    def do_wait( self, _line ):
         "Wait until all switches have connected to a controller"
         self.mn.waitConnected()
 
