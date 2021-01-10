@@ -10,8 +10,9 @@ import unittest
 import os
 import re
 from mininet.util import quietRun, pexpect
+from mininet.clean import cleanup
 from distutils.version import StrictVersion
-from time import sleep
+from sys import stdout
 
 
 def tsharkVersion():
@@ -28,6 +29,11 @@ class testWalkthrough( unittest.TestCase ):
 
     prompt = 'mininet>'
 
+    @staticmethod
+    def setup():
+        "Be paranoid and run cleanup() before each test"
+        cleanup()
+
     # PART 1
     def testHelp( self ):
         "Check the usage message"
@@ -43,17 +49,18 @@ class testWalkthrough( unittest.TestCase ):
             tshark = pexpect.spawn( 'tshark -i lo -R of' )
         else:
             tshark = pexpect.spawn( 'tshark -i lo -Y openflow_v1' )
-        tshark.expect( [ 'Capturing on lo', "Capturing on 'Loopback'" ] )
+        tshark.expect( [ 'Capturing on lo', "Capturing on 'Loopback" ] )
         mn = pexpect.spawn( 'mn --test pingall' )
         mn.expect( '0% dropped' )
         tshark.expect( [ '74 Hello', '74 of_hello', '74 Type: OFPT_HELLO' ] )
         tshark.sendintr()
         mn.expect( pexpect.EOF )
+        tshark.expect( 'aptured' )  # 'xx packets captured'
         tshark.expect( pexpect.EOF )
 
     def testBasic( self ):
         "Test basic CLI commands (help, nodes, net, dump)"
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         # help command
         p.sendline( 'help' )
@@ -92,7 +99,7 @@ class testWalkthrough( unittest.TestCase ):
 
     def testHostCommands( self ):
         "Test ifconfig and ps on h1 and s1"
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         # Third pattern is a local interface beginning with 'eth' or 'en'
         interfaces = [ r'h1-eth0[:\s]', r's1-eth1[:\s]',
@@ -144,7 +151,7 @@ class testWalkthrough( unittest.TestCase ):
 
     def testConnectivity( self ):
         "Test ping and pingall"
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 h2' )
         p.expect( '1 packets transmitted, 1 received' )
@@ -161,14 +168,16 @@ class testWalkthrough( unittest.TestCase ):
             httpserver = 'SimpleHTTPServer'
         else:
             httpserver = 'http.server'
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w', logfile=stdout )
         p.expect( self.prompt )
-        p.sendline( 'h1 python -m %s 80 &' % httpserver )
+        p.sendline( 'h1 python -m %s 80 >& /dev/null &' % httpserver )
+        p.expect( self.prompt )
         # The walkthrough doesn't specify a delay here, and
         # we also don't read the output (also a possible problem),
-        # but for now let's wait a couple of seconds to make
+        # but for now let's wait a number of seconds to make
         # it less likely to fail due to the race condition.
-        sleep( 2 )
+        p.sendline( 'px from mininet.util import waitListening;'
+                    'waitListening(h1, port=80, timeout=30)' )
         p.expect( self.prompt )
         p.sendline( ' h2 wget -O - h1' )
         p.expect( '200 OK' )
@@ -213,7 +222,9 @@ class testWalkthrough( unittest.TestCase ):
 
     def testLinkChange( self ):
         "Test TCLink bw and delay"
-        p = pexpect.spawn( 'mn --link tc,bw=10,delay=10ms' )
+        p = pexpect.spawn( 'mn -w --link tc,bw=10,delay=10ms' )
+        p.expect( self.prompt )
+        p.sendline( 'h1 route && ping -c1 h2' )
         # test bw
         p.expect( self.prompt )
         p.sendline( 'iperf' )
@@ -319,7 +330,7 @@ class testWalkthrough( unittest.TestCase ):
     # PART 3
     def testPythonInterpreter( self ):
         "Test py and px by checking IP for h1 and adding h3"
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         # test host IP
         p.sendline( 'py h1.IP()' )
@@ -341,7 +352,7 @@ class testWalkthrough( unittest.TestCase ):
 
     def testLink( self ):
         "Test link CLI command using ping"
-        p = pexpect.spawn( 'mn' )
+        p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         p.sendline( 'link s1 h1 down' )
         p.expect( self.prompt )

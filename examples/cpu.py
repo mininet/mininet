@@ -52,7 +52,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
                            period_us=period_us,
                            cpu=.5*cpu )
             try:
-                net = Mininet( topo=topo, host=host )
+                net = Mininet( topo=topo, host=host, waitConnected=True )
             # pylint: disable=bare-except
             except:
                 info( '*** Skipping scheduler %s and cleaning up\n' % sched )

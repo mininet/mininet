@@ -20,7 +20,8 @@ from mininet.log import setLogLevel, info
 def multiControllerNet():
     "Create a network from semi-scratch with multiple controllers."
 
-    net = Mininet( controller=Controller, switch=OVSSwitch )
+    net = Mininet( controller=Controller, switch=OVSSwitch,
+                   waitConnected=True )
 
     info( "*** Creating (reference) controllers\n" )
     c1 = net.addController( 'c1', port=6633 )

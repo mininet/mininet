@@ -13,7 +13,7 @@ from mininet.topo import Topo
 def runMultiLink():
     "Create and run multiple link network"
     topo = simpleMultiLinkTopo( n=2 )
-    net = Mininet( topo=topo )
+    net = Mininet( topo=topo, waitConnected=True )
     net.start()
     CLI( net )
     net.stop()

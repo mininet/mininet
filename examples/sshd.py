@@ -29,7 +29,7 @@ from mininet.util import waitListening
 def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
     topo = TreeTopo( depth, fanout )
-    return Mininet( topo, **kwargs )
+    return Mininet( topo, waitConnected=True, **kwargs )
 
 def connectToRootNS( network, switch, ip, routes ):
     """Connect hosts to root namespace via switch. Starts network.
