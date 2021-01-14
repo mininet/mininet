@@ -183,8 +183,8 @@ function mn_deps {
                  ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
-        if ! ${PYTHON} -m pip; then
-            curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+        if ! ${PYTHON} -m pip -V; then
+            wget https://bootstrap.pypa.io/get-pip.py
             sudo ${PYTHON} get-pip.py
             rm get-pip.py
         fi

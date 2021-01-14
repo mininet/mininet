@@ -24,7 +24,7 @@ if [ -e /etc/rc.local.backup ]; then
     sudo mv /etc/rc.local.backup /etc/rc.local
 fi
 # Fetch Mininet
-sudo apt-get -y install git-core openssh-server
+sudo apt-get -y -qq install git-core openssh-server
 git clone git://github.com/mininet/mininet
 # Optionally check out branch
 if [ "$1" != "" ]; then
@@ -33,8 +33,14 @@ if [ "$1" != "" ]; then
     git checkout $1
     popd
 fi
-# Install Mininet
-time mininet/util/install.sh
+# Install Mininet for Python2 and Python3
+APT="sudo apt-get -y -qq"
+$APT install python3
+$APT install python-is-python3 || true
+$APT install python2 || $APT install python
+python --version
+time PYTHON=python3 mininet/util/install.sh
+time PYTHON=python2 mininet/util/install.sh -n
 # Finalize VM
 time mininet/util/install.sh -tcd
 # Ignoring this since NOX classic is deprecated

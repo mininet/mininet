@@ -638,7 +638,8 @@ def checkOutBranch( vm, branch, prompt=Prompt ):
     vm.sendline( 'util/install.sh -n' )
 
 
-def interact( vm, tests, pre='', post='', prompt=Prompt ):
+def interact( vm, tests, pre='', post='', prompt=Prompt,
+              clean=True):
     "Interact with vm, which is a pexpect object"
     login( vm )
     log( '* Waiting for login...' )
@@ -676,6 +677,10 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Disabling serial console' )
     vm.sendline( "sudo sed -i -e 's/^GRUB_TERMINAL=serial/#GRUB_TERMINAL=serial/' "
                 "/etc/default/grub; sudo update-grub" )
+    vm.expect( prompt )
+    if clean:
+        log( '* Cleaning vm' )
+        vm.sendline( '~/mininet/util/install.sh -d' )
     vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
