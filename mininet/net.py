@@ -92,6 +92,7 @@ import select
 import signal
 import random
 
+from sys import exit  # pylint: disable=redefined-builtin
 from time import sleep
 from itertools import chain, groupby
 from math import ceil
@@ -113,6 +114,7 @@ VERSION = "2.3.0a1"
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
+    # pylint: disable=too-many-arguments
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                   controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',

@@ -2,13 +2,14 @@
 
 "Monitor multiple hosts using popen()/pmonitor()"
 
+from time import time
+from signal import SIGINT
+
 from mininet.net import Mininet
 from mininet.topo import SingleSwitchTopo
 from mininet.util import pmonitor
 from mininet.log import setLogLevel, info
 
-from time import time
-from signal import SIGINT
 
 def pmonitorTest( N=3, seconds=10 ):
     "Run pings and monitor multiple hosts using pmonitor"
@@ -30,6 +31,7 @@ def pmonitorTest( N=3, seconds=10 ):
             for p in popens.values():
                 p.send_signal( SIGINT )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

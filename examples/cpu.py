@@ -54,7 +54,7 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
             try:
                 net = Mininet( topo=topo, host=host, waitConnected=True )
             # pylint: disable=bare-except
-            except:
+            except:  # noqa
                 info( '*** Skipping scheduler %s and cleaning up\n' % sched )
                 cleanup()
                 break

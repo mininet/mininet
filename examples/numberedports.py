@@ -75,6 +75,7 @@ def testPortNumbering():
     info( '*** Stopping network\n' )
     net.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     testPortNumbering()

@@ -59,13 +59,14 @@ class MininetFacade( object ):
 
     def __getitem__( self, key ):
         "returns primary/named networks or node from any net"
-        #search kwargs for net named key
+        # search kwargs for net named key
         if key in self.nameToNet:
             return self.nameToNet[ key ]
-        #search each net for node named key
+        # search each net for node named key
         for net in self.nets:
             if key in net:
                 return net[ key ]
+        return None
 
     def __iter__( self ):
         "Iterate through all nodes in all Mininet objects"
@@ -100,6 +101,7 @@ class MininetFacade( object ):
 
 class ControlNetwork( Topo ):
     "Control Network Topology"
+    # pylint: disable=arguments-differ
     def build( self, n, dataController=DataController, **_kwargs ):
         """n: number of data network controller nodes
            dataController: class for data network controllers"""

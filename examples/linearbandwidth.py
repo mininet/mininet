@@ -24,20 +24,24 @@ of switches, this example demonstrates:
 """
 
 
+import sys
+
+from functools import partial
+
 from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg, info
 from mininet.util import irange, quietRun
 from mininet.link import TCLink
-from functools import partial
 
-import sys
 flush = sys.stdout.flush
+
 
 class LinearTestTopo( Topo ):
     "Topology for a string of N hosts and N-1 switches."
 
+    # pylint: disable=arguments-differ
     def build( self, N, **params ):
         # Create switches and hosts
         hosts = [ self.addHost( 'h%s' % h )
@@ -79,7 +83,7 @@ def linearBandwidthTest( lengths ):
     output = quietRun( 'sysctl -w net.ipv4.tcp_congestion_control=reno' )
     assert 'reno' in output
 
-    for datapath in switches.keys():
+    for datapath in switches:
         info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
@@ -105,7 +109,7 @@ def linearBandwidthTest( lengths ):
             results[ datapath ] += [ ( n, serverbw ) ]
         net.stop()
 
-    for datapath in switches.keys():
+    for datapath in switches:
         info( "\n*** Linear network results for", datapath, "datapath:\n" )
         result = results[ datapath ]
         info( "SwitchCount\tiperf Results\n" )
@@ -114,6 +118,7 @@ def linearBandwidthTest( lengths ):
             info( serverbw, '\n' )
         info( '\n')
     info( '\n' )
+
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
