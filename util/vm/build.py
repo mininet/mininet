@@ -662,8 +662,11 @@ def interact( vm, tests, pre='', post='', prompt=Prompt,
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
     log( '* Waiting for script to complete... ' )
-    # Gigantic timeout for now ;-(
-    vm.expect( 'Done preparing Mininet', timeout=3600 )
+    # Long timeout since we may be on cloud CI
+    # 30min for kvm, 1.5hr for emulation
+    # TODO: detect installation errors
+    timeout = 5200 if NoKVM else 1800
+    vm.expect( 'Done preparing Mininet', timeout=timeout )
     log( '* Completed successfully' )
     vm.expect( prompt )
     version = getMininetVersion( vm )
