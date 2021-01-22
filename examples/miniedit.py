@@ -3011,7 +3011,7 @@ class MiniEdit( Frame ):
         ## NOTE: MAKE SURE THIS IS LAST THING CALLED
         # Start the CLI if enabled
         if self.appPrefs['startCLI'] == '1':
-            info( "\n\n NOTE: PLEASE REMEMBER TO EXIT THE CLI BEFORE YOU PRESS THE STOP BUTTON. Not exiting will prevent MiniEdit from quitting and will prevent you from starting the network again during this sessoin.\n\n")
+            info( "\n\n NOTE: PLEASE REMEMBER TO EXIT THE CLI BEFORE YOU PRESS THE STOP BUTTON. Not exiting will prevent MiniEdit from quitting and will prevent you from starting the network again during this session.\n\n")
             CLI(self.net)
 
     def start( self ):
