@@ -58,6 +58,7 @@ def multiControllerNet():
     info( "*** Stopping network\n" )
     net.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )  # for CLI output
     multiControllerNet()

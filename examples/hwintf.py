@@ -8,12 +8,15 @@ hardware interface) to a network after the network is created.
 import re
 import sys
 
+from sys import exit  # pylint: disable=redefined-builtin
+
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info, error
 from mininet.net import Mininet
 from mininet.link import Intf
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun
+
 
 def checkIntf( intf ):
     "Make sure intf exists and is not configured."
@@ -26,6 +29,7 @@ def checkIntf( intf ):
         error( 'Error:', intf, 'has an IP address,'
                'and is probably in use!\n' )
         exit( 1 )
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

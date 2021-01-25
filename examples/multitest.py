@@ -17,6 +17,7 @@ def ifconfigTest( net ):
     for host in hosts:
         info( host.cmd( 'ifconfig' ) )
 
+
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
     info( "*** Initializing Mininet and kernel modules\n" )

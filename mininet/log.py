@@ -20,7 +20,7 @@ LEVELS = { 'debug': logging.DEBUG,
 # change this to logging.INFO to get printouts when running unit tests
 LOGLEVELDEFAULT = OUTPUT
 
-#default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOGMSGFORMAT = '%(message)s'
 
 
@@ -51,7 +51,7 @@ class StreamHandlerNoNewline( logging.StreamHandler ):
             self.flush()
         except ( KeyboardInterrupt, SystemExit ):
             raise
-        except:
+        except:  # noqa pylint: disable=bare-except
             self.handleError( record )
 
 
@@ -137,12 +137,13 @@ class MininetLogger( Logger, object ):
 
            logger.warning("Houston, we have a %s", "cli output", exc_info=1)
         """
-        if self.manager.disable >= OUTPUT:
+        if getattr( self.manager, 'disabled', 0 ) >= OUTPUT:
             return
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
 
     # pylint: enable=method-hidden
+
 
 lg = MininetLogger()
 
@@ -167,6 +168,7 @@ def makeListCompatible( fn ):
     setattr( newfn, '__name__', fn.__name__ )
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
+
 
 _loggers = lg.info, lg.output, lg.warn, lg.error, lg.debug
 _loggers = tuple( makeListCompatible( logger )

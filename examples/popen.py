@@ -28,6 +28,7 @@ def monitorhosts( hosts=5 ):
     # Done
     net.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     monitorhosts( hosts=5 )

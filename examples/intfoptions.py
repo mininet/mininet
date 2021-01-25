@@ -43,6 +43,7 @@ def intfOptions():
     info( '\n*** Done testing\n' )
     net.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     intfOptions()

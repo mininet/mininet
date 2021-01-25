@@ -11,14 +11,19 @@ Example to pull custom params (topo, switch, etc.) from a file:
   sudo mn --custom ~/mininet/custom/custom_example.py
 """
 
-from optparse import OptionParser
 import os
 import sys
 import time
 
+from functools import partial
+from optparse import OptionParser  # pylint: disable=deprecated-module
+from sys import exit  # pylint: disable=redefined-builtin
+
 # Fix setuptools' evil madness, and open up (more?) security holes
 if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
+
+# pylint: disable=wrong-import-position
 
 from mininet.clean import cleanup
 import mininet.cli
@@ -34,10 +39,7 @@ from mininet.link import Link, TCLink, TCULink, OVSLink
 from mininet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
 from mininet.topolib import TreeTopo, TorusTopo
-from mininet.util import customClass, specialClass, splitArgs
-from mininet.util import buildTopo
-
-from functools import partial
+from mininet.util import customClass, specialClass, splitArgs, buildTopo
 
 # Experimental! cluster edition prototype
 from mininet.examples.cluster import ( MininetCluster, RemoteHost,
@@ -45,6 +47,7 @@ from mininet.examples.cluster import ( MininetCluster, RemoteHost,
                                        SwitchBinPlacer, RandomPlacer,
                                        ClusterCleanup )
 from mininet.examples.clustercli import ClusterCLI
+
 
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
 
@@ -106,6 +109,7 @@ def allTest( net ):
 def nullTest( _net ):
     "Null 'test' (does nothing)"
     pass
+
 
 TESTS.update( all=allTest, none=nullTest, build=nullTest )
 
@@ -425,7 +429,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         info( "\n\nKeyboard Interrupt. Shutting down and cleaning up...\n\n")
         cleanup()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Print exception
         type_, val_, trace_ = sys.exc_info()
         errorMsg = ( "-"*80 + "\n" +

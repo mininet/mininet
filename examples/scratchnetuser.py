@@ -66,6 +66,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     switch.deleteIntfs()
     info( '\n' )
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     info( '*** Scratch network demo (user datapath)\n' )

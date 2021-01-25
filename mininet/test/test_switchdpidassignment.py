@@ -24,7 +24,7 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
         "Clean up if necessary"
         # satisfy pylint
         assert self
-        if sys.exc_info != ( None, None, None ):
+        if sys.exc_info() != ( None, None, None ):
             cleanup()
 
     def testDefaultDpid( self ):
@@ -94,6 +94,7 @@ class testSwitchIVS( TestSwitchDpidAssignmentOVS ):
 class testSwitchUserspace( TestSwitchDpidAssignmentOVS ):
     "Test dpid assignment of Userspace switch."
     switchClass = UserSwitch
+
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )

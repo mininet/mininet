@@ -1,8 +1,11 @@
 "Module dependency utility functions for Mininet."
 
+from os import environ
+from sys import exit  # pylint: disable=redefined-builtin
+
 from mininet.util import quietRun, BaseString
 from mininet.log import info, error, debug
-from os import environ
+
 
 def lsmod():
     "Return output of lsmod."
@@ -17,6 +20,7 @@ def modprobe( mod ):
     """Return output of modprobe
        mod: module string"""
     return quietRun( [ 'modprobe', mod ] )
+
 
 OF_KMOD = 'ofdatapath'
 OVS_KMOD = 'openvswitch_mod'  # Renamed 'openvswitch' in OVS 1.7+/Linux 3.5+
