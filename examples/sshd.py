@@ -47,6 +47,7 @@ def connectToRootNS( network, switch, ip, routes ):
     for route in routes:
         root.cmd( 'route add -net ' + route + ' dev ' + str( intf ) )
 
+# pylint: disable=too-many-arguments
 def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
           ip='10.123.123.1/32', routes=None, switch=None ):
     """Start a network, connect it to root ns, and run sshd on all hosts.
@@ -72,6 +73,7 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     for host in network.hosts:
         host.cmd( 'kill %' + cmd )
     network.stop()
+
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info')

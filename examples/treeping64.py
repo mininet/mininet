@@ -38,6 +38,7 @@ def treePing64():
         info( "%s: %d%% packet loss\n" % ( name, results[ name ] ) )
     info( '\n' )
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     treePing64()

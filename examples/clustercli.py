@@ -31,6 +31,7 @@ class ClusterCLI( CLI ):
         if not nx:
             try:
                 # pylint: disable=import-error,no-member
+                # pylint: disable=import-outside-toplevel
                 import networkx
                 nx = networkx  # satisfy pylint
                 from matplotlib import pyplot

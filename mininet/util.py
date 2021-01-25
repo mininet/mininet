@@ -1,19 +1,23 @@
 "Utility functions for Mininet."
 
+import codecs
+import os
+import re
+import sys
 
-from mininet.log import output, info, error, warn, debug
-
-from time import sleep
+from fcntl import fcntl, F_GETFL, F_SETFL
+from functools import partial
+from os import O_NONBLOCK
 from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
-import re
-from fcntl import fcntl, F_GETFL, F_SETFL
-from os import O_NONBLOCK
-import os
-from functools import partial
-import sys
-import codecs
+from sys import exit  # pylint: disable=redefined-builtin
+from time import sleep
+
+from mininet.log import output, info, error, warn, debug
+
+# pylint: disable=too-many-arguments
+
 
 # Python 2/3 compatibility
 
@@ -454,6 +458,7 @@ def pmonitor(popens, timeoutms=500, readline=True,
         poller.register( fd, POLLIN )
         flags = fcntl( fd, F_GETFL )
         fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+    # pylint: disable=too-many-nested-blocks
     while popens:
         fds = poller.poll( timeoutms )
         if fds:
@@ -665,7 +670,6 @@ def ensureRoot():
     if os.getuid() != 0:
         error( '*** Mininet must run as root.\n' )
         exit( 1 )
-    return
 
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     """Wait until server is listening on port.

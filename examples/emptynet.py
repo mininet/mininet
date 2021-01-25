@@ -39,6 +39,7 @@ def emptyNet():
     info( '*** Stopping network' )
     net.stop()
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
     emptyNet()

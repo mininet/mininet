@@ -3,20 +3,17 @@ sudo: required
 
 matrix:
   include:
-    - dist: trusty
-      python: 2.7
-      env: dist="14.04 LTS trusty"
-    - dist: trusty
+    - dist: focal
       python: 3.6
-      env: dist="14.04 LTS trusty"
+      env: dist="24.04 LTS focal"
 
 before_install:
 - sudo apt-get update -qq
-- sudo apt-get install -qq vlan
+- sudo apt-get install -qq vlan pyflakes
 - PYTHON=`which python` util/install.sh -n
 
 install:
-- bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
+- make codecheck
 - pip install pexpect || pip3 install pexpect
 - util/install.sh -nfvw
 

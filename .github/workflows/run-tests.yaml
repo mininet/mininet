@@ -24,9 +24,6 @@ jobs:
           # This seems too slow unfortunately:
           # sudo apt-get upgrade -y -qq
           PYTHON=`which python` util/install.sh -nv
-      - name: Run code check (skipping for now)
-        run: |
-          bash -c "if [ `lsb_release -rs` == '14.04' ]; then make codecheck; fi"
       - name: Sanity test
         run: |
           export sudo="sudo env PATH=$PATH"

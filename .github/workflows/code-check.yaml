@@ -1,0 +1,22 @@
+
+name: code-check
+
+on: [push, pull_request]
+
+jobs:
+  code-check:
+    name: Mininet Code Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+      - name: Check out Mininet source
+        uses: actions/checkout@v2
+      - name: Install Mininet code check dependencies
+        run: |
+          PYTHON=`which python` util/install.sh -n
+          python -m pip install pylint==2.4.4
+      - name: Run code check
+        run:  make codecheck
