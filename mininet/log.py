@@ -4,6 +4,7 @@ import logging
 from logging import Logger
 import types
 
+
 # Create a new loglevel, 'CLI info', which enables a Mininet user to see only
 # the output of the commands they execute, plus any errors or warnings.  This
 # level is in between info and warning.  CLI info-level commands should not be
@@ -105,30 +106,21 @@ class MininetLogger( Logger, object ):
         formatter = logging.Formatter( LOGMSGFORMAT )
         # add formatter to ch
         ch.setFormatter( formatter )
-        # add ch to lg
+        # add ch to lg and initialize log level
         self.addHandler( ch )
-
+        self.ch = ch
         self.setLogLevel()
 
     def setLogLevel( self, levelname=None ):
         """Setup loglevel.
            Convenience function to support lowercase names.
            levelName: level name from LEVELS"""
-        level = LOGLEVELDEFAULT
-        if levelname is not None:
-            if levelname not in LEVELS:
-                raise Exception( 'unknown levelname seen in setLogLevel' )
-            else:
-                level = LEVELS.get( levelname, level )
-
+        if levelname and levelname not in LEVELS:
+            raise Exception( 'setLogLevel: unknown levelname %s' % levelname )
+        level = LEVELS.get( levelname, LOGLEVELDEFAULT  )
         self.setLevel( level )
-        self.handlers[ 0 ].setLevel( level )
+        self.ch.setLevel( level )
 
-    # pylint: disable=method-hidden
-    # "An attribute inherited from mininet.log hide this method" (sic)
-    # Not sure why this is occurring - this function definitely gets called.
-
-    # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
     def output( self, msg, *args, **kwargs ):
         """Log 'msg % args' with severity 'OUTPUT'.
 
@@ -141,8 +133,6 @@ class MininetLogger( Logger, object ):
             return
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
-
-    # pylint: enable=method-hidden
 
 
 lg = MininetLogger()
