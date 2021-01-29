@@ -62,7 +62,7 @@ develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	$(PYTHON) -m pip install -e . --no-binary
+	$(PYTHON) -m pip install -e . --no-binary :all:
 
 man: $(MANPAGES)
 
