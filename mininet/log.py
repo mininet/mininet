@@ -15,6 +15,7 @@ LEVELS = { 'debug': logging.DEBUG,
            'info': logging.INFO,
            'output': OUTPUT,
            'warning': logging.WARNING,
+           'warn': logging.WARNING,
            'error': logging.ERROR,
            'critical': logging.CRITICAL }
 
@@ -96,9 +97,9 @@ class MininetLogger( Logger, object ):
 
     __metaclass__ = Singleton
 
-    def __init__( self ):
+    def __init__( self, name="mininet" ):
 
-        Logger.__init__( self, "mininet" )
+        Logger.__init__( self, name )
 
         # create console handler
         ch = StreamHandlerNoNewline()
@@ -116,6 +117,7 @@ class MininetLogger( Logger, object ):
            Convenience function to support lowercase names.
            levelName: level name from LEVELS"""
         if levelname and levelname not in LEVELS:
+            print(LEVELS)
             raise Exception( 'setLogLevel: unknown levelname %s' % levelname )
         level = LEVELS.get( levelname, LOGLEVELDEFAULT  )
         self.setLevel( level )
@@ -134,8 +136,6 @@ class MininetLogger( Logger, object ):
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
 
-
-lg = MininetLogger()
 
 # Make things a bit more convenient by adding aliases
 # (info, warn, error, debug) and allowing info( 'this', 'is', 'OK' )
@@ -160,10 +160,13 @@ def makeListCompatible( fn ):
     return newfn
 
 
-_loggers = lg.info, lg.output, lg.warn, lg.error, lg.debug
-_loggers = tuple( makeListCompatible( logger )
-                  for logger in _loggers )
-lg.info, lg.output, lg.warn, lg.error, lg.debug = _loggers
-info, output, warn, error, debug = _loggers
+# Initialize logger and logging functions
 
+logging.setLoggerClass( MininetLogger )
+lg = logging.getLogger( "mininet" )
+_loggers = lg.info, lg.output, lg.warning, lg.error, lg.debug
+_loggers = tuple( makeListCompatible( logger ) for logger in _loggers )
+lg.info, lg.output, lg.warning, lg.error, lg.debug = _loggers
+info, output, warning, error, debug = _loggers
+warn = warning  # alternate/old name
 setLogLevel = lg.setLogLevel
