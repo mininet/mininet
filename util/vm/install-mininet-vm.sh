@@ -36,11 +36,10 @@ fi
 # Install Mininet for Python2 and Python3
 APT="sudo apt-get -y -qq"
 $APT install python3
-$APT install python-is-python3 || true
 $APT install python2 || $APT install python
-python --version
-time PYTHON=python3 mininet/util/install.sh
+python --version || $APT install python-is-python3
 time PYTHON=python2 mininet/util/install.sh -n
+time PYTHON=python3 mininet/util/install.sh
 # Finalize VM
 time mininet/util/install.sh -tcd
 # Ignoring this since NOX classic is deprecated
