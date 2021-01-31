@@ -129,8 +129,8 @@ hard work that Mininet continues to grow and improve.
 
 ### Enjoy Mininet
 
-Best wishes, and we look forward to seeing what you can do with
-Mininet to change the networking world!
+Have fun! We look forward to seeing what you will do with Mininet 
+to change the networking world.
 
 Bob Lantz
 on behalf of the Mininet Contributors
