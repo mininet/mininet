@@ -954,7 +954,8 @@ def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
     log( '* Creating COW disk', cow )
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, cow ) )
     log( '* Extracting kernel and initrd' )
-    kernel, initrd, part = extractKernel( image, flavor=basename, imageDir=tmpdir )
+    kernel, initrd, partnum = extractKernel(
+        image, flavor=basename, imageDir=tmpdir )
     if LogToConsole:
         logfile = stdout
     else:
@@ -962,7 +963,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile,
-               memory=memory, cpuCores=cpuCores, part=part )
+               memory=memory, cpuCores=cpuCores, partnum=partnum )
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
