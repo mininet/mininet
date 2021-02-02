@@ -791,7 +791,7 @@ function vm_clean {
     echo 'Removing SSH keys from /etc/ssh/'
     sudo rm -f /etc/ssh/*key*
     if [ ! -e /etc/rc.local ]; then
-        echo '#!/usr/bin/bash' | sudo tee /etc/rc.local
+        echo '#!/bin/bash' | sudo tee /etc/rc.local
         sudo chmod +x /etc/rc.local
     fi
     if ! grep mininet /etc/rc.local >& /dev/null; then
