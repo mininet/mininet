@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 multiping.py: monitor multiple sets of hosts using ping

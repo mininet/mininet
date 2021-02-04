@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "CLI for Mininet Cluster Edition prototype demo"
 

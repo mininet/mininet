@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 """
 Convert simple documentation to epydoc/pydoctor-compatible markup
@@ -83,7 +83,3 @@ if __name__ == '__main__':
     infile.close()
     os.close( outfid )
     call( [ 'doxypy', outname ] )
-
-
-
-
