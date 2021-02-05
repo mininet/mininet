@@ -1704,7 +1704,7 @@ class MiniEdit( Frame ):
             # debug( "Now saving under %s\n" % fileName )
             f = open(fileName, 'wb')
 
-            f.write("#!/usr/bin/python\n")
+            f.write("#!/usr/bin/env python\n")
             f.write("\n")
             f.write("from mininet.net import Mininet\n")
             f.write("from mininet.node import Controller, RemoteController, OVSController\n")

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "Create a 64-node tree network, and test connectivity using ping."
 

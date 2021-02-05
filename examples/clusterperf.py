@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "clusterperf.py compare the maximum throughput between SSH and GRE tunnels"
 
