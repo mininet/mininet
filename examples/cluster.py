@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 cluster.py: prototyping/experimentation for distributed Mininet,

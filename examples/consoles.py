@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 consoles.py: bring up a bunch of miniature consoles on a virtual network
