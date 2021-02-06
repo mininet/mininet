@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "Create a 64-node tree network, and test connectivity using ping."
 
@@ -37,6 +37,7 @@ def treePing64():
     for name in switches:
         info( "%s: %d%% packet loss\n" % ( name, results[ name ] ) )
     info( '\n' )
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

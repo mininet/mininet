@@ -25,6 +25,7 @@ def runTests( testDir, verbosity=1 ):
                 .run( testSuite ).wasSuccessful() )
     sys.exit( 0 if success else 1 )
 
+
 if __name__ == '__main__':
     setLogLevel( 'warning' )
     # get the directory containing example tests

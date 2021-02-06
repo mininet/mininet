@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 limit.py: example of using link and CPU limits
@@ -54,6 +54,7 @@ def verySimpleLimit( bw=150 ):
     h1.cmdPrint( 'tc -s qdisc ls dev', h1.defaultIntf() )
     h2.cmdPrint( 'tc -d class show dev', h2.defaultIntf() )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

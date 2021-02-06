@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Create a network where different switches are connected to
@@ -25,6 +25,7 @@ class MultiSwitch( OVSSwitch ):
     "Custom Switch() subclass that connects to different controllers"
     def start( self, controllers ):
         return OVSSwitch.start( self, [ cmap[ self.name ] ] )
+
 
 topo = TreeTopo( depth=2, fanout=2 )
 net = Mininet( topo=topo, switch=MultiSwitch, build=False, waitConnected=True )

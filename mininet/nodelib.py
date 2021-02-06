@@ -102,6 +102,7 @@ class NAT( Node ):
             # hopefully this won't disconnect you
             self.cmd( 'service network-manager restart || netplan apply' )
 
+    # pylint: disable=arguments-differ
     def config( self, **params ):
         """Configure the NAT and iptables"""
 

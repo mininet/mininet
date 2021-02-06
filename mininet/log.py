@@ -4,6 +4,7 @@ import logging
 from logging import Logger
 import types
 
+
 # Create a new loglevel, 'CLI info', which enables a Mininet user to see only
 # the output of the commands they execute, plus any errors or warnings.  This
 # level is in between info and warning.  CLI info-level commands should not be
@@ -14,13 +15,14 @@ LEVELS = { 'debug': logging.DEBUG,
            'info': logging.INFO,
            'output': OUTPUT,
            'warning': logging.WARNING,
+           'warn': logging.WARNING,
            'error': logging.ERROR,
            'critical': logging.CRITICAL }
 
 # change this to logging.INFO to get printouts when running unit tests
 LOGLEVELDEFAULT = OUTPUT
 
-#default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# default: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOGMSGFORMAT = '%(message)s'
 
 
@@ -51,7 +53,7 @@ class StreamHandlerNoNewline( logging.StreamHandler ):
             self.flush()
         except ( KeyboardInterrupt, SystemExit ):
             raise
-        except:
+        except:  # noqa pylint: disable=bare-except
             self.handleError( record )
 
 
@@ -95,9 +97,9 @@ class MininetLogger( Logger, object ):
 
     __metaclass__ = Singleton
 
-    def __init__( self ):
+    def __init__( self, name="mininet" ):
 
-        Logger.__init__( self, "mininet" )
+        Logger.__init__( self, name )
 
         # create console handler
         ch = StreamHandlerNoNewline()
@@ -105,30 +107,22 @@ class MininetLogger( Logger, object ):
         formatter = logging.Formatter( LOGMSGFORMAT )
         # add formatter to ch
         ch.setFormatter( formatter )
-        # add ch to lg
+        # add ch to lg and initialize log level
         self.addHandler( ch )
-
+        self.ch = ch
         self.setLogLevel()
 
     def setLogLevel( self, levelname=None ):
         """Setup loglevel.
            Convenience function to support lowercase names.
            levelName: level name from LEVELS"""
-        level = LOGLEVELDEFAULT
-        if levelname is not None:
-            if levelname not in LEVELS:
-                raise Exception( 'unknown levelname seen in setLogLevel' )
-            else:
-                level = LEVELS.get( levelname, level )
-
+        if levelname and levelname not in LEVELS:
+            print(LEVELS)
+            raise Exception( 'setLogLevel: unknown levelname %s' % levelname )
+        level = LEVELS.get( levelname, LOGLEVELDEFAULT  )
         self.setLevel( level )
-        self.handlers[ 0 ].setLevel( level )
+        self.ch.setLevel( level )
 
-    # pylint: disable=method-hidden
-    # "An attribute inherited from mininet.log hide this method" (sic)
-    # Not sure why this is occurring - this function definitely gets called.
-
-    # See /usr/lib/python2.5/logging/__init__.py; modified from warning()
     def output( self, msg, *args, **kwargs ):
         """Log 'msg % args' with severity 'OUTPUT'.
 
@@ -137,14 +131,11 @@ class MininetLogger( Logger, object ):
 
            logger.warning("Houston, we have a %s", "cli output", exc_info=1)
         """
-        if self.manager.disable >= OUTPUT:
+        if getattr( self.manager, 'disabled', 0 ) >= OUTPUT:
             return
         if self.isEnabledFor( OUTPUT ):
             self._log( OUTPUT, msg, args, kwargs )
 
-    # pylint: enable=method-hidden
-
-lg = MininetLogger()
 
 # Make things a bit more convenient by adding aliases
 # (info, warn, error, debug) and allowing info( 'this', 'is', 'OK' )
@@ -168,10 +159,14 @@ def makeListCompatible( fn ):
     setattr( newfn, '__doc__', fn.__doc__ )
     return newfn
 
-_loggers = lg.info, lg.output, lg.warn, lg.error, lg.debug
-_loggers = tuple( makeListCompatible( logger )
-                  for logger in _loggers )
-lg.info, lg.output, lg.warn, lg.error, lg.debug = _loggers
-info, output, warn, error, debug = _loggers
 
+# Initialize logger and logging functions
+
+logging.setLoggerClass( MininetLogger )
+lg = logging.getLogger( "mininet" )
+_loggers = lg.info, lg.output, lg.warning, lg.error, lg.debug
+_loggers = tuple( makeListCompatible( logger ) for logger in _loggers )
+lg.info, lg.output, lg.warning, lg.error, lg.debug = _loggers
+info, output, warning, error, debug = _loggers
+warn = warning  # alternate/old name
 setLogLevel = lg.setLogLevel

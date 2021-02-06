@@ -26,7 +26,7 @@ class testSingleSwitchCommon( object ):
     @staticmethod
     def tearDown():
         "Clean up if necessary"
-        if sys.exc_info != ( None, None, None ):
+        if sys.exc_info() != ( None, None, None ):
             cleanup()
 
     def testMinimal( self ):

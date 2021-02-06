@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example shows how to create a network and run multiple tests.
@@ -16,6 +16,7 @@ def ifconfigTest( net ):
     hosts = net.hosts
     for host in hosts:
         info( host.cmd( 'ifconfig' ) )
+
 
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )

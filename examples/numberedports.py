@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Create a network with 5 hosts, numbered 1-4 and 9.
@@ -74,6 +74,7 @@ def testPortNumbering():
 
     info( '*** Stopping network\n' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 natnet.py: Example network with NATs
@@ -27,6 +27,7 @@ from mininet.util import irange
 
 class InternetTopo(Topo):
     "Single switch connected to n hosts."
+    # pylint: disable=arguments-differ
     def build(self, n=2, **_kwargs ):
         # set up inet switch
         inetSwitch = self.addSwitch('s0')
@@ -61,6 +62,7 @@ def run():
     net.start()
     CLI(net)
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel('info')

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Simple example of sending output to multiple files and
@@ -6,14 +6,14 @@ monitoring them
 """
 
 
+from time import time
+from select import poll, POLLIN
+from subprocess import Popen, PIPE
+
 from mininet.topo import SingleSwitchTopo
 from mininet.net import Mininet
 from mininet.log import info, setLogLevel
 from mininet.util import decode
-
-from time import time
-from select import poll, POLLIN
-from subprocess import Popen, PIPE
 
 
 def monitorFiles( outfiles, seconds, timeoutms ):

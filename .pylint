@@ -41,10 +41,16 @@ load-plugins=
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
+#
+# Note: we may want to re-enable some of these at some point, but many of them
+# are just style issues rather than errors.
+#
 disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
-        too-many-instance-attributes, too-few-public-methods, too-many-arguments,
+        too-many-instance-attributes, too-few-public-methods,
         too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
-        locally-disabled, locally-enabled
+        locally-disabled, locally-enabled, bad-continuation,
+        useless-object-inheritance, unnecessary-pass, no-else-return,
+        no-else-raise, no-else-continue, super-with-arguments
 
 # bad-continuation, wrong-import-order
 

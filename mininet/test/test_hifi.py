@@ -45,7 +45,7 @@ class testOptionsTopoCommon( object ):
     @staticmethod
     def tearDown():
         "Clean up if necessary"
-        if sys.exc_info != ( None, None, None ):
+        if sys.exc_info() != ( None, None, None ):
             cleanup()
 
     def runOptionsTopoTest( self, n, msg, hopts=None, lopts=None ):
@@ -95,7 +95,7 @@ class testOptionsTopoCommon( object ):
         CPU_FRACTION = 0.1
         CPU_TOLERANCE = 0.8  # CPU fraction below which test should fail
         hopts = { 'cpu': CPU_FRACTION }
-        #self.runOptionsTopoTest( N, hopts=hopts )
+        # self.runOptionsTopoTest( N, hopts=hopts )
 
         mn = Mininet( SingleSwitchOptionsTopo( n=N, hopts=hopts ),
                       host=CPULimitedHost, switch=self.switchClass,
@@ -118,7 +118,7 @@ class testOptionsTopoCommon( object ):
                 % ( CPU_FRACTION * 100, hostUsage, N, hoptsStr,
                     self.switchClass ) )
         for pct in results:
-            #divide cpu by 100 to convert from percentage to fraction
+            # divide cpu by 100 to convert from percentage to fraction
             self.assertWithinTolerance( pct/100, CPU_FRACTION,
                                         CPU_TOLERANCE, msg )
 
@@ -262,6 +262,7 @@ class testOptionsTopoUserspace( testOptionsTopoCommon, unittest.TestCase ):
      (UserSwitch)."""
     longMessage = True
     switchClass = UserSwitch
+
 
 if __name__ == '__main__':
     setLogLevel( 'warning' )

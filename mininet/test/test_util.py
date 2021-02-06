@@ -35,5 +35,6 @@ class testQuietRun( unittest.TestCase ):
             output = quietRun(testQuietRun.getEchoCmd( n ) )
             self.assertEqual( n, len( output ) )
 
+
 if __name__ == "__main__":
     unittest.main()

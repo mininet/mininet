@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''
 example of using various TCIntf options.
@@ -42,6 +42,7 @@ def intfOptions():
 
     info( '\n*** Done testing\n' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

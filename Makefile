@@ -8,7 +8,7 @@ BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
 MANPAGES = mn.1 mnexec.1
-P8IGN = E251,E201,E302,E202,E126,E127,E203,E226
+P8IGN = E251,E201,E302,E202,E126,E127,E203,E226,E402,W504,W503,E731
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man/man1
@@ -62,7 +62,7 @@ develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	$(PYTHON) -m pip install -e . --no-binary
+	$(PYTHON) -m pip install -e . --no-binary :all:
 
 man: $(MANPAGES)
 

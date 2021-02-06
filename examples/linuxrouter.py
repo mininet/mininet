@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 linuxrouter.py: Example network with Linux IP router
@@ -38,6 +38,7 @@ from mininet.cli import CLI
 class LinuxRouter( Node ):
     "A Node with IP forwarding enabled."
 
+    # pylint: disable=arguments-differ
     def config( self, **params ):
         super( LinuxRouter, self).config( **params )
         # Enable forwarding on the router
@@ -51,6 +52,7 @@ class LinuxRouter( Node ):
 class NetworkTopo( Topo ):
     "A LinuxRouter connecting three IP subnets"
 
+    # pylint: disable=arguments-differ
     def build( self, **_opts ):
 
         defaultIP = '192.168.1.1/24'  # IP address for r0-eth1
@@ -86,6 +88,7 @@ def run():
     info( net[ 'r0' ].cmd( 'route' ) )
     CLI( net )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

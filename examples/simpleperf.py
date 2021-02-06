@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Simple example of setting network and CPU parameters
@@ -9,6 +9,7 @@ iperf will hang indefinitely if the TCP handshake fails
 to complete.
 """
 
+from sys import argv
 
 from mininet.topo import Topo
 from mininet.net import Mininet
@@ -17,7 +18,6 @@ from mininet.link import TCLink
 from mininet.util import dumpNodeConnections
 from mininet.log import setLogLevel, info
 
-from sys import argv
 
 # It would be nice if we didn't have to do this:
 # pylint: disable=arguments-differ
@@ -53,6 +53,7 @@ def perfTest( lossy=True ):
     h1, h4 = net.getNodeByName('h1', 'h4')
     net.iperf( ( h1, h4 ), l4Type='UDP' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

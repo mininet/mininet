@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example shows how to create an empty Mininet object
@@ -38,6 +38,7 @@ def emptyNet():
 
     info( '*** Stopping network' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

@@ -50,7 +50,7 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
-        return
+        return None
     display, tunnel = tunnelX11( node, display )
     if display is None:
         return []
