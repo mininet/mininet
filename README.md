@@ -70,7 +70,7 @@ Mininet includes:
 
 ### Python 3 Support
 
-- Mininet 2.3.0b2 supports Python 3 and Python 2.
+- Mininet 2.3.0b2 supports Python 3 and Python 2!
 
 - You can install both the Python 3 and Python 2 versions of
 Mininet side by side, but the most recent installation will
@@ -82,6 +82,9 @@ determine which Python version is used by default by `mn`.
 
       $ sudo python2 `which mn`
 
+- More information regarding Python 3 and Python 2 support
+  may be found in the release notes on http://docs.mininet.org.
+  
 ### Other Enhancements and Information
 
 - Support for Ubuntu 20.04 LTS (and 18.04 and 16.04)
@@ -126,8 +129,8 @@ hard work that Mininet continues to grow and improve.
 
 ### Enjoy Mininet
 
-Best wishes, and we look forward to seeing what you can do with
-Mininet to change the networking world!
+Have fun! We look forward to seeing what you will do with Mininet 
+to change the networking world.
 
 Bob Lantz
 on behalf of the Mininet Contributors
