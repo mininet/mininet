@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 consoles.py: bring up a bunch of miniature consoles on a virtual network
@@ -27,12 +27,16 @@ Bob Lantz, April 2010
 
 import re
 
+# pylint: disable=import-error
 from Tkinter import Frame, Button, Label, Text, Scrollbar, Canvas, Wm, READABLE
 
 from mininet.log import setLogLevel
 from mininet.topolib import TreeNet
 from mininet.term import makeTerms, cleanUpScreens
 from mininet.util import quietRun
+
+# pylint: disable=too-many-arguments
+
 
 class Console( Frame ):
     "A simple console on a host."
@@ -319,7 +323,7 @@ class ConsoleApp( Frame ):
         if not m:
             return
         val, units = float( m.group( 1 ) ), m.group( 2 )
-        #convert to Gbps
+        # convert to Gbps
         if units[0] == 'M':
             val *= 10 ** -3
         elif units[0] == 'K':

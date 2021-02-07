@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This is a simple example that demonstrates multiple links
@@ -21,6 +21,7 @@ def runMultiLink():
 class simpleMultiLinkTopo( Topo ):
     "Simple topology with multiple links"
 
+    # pylint: disable=arguments-differ
     def build( self, n, **_kwargs ):
         h1, h2 = self.addHost( 'h1' ), self.addHost( 'h2' )
         s1 = self.addSwitch( 's1' )
@@ -28,6 +29,7 @@ class simpleMultiLinkTopo( Topo ):
         for _ in range( n ):
             self.addLink( s1, h1 )
             self.addLink( s1, h2 )
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

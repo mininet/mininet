@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example monitors a number of hosts using host.popen() and
@@ -27,6 +27,7 @@ def monitorhosts( hosts=5 ):
             info( "<%s>: %s" % ( host.name, line ) )
     # Done
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

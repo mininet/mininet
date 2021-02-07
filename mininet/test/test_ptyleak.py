@@ -26,6 +26,7 @@ class TestPtyLeak( unittest.TestCase ):
             assert ( host.slave, host.master ) == oldptys
         net.stop()
 
+
 if __name__ == '__main__':
     unittest.main()
     cleanup()

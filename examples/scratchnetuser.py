@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Build a simple network from scratch, using mininet primitives.
@@ -65,6 +65,7 @@ def scratchNetUser( cname='controller', cargs='ptcp:' ):
     switch.cmd( 'kill %ofprotocol' )
     switch.deleteIntfs()
     info( '\n' )
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

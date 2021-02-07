@@ -6,13 +6,15 @@ Tests for the Mininet Walkthrough
 TODO: missing xterm test
 """
 
-import unittest
 import os
 import re
-from mininet.util import quietRun, pexpect
-from mininet.clean import cleanup
+import unittest
+
 from distutils.version import StrictVersion
 from sys import stdout
+
+from mininet.util import quietRun, pexpect
+from mininet.clean import cleanup
 
 
 def tsharkVersion():
@@ -74,7 +76,7 @@ class testWalkthrough( unittest.TestCase ):
         p.expect( self.prompt )
         # net command
         p.sendline( 'net' )
-        expected = [ x for x in nodes ]
+        expected = list( nodes )
         while len( expected ) > 0:
             index = p.expect( expected )
             node = p.match.group( 0 )
@@ -110,7 +112,7 @@ class testWalkthrough( unittest.TestCase ):
         ifcount = 0
         while True:
             index = p.expect( interfaces )
-            if index == 0 or index == 3:
+            if index in (0, 3):
                 ifcount += 1
             elif index == 1:
                 self.fail( 's1 interface displayed in "h1 ifconfig"' )
@@ -126,7 +128,7 @@ class testWalkthrough( unittest.TestCase ):
             index = p.expect( interfaces )
             if index == 0:
                 self.fail( 'h1 interface displayed in "s1 ifconfig"' )
-            elif index == 1 or index == 2 or index == 3:
+            elif index in (1, 2, 3):
                 ifcount += 1
             else:
                 break
@@ -309,7 +311,7 @@ class testWalkthrough( unittest.TestCase ):
         ifcount = 0
         while True:
             index = p.expect( interfaces )
-            if index == 1 or index == 3:
+            if index in (1, 3):
                 ifcount += 1
             elif index == 0:
                 self.fail( 'h1 interface displayed in "s1 ifconfig"' )

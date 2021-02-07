@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example creates a multi-controller network from semi-scratch by
@@ -57,6 +57,7 @@ def multiControllerNet():
 
     info( "*** Stopping network\n" )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )  # for CLI output

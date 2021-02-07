@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "clusterperf.py compare the maximum throughput between SSH and GRE tunnels"
 
@@ -16,6 +16,7 @@ def perf(Link):
     net.pingAll()
     net.iperf()
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel('info')

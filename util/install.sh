@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Mininet install script for Ubuntu and Debian
 # Original author: Brandon Heller
@@ -181,7 +181,17 @@ function mn_deps {
                  ethtool help2man $pf pylint pep8 \
                  net-tools \
                  ${PYPKG}-pexpect ${PYPKG}-tk
+        # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
+        if ! ${PYTHON} -m pip -V; then
+            if [ $PYTHON_VERSION == 2 ]; then
+                wget https://bootstrap.pypa.io/2.6/get-pip.py
+            else
+                wget https://bootstrap.pypa.io/get-pip.py
+            fi
+            sudo ${PYTHON} get-pip.py
+            rm get-pip.py
+        fi
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
     fi
@@ -192,13 +202,14 @@ function mn_deps {
     popd
 }
 
-# Install Mininet developer dependencies
-function mn_dev {
-    echo "Installing Mininet developer dependencies"
-    $install doxygen doxypy texlive-fonts-recommended
+# Install Mininet documentation dependencies
+function mn_doc {
+    echo "Installing Mininet documentation dependencies"
+    $install doxygen texlive-fonts-recommended
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
+    sudo pip install doxypy
 }
 
 # The following will cause a full OF install, covering:
@@ -437,6 +448,12 @@ function ovs {
             sudo update-rc.d $OVSC disable
         fi
     fi
+    # This service seems to hang on 20.04
+    if systemctl list-units | \
+            grep status netplan-ovs-cleanup.service>&/dev/null; then
+        echo 'TimeoutSec=10' | sudo EDITOR='tee -a' \
+        sudo systemctl edit --full netplan-ovs-cleanup.service
+    fi
 }
 
 function remove_ovs {
@@ -602,7 +619,8 @@ function oftest {
     echo "Installing oftest..."
 
     # Install deps:
-    $install tcpdump ${PYPKG}-scapy
+    $install tcpdump
+    $install ${PYPKG}-scapy || sudo $PYTHON -m pip install scapy
 
     # Install oftest:
     cd $BUILD_DIR/
@@ -660,9 +678,10 @@ net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     fi
     # Since the above doesn't disable neighbor discovery, also do this:
+    # disable via boot line, and also restore eth0 naming for VM use
     if ! grep 'ipv6.disable' /etc/default/grub; then
         sudo sed -i -e \
-        's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 /' \
+        's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 net.ifnames=0 /' \
         /etc/default/grub
         sudo update-grub
     fi
@@ -740,8 +759,8 @@ function all {
     echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
     kernel
     mn_deps
-    # Skip mn_dev (doxypy/texlive/fonts/etc.) because it's huge
-    # mn_dev
+    # Skip mn_doc (doxypy/texlive/fonts/etc.) because it's huge
+    # mn_doc
     of
     install_wireshark
     ovs
@@ -772,8 +791,12 @@ function vm_clean {
     # Remove SSH keys and regenerate on boot
     echo 'Removing SSH keys from /etc/ssh/'
     sudo rm -f /etc/ssh/*key*
+    if [ ! -e /etc/rc.local ]; then
+        echo '#!/bin/bash' | sudo tee /etc/rc.local
+        sudo chmod +x /etc/rc.local
+    fi
     if ! grep mininet /etc/rc.local >& /dev/null; then
-        sudo sed -i -e "s/exit 0//" /etc/rc.local
+        sudo sed -i -e "s/exit 0//" /etc/rc.local || true
         echo '
 # mininet: regenerate ssh keys if we deleted them
 if ! stat -t /etc/ssh/*key* >/dev/null 2>&1; then
@@ -781,14 +804,14 @@ if ! stat -t /etc/ssh/*key* >/dev/null 2>&1; then
 fi
 exit 0
 ' | sudo tee -a /etc/rc.local > /dev/null
+        sudo chmod +x /etc/rc.local
     fi
-
-    # Remove Mininet files
-    #sudo rm -f /lib/modules/python2.5/site-packages/mininet*
-    #sudo rm -f /usr/bin/mnexec
 
     # Clear optional dev script for SSH keychain load on boot
     rm -f ~/.bash_profile
+
+    # Remove leftover install script if any
+    rm -f install-mininet-vm.sh
 
     # Clear git changes
     git config --global user.name "None"
@@ -816,7 +839,7 @@ function usage {
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
     printf -- ' -c: (C)lean up after kernel install\n' >&2
     printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2
-    printf -- ' -e: install Mininet d(E)veloper dependencies\n' >&2
+    printf -- ' -e: install Mininet documentation/LaT(e)X dependencies\n' >&2
     printf -- ' -f: install Open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -i: install (I)ndigo Virtual Switch\n' >&2
@@ -850,7 +873,7 @@ else
       b)    cbench;;
       c)    kernel_clean;;
       d)    vm_clean;;
-      e)    mn_dev;;
+      e)    mn_doc;;
       f)    case $OF_VERSION in
             1.0) of;;
             1.3) of13;;

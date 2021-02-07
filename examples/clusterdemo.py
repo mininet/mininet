@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 "clusterdemo.py: demo of Mininet Cluster Edition prototype"
 
@@ -18,6 +18,7 @@ def demo():
     net.start()
     CLI( net )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

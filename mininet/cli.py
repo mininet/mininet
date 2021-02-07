@@ -47,7 +47,7 @@ class CLI( Cmd ):
     prompt = 'mininet> '
 
     def __init__( self, mininet, stdin=sys.stdin, script=None,
-                  *args, **kwargs ):
+                  **kwargs ):
         """Start and run interactive or batch mode CLI
            mininet: Mininet network object
            stdin: standard input for CLI
@@ -59,7 +59,7 @@ class CLI( Cmd ):
         self.inPoller = poll()
         self.inPoller.register( stdin )
         self.inputFile = script
-        Cmd.__init__( self, *args, stdin=stdin, **kwargs )
+        Cmd.__init__( self, stdin=stdin, **kwargs )
         info( '*** Starting CLI:\n' )
 
         if self.inputFile:
@@ -79,6 +79,7 @@ class CLI( Cmd ):
             return
         cls.readlineInited = True
         try:
+            # pylint: disable=import-outside-toplevel
             from readline import ( read_history_file, write_history_file,
                                    set_history_length )
         except ImportError:
@@ -141,7 +142,7 @@ class CLI( Cmd ):
         '  mininet> xterm h2\n\n'
     )
 
-    def do_help( self, line ):
+    def do_help( self, line ):  # pylint: disable=arguments-differ
         "Describe available CLI commands."
         Cmd.do_help( self, line )
         if line == '':
@@ -173,6 +174,7 @@ class CLI( Cmd ):
         """Evaluate a Python expression.
            Node names may be used, e.g.: py h1.cmd('ls')"""
         try:
+            # pylint: disable=eval-used
             result = eval( line, globals(), self.getLocals() )
             if not result:
                 return
@@ -467,10 +469,10 @@ class CLI( Cmd ):
                 node.sendInt()
             except select.error as e:
                 # pylint: disable=unpacking-non-sequence
+                # pylint: disable=unbalanced-tuple-unpacking
                 errno_, errmsg = e.args
-                # pylint: enable=unpacking-non-sequence
                 if errno_ != errno.EINTR:
-                    error( "select.error: %d, %s" % (errno_, errmsg) )
+                    error( "select.error: %s, %s" % (errno_, errmsg) )
                     node.sendInt()
 
     def precmd( self, line ):
@@ -488,3 +490,4 @@ def isReadable( poller ):
         mask = fdmask[ 1 ]
         if mask & POLLIN:
             return True
+        return False

@@ -2,10 +2,9 @@ Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.3.0a1
+Mininet 2.3.0b2
 
-[![Build Status][2]](https://github.com/mininet/mininet/actions)
-[![Travis Status][1]](https://travis-ci.org/mininet/mininet)
+[![Build Status][1]](https://github.com/mininet/mininet/actions)
 
 
 ### What is Mininet?
@@ -69,18 +68,31 @@ Mininet includes:
 
   `mn -c`
 
-### New features in this release
+### Python 3 Support
 
-This is primarily a performance improvement and bug fix release.
+- Mininet 2.3.0b2 supports Python 3 and Python 2!
 
-- Python 3 support (Python 2 is still supported as well)
+- You can install both the Python 3 and Python 2 versions of
+Mininet side by side, but the most recent installation will
+determine which Python version is used by default by `mn`.
 
-- Support for Ubuntu 20.04
+- You can run `mn` directly with Python 2 or Python 3,
+  as long as the appropriate version of Mininet is installed,
+  e.g.
+
+      $ sudo python2 `which mn`
+
+- More information regarding Python 3 and Python 2 support
+  may be found in the release notes on http://docs.mininet.org.
+  
+### Other Enhancements and Information
+
+- Support for Ubuntu 20.04 LTS (and 18.04 and 16.04)
 
 - More reliable testing and CI via github actions
 
-- Additional information for this release and previous releases
-  may be found in the release notes on docs.mininet.org
+- Additional information about this release and previous releases
+  may be found in the release notes on http://docs.mininet.org.
 
 ### Installation
 
@@ -93,7 +105,8 @@ information, including a Mininet walkthrough and an introduction
 to the Python API, is available on the
 [Mininet Web Site](http://mininet.org).
 There is also a wiki which you are encouraged to read and to
-contribute to, particularly the Frequently Asked Questions (FAQ.)
+contribute to, particularly the Frequently Asked Questions
+(FAQ) at http://faq.mininet.org.
 
 ### Support
 
@@ -116,11 +129,10 @@ hard work that Mininet continues to grow and improve.
 
 ### Enjoy Mininet
 
-Best wishes, and we look forward to seeing what you can do with
-Mininet to change the networking world!
+Have fun! We look forward to seeing what you will do with Mininet 
+to change the networking world.
 
 Bob Lantz
 on behalf of the Mininet Contributors
 
-[1]: https://travis-ci.org/mininet/mininet.svg?branch=master
-[2]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg
+[1]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg
