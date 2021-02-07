@@ -56,7 +56,7 @@ install-manpages: $(MANPAGES)
 	install -D -t $(MANDIR) $(MANPAGES)
 
 install: install-mnexec install-manpages
-	$(PYTHON) -m pip install .
+	$(PYTHON) -m pip install . --upgrade --force-reinstall
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
