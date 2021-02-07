@@ -2703,14 +2703,13 @@ class MiniEdit( Frame ):
         tags = self.canvas.gettags(item)
         if 'Controller' in tags:
             # remove from switch controller lists
-            for serachwidget in self.widgetToItem:
-                name = serachwidget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ serachwidget ] )
+            for searchwidget in self.widgetToItem:
+                name = searchwidget[ 'text' ]
+                tags = self.canvas.gettags( self.widgetToItem[ searchwidget ] )
                 if 'Switch' in tags:
                     if widget['text'] in self.switchOpts[name]['controllers']:
                         self.switchOpts[name]['controllers'].remove(widget['text'])
-
-        for link in widget.links.values():
+        for link in tuple( widget.links.values() ):
             # Delete from view and model
             self.deleteItem( link )
         del self.itemToWidget[ item ]
