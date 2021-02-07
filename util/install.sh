@@ -205,10 +205,11 @@ function mn_deps {
 # Install Mininet documentation dependencies
 function mn_doc {
     echo "Installing Mininet documentation dependencies"
-    $install doxygen doxypy texlive-fonts-recommended
+    $install doxygen texlive-fonts-recommended
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
+    sudo pip install doxypy
 }
 
 # The following will cause a full OF install, covering:
