@@ -1505,32 +1505,26 @@ class NOX( Controller ):
 
         Controller.__init__( self, name,
                              command=noxCoreDir + '/nox_core',
-                             cargs='--libdir=/usr/local/lib -v -i ptcp:%s ' +
+                             cargs='--libdir=/usr/local/lib -v '
+                             '-i ptcp:%s ' +
                              ' '.join( noxArgs ),
                              cdir=noxCoreDir,
                              **kwargs )
 
 class Ryu( Controller ):
-    "Controller to run Ryu application"
-    def __init__( self, name, *ryuArgs, **kwargs ):
+    "Ryu OpenFlow Controller"
+    def __init__( self, name, ryuArgs='ryu.app.simple_switch',
+                  command='ryu run', **kwargs ):
         """Init.
-        name: name to give controller.
-        ryuArgs: arguments and modules to pass to Ryu"""
-        homeDir = quietRun( 'printenv HOME' ).strip( '\r\n' )
-        ryuCoreDir = '%s/ryu/ryu/app/' % homeDir
-        if not ryuArgs:
-            warn( 'warning: no Ryu modules specified; '
-                  'running simple_switch only\n' )
-            ryuArgs = [ ryuCoreDir + 'simple_switch.py' ]
-        elif not isinstance( ryuArgs, ( list, tuple ) ):
-            ryuArgs = [ ryuArgs ]
-
-        Controller.__init__( self, name,
-                             command='ryu-manager',
-                             cargs='--ofp-tcp-listen-port %s ' +
-                             ' '.join( ryuArgs ),
-                             cdir=ryuCoreDir,
-                             **kwargs )
+           name: name to give controller.
+           ryuArgs: modules to pass to Ryu (ryu.app.simple_switch)
+           command: comand to run Ryu ('ryu run')"""
+        if isinstance( ryuArgs, ( list, tuple ) ):
+            ryuArgs = ' '.join( ryuArgs )
+        cargs = kwargs.pop(
+            'cargs', ryuArgs + ' --ofp-tcp-listen-port %s' )
+        Controller.__init__( self, name, command=command,
+                             cargs=cargs, **kwargs )
 
 
 class RemoteController( Controller ):
