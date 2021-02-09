@@ -2,7 +2,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.3.0b2
+Mininet 2.3.0rc1
 
 [![Build Status][1]](https://github.com/mininet/mininet/actions)
 
@@ -70,7 +70,7 @@ Mininet includes:
 
 ### Python 3 Support
 
-- Mininet 2.3.0b2 supports Python 3 and Python 2!
+- Mininet 2.3.0rc1 supports Python 3 and Python 2!
 
 - You can install both the Python 3 and Python 2 versions of
 Mininet side by side, but the most recent installation will
@@ -84,7 +84,7 @@ determine which Python version is used by default by `mn`.
 
 - More information regarding Python 3 and Python 2 support
   may be found in the release notes on http://docs.mininet.org.
-  
+
 ### Other Enhancements and Information
 
 - Support for Ubuntu 20.04 LTS (and 18.04 and 16.04)
@@ -117,7 +117,7 @@ Mininet mailing list, `mininet-discuss` at:
 
 ### Join Us
 
-Thanks again to all of the Mininet contributors!
+Thanks again to all of the Mininet contributors and users!
 
 Mininet is an open source project and is currently hosted
 at <https://github.com/mininet>.  You are encouraged to download
@@ -129,10 +129,10 @@ hard work that Mininet continues to grow and improve.
 
 ### Enjoy Mininet
 
-Have fun! We look forward to seeing what you will do with Mininet 
+Have fun! We look forward to seeing what you will do with Mininet
 to change the networking world.
 
-Bob Lantz
+Bob Lantz,
 on behalf of the Mininet Contributors
 
 [1]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg

@@ -109,7 +109,7 @@ from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.3.0b2"
+VERSION = "2.3.0rc1"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
