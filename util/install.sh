@@ -164,7 +164,7 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man 
+            ethtool help2man net-tools
         $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
             ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
