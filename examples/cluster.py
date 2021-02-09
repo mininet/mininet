@@ -89,7 +89,7 @@ from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
-from mininet.util import quietRun, errRun
+from mininet.util import quietRun, errRun, decode
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 from mininet.clean import addCleanupCallback
@@ -247,7 +247,7 @@ class RemoteMixin( object ):
         result = ''
         while True:
             poll = popen.poll()
-            result += popen.stdout.read()
+            result += decode( popen.stdout.read() )
             if poll is not None:
                 break
         return result
@@ -440,13 +440,16 @@ class RemoteLink( Link ):
         # When we receive the character '@', it means that our
         # tunnel should be set up
         debug( 'Waiting for tunnel to come up...\n' )
-        ch = tunnel.stdout.read( 1 )
+        ch = decode( tunnel.stdout.read( 1 ) )
         if ch != '@':
-            raise Exception( 'makeTunnel:\n',
-                             'Tunnel setup failed for',
-                             '%s:%s' % ( node1, node1.dest ), 'to',
-                             '%s:%s\n' % ( node2, node2.dest ),
-                             'command was:', cmd, '\n' )
+            ch += decode( tunnel.stdout.read() )
+            cmd = ' '.join( cmd )
+            raise Exception( 'makeTunnel:\n'
+                             'Tunnel setup failed for '
+                             '%s:%s' % ( node1, node1.dest ) + ' to '
+                             '%s:%s\n' % ( node2, node2.dest ) +
+                             'command was: %s' % cmd + '\n' +
+                             'result was: ' + ch )
         # 3. Move interfaces if necessary
         for node in node1, node2:
             if not self.moveIntf( 'tap9', node ):
@@ -848,27 +851,37 @@ class MininetCluster( Mininet ):
             if cfile:
                 config.setdefault( 'controlPath', cfile )
 
+    @staticmethod
+    def isLoopback( ipaddr ):
+        "Is ipaddr an IPv4 loopback address?"
+        return ipaddr.startswith( '127.' )
+
     # pylint: disable=arguments-differ,signature-differs
     def addController( self, *args, **kwargs ):
         "Patch to update IP address to global IP address"
         controller = Mininet.addController( self, *args, **kwargs )
-        loopback = '127.0.0.1'
+        controllerIP = controller.IP()
         if ( not isinstance( controller, Controller ) or
-             controller.IP() != loopback ):
-            return None
+             not self.isLoopback( controller.IP() ) ):
+            return controller
         # Find route to a different server IP address
         serverIPs = [ ip for ip in self.serverIP.values()
-                      if ip is not controller.IP() ]
+                      if ip != controllerIP ]
         if not serverIPs:
             return None  # no remote servers - loopback is fine
-        remoteIP = serverIPs[ 0 ]
-        # Route should contain 'dev <intfname>'
-        route = controller.cmd( 'ip route get', remoteIP,
-                                r'| egrep -o "dev\s[^[:space:]]+"' )
-        if not route:
-            raise Exception('addController: no route from', controller,
-                            'to', remoteIP )
-        intf = route.split()[ 1 ].strip()
+        for remoteIP in serverIPs:
+            # Route should contain 'dev <intfname>'
+            route = controller.cmd( 'ip route get', remoteIP,
+                                    r'| egrep -o "dev\s[^[:space:]]+"' )
+            if not route:
+                raise Exception('addController: no route from', controller,
+                                'to', remoteIP )
+            intf = route.split()[ 1 ].strip()
+            if intf != 'lo':
+                break
+        if intf == 'lo':
+            raise Exception( 'addController: could not find external '
+                             'interface/IP for %s' % controller )
         debug( 'adding', intf, 'to', controller )
         Intf( intf, node=controller ).updateIP()
         debug( controller, 'IP address updated to', controller.IP() )
@@ -883,7 +896,10 @@ class MininetCluster( Mininet ):
         Mininet.buildFromTopo( self, *args, **kwargs )
 
 
-def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
+# Default remote server for tests
+remoteServer = 'ubuntu2'
+
+def testNsTunnels( remote=remoteServer, link=RemoteGRELink ):
     "Test tunnels between nodes in namespaces"
     net = Mininet( host=RemoteHost, link=link, waitConnected=True )
     h1 = net.addHost( 'h1')
@@ -898,14 +914,14 @@ def testNsTunnels( remote='ubuntu2', link=RemoteGRELink ):
 # This shows how node options may be used to manage
 # cluster placement using the net.add*() API
 
-def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
+def testRemoteNet( remote=remoteServer, link=RemoteGRELink ):
     "Test remote Node classes"
     info( '*** Remote Node Test\n' )
-    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch, link=link,
+    net = Mininet( host=RemoteHost, switch=RemoteOVSSwitch,
+                   link=link, controller=ClusterController,
                    waitConnected=True )
     c0 = net.addController( 'c0' )
     # Make sure controller knows its non-loopback address
-    Intf( 'eth0', node=c0 ).updateIP()
     info( "*** Creating local h1\n" )
     h1 = net.addHost( 'h1' )
     info( "*** Creating remote h2\n" )
@@ -937,7 +953,7 @@ def testRemoteNet( remote='ubuntu2', link=RemoteGRELink ):
 
 remoteHosts = [ 'h2' ]
 remoteSwitches = [ 's2' ]
-remoteServer = 'ubuntu2'
+
 
 def HostPlacer( name, *args, **params ):
     "Custom Host() constructor which places hosts on servers"
@@ -954,10 +970,21 @@ def SwitchPlacer( name, *args, **params ):
         return RemoteOVSSwitch( name, *args, **params )
 
 def ClusterController( *args, **kwargs):
-    "Custom Controller() constructor which updates its eth0 IP address"
+    "Custom Controller() constructor which updates its intf IP address"
+    intf = kwargs.pop( 'intf', '' )
     controller = Controller( *args, **kwargs )
     # Find out its IP address so that cluster switches can connect
-    Intf( 'eth0', node=controller ).updateIP()
+    if not intf:
+        output = controller.cmd(
+            r"ip a | egrep -o '\w+:\s\w+'" ).split( '\n' )
+        for line in output:
+            intf = line.split()[ -1 ]
+            if intf != 'lo':
+                break
+        if intf == 'lo':
+            raise Exception( 'Could not find non-loopback interface'
+                             'for %s' % controller )
+    Intf( intf, node=controller ).updateIP()
     return controller
 
 def testRemoteTopo( link=RemoteGRELink ):
@@ -974,7 +1001,7 @@ def testRemoteTopo( link=RemoteGRELink ):
 # do random switch placement rather than completely random
 # host placement.
 
-def testRemoteSwitches( remote='ubuntu2', link=RemoteGRELink ):
+def testRemoteSwitches( remote=remoteServer, link=RemoteGRELink ):
     "Test with local hosts and remote switches"
     servers = [ 'localhost', remote]
     topo = TreeTopo( depth=4, fanout=2 )
@@ -992,7 +1019,7 @@ def testRemoteSwitches( remote='ubuntu2', link=RemoteGRELink ):
 # functions, for maximum ease of use. MininetCluster() also
 # pre-flights and multiplexes server connections.
 
-def testMininetCluster( remote='ubuntu2', link=RemoteGRELink ):
+def testMininetCluster( remote=remoteServer, link=RemoteGRELink ):
     "Test MininetCluster()"
     servers = [ 'localhost', remote ]
     topo = TreeTopo( depth=3, fanout=3 )
@@ -1002,7 +1029,7 @@ def testMininetCluster( remote='ubuntu2', link=RemoteGRELink ):
     net.pingAll()
     net.stop()
 
-def signalTest( remote='ubuntu2'):
+def signalTest( remote=remoteServer):
     "Make sure hosts are robust to signals"
     h = RemoteHost( 'h0', server=remote )
     h.shell.send_signal( SIGINT )
@@ -1017,7 +1044,6 @@ def signalTest( remote='ubuntu2'):
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    remoteServer = 'ubuntu2'
     remoteLink = RemoteSSHLink
     testRemoteTopo(link=remoteLink)
     testNsTunnels( remote=remoteServer, link=remoteLink )
