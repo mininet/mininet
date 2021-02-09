@@ -183,8 +183,11 @@ class Mininet( object ):
            delay: seconds to sleep per iteration
            returns: True if all switches are connected"""
         info( '*** Waiting for switches to connect\n' )
-        time = 0
+        time = 0.0
         remaining = list( self.switches )
+        # False: 0s timeout; None: wait forever (preserve 2.2 behavior)
+        if isinstance( timeout, bool ):
+            timeout = None if timeout else 0
         while True:
             for switch in tuple( remaining ):
                 if switch.connected():
@@ -193,8 +196,7 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            # Still allow None to preserve 2.2 behavior
-            if timeout not in ( None, True ) and time > timeout:
+            if timeout is not None and time >= timeout:
                 break
             sleep( delay )
             time += delay
@@ -561,7 +563,7 @@ class Mininet( object ):
                 started.update( { s: s for s in success } )
         info( '\n' )
         if self.waitConn:
-            self.waitConnected()
+            self.waitConnected( self.waitConn )
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
