@@ -2,7 +2,7 @@ Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.3.0rc1
+Mininet 2.3.0rc2
 
 [![Build Status][1]](https://github.com/mininet/mininet/actions)
 
@@ -70,7 +70,7 @@ Mininet includes:
 
 ### Python 3 Support
 
-- Mininet 2.3.0rc1 supports Python 3 and Python 2!
+- Mininet 2.3.0rc2 supports Python 3 and Python 2!
 
 - You can install both the Python 3 and Python 2 versions of
 Mininet side by side, but the most recent installation will
