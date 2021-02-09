@@ -164,7 +164,9 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man pyflakes pylint python-pep8 python-pexpect
+            ethtool help2man 
+        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
+            ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
 			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
@@ -408,7 +410,11 @@ function ovs {
     echo "Installing Open vSwitch..."
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install openvswitch openvswitch-controller
+        $install openvswitch
+        if ! $install openvswitch-controller; then
+            echo "openvswitch-controller not installed"
+            echo "You may wish to install another controller such as Ryu"
+        fi
         return
     fi
 
