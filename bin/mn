@@ -290,6 +290,9 @@ class MininetRunner( object ):
                          help='prints the version and exits' )
         opts.add_option( '--wait', '-w', action='store_true',
                          default=False, help='wait for switches to connect' )
+        opts.add_option( '--twait', '-t', action='store', type='int',
+                         dest='wait',
+                         help='timed wait (s) for switches to connect' )
         opts.add_option( '--cluster', type='string', default=None,
                          metavar='server1,server2...',
                          help=( 'run on multiple servers (experimental!)' ) )
