@@ -101,7 +101,6 @@ CLI = None  # Set below if needed
 # Locally defined tests
 def allTest( net ):
     "Run ping and iperf tests"
-    net.waitConnected()
     net.start()
     net.ping()
     net.iperf()
@@ -131,7 +130,6 @@ def runTests( mn, options ):
             if callable( testfn ):
                 testfn( mn, *args, **kwargs )
             elif hasattr( mn, test ):
-                mn.waitConnected()
                 getattr( mn, test )( *args, **kwargs )
             else:
                 raise Exception( 'Test %s is unknown - please specify one of '
@@ -388,6 +386,11 @@ class MininetRunner( object ):
             Net = partial( MininetCluster, servers=servers,
                            placement=PLACEMENT[ opts.placement ] )
             mininet.cli.CLI = ClusterCLI
+
+        # Wait for controllers to connect unless we're running null test
+        if ( opts.test and opts.test != [ 'none' ] and
+             isinstance( opts.wait, bool ) ):
+            opts.wait = True
 
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller, link=link,
