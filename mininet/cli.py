@@ -89,7 +89,15 @@ class CLI( Cmd ):
             if os.path.isfile( history_path ):
                 read_history_file( history_path )
                 set_history_length( 1000 )
-            atexit.register( lambda: write_history_file( history_path ) )
+
+            def writeHistory():
+                "Write out history file"
+                try:
+                    write_history_file( history_path )
+                except IOError:
+                    # Ignore probably spurious IOError
+                    pass
+            atexit.register( writeHistory )
 
     def run( self ):
         "Run our cmdloop(), catching KeyboardInterrupt"
