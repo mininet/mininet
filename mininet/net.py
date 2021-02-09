@@ -137,7 +137,9 @@ class Mininet( object ):
            autoStaticArp: set all-pairs static MAC addrs?
            autoPinCpus: pin hosts to (real) cores (requires CPULimitedHost)?
            listenPort: base listening port to open; will be incremented for
-               each additional switch in the net if inNamespace=False"""
+               each additional switch in the net if inNamespace=False
+           waitConnected: wait for switches to Connect?
+               (False; True/None=wait indefinitely; time(s)=timed wait)"""
         self.topo = topo
         self.switch = switch
         self.host = host
@@ -175,10 +177,9 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def waitConnected( self, timeout=5, delay=.5 ):
-        """wait for each switch to connect to a controller,
-           up to 5 seconds
-           timeout: time to wait, or None to wait indefinitely
+    def waitConnected( self, timeout=None, delay=.5 ):
+        """wait for each switch to connect to a controller
+           timeout: time to wait, or None or True to wait indefinitely
            delay: seconds to sleep per iteration
            returns: True if all switches are connected"""
         info( '*** Waiting for switches to connect\n' )
@@ -192,7 +193,8 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            if timeout is not None and time > timeout:
+            # Still allow None to preserve 2.2 behavior
+            if timeout not in ( None, True ) and time > timeout:
                 break
             sleep( delay )
             time += delay
