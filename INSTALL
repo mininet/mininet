@@ -2,7 +2,7 @@
 Mininet Installation/Configuration Notes
 ----------------------------------------
 
-Mininet 2.3.0b2
+Mininet 2.3.0rc1
 ---
 
 The supported installation methods for Mininet are 1) using a
@@ -137,27 +137,13 @@ like to contribute an installation script, we would welcome it!)
 
    This takes about 4 minutes on our test system.
 
-3.2. Native installation from source on Fedora 18+.
-
-   *This may be out of date.*
+3.2. Native installation from source on Fedora:
 
    As root execute the following operations:
 
     * install git
 
         yum install git
-
-    * create an user account (e.g. mininet) and add it to the wheel group
-
-        useradd [...] mininet
-        usermod -a -G wheel mininet
-
-    * change the SElinux setting to permissive. It can be done
-      temporarily with:
-
-        setenforce 0
-
-   then login with the new account (e.g. mininet) and do the following:
 
     * clone the Mininet repository
 
@@ -177,7 +163,7 @@ like to contribute an installation script, we would welcome it!)
 
         sudo mn --test pingall
 
-4. Creating your own Mininet/OpenFlow tutorial VM
+4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
    is easy! First, create a new Ubuntu VM. Next, run two commands in it:

@@ -413,7 +413,6 @@ function ovs {
         $install openvswitch
         if ! $install openvswitch-controller; then
             echo "openvswitch-controller not installed"
-            echo "You may wish to install another controller such as Ryu"
         fi
         return
     fi
