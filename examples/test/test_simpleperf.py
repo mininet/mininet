@@ -5,7 +5,7 @@ Test for simpleperf.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 from mininet.log import setLogLevel
 
@@ -18,7 +18,7 @@ class testSimplePerf( unittest.TestCase ):
         "Run the example and verify iperf results"
         # 10 Mb/s, plus or minus 20% tolerance
         BW = 10
-	TOLERANCE = .2 
+        TOLERANCE = .2
         p = pexpect.spawn( 'python -m mininet.examples.simpleperf testmode' )
         # check iperf results
         p.expect( "Results: \['10M', '([\d\.]+) .bits/sec", timeout=480 )

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This is a simple example that demonstrates multiple links
@@ -13,7 +13,7 @@ from mininet.topo import Topo
 def runMultiLink():
     "Create and run multiple link network"
     topo = simpleMultiLinkTopo( n=2 )
-    net = Mininet( topo=topo )
+    net = Mininet( topo=topo, waitConnected=True )
     net.start()
     CLI( net )
     net.stop()
@@ -21,15 +21,15 @@ def runMultiLink():
 class simpleMultiLinkTopo( Topo ):
     "Simple topology with multiple links"
 
-    def __init__( self, n, **kwargs ):
-        Topo.__init__( self, **kwargs )
-
+    # pylint: disable=arguments-differ
+    def build( self, n, **_kwargs ):
         h1, h2 = self.addHost( 'h1' ), self.addHost( 'h2' )
         s1 = self.addSwitch( 's1' )
 
         for _ in range( n ):
             self.addLink( s1, h1 )
             self.addLink( s1, h2 )
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

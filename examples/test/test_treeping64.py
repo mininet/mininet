@@ -5,7 +5,7 @@ Test for treeping64.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 
 class testTreePing64( unittest.TestCase ):

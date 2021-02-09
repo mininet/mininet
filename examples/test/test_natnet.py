@@ -5,7 +5,7 @@ Test for natnet.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from mininet.util import quietRun
 
 class testNATNet( unittest.TestCase ):

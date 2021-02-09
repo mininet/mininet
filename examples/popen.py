@@ -1,23 +1,19 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example monitors a number of hosts using host.popen() and
 pmonitor()
 """
 
-
 from mininet.net import Mininet
-from mininet.node import CPULimitedHost
 from mininet.topo import SingleSwitchTopo
 from mininet.log import setLogLevel, info
-from mininet.util import custom, pmonitor
+from mininet.util import pmonitor
 
-def monitorhosts( hosts=5, sched='cfs' ):
+def monitorhosts( hosts=5 ):
     "Start a bunch of pings and monitor them using popen"
     mytopo = SingleSwitchTopo( hosts )
-    cpu = .5 / hosts
-    myhost = custom( CPULimitedHost, cpu=cpu, sched=sched )
-    net = Mininet( topo=mytopo, host=myhost )
+    net = Mininet( topo=mytopo, waitConnected=True )
     net.start()
     # Start a bunch of pings
     popens = {}
@@ -31,6 +27,7 @@ def monitorhosts( hosts=5, sched='cfs' ):
             info( "<%s>: %s" % ( host.name, line ) )
     # Done
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

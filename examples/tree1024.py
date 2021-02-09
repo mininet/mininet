@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Create a 1024-host network, and run the CLI on it.
@@ -11,8 +11,10 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.node import OVSSwitch
 from mininet.topolib import TreeNet
+from mininet.examples.treeping64 import HostV4
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
-    network = TreeNet( depth=2, fanout=32, switch=OVSSwitch )
+    network = TreeNet( depth=2, fanout=32, host=HostV4,
+                       switch=OVSSwitch, waitConnected=True)
     network.run( CLI, network )

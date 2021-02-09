@@ -5,7 +5,7 @@ Test for limit.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 
 class testLimit( unittest.TestCase ):

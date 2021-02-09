@@ -84,12 +84,35 @@ class NAT( Node ):
         self.flush = flush
         self.forwardState = self.cmd( 'sysctl -n net.ipv4.ip_forward' ).strip()
 
+    def setManualConfig( self, intf ):
+        """Prevent network-manager/networkd from messing with our interface
+           by specifying manual configuration in /etc/network/interfaces"""
+        cfile = '/etc/network/interfaces'
+        line = '\niface %s inet manual\n' % intf
+        try:
+            with open( cfile ) as f:
+                config = f.read()
+        except IOError:
+            config = ''
+        if ( line ) not in config:
+            info( '*** Adding "' + line.strip() + '" to ' + cfile + '\n' )
+            with open( cfile, 'a' ) as f:
+                f.write( line )
+            # Probably need to restart network manager to be safe -
+            # hopefully this won't disconnect you
+            self.cmd( 'service network-manager restart || netplan apply' )
+
+    # pylint: disable=arguments-differ
     def config( self, **params ):
         """Configure the NAT and iptables"""
-        super( NAT, self).config( **params )
 
         if not self.localIntf:
             self.localIntf = self.defaultIntf()
+
+        self.setManualConfig( self.localIntf )
+
+        # Now we can configure manually without interference
+        super( NAT, self).config( **params )
 
         if self.flush:
             self.cmd( 'sysctl net.ipv4.ip_forward=0' )
@@ -113,20 +136,6 @@ class NAT( Node ):
 
         # Instruct the kernel to perform forwarding
         self.cmd( 'sysctl net.ipv4.ip_forward=1' )
-
-        # Prevent network-manager from messing with our interface
-        # by specifying manual configuration in /etc/network/interfaces
-        intf = self.localIntf
-        cfile = '/etc/network/interfaces'
-        line = '\niface %s inet manual\n' % intf
-        config = open( cfile ).read()
-        if ( line ) not in config:
-            info( '*** Adding "' + line.strip() + '" to ' + cfile + '\n' )
-            with open( cfile, 'a' ) as f:
-                f.write( line )
-        # Probably need to restart network-manager to be safe -
-        # hopefully this won't disconnect you
-        self.cmd( 'service network-manager restart' )
 
     def terminate( self ):
         "Stop NAT/forwarding between Mininet and external network"

@@ -92,6 +92,7 @@ import select
 import signal
 import random
 
+from sys import exit  # pylint: disable=redefined-builtin
 from time import sleep
 from itertools import chain, groupby
 from math import ceil
@@ -104,15 +105,16 @@ from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
                            macColonHex, ipStr, ipParse, netParse, ipAdd,
-                           waitListening )
+                           waitListening, BaseString )
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.3.0d1"
+VERSION = "2.3.0b2"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
 
+    # pylint: disable=too-many-arguments
     def __init__( self, topo=None, switch=OVSKernelSwitch, host=Host,
                   controller=DefaultController, link=Link, intf=Intf,
                   build=True, xterms=False, cleanup=False, ipBase='10.0.0.0/8',
@@ -173,7 +175,7 @@ class Mininet( object ):
         if topo and build:
             self.build()
 
-    def waitConnected( self, timeout=None, delay=.5 ):
+    def waitConnected( self, timeout=5, delay=.5 ):
         """wait for each switch to connect to a controller,
            up to 5 seconds
            timeout: time to wait, or None to wait indefinitely
@@ -190,7 +192,7 @@ class Mininet( object ):
             if not remaining:
                 info( '\n' )
                 return True
-            if time > timeout and timeout is not None:
+            if timeout is not None and time > timeout:
                 break
             sleep( delay )
             time += delay
@@ -383,8 +385,8 @@ class Mininet( object ):
             params: additional link params (optional)
             returns: link object"""
         # Accept node objects or names
-        node1 = node1 if not isinstance( node1, basestring ) else self[ node1 ]
-        node2 = node2 if not isinstance( node2, basestring ) else self[ node2 ]
+        node1 = node1 if not isinstance( node1, BaseString ) else self[ node1 ]
+        node2 = node2 if not isinstance( node2, BaseString ) else self[ node2 ]
         options = dict( params )
         # Port is optional
         if port1 is not None:
@@ -549,7 +551,8 @@ class Mininet( object ):
             switch.start( self.controllers )
         started = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=type ), type ):
+                sorted( self.switches,
+                        key=lambda s: str( type( s ) ) ), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchStartup' ):
                 success = swclass.batchStartup( switches )
@@ -576,7 +579,8 @@ class Mininet( object ):
         info( '*** Stopping %i switches\n' % len( self.switches ) )
         stopped = {}
         for swclass, switches in groupby(
-                sorted( self.switches, key=type ), type ):
+                sorted( self.switches,
+                        key=lambda s: str( type( s ) ) ), type ):
             switches = tuple( switches )
             if hasattr( swclass, 'batchShutdown' ):
                 success = swclass.batchShutdown( switches )

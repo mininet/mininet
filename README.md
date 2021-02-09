@@ -2,9 +2,10 @@ Mininet: Rapid Prototyping for Software Defined Networks
 ========================================================
 *The best way to emulate almost any network on your laptop!*
 
-Mininet 2.3.0d1
+Mininet 2.3.0b2
 
-[![Build Status][1]](https://travis-ci.org/mininet/mininet)
+[![Build Status][1]](https://github.com/mininet/mininet/actions)
+
 
 ### What is Mininet?
 
@@ -67,27 +68,31 @@ Mininet includes:
 
   `mn -c`
 
-### New features in this release
+### Python 3 Support
 
-This is primarily a performance improvement and bug fix release.
+- Mininet 2.3.0b2 supports Python 3 and Python 2!
 
-- Batch startup has been implemented for Open vSwitch, improving
-  startup performance.
+- You can install both the Python 3 and Python 2 versions of
+Mininet side by side, but the most recent installation will
+determine which Python version is used by default by `mn`.
 
-- OVS patch links have been implemented via OVSLink and --link ovs
+- You can run `mn` directly with Python 2 or Python 3,
+  as long as the appropriate version of Mininet is installed,
+  e.g.
 
-  Warning! These links have *serious limitations* compared to
-  virtual Ethernet pairs: they are not attached to real Linux
-  interfaces so you cannot use tcpdump or wireshark with them;
-  they also cannot be used in long chains - we don't recommend more
-  than 64 OVSLinks, for example --linear,64. However, they can offer
-  significantly better performance than veth pairs, for certain
-  configurations.
+      $ sudo python2 `which mn`
 
-- You can now easily install Mininet on a Raspberry Pi ;-)
+- More information regarding Python 3 and Python 2 support
+  may be found in the release notes on http://docs.mininet.org.
+  
+### Other Enhancements and Information
 
-- Additional information for this release and previous releases
-  may be found in the release notes on docs.mininet.org
+- Support for Ubuntu 20.04 LTS (and 18.04 and 16.04)
+
+- More reliable testing and CI via github actions
+
+- Additional information about this release and previous releases
+  may be found in the release notes on http://docs.mininet.org.
 
 ### Installation
 
@@ -100,7 +105,8 @@ information, including a Mininet walkthrough and an introduction
 to the Python API, is available on the
 [Mininet Web Site](http://mininet.org).
 There is also a wiki which you are encouraged to read and to
-contribute to, particularly the Frequently Asked Questions (FAQ.)
+contribute to, particularly the Frequently Asked Questions
+(FAQ) at http://faq.mininet.org.
 
 ### Support
 
@@ -123,10 +129,10 @@ hard work that Mininet continues to grow and improve.
 
 ### Enjoy Mininet
 
-Best wishes, and we look forward to seeing what you can do with
-Mininet to change the networking world!
+Have fun! We look forward to seeing what you will do with Mininet 
+to change the networking world.
 
-Bob Lantz  
-Mininet Core Team
+Bob Lantz
+on behalf of the Mininet Contributors
 
-[1]: https://travis-ci.org/mininet/mininet.svg?branch=master
+[1]: https://github.com/mininet/mininet/workflows/mininet-tests/badge.svg

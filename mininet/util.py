@@ -1,17 +1,79 @@
 "Utility functions for Mininet."
 
+import codecs
+import os
+import re
+import sys
 
-from mininet.log import output, info, error, warn, debug
-
-from time import sleep
+from fcntl import fcntl, F_GETFL, F_SETFL
+from functools import partial
+from os import O_NONBLOCK
 from resource import getrlimit, setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 from select import poll, POLLIN, POLLHUP
 from subprocess import call, check_call, Popen, PIPE, STDOUT
-import re
-from fcntl import fcntl, F_GETFL, F_SETFL
-from os import O_NONBLOCK
-import os
-from functools import partial
+from sys import exit  # pylint: disable=redefined-builtin
+from time import sleep
+
+from mininet.log import output, info, error, warn, debug
+
+# pylint: disable=too-many-arguments
+
+
+# Python 2/3 compatibility
+
+Python3 = sys.version_info[0] == 3
+BaseString = str if Python3 else getattr( str, '__base__' )
+Encoding = 'utf-8' if Python3 else None
+class NullCodec( object ):
+    "Null codec for Python 2"
+    @staticmethod
+    def decode( buf ):
+        "Null decode"
+        return buf
+
+    @staticmethod
+    def encode( buf ):
+        "Null encode"
+        return buf
+
+
+if Python3:
+    def decode( buf ):
+        "Decode buffer for Python 3"
+        return buf.decode( Encoding )
+
+    def encode( buf ):
+        "Encode buffer for Python 3"
+        return buf.encode( Encoding )
+    getincrementaldecoder = codecs.getincrementaldecoder( Encoding )
+else:
+    decode, encode = NullCodec.decode, NullCodec.encode
+
+    def getincrementaldecoder():
+        "Return null codec for Python 2"
+        return NullCodec
+
+try:
+    # pylint: disable=import-error
+    oldpexpect = None
+    import pexpect as oldpexpect
+
+    # pylint: enable=import-error
+    class Pexpect( object ):
+        "Custom pexpect that is compatible with str"
+        @staticmethod
+        def spawn( *args, **kwargs):
+            "pexpect.spawn that is compatible with str"
+            if Python3 and 'encoding' not in kwargs:
+                kwargs.update( encoding='utf-8'  )
+            return oldpexpect.spawn( *args, **kwargs )
+
+        def __getattr__( self, name ):
+            return getattr( oldpexpect, name )
+    pexpect = Pexpect()
+except ImportError:
+    pass
+
 
 # Command execution support
 
@@ -33,7 +95,7 @@ def oldQuietRun( *cmd ):
        cmd: list of command params"""
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
-        if isinstance( cmd, str ):
+        if isinstance( cmd, BaseString ):
             cmd = cmd.split( ' ' )
     popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
@@ -57,7 +119,7 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches,too-many-statements
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
        cmd: string or list of command and args
@@ -74,7 +136,7 @@ def errRun( *cmd, **kwargs ):
     if len( cmd ) == 1:
         cmd = cmd[ 0 ]
     # Allow passing in a list or a string
-    if isinstance( cmd, str ) and not shell:
+    if isinstance( cmd, BaseString ) and not shell:
         cmd = cmd.split( ' ' )
         cmd = [ str( arg ) for arg in cmd ]
     elif isinstance( cmd, list ) and shell:
@@ -86,18 +148,21 @@ def errRun( *cmd, **kwargs ):
     out, err = '', ''
     poller = poll()
     poller.register( popen.stdout, POLLIN )
-    fdtofile = { popen.stdout.fileno(): popen.stdout }
+    fdToFile = { popen.stdout.fileno(): popen.stdout }
+    fdToDecoder = { popen.stdout.fileno(): getincrementaldecoder() }
     outDone, errDone = False, True
     if popen.stderr:
-        fdtofile[ popen.stderr.fileno() ] = popen.stderr
+        fdToFile[ popen.stderr.fileno() ] = popen.stderr
+        fdToDecoder[ popen.stderr.fileno() ] = getincrementaldecoder()
         poller.register( popen.stderr, POLLIN )
         errDone = False
     while not outDone or not errDone:
         readable = poller.poll()
         for fd, event in readable:
-            f = fdtofile[ fd ]
-            if event & POLLIN:
-                data = f.read( 1024 )
+            f = fdToFile[ fd ]
+            decoder = fdToDecoder[ fd ]
+            if event & ( POLLIN | POLLHUP ):
+                data = decoder.decode( f.read( 1024 ) )
                 if echo:
                     output( data )
                 if f == popen.stdout:
@@ -108,7 +173,7 @@ def errRun( *cmd, **kwargs ):
                     err += data
                     if data == '':
                         errDone = True
-            else:  # POLLHUP or something unexpected
+            else:  # something unexpected
                 if f == popen.stdout:
                     outDone = True
                 elif f == popen.stderr:
@@ -116,6 +181,10 @@ def errRun( *cmd, **kwargs ):
                 poller.unregister( fd )
 
     returncode = popen.wait()
+    # Python 3 complains if we don't explicitly close these
+    popen.stdout.close()
+    if stderr == PIPE:
+        popen.stderr.close()
     debug( out, err, returncode )
     return out, err, returncode
 # pylint: enable=too-many-branches
@@ -132,18 +201,25 @@ def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
     return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
 
+def which(cmd, **kwargs ):
+    "Run a command and return merged stdout and stderr"
+    out, _, ret = errRun( ["which", cmd], stderr=STDOUT, **kwargs )
+    return out.rstrip() if ret == 0 else None
+
 # pylint: enable=maybe-no-member
 
 def isShellBuiltin( cmd ):
     "Return True if cmd is a bash builtin."
     if isShellBuiltin.builtIns is None:
-        isShellBuiltin.builtIns = quietRun( 'bash -c enable' )
+        isShellBuiltin.builtIns = set(quietRun( 'bash -c enable' ).split())
     space = cmd.find( ' ' )
     if space > 0:
         cmd = cmd[ :space]
     return cmd in isShellBuiltin.builtIns
 
+
 isShellBuiltin.builtIns = None
+
 
 # Interface management
 #
@@ -331,7 +407,7 @@ def netParse( ipstr ):
     if '/' in ipstr:
         ip, pf = ipstr.split( '/' )
         prefixLen = int( pf )
-    #if no prefix is specified, set the prefix to 24
+    # if no prefix is specified, set the prefix to 24
     else:
         ip = ipstr
         prefixLen = 24
@@ -374,30 +450,34 @@ def pmonitor(popens, timeoutms=500, readline=True,
        terminates: when all EOFs received"""
     poller = poll()
     fdToHost = {}
-    for host, popen in popens.iteritems():
+    fdToDecoder = {}
+    for host, popen in popens.items():
         fd = popen.stdout.fileno()
         fdToHost[ fd ] = host
+        fdToDecoder[ fd ] = getincrementaldecoder()
         poller.register( fd, POLLIN )
-        if not readline:
-            # Use non-blocking reads
-            flags = fcntl( fd, F_GETFL )
-            fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+        flags = fcntl( fd, F_GETFL )
+        fcntl( fd, F_SETFL, flags | O_NONBLOCK )
+    # pylint: disable=too-many-nested-blocks
     while popens:
         fds = poller.poll( timeoutms )
         if fds:
             for fd, event in fds:
                 host = fdToHost[ fd ]
+                decoder = fdToDecoder[ fd ]
                 popen = popens[ host ]
-                if event & POLLIN:
-                    if readline:
-                        # Attempt to read a line of output
-                        # This blocks until we receive a newline!
-                        line = popen.stdout.readline()
-                    else:
-                        line = popen.stdout.read( readmax )
-                    yield host, line
-                # Check for EOF
-                elif event & POLLHUP:
+                if event & ( POLLIN | POLLHUP ):
+                    while True:
+                        try:
+                            f = popen.stdout
+                            line = decoder.decode( f.readline() if readline
+                                                   else f.read( readmax ) )
+                        except IOError:
+                            line = ''
+                        if line == '':
+                            break
+                        yield host, line
+                if event & POLLHUP:
                     poller.unregister( fd )
                     del popens[ host ]
         else:
@@ -406,19 +486,19 @@ def pmonitor(popens, timeoutms=500, readline=True,
 # Other stuff we use
 def sysctlTestAndSet( name, limit ):
     "Helper function to set sysctl limits"
-    #convert non-directory names into directory names
+    # convert non-directory names into directory names
     if '/' not in name:
         name = '/proc/sys/' + name.replace( '.', '/' )
-    #read limit
+    # read limit
     with open( name, 'r' ) as readFile:
         oldLimit = readFile.readline()
         if isinstance( limit, int ):
-            #compare integer limits before overriding
+            # compare integer limits before overriding
             if int( oldLimit ) < limit:
                 with open( name, 'w' ) as writeFile:
                     writeFile.write( "%d" % limit )
         else:
-            #overwrite non-integer limits
+            # overwrite non-integer limits
             with open( name, 'w' ) as writeFile:
                 writeFile.write( limit )
 
@@ -435,21 +515,21 @@ def fixLimits():
     try:
         rlimitTestAndSet( RLIMIT_NPROC, 8192 )
         rlimitTestAndSet( RLIMIT_NOFILE, 16384 )
-        #Increase open file limit
+        # Increase open file limit
         sysctlTestAndSet( 'fs.file-max', 10000 )
-        #Increase network buffer space
+        # Increase network buffer space
         sysctlTestAndSet( 'net.core.wmem_max', 16777216 )
         sysctlTestAndSet( 'net.core.rmem_max', 16777216 )
         sysctlTestAndSet( 'net.ipv4.tcp_rmem', '10240 87380 16777216' )
         sysctlTestAndSet( 'net.ipv4.tcp_wmem', '10240 87380 16777216' )
         sysctlTestAndSet( 'net.core.netdev_max_backlog', 5000 )
-        #Increase arp cache size
+        # Increase arp cache size
         sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh1', 4096 )
         sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh2', 8192 )
         sysctlTestAndSet( 'net.ipv4.neigh.default.gc_thresh3', 16384 )
-        #Increase routing table size
+        # Increase routing table size
         sysctlTestAndSet( 'net.ipv4.route.max_size', 32768 )
-        #Increase number of PTYs for nodes
+        # Increase number of PTYs for nodes
         sysctlTestAndSet( 'kernel.pty.max', 20000 )
     # pylint: disable=broad-except
     except Exception:
@@ -460,7 +540,7 @@ def fixLimits():
 
 def mountCgroups():
     "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'cat /proc/mounts' )
+    mounts = quietRun( 'grep cgroup /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
     if ('cgroup %s' % cgdir not in mounts and
@@ -590,7 +670,6 @@ def ensureRoot():
     if os.getuid() != 0:
         error( '*** Mininet must run as root.\n' )
         exit( 1 )
-    return
 
 def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     """Wait until server is listening on port.
@@ -600,7 +679,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     if not runCmd( 'which telnet' ):
         raise Exception('Could not find telnet' )
     # pylint: disable=maybe-no-member
-    serverIP = server if isinstance( server, basestring ) else server.IP()
+    serverIP = server if isinstance( server, BaseString ) else server.IP()
     cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )

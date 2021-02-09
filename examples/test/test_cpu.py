@@ -15,7 +15,7 @@ cfs	10%	1.29e+09
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 
 class testCPU( unittest.TestCase ):

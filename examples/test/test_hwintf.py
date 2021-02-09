@@ -7,7 +7,7 @@ Test for hwintf.py
 import unittest
 import re
 
-import pexpect
+from mininet.util import pexpect
 
 from mininet.log import setLogLevel
 from mininet.node import Node

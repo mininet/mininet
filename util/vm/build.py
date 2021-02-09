@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 """
 build.py: build a Mininet VM
@@ -31,6 +31,7 @@ from os import stat, path
 from stat import ST_MODE, ST_SIZE
 from os.path import abspath
 from sys import exit, stdout, argv, modules
+import sys
 import re
 from glob import glob
 from subprocess import check_output, call, Popen
@@ -39,11 +40,13 @@ from time import time, strftime, localtime
 import argparse
 from distutils.spawn import find_executable
 import inspect
+from traceback import print_exc
+
 
 pexpect = None  # For code check - imported dynamically
 
 # boot can be slooooow!!!! need to debug/optimize somehow
-TIMEOUT=600
+TIMEOUT = 600
 
 # Some configuration options
 # Possibly change this to use the parsed arguments instead!
@@ -60,10 +63,23 @@ VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
 Prompt = '\$ '              # Shell prompt that pexpect will wait for
 
+
+# URLs for Ubunto .iso images
+
+def serverURL( version, arch ):
+    "Return .iso URL for Ubuntu version and arch"
+    server = 'http://cdimage.ubuntu.com/ubuntu/releases/%s/release/'
+    iso = 'ubuntu-%s-server-%s.iso'
+    return (server + iso )  % ( version, version, arch )
+
+def legacyURL( version, arch ):
+    "Return .iso URL for Ubuntu version"
+    server = ( 'http://cdimage.ubuntu.com/ubuntu-legacy-server/'
+               'releases/%s/release/' )
+    iso = 'ubuntu-%s-legacy-server-%s.iso'
+    return (server + iso ) % ( version, version, arch )
+
 isoURLs = {
-    'precise32server':
-    'http://mirrors.kernel.org/ubuntu-releases/12.04/'
-    'ubuntu-12.04.5-server-i386.iso',
     'precise64server':
     'http://mirrors.kernel.org/ubuntu-releases/12.04/'
     'ubuntu-12.04.5-server-amd64.iso',
@@ -73,18 +89,14 @@ isoURLs = {
     'trusty64server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
     'ubuntu-14.04.4-server-amd64.iso',
-    'wily32server':
-    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
-    'ubuntu-15.10-server-i386.iso',
-    'wily64server':
-    'http://mirrors.kernel.org/ubuntu-releases/15.10/'
-    'ubuntu-15.10-server-amd64.iso',
     'xenial32server':
     'http://mirrors.kernel.org/ubuntu-releases/16.04/'
-    'ubuntu-16.04.1-server-i386.iso',
+    'ubuntu-16.04.6-server-i386.iso',
     'xenial64server':
     'http://mirrors.kernel.org/ubuntu-releases/16.04/'
-    'ubuntu-16.04.1-server-amd64.iso',
+    'ubuntu-16.04.7-server-amd64.iso',
+    'bionic64server': serverURL( '18.04.5', 'amd64' ),
+    'focal64server':  legacyURL( '20.04.1', 'amd64' ),
 }
 
 
@@ -122,7 +134,7 @@ def log( *args, **kwargs ):
     else:
         print( output, )
     # Optionally mirror to LogFile
-    if type( LogFile ) is file:
+    if LogFile:
         if cr:
             output += '\n'
         LogFile.write( output )
@@ -131,7 +143,7 @@ def log( *args, **kwargs ):
 
 def run( cmd, **kwargs ):
     "Convenient interface to check_output"
-    log( '-', cmd )
+    log( '+', cmd )
     cmd = cmd.split()
     arg0 = cmd[ 0 ]
     if not find_executable( arg0 ):
@@ -153,7 +165,7 @@ def depend():
     log( '* Installing package dependencies' )
     run( 'sudo apt-get -qy update' )
     run( 'sudo apt-get -qy install'
-         ' kvm cloud-utils genisoimage qemu-kvm qemu-utils'
+         ' kvmtool cloud-utils genisoimage qemu-kvm qemu-utils'
          ' e2fsprogs curl'
          ' python-setuptools mtools zip' )
     run( 'sudo easy_install pexpect' )
@@ -179,9 +191,9 @@ def findiso( flavor ):
     url = isoURLs[ flavor ]
     name = path.basename( url )
     iso = path.join( VMImageDir, name )
-    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0777 != 0444 ):
+    if not path.exists( iso ) or ( stat( iso )[ ST_MODE ] & 0o777 != 0o444 ):
         log( '* Retrieving', url )
-        run( 'curl -C - -o %s %s' % ( iso, url ) )
+        run( 'curl -L -C - -o %s %s' % ( iso, url ) )
         # Make sure the file header/type is something reasonable like
         # 'ISO' or 'x86 boot sector', and not random html or text
         result = run( 'file ' + iso )
@@ -190,7 +202,7 @@ def findiso( flavor ):
             raise Exception( 'findiso: could not download iso from ' + url )
         # Write-protect iso, signaling it is complete
         log( '* Write-protecting iso', iso)
-        os.chmod( iso, 0444 )
+        os.chmod( iso, 0o444 )
     log( '* Using iso', iso )
     return iso
 
@@ -201,10 +213,11 @@ def attachNBD( cow, flags='' ):
     # qemu-nbd requires an absolute path
     cow = abspath( cow )
     log( '* Checking for unused /dev/nbdX device ' )
-    for i in range ( 0, 63 ):
-        nbd = '/dev/nbd%d' % i
+    for i in range ( 1, 63 ):
+        entry = 'nbd%d' % i
+        nbd = '/dev/' + entry
         # Check whether someone's already messing with that device
-        if call( [ 'pgrep', '-f', nbd ] ) == 0:
+        if call( [ 'pgrep', '-f', entry ] ) == 0:
             continue
         srun( 'modprobe nbd max-part=64' )
         srun( 'qemu-nbd %s -c %s %s' % ( flags, nbd, cow ) )
@@ -222,17 +235,26 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
     "Extract kernel and initrd from base image"
     kernel = path.join( imageDir, flavor + '-vmlinuz' )
     initrd = path.join( imageDir, flavor + '-initrd' )
-    if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0777 ) == 0444:
-        # If kernel is there, then initrd should also be there
-        return kernel, initrd
     log( '* Extracting kernel to', kernel )
     nbd = attachNBD( image, flags='-r' )
     try:
         print( srun( 'partx ' + nbd ) )
     except:
         log( 'Warning - partx failed with error' )
-    # Assume kernel is in partition 1/boot/vmlinuz*generic for now
+    # Guess that  kernel is in partition 1/boot/vmlinuz*generic
+    # ...but look for other Linux partitions just in case
     part = nbd + 'p1'
+    partitions = srun( 'fdisk -l ' + nbd )
+    for line in partitions.split( '\n' ):
+        line = line.strip()
+        if line.endswith( 'Linux' ):
+            part = line.split()[ 0 ]
+            break
+    partnum = int( part.split( 'p' )[ -1 ] )
+    if path.exists( kernel ) and ( stat( image )[ ST_MODE ] & 0o777 ) == 0o444:
+        # If kernel is there, then initrd should also be there
+        detachNBD( nbd )
+        return kernel, initrd, partnum
     mnt = mkdtemp()
     srun( 'mount -o ro,noload %s %s' % ( part, mnt  ) )
     kernsrc = glob( '%s/boot/vmlinuz*generic' % mnt )[ 0 ]
@@ -244,7 +266,7 @@ def extractKernel( image, flavor, imageDir=VMImageDir ):
     srun( 'umount ' + mnt )
     run( 'rmdir ' + mnt )
     detachNBD( nbd )
-    return kernel, initrd
+    return kernel, initrd, partnum
 
 
 def findBaseImage( flavor, size='8G' ):
@@ -252,8 +274,8 @@ def findBaseImage( flavor, size='8G' ):
     image = path.join( VMImageDir, flavor + '-base.qcow2' )
     if path.exists( image ):
         # Detect race condition with multiple builds
-        perms = stat( image )[ ST_MODE ] & 0777
-        if perms != 0444:
+        perms = stat( image )[ ST_MODE ] & 0o777
+        if perms != 0o444:
             raise Exception( 'Error - base image %s is writable.' % image +
                              ' Are multiple builds running? if not,'
                              ' remove %s and try again.' % image )
@@ -266,10 +288,11 @@ def findBaseImage( flavor, size='8G' ):
         installUbuntu( iso, image )
         # Write-protect image, also signaling it is complete
         log( '* Write-protecting image', image)
-        os.chmod( image, 0444 )
-    kernel, initrd = extractKernel( image, flavor )
-    log( '* Using base image', image, 'and kernel', kernel )
-    return image, kernel, initrd
+        os.chmod( image, 0o444 )
+    kernel, initrd, partnum = extractKernel( image, flavor )
+    log( '* Using base image', image, 'and kernel', kernel,
+         'and partition #', partnum )
+    return image, kernel, initrd, partnum
 
 
 # Kickstart and Preseed files for Ubuntu/Debian installer
@@ -382,8 +405,20 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
     # Mount iso so we can use its kernel
     mnt = mkdtemp()
     srun( 'mount %s %s' % ( iso, mnt ) )
-    kernel = path.join( mnt, 'install/vmlinuz' )
-    initrd = path.join( mnt, 'install/initrd.gz' )
+    for kdir in 'install', 'casper':
+        kernel = path.join( mnt, kdir, 'vmlinuz' )
+        if not path.exists( kernel ):
+            kernel = ''
+        for initrd in 'initrd.gz', 'initrd':
+            initrd = path.join( mnt, kdir, initrd )
+            if path.exists( initrd ):
+                break
+            else:
+                initrd = ''
+        if kernel and initrd:
+            break
+    if not kernel or not initrd:
+        raise Exception( 'unable to locate kernel and initrd in iso image' )
     if NoKVM:
         accel = 'tcg'
     else:
@@ -407,6 +442,7 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
            '-append',
            ' ks=floppy:/' + kickstart +
            ' preseed/file=floppy://' + preseed +
+           ' net.ifnames=0' +
            ' console=ttyS0' ]
     ubuntuStart = time()
     log( '* INSTALLING UBUNTU FROM', iso, 'ONTO', image )
@@ -423,6 +459,8 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
         logfile.close()
     elapsed = time() - ubuntuStart
     # Unmount iso and clean up
+    ### DEBUGGING
+    srun( 'ls -l ' + mnt )
     srun( 'umount ' + mnt )
     run( 'rmdir ' + mnt )
     if vm.returncode != 0:
@@ -432,7 +470,7 @@ def installUbuntu( iso, image, logfilename='install.log', memory=1024 ):
     log( '* Ubuntu installation completed in %.2f seconds' % elapsed )
 
 
-def boot( cow, kernel, initrd, logfile, memory=1024, cpuCores=1 ):
+def boot( cow, kernel, initrd, logfile, memory=1024, cpuCores=1, partnum=1 ):
     """Boot qemu/kvm with a COW disk and local/user data store
        cow: COW disk path
        kernel: kernel path
@@ -464,7 +502,9 @@ def boot( cow, kernel, initrd, logfile, memory=1024, cpuCores=1 ):
             '-kernel', kernel,
             '-initrd', initrd,
             '-drive file=%s,if=virtio' % cow,
-            '-append "root=/dev/vda1 init=/sbin/init console=ttyS0" ' ]
+            '-append "root=/dev/vda%d init=/sbin/init'
+            ' net.ifnames=0 console=ttyS0" ' % partnum ]
+    log( cmd )
     if Forward:
         cmd += sum( [ [ '-redir', f ] for f in Forward ], [] )
     if cpuCores > 1:
@@ -590,13 +630,16 @@ def checkOutBranch( vm, branch, prompt=Prompt ):
     # The branch will be rebased to its parent on origin.
     # This probably doesn't matter since we're running on a COW disk
     # anyway.
-    vm.sendline( 'cd ~/mininet; git fetch --all; git checkout '
-                 + branch + '; git pull --rebase origin ' + branch )
+    vm.sendline( 'cd ~/mininet; git fetch origin ' + branch +
+                 '; git checkout ' + branch +
+                 '; git pull --rebase origin ' + branch )
     vm.expect( prompt )
-    vm.sendline( 'sudo -n make install' )
+    # Use install.sh since we may need to identify python version?
+    vm.sendline( 'util/install.sh -n' )
 
 
-def interact( vm, tests, pre='', post='', prompt=Prompt ):
+def interact( vm, tests, pre='', post='', prompt=Prompt,
+              clean=True):
     "Interact with vm, which is a pexpect object"
     login( vm )
     log( '* Waiting for login...' )
@@ -619,8 +662,11 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     vm.expect ( 'password for mininet: ' )
     vm.sendline( 'mininet' )
     log( '* Waiting for script to complete... ' )
-    # Gigantic timeout for now ;-(
-    vm.expect( 'Done preparing Mininet', timeout=3600 )
+    # Long timeout since we may be on cloud CI
+    # 30min for kvm, 1.5hr for emulation
+    # TODO: detect installation errors
+    timeout = 5200 if NoKVM else 1800
+    vm.expect( 'Done preparing Mininet', timeout=timeout )
     log( '* Completed successfully' )
     vm.expect( prompt )
     version = getMininetVersion( vm )
@@ -634,6 +680,10 @@ def interact( vm, tests, pre='', post='', prompt=Prompt ):
     log( '* Disabling serial console' )
     vm.sendline( "sudo sed -i -e 's/^GRUB_TERMINAL=serial/#GRUB_TERMINAL=serial/' "
                 "/etc/default/grub; sudo update-grub" )
+    vm.expect( prompt )
+    if clean:
+        log( '* Cleaning vm' )
+        vm.sendline( '~/mininet/util/install.sh -d' )
     vm.expect( prompt )
     log( '* Shutting down' )
     vm.sendline( 'sync; sudo shutdown -h now' )
@@ -799,7 +849,7 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     ovfdate = strftime( '%y%m%d', lstart )
     dir = 'mn-%s-%s' % ( flavor, date )
     if Branch:
-        dirname = 'mn-%s-%s-%s' % ( Branch, flavor, date )
+        dir = 'mn-%s-%s-%s' % ( Branch, flavor, date )
     try:
         os.mkdir( dir)
     except:
@@ -810,7 +860,7 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     LogFile = open( 'build.log', 'w' )
     log( '* Logging to', abspath( LogFile.name ) )
     log( '* Created working directory', dir )
-    image, kernel, initrd = findBaseImage( flavor )
+    image, kernel, initrd, partnum = findBaseImage( flavor )
     basename = 'mininet-' + flavor
     volume = basename + '.qcow2'
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, volume ) )
@@ -820,7 +870,7 @@ def build( flavor='raring32server', tests=None, pre='', post='', memory=1024 ):
     else:
         logfile = open( flavor + '.log', 'w+' )
     log( '* Logging results to', abspath( logfile.name ) )
-    vm = boot( volume, kernel, initrd, logfile, memory=memory )
+    vm = boot( volume, kernel, initrd, logfile, memory=memory, partnum=partnum )
     version = interact( vm, tests=tests, pre=pre, post=post )
     size = qcow2size( volume )
     arch = archFor( flavor )
@@ -879,7 +929,7 @@ def runTests( vm, tests=None, pre='', post='', prompt=Prompt, uninstallNtpd=Fals
 
 def getMininetVersion( vm ):
     "Run mn to find Mininet version in VM"
-    vm.sendline( '~/mininet/bin/mn --version' )
+    vm.sendline( '(cd ~/mininet; PYTHONPATH=. bin/mn --version)' )
     # Eat command line echo, then read output line
     vm.readline()
     version = vm.readline().strip()
@@ -904,7 +954,8 @@ def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
     log( '* Creating COW disk', cow )
     run( 'qemu-img create -f qcow2 -b %s %s' % ( image, cow ) )
     log( '* Extracting kernel and initrd' )
-    kernel, initrd = extractKernel( image, flavor=basename, imageDir=tmpdir )
+    kernel, initrd, partnum = extractKernel(
+        image, flavor=basename, imageDir=tmpdir )
     if LogToConsole:
         logfile = stdout
     else:
@@ -912,7 +963,7 @@ def bootAndRun( image, prompt=Prompt, memory=1024, cpuCores=1, outputFile=None,
                                       suffix='.testlog', delete=False )
     log( '* Logging VM output to', logfile.name )
     vm = boot( cow=cow, kernel=kernel, initrd=initrd, logfile=logfile,
-               memory=memory, cpuCores=cpuCores )
+               memory=memory, cpuCores=cpuCores, partnum=partnum )
     login( vm )
     log( '* Waiting for prompt after login' )
     vm.expect( prompt )
@@ -951,7 +1002,7 @@ def testDict():
 def testString():
     "Return string listing valid tests"
     tests = [ '%s <%s>' % ( name, func.__doc__ )
-              for name, func in testDict().iteritems() ]
+              for name, func in testDict().items() ]
     return 'valid tests: %s' % ', '.join( tests )
 
 
@@ -1031,6 +1082,7 @@ def parseArgs():
                    memory=args.memory )
         except Exception as e:
             log( '* BUILD FAILED with exception: ', e )
+            print_exc( e )
             exit( 1 )
     for image in args.image:
         bootAndRun( image, runFunction=runTests, tests=args.test, pre=args.run,

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 limit.py: example of using link and CPU limits
@@ -34,7 +34,7 @@ def limit( bw=10, cpu=.1 ):
                       'Skipping this test\n' )
                 continue
         host = custom( CPULimitedHost, sched=sched, cpu=cpu )
-        net = Mininet( topo=myTopo, intf=intf, host=host )
+        net = Mininet( topo=myTopo, intf=intf, host=host, waitConnected=True )
         net.start()
         testLinkLimit( net, bw=bw )
         net.runCpuLimitTest( cpu=cpu )
@@ -43,7 +43,7 @@ def limit( bw=10, cpu=.1 ):
 def verySimpleLimit( bw=150 ):
     "Absurdly simple limiting test"
     intf = custom( TCIntf, bw=bw )
-    net = Mininet( intf=intf )
+    net = Mininet( intf=intf, waitConnected=True )
     h1, h2 = net.addHost( 'h1' ), net.addHost( 'h2' )
     net.addLink( h1, h2 )
     net.start()
@@ -54,6 +54,7 @@ def verySimpleLimit( bw=150 ):
     h1.cmdPrint( 'tc -s qdisc ls dev', h1.defaultIntf() )
     h2.cmdPrint( 'tc -d class show dev', h2.defaultIntf() )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

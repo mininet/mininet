@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example shows how to add an interface (for example a real
@@ -8,12 +8,15 @@ hardware interface) to a network after the network is created.
 import re
 import sys
 
+from sys import exit  # pylint: disable=redefined-builtin
+
 from mininet.cli import CLI
 from mininet.log import setLogLevel, info, error
 from mininet.net import Mininet
 from mininet.link import Intf
 from mininet.topolib import TreeTopo
 from mininet.util import quietRun
+
 
 def checkIntf( intf ):
     "Make sure intf exists and is not configured."
@@ -27,6 +30,7 @@ def checkIntf( intf ):
                'and is probably in use!\n' )
         exit( 1 )
 
+
 if __name__ == '__main__':
     setLogLevel( 'info' )
 
@@ -38,7 +42,7 @@ if __name__ == '__main__':
     checkIntf( intfName )
 
     info( '*** Creating network\n' )
-    net = Mininet( topo=TreeTopo( depth=1, fanout=2 ) )
+    net = Mininet( topo=TreeTopo( depth=1, fanout=2 ), waitConnected=True )
 
     switch = net.switches[ 0 ]
     info( '*** Adding hardware interface', intfName, 'to switch',

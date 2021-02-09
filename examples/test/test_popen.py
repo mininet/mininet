@@ -5,7 +5,7 @@ Test for popen.py and popenpoll.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class testPopen( unittest.TestCase ):
 

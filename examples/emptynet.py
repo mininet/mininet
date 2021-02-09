@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example shows how to create an empty Mininet object
@@ -14,7 +14,7 @@ def emptyNet():
 
     "Create an empty network and add nodes to it."
 
-    net = Mininet( controller=Controller )
+    net = Mininet( controller=Controller, waitConnected=True )
 
     info( '*** Adding controller\n' )
     net.addController( 'c0' )
@@ -38,6 +38,7 @@ def emptyNet():
 
     info( '*** Stopping network' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

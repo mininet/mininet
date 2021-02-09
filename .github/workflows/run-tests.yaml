@@ -1,0 +1,51 @@
+
+name: mininet-tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Mininet Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-18.04, ubuntu-16.04]
+        python-version: [3.x, 2.x]
+    steps:
+      - name: Check out Mininet source
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Mininet and base dependencies
+        run: |
+          sudo apt-get update -qq
+          # This seems too slow unfortunately:
+          # sudo apt-get upgrade -y -qq
+          PYTHON=`which python` util/install.sh -nv
+      - name: Sanity test
+        run: |
+          export sudo="sudo env PATH=$PATH"
+          # Verify major python-version number matches python and mininet
+          export PYVER=`echo ${{ matrix.python-version }} | cut -d . -f 1`
+          export CHKVER='px import platform; print(platform.python_version())'
+          python --version |& grep " $PYVER\."
+          echo $CHKVER | $sudo mn -v output | grep " $PYVER\."
+          # Newer OvS tries OpenFlow15 which crashes ovsc on ubuntu-20.04
+          $sudo mn --switch ovs,protocols=OpenFlow13 --test pingall
+      - name: Install test dependencies
+        run: |
+          sudo apt-get install -qq vlan
+          pip install pexpect
+          util/install.sh -fw
+      - name: Run core tests
+        run: |
+          export sudo="sudo env PATH=$PATH"
+          export PYTHON=`which python`
+          $sudo $PYTHON mininet/test/runner.py -v
+      - name: Run examples tests (quick)
+        run: |
+          export sudo="sudo env PATH=$PATH"
+          export PYTHON=`which python`
+          $sudo $PYTHON examples/test/runner.py -v -quick

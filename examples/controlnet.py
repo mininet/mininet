@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 controlnet.py: Mininet with a custom control network
@@ -49,7 +49,7 @@ class MininetFacade( object ):
            args: unnamed networks passed as arguments
            kwargs: named networks passed as arguments"""
         self.net = net
-        self.nets = [ net ] + list( args ) + kwargs.values()
+        self.nets = [ net ] + list( args ) + list( kwargs.values() )
         self.nameToNet = kwargs
         self.nameToNet['net'] = net
 
@@ -59,13 +59,14 @@ class MininetFacade( object ):
 
     def __getitem__( self, key ):
         "returns primary/named networks or node from any net"
-        #search kwargs for net named key
+        # search kwargs for net named key
         if key in self.nameToNet:
             return self.nameToNet[ key ]
-        #search each net for node named key
+        # search each net for node named key
         for net in self.nets:
             if key in net:
                 return net[ key ]
+        return None
 
     def __iter__( self ):
         "Iterate through all nodes in all Mininet objects"
@@ -100,10 +101,10 @@ class MininetFacade( object ):
 
 class ControlNetwork( Topo ):
     "Control Network Topology"
-    def __init__( self, n, dataController=DataController, **kwargs ):
+    # pylint: disable=arguments-differ
+    def build( self, n, dataController=DataController, **_kwargs ):
         """n: number of data network controller nodes
            dataController: class for data network controllers"""
-        Topo.__init__( self, **kwargs )
         # Connect everything to a single switch
         cs0 = self.addSwitch( 'cs0' )
         # Add hosts which will serve as data network controllers
@@ -124,7 +125,8 @@ def run():
 
     info( '* Creating Control Network\n' )
     ctopo = ControlNetwork( n=4, dataController=DataController )
-    cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24', controller=None )
+    cnet = Mininet( topo=ctopo, ipBase='192.168.123.0/24',
+                    controller=None, waitConnected=True )
     info( '* Adding Control Network Controller\n')
     cnet.addController( 'cc0', controller=Controller )
     info( '* Starting Control Network\n')
@@ -134,7 +136,8 @@ def run():
     topo = TreeTopo( depth=2, fanout=2 )
     # UserSwitch so we can easily test failover
     sw = partial( UserSwitch, opts='--inactivity-probe=1 --max-backoff=1' )
-    net = Mininet( topo=topo, switch=sw, controller=None )
+    net = Mininet( topo=topo, switch=sw, controller=None,
+                   waitConnected=True )
     info( '* Adding Controllers to Data Network\n' )
     for host in cnet.hosts:
         if isinstance(host, Controller):

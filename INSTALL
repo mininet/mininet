@@ -2,7 +2,7 @@
 Mininet Installation/Configuration Notes
 ----------------------------------------
 
-Mininet 2.3.0d1
+Mininet 2.3.0b2
 ---
 
 The supported installation methods for Mininet are 1) using a
@@ -32,19 +32,21 @@ like to contribute an installation script, we would welcome it!)
 2. Next-easiest option: use our Ubuntu package!
 
    To install Mininet itself (i.e. `mn` and the Python API) on Ubuntu
-   12.10+:
+   16.04+:
 
         sudo apt-get install mininet
 
-   Note: if you are upgrading from an older version of Mininet, make
-   sure you remove the old OVS from `/usr/local`:
-
-        sudo rm /usr/local/bin/ovs*
-        sudo rm /usr/local/sbin/ovs*
+   Note: this may install an older version of Mininet which may not
+   support Python 3. If you would like the latest version of Mininet,
+   consider installing from source as described in the next section.
 
 3. Native installation from source
 
-3.1. Native installation from source on Ubuntu 12.04+
+   If you are running Ubuntu, Debian, or Fedora, you may be able to use
+   our handy `install.sh` script, which is in `util/`. Please read the
+   following sections first.
+
+3.1. Obtaining the Mininet source code
 
    If you're reading this, you've probably already done so, but the
    command to download the Mininet source code is:
@@ -52,8 +54,9 @@ like to contribute an installation script, we would welcome it!)
         git clone git://github.com/mininet/mininet.git
 
    Note that the above git command will check out the latest and greatest
-   Mininet (which we recommend!) If you want to run the last tagged/released
-   version of Mininet, you can look at the release tags using
+   Mininet (which we recommend!) If you want to run the last
+   tagged/released version of Mininet, you can look at the release tags
+   using
 
         cd mininet
         git tag
@@ -64,21 +67,38 @@ like to contribute an installation script, we would welcome it!)
 
    where <release tag> is the release you want to check out.
 
-   If you are running Ubuntu, Debian, or Fedora, you may be able to use
-   our handy `install.sh` script, which is in `util/`.
+3.1.1 *CAUTION: USE AT YOUR OWN RISK!*
 
-   *WARNING: USE AT YOUR OWN RISK!*
-
-   `install.sh` is a bit intrusive and may possibly damage your OS
+   `install.sh` can be a bit intrusive and may possibly damage your OS
    and/or home directory, by creating/modifying several directories
    such as `mininet`, `openflow`, `oftest`, `pox`, etc.. We recommend
-   trying it in a VM before trying it on a system you use from day to day.
+   trying it in a VM before trying it on a system you use from day to
+   day.
 
    Although we hope it won't do anything completely terrible, you may
    want to look at the script before you run it, and you should make
    sure your system and home directory are backed up just in case!
 
-   To install Mininet itself, the OpenFlow reference implementation, and
+   You can change the directory where the dependencies are installed
+   using the -s <directory> flag.
+
+        util/install.sh -s <directory> ...
+
+3.1.2 Running `install.sh`
+
+   Installing a "minimal" version of Mininet with Open vSwitch should
+   be reasonably non-perturbing since it should not create directories
+   for other tools:
+
+       util/install.sh -nv
+
+   Note this will not install a controller, so you will have to either
+   install your own controller, or use a switch such OVSBridge that does
+   not require a controller:
+
+       sudo mn --switch ovsbr --test pingall
+
+   To install Mininet itself, the OpenFlow reference controller, and
    Open vSwitch, you may use:
 
         util/install.sh -fnv
@@ -88,6 +108,27 @@ like to contribute an installation script, we would welcome it!)
 
         sudo mn --test pingall
 
+3.1.3 Python 3 and Python 2 support
+
+   Mininet supports Python 3 and Python 2. By default, `install.sh`
+   will use whatever `python` is on your system.  To specify a
+   specific version of Pythonm, you can set the PYTHON environment
+   variable:
+
+       PYTHON=python3 util/install.sh -fnv
+
+   You can install Mininet for both Python 3 and Python 2:
+
+       PYTHON=python2 util/install.sh -fnv
+       PYTHON=python3 util/install.sh -n
+
+   Whichever version was installed last will be the default for `mn`.
+   As long as Mininet is installed for the appropriate version of
+   Python, you can run it using that versinon of Python:
+
+       python3 `which mn`
+       python2 `which mn`
+
    To install ALL of the software which we use for OpenFlow tutorials,
    including POX, the OpenFlow WireShark dissector, the `oftest`
    framework, and other potentially useful software, you may use:
@@ -96,12 +137,9 @@ like to contribute an installation script, we would welcome it!)
 
    This takes about 4 minutes on our test system.
 
-   You can change the directory where the dependencies are installed using
-   the -s <directory> flag.
-
-        util/install.sh -s <directory> -a
-
 3.2. Native installation from source on Fedora 18+.
+
+   *This may be out of date.*
 
    As root execute the following operations:
 
@@ -155,7 +193,8 @@ like to contribute an installation script, we would welcome it!)
 
    Although we don't support other Linux distributions directly, it
    should be possible to install and run Mininet with some degree of
-   manual effort.
+   manual effort. People have even gotten `mn --switch user` to run
+   in a ChromeOS container.
 
    In general, you must have:
 
@@ -172,8 +211,11 @@ like to contribute an installation script, we would welcome it!)
    support other Linux distributions.
 
 
-Good luck!
+As always, please feel free to submit issues or pull requests for
+installation-related features.
 
-Mininet Team
+Good luck, and have fun!
+
+Mininet Developers
 
 ---

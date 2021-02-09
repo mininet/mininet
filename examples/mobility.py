@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Simple example of Mobility with Mininet
@@ -19,13 +19,12 @@ to-do:
 - think about clearing last hop - why doesn't that work?
 """
 
+from random import randint
 
 from mininet.net import Mininet
 from mininet.node import OVSSwitch
 from mininet.topo import LinearTopo
 from mininet.log import info, output, warn, setLogLevel
-
-from random import randint
 
 
 class MobilitySwitch( OVSSwitch ):
@@ -38,6 +37,7 @@ class MobilitySwitch( OVSSwitch ):
         del self.intfs[ port ]
         del self.nameToIntf[ intf.name ]
 
+    # pylint: disable=arguments-differ
     def addIntf( self, intf, rename=False, **kwargs ):
         "Add (and reparent) an interface"
         OVSSwitch.addIntf( self, intf, **kwargs )
@@ -107,7 +107,8 @@ def moveHost( host, oldSwitch, newSwitch, newPort=None ):
 def mobilityTest():
     "A simple test of mobility"
     info( '* Simple mobility test\n' )
-    net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch )
+    net = Mininet( topo=LinearTopo( 3 ), switch=MobilitySwitch,
+                                    waitConnected=True )
     info( '* Starting network:\n' )
     net.start()
     printConnections( net.switches )
@@ -130,6 +131,7 @@ def mobilityTest():
         net.pingAll()
         old = new
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

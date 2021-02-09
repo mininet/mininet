@@ -5,7 +5,7 @@ Test for vlanhost.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 import sys
 from mininet.util import quietRun
 

@@ -5,7 +5,7 @@ A simple sanity check test for cluster edition
 '''
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 
 class clusterSanityCheck( unittest.TestCase ):
 
@@ -13,6 +13,8 @@ class clusterSanityCheck( unittest.TestCase ):
 
     def testClusterPingAll( self ):
         p = pexpect.spawn( 'python -m mininet.examples.clusterSanity' )
+        p.expect( self.prompt )
+        p.sendline( 'py net.waitConnected()' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )

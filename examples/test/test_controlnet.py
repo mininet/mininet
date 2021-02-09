@@ -5,7 +5,9 @@ Test for controlnet.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
+
+from sys import stdout
 
 class testControlNet( unittest.TestCase ):
 
@@ -13,7 +15,7 @@ class testControlNet( unittest.TestCase ):
 
     def testPingall( self ):
         "Simple pingall test that verifies 0% packet drop in data network"
-        p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
+        p = pexpect.spawn( 'python -m mininet.examples.controlnet', logfile=stdout)
         p.expect( self.prompt )
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )
@@ -26,9 +28,9 @@ class testControlNet( unittest.TestCase ):
     def testFailover( self ):
         "Kill controllers and verify that switch, s1, fails over properly"
         count = 1
-        p = pexpect.spawn( 'python -m mininet.examples.controlnet' )
+        p = pexpect.spawn( 'python -m mininet.examples.controlnet', logfile=stdout )
         p.expect( self.prompt )
-        lp = pexpect.spawn( 'tail -f /tmp/s1-ofp.log' )
+        lp = pexpect.spawn( 'tail -f /tmp/s1-ofp.log', logfile=stdout )
         lp.expect( 'tcp:\d+\.\d+\.\d+\.(\d+):\d+: connected' )
         ip = int( lp.match.group( 1 ) )
         self.assertEqual( count, ip )

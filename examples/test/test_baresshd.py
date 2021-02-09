@@ -5,8 +5,9 @@ Tests for baresshd.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from mininet.clean import cleanup, sh
+from sys import stdout
 
 class testBareSSHD( unittest.TestCase ):
 
@@ -14,13 +15,16 @@ class testBareSSHD( unittest.TestCase ):
 
     def connected( self ):
         "Log into ssh server, check banner, then exit"
-        p = pexpect.spawn( 'ssh 10.0.0.1 -o StrictHostKeyChecking=no -i /tmp/ssh/test_rsa exit' )
+        p = pexpect.spawn( 'ssh 10.0.0.1 -o ConnectTimeout=1 '
+                           '-o StrictHostKeyChecking=no '
+                           '-i /tmp/ssh/test_rsa exit' )
         while True:
             index = p.expect( self.opts )
             if index == 0:
                 return True
             else:
                 return False
+
 
     def setUp( self ):
         # verify that sshd is not running
@@ -55,7 +59,7 @@ class testBareSSHD( unittest.TestCase ):
 
     def tearDown( self ):
         # kill the ssh process
-        sh( "ps aux | grep 'ssh.*Banner' | awk '{ print $2 }' | xargs kill" )
+        sh( "ps aux | grep ssh |grep Banner| awk '{ print $2 }' | xargs kill" )
         cleanup()
         # remove public key pair
         sh( 'rm -rf /tmp/ssh' )

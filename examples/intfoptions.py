@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''
 example of using various TCIntf options.
@@ -13,7 +13,7 @@ from mininet.link import TCLink
 
 def intfOptions():
     "run various traffic control commands on a single interface"
-    net = Mininet( autoStaticArp=True )
+    net = Mininet( autoStaticArp=True, waitConnected=True )
     net.addController( 'c0' )
     h1 = net.addHost( 'h1' )
     h2 = net.addHost( 'h2' )
@@ -25,10 +25,10 @@ def intfOptions():
     # flush out latency from reactive forwarding delay
     net.pingAll()
 
-    info( '\n*** Configuring one intf with bandwidth of 5 Mb\n' )
-    link1.intf1.config( bw=5 )
+    info( '\n*** Configuring one intf with bandwidth of 10 Mb\n' )
+    link1.intf1.config( bw=10 )
     info( '\n*** Running iperf to test\n' )
-    net.iperf()
+    net.iperf( seconds=10 )
 
     info( '\n*** Configuring one intf with loss of 50%\n' )
     link1.intf1.config( loss=50 )
@@ -42,6 +42,7 @@ def intfOptions():
 
     info( '\n*** Done testing\n' )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

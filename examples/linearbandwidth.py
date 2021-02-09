@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Test bandwidth (using iperf) on linear networks of varying size,
@@ -24,25 +24,25 @@ of switches, this example demonstrates:
 """
 
 
+import sys
+
+from functools import partial
+
 from mininet.net import Mininet
 from mininet.node import UserSwitch, OVSKernelSwitch, Controller
 from mininet.topo import Topo
 from mininet.log import lg, info
 from mininet.util import irange, quietRun
 from mininet.link import TCLink
-from functools import partial
 
-import sys
 flush = sys.stdout.flush
+
 
 class LinearTestTopo( Topo ):
     "Topology for a string of N hosts and N-1 switches."
 
-    def __init__( self, N, **params ):
-
-        # Initialize topology
-        Topo.__init__( self, **params )
-
+    # pylint: disable=arguments-differ
+    def build( self, N, **params ):
         # Create switches and hosts
         hosts = [ self.addHost( 'h%s' % h )
                   for h in irange( 1, N ) ]
@@ -83,14 +83,14 @@ def linearBandwidthTest( lengths ):
     output = quietRun( 'sysctl -w net.ipv4.tcp_congestion_control=reno' )
     assert 'reno' in output
 
-    for datapath in switches.keys():
+    for datapath in switches:
         info( "*** testing", datapath, "datapath\n" )
         Switch = switches[ datapath ]
         results[ datapath ] = []
-        link = partial( TCLink, delay='2ms', bw=10 )
+        link = partial( TCLink, delay='30ms', bw=100 )
         net = Mininet( topo=topo, switch=Switch,
-                       controller=Controller, waitConnected=True,
-                       link=link )
+                       controller=Controller, link=link,
+                       waitConnected=True )
         net.start()
         info( "*** testing basic connectivity\n" )
         for n in lengths:
@@ -103,13 +103,13 @@ def linearBandwidthTest( lengths ):
             src.cmd( 'telnet', dst.IP(), '5001' )
             info( "testing", src.name, "<->", dst.name, '\n' )
             # serverbw = received; _clientbw = buffered
-            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=10 )
+            serverbw, _clientbw = net.iperf( [ src, dst ], seconds=5 )
             info( serverbw, '\n' )
             flush()
             results[ datapath ] += [ ( n, serverbw ) ]
         net.stop()
 
-    for datapath in switches.keys():
+    for datapath in switches:
         info( "\n*** Linear network results for", datapath, "datapath:\n" )
         result = results[ datapath ]
         info( "SwitchCount\tiperf Results\n" )
@@ -119,8 +119,9 @@ def linearBandwidthTest( lengths ):
         info( '\n')
     info( '\n' )
 
+
 if __name__ == '__main__':
     lg.setLogLevel( 'info' )
-    sizes = [ 1, 10, 20, 40, 60, 80 ]
+    sizes = [ 1, 2, 3, 4 ]
     info( "*** Running linearBandwidthTest", sizes, '\n' )
     linearBandwidthTest( sizes  )

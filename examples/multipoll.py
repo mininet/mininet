@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 Simple example of sending output to multiple files and
@@ -6,20 +6,21 @@ monitoring them
 """
 
 
-from mininet.topo import SingleSwitchTopo
-from mininet.net import Mininet
-from mininet.log import info, setLogLevel
-
 from time import time
 from select import poll, POLLIN
 from subprocess import Popen, PIPE
+
+from mininet.topo import SingleSwitchTopo
+from mininet.net import Mininet
+from mininet.log import info, setLogLevel
+from mininet.util import decode
 
 
 def monitorFiles( outfiles, seconds, timeoutms ):
     "Monitor set of files and return [(host, line)...]"
     devnull = open( '/dev/null', 'w' )
     tails, fdToFile, fdToHost = {}, {}, {}
-    for h, outfile in outfiles.iteritems():
+    for h, outfile in outfiles.items():
         tail = Popen( [ 'tail', '-f', outfile ],
                       stdout=PIPE, stderr=devnull )
         fd = tail.stdout.fileno()
@@ -40,7 +41,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
                 host = fdToHost[ fd ]
                 # Wait for a line of output
                 line = f.readline().strip()
-                yield host, line
+                yield host, decode( line )
         else:
             # If we timed out, return nothing
             yield None, ''
@@ -52,7 +53,7 @@ def monitorFiles( outfiles, seconds, timeoutms ):
 def monitorTest( N=3, seconds=3 ):
     "Run pings and monitor multiple hosts"
     topo = SingleSwitchTopo( N )
-    net = Mininet( topo )
+    net = Mininet( topo, waitConnected=True )
     net.start()
     hosts = net.hosts
     info( "Starting test...\n" )

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 This example creates a multi-controller network from semi-scratch by
@@ -20,7 +20,8 @@ from mininet.log import setLogLevel, info
 def multiControllerNet():
     "Create a network from semi-scratch with multiple controllers."
 
-    net = Mininet( controller=Controller, switch=OVSSwitch )
+    net = Mininet( controller=Controller, switch=OVSSwitch,
+                   waitConnected=True )
 
     info( "*** Creating (reference) controllers\n" )
     c1 = net.addController( 'c1', port=6633 )
@@ -56,6 +57,7 @@ def multiControllerNet():
 
     info( "*** Stopping network\n" )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )  # for CLI output

@@ -5,7 +5,7 @@ Test for multiping.py
 """
 
 import unittest
-import pexpect
+from mininet.util import pexpect
 from collections import defaultdict
 
 class testMultiPing( unittest.TestCase ):
@@ -31,18 +31,20 @@ class testMultiPing( unittest.TestCase ):
                 target = p.match.group(3)
                 received = int( p.match.group(4) )
                 if target == '10.0.0.200':
-                    self.assertEqual( received, 0 )
+                    self.assertEqual( received, 0, p.match.group(0) + '\n' +
+                                      target + ' received %d != 0 packets' % received )
                 else:
-                    self.assertEqual( received, 1 )
+                    self.assertEqual( received, 1, p.match.group(0) + '\n' +
+                                      target + ' received %d != 1 packets' % received )
                 try:
                     pings[ name ].remove( target )
                 except:
                     pass
             else:
                 break
-        self.assertTrue( len( pings ) > 0 )
+        self.assertTrue( len( pings ) > 0, 'too few pings' )
         for t in pings.values():
-            self.assertEqual( len( t ), 0 )
+            self.assertEqual( len( t ), 0, 'missed ping target(s): %s' % t )
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 """
 bind.py: Bind mount example
@@ -34,13 +34,13 @@ and '/var/run'. It also has a temporary private directory mounted
 on '/var/mn'
 """
 
+from functools import partial
+
 from mininet.net import Mininet
 from mininet.node import Host
 from mininet.cli import CLI
 from mininet.topo import SingleSwitchTopo
 from mininet.log import setLogLevel, info
-
-from functools import partial
 
 
 # Sample usage
@@ -53,13 +53,14 @@ def testHostWithPrivateDirs():
                       '/var/mn' ]
     host = partial( Host,
                     privateDirs=privateDirs )
-    net = Mininet( topo=topo, host=host )
+    net = Mininet( topo=topo, host=host, waitConnected=True )
     net.start()
     directories = [ directory[ 0 ] if isinstance( directory, tuple )
                     else directory for directory in privateDirs ]
     info( 'Private Directories:', directories, '\n' )
     CLI( net )
     net.stop()
+
 
 if __name__ == '__main__':
     setLogLevel( 'info' )

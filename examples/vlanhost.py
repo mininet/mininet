@@ -24,14 +24,18 @@ Usage (example uses VLAN ID=1000):
 
 """
 
+from sys import exit  # pylint: disable=redefined-builtin
+
 from mininet.node import Host
 from mininet.topo import Topo
 from mininet.util import quietRun
 from mininet.log import error
 
+
 class VLANHost( Host ):
     "Host connected to VLAN interface"
 
+    # pylint: disable=arguments-differ
     def config( self, vlan=100, **params ):
         """Configure VLANHost according to (optional) parameters:
            vlan: VLAN ID for default interface"""
@@ -54,6 +58,7 @@ class VLANHost( Host ):
 
         return r
 
+
 hosts = { 'vlan': VLANHost }
 
 
@@ -65,7 +70,7 @@ def exampleAllHosts( vlan ):
 
     # Start a basic network using our VLANHost
     topo = SingleSwitchTopo( k=2 )
-    net = Mininet( host=host, topo=topo )
+    net = Mininet( host=host, topo=topo, waitConnected=True )
     net.start()
     CLI( net )
     net.stop()
@@ -96,10 +101,11 @@ class VLANStarTopo( Topo ):
 def exampleCustomTags():
     """Simple example that exercises VLANStarTopo"""
 
-    net = Mininet( topo=VLANStarTopo() )
+    net = Mininet( topo=VLANStarTopo(), waitConnected=True )
     net.start()
     CLI( net )
     net.stop()
+
 
 if __name__ == '__main__':
     import sys
