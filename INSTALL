@@ -137,7 +137,7 @@ like to contribute an installation script, we would welcome it!)
 
    This takes about 4 minutes on our test system.
 
-3.2. Native installation from source on Fedora:
+3.2. (Experimental) Native installation from source on Fedora:
 
    As root execute the following operations:
 
@@ -163,6 +163,9 @@ like to contribute an installation script, we would welcome it!)
 
         sudo mn --test pingall
 
+    Note that `install.sh -fnv `may not install all dependencies on Fedora,
+    and many tests may still fail.
+    
 4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
