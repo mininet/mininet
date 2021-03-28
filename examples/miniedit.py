@@ -1449,7 +1449,7 @@ class MiniEdit( Frame ):
 
         # Load application preferences
         if 'application' in loadedTopology:
-            self.appPrefs = dict(self.appPrefs.items() + loadedTopology['application'].items())
+            self.appPrefs.update(loadedTopology['application'])
             if "ovsOf10" not in self.appPrefs["openFlowVersions"]:
                 self.appPrefs["openFlowVersions"]["ovsOf10"] = '0'
             if "ovsOf11" not in self.appPrefs["openFlowVersions"]:
@@ -1683,7 +1683,7 @@ class MiniEdit( Frame ):
             savingDictionary['application'] = self.appPrefs
 
             try:
-                f = open(fileName, 'wb')
+                f = open(fileName, 'w')
                 f.write(json.dumps(savingDictionary, sort_keys=True, indent=4, separators=(',', ': ')))
             # pylint: disable=broad-except
             except Exception as er:
@@ -1702,7 +1702,7 @@ class MiniEdit( Frame ):
         fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Export the topology as...")
         if len(fileName ) > 0:
             # debug( "Now saving under %s\n" % fileName )
-            f = open(fileName, 'wb')
+            f = open(fileName, 'w')
 
             f.write("#!/usr/bin/env python\n")
             f.write("\n")
