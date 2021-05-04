@@ -35,6 +35,7 @@ import sys
 import time
 import os
 import atexit
+import argparse
 
 from mininet.log import info, output, error
 from mininet.term import makeTerms, runX11
@@ -208,7 +209,9 @@ class CLI( Cmd ):
 
     def do_pingall( self, line ):
         "Ping between all hosts."
-        self.mn.pingAll( line )
+        options = parsePingOptions("pingall", line)
+        if options is not None:
+            self.mn.pingAll( timeout=options.timeout, count=options.count )
 
     def do_pingpair( self, _line ):
         "Ping between first two hosts, useful for testing."
@@ -491,6 +494,18 @@ class CLI( Cmd ):
 
 
 # Helper functions
+
+def parsePingOptions( command, line ):
+    "Parse ping related command's argements"
+    parser = argparse.ArgumentParser(prog=command, usage='%(prog)s [options]')
+    parser.add_argument("-timeout", "-t", type=int,
+                        help="Time to wait for a response in seconds")
+    parser.add_argument("-count", "-c", type=int, default=1,
+                        help="Stop after sending countECHO_REQUEST packets")
+    try:
+        return parser.parse_args(line.split())
+    except SystemExit:
+        return None
 
 def isReadable( poller ):
     "Check whether a Poll object has a readable fd."

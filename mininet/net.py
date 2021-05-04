@@ -651,7 +651,7 @@ class Mininet( object ):
         sent, received = int( m.group( 1 ) ), int( m.group( 2 ) )
         return sent, received
 
-    def ping( self, hosts=None, timeout=None ):
+    def ping( self, hosts=None, timeout=None , count =1):
         """Ping between all specified hosts.
            hosts: list of hosts
            timeout: time to wait for a response, as string
@@ -671,8 +671,8 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' %
-                                           (opts, dest.IP()) )
+                        result = node.cmd( 'ping -c%d %s %s' %
+                                           (count, opts, dest.IP()) )
                         sent, received = self._parsePing( result )
                     else:
                         sent, received = 0, 0
@@ -759,10 +759,10 @@ class Mininet( object ):
                     (rttmin, rttavg, rttmax, rttdev) )
         return all_outputs
 
-    def pingAll( self, timeout=None ):
+    def pingAll( self, timeout=None , count=1):
         """Ping between all hosts.
            returns: ploss packet loss percentage"""
-        return self.ping( timeout=timeout )
+        return self.ping( timeout=timeout, count=count )
 
     def pingPair( self ):
         """Ping between first two hosts, useful for testing.
