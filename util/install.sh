@@ -46,13 +46,17 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
         $install lsb-release
     fi
 fi
+
+
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
-if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+test -e /etc/centos-release && DIST="CentOS"
+if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
     install='sudo yum -y install'
+    pipinstall='sudo pip install'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
-    update='sudo yum'
+    update='sudo yum -y'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install redhat-lsb-core
@@ -83,7 +87,7 @@ KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 # Treat Raspbian as Debian
 [ "$DIST" = 'Raspbian' ] && DIST='Debian'
 
-DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
+DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|CentOS|SUSE LINUX'
 if ! echo $DIST | egrep "$DISTS" >/dev/null; then
     echo "Install.sh currently only supports $DISTS."
     exit 1
@@ -115,6 +119,7 @@ for python in $PYTHON python2 python3; do
         break
     fi
 done
+
 if [ "$PYTHON_VERSION" == unknown ]; then
     echo "Can't find a working python command ('$PYTHON' doesn't work.)"
     echo "You may wish to export PYTHON or install a working 'python'."
@@ -161,12 +166,14 @@ function kernel_clean {
 # Install Mininet deps
 function mn_deps {
     echo "Installing Mininet dependencies"
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install gcc make socat psmisc xterm openssh-clients iperf \
-            iproute telnet python-setuptools libcgroup-tools \
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
+        $install gcc make socat psmisc xterm openssh-clients iperf3 \
+            iproute telnet platform-python-setuptools libcgroup-tools \
             ethtool help2man net-tools
-        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
+        ###$install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
+        $install ${PYPKG}-pyflakes pylint  \
             ${PYPKG}-pexpect
+	$pipinstall pep8
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
 			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
@@ -222,7 +229,7 @@ function of {
     echo "Installing OpenFlow reference implementation..."
     cd $BUILD_DIR
     $install autoconf automake libtool make gcc
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install git pkgconfig glibc-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
        $install git pkgconfig glibc-devel
@@ -291,7 +298,7 @@ function of13 {
 function install_wireshark {
     if ! which wireshark; then
         echo "Installing Wireshark"
-        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
             $install wireshark wireshark-gnome
 		elif [ "$DIST" = "SUSE LINUX"  ]; then
 			$install wireshark
@@ -409,7 +416,7 @@ function ubuntuOvs {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install openvswitch
         if ! $install openvswitch-controller; then
             echo "openvswitch-controller not installed"
@@ -489,7 +496,7 @@ function ivs {
 
     # Install dependencies
     $install gcc make
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install git pkgconfig libnl3-devel libcap-devel openssl-devel
     else
         $install git-core pkg-config libnl-3-dev libnl-route-3-dev \
@@ -636,7 +643,7 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install net-snmp-devel libpcap-devel libconfig-devel
@@ -712,7 +719,7 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     $install ntp
 
     # Install vconfig for VLAN example
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" ]; then
         $install vconfig
     else
         $install vlan
