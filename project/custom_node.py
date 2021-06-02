@@ -15,9 +15,12 @@ class HostConnectedNode(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        intf = Link(node1=self, intfName1='local0',
-                    node2=HostConnectedNode.s0, intfName2=None).intf1
-        self.setIP('66.0.0.%d/24' % (int(self.name[-1]) + 1), intf=intf)
+        intf_lo, intf_s0 = (lambda x: (x.intf1, x.intf2))(
+            Link(node1=self, intfName1='local0',
+                 node2=HostConnectedNode.s0, intfName2=None)
+        )
+        HostConnectedNode.s0.attach(intf_s0)
+        self.setIP('66.0.0.%d/24' % (int(self.name[-1]) + 1), intf=intf_lo)
 
         HostConnectedNode.hostOnlyNetNextNode += 1
         HostConnectedNode.hostNum += 1
@@ -49,7 +52,7 @@ class HostConnectedNode(Node):
 
     @classmethod
     def setup(cls):
-        HostConnectedNode.s0 = LinuxBridge('s0', inNamespace=False, failMode="standalone")
+        HostConnectedNode.s0 = OVSKernelSwitch('s0', inNamespace=False, failMode="standalone")
 
         root_node = Host('h0', inNamespace=False)
         intf = Link(root_node, HostConnectedNode.s0).intf1
