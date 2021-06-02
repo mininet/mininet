@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-from mininet.link import Intf, Link
+from mininet.link import Link
 from mininet.log import warn
-from mininet.net import Mininet
-from mininet.node import Node, UserSwitch, Host, Switch, OVSSwitch, Controller
-from mininet.cli import CLI
+from mininet.node import Node, Host, OVSKernelSwitch
 
 
 # from mininet.log import debug
@@ -11,15 +9,14 @@ from mininet.nodelib import LinuxBridge
 
 
 class HostConnectedNode(Node):
-    s0: OVSSwitch = None
-    c0: Controller = None
+    s0: OVSKernelSwitch = None
     hostOnlyNetNextNode: int = 0
     hostNum = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        intf = Link(node1=HostConnectedNode.s0, intfName1=None,
-                    node2=self, intfName2='local0').intf2
+        intf = Link(node1=self, intfName1='local0',
+                    node2=HostConnectedNode.s0, intfName2=None).intf1
         self.setIP('66.0.0.%d/24' % (int(self.name[-1]) + 1), intf=intf)
 
         HostConnectedNode.hostOnlyNetNextNode += 1
@@ -52,17 +49,14 @@ class HostConnectedNode(Node):
 
     @classmethod
     def setup(cls):
-        HostConnectedNode.s0 = OVSSwitch('s0', inNamespace=False, listenPort=6666)
-        HostConnectedNode.c0 = Controller('l-c0', inNamespace=False, port=6666)
+        HostConnectedNode.s0 = LinuxBridge('s0', inNamespace=False, failMode="standalone")
 
         root_node = Host('h0', inNamespace=False)
         intf = Link(root_node, HostConnectedNode.s0).intf1
         root_node.setIP('66.0.0.1/24', intf=intf)
         cls.hostOnlyNetNextNode += 1
 
-        cls.c0.start()
-        cls.s0.start([cls.c0])
-        # cls.s0.start([])
+        cls.s0.start([])
 
 
 hosts = {"deb_host": HostConnectedNode}

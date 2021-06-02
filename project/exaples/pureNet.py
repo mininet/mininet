@@ -23,9 +23,9 @@ h1.setIP('10.1/8', intf=i1)
 h2.setIP('10.2/8', intf=i2)
 h2.setIP('10.3/8', intf=i3)
 
-# c0.start()
-# s1.start([c0])
-s1.start([])
+c0.start()
+s1.start([c0])
+# s1.start([])
 
 print(h1.cmd('ping -c2', h2.IP()))
 print(h1.cmd('ping -c2', h3.IP()))
