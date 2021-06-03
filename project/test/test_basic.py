@@ -23,7 +23,7 @@ class testBasic(unittest.TestCase):
         self.assertEqual(dropped, 0)
 
     def testChangeIP(self):
-        mn = Mininet(SingleSwitchTopo(k=5))
+        mn = Mininet(SingleSwitchTopo(k=5), waitConnected=True)
         mn.start()
 
         h1, h2, h3, h4, h5 = mn.hosts
@@ -34,7 +34,7 @@ class testBasic(unittest.TestCase):
         mn.stop()
 
     def testDropInterface(self):
-        mn = Mininet(SingleSwitchTopo(k=5))
+        mn = Mininet(SingleSwitchTopo(k=5), waitConnected=True)
         mn.start()
 
         h1, h2, h3, h4, h5 = mn.hosts
