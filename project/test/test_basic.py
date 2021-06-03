@@ -33,6 +33,17 @@ class testBasic(unittest.TestCase):
 
         mn.stop()
 
+    def testDropInterface(self):
+        mn = Mininet(SingleSwitchTopo(k=5))
+        mn.start()
+
+        h1, h2, h3, h4, h5 = mn.hosts
+        h5.intf(intf="h5-eth0").delete()
+        dropped = mn.ping(hosts=[h5, h4])
+        self.assertEqual(dropped, 100)
+
+        mn.stop()
+
 
 if __name__ == '__main__':
     setLogLevel('warning')
