@@ -22,6 +22,17 @@ class testBasic(unittest.TestCase):
         dropped = mn.run(mn.ping)
         self.assertEqual(dropped, 0)
 
+    def testChangeIP(self):
+        mn = Mininet(SingleSwitchTopo(k=5))
+        mn.start()
+
+        h1, h2, h3, h4, h5 = mn.hosts
+        h5.config(ip="10.0.0.20")
+        dropped = mn.pingAll()
+        self.assertEqual(dropped, 0)
+
+        mn.stop()
+
 
 if __name__ == '__main__':
     setLogLevel('warning')
