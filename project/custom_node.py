@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 import os
-import signal
-
 from mininet.link import Link
 from mininet.log import warn, info
 from mininet.node import Node, Host, OVSKernelSwitch
 
 
 class HostConnectedNode(Node):
+    """
+    Implements a Host node witch creates and connects Host Only Interface
+    to previously created Host Only Network.
+    The Host Only Network works in 66.0.0.0/24 address space.
+    The Root interface h0-eth0 has by default 66.0.0.1 IP
+    (though it we can access the Host Only Network)
+    On each created Node by default is opened a SSH server.
+    """
     hostONet = {
         "ssh_cmd": "/usr/sbin/sshd -D -o UseDNS=no -u0",
         "ssh_pid": [],
@@ -35,13 +41,12 @@ class HostConnectedNode(Node):
         self.hostONet['ssh_pid'].append(self.lastPid)
 
     def defaultIntf(self):
-        "Return interface for lowest port"
+        """Return interface for lowest port except of Host Only Interface"""
         ports = set(self.intfs.keys())
         if not ports:
             warn('*** defaultIntf: warning:', self.name, 'has no interfaces\n')
             return None
 
-        # TODO: consider if the min port is always 'local0'?
         min_port = min(ports)
         if self.intfs[min_port].name == 'local0':
             ports.remove(min_port)
