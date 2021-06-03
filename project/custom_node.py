@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 from mininet.link import Link
-from mininet.log import warn
+from mininet.log import warn, info
 from mininet.node import Node, Host, OVSKernelSwitch
 
 
 # from mininet.log import debug
 from mininet.nodelib import LinuxBridge
+from mininet.util import waitListening
+
+ssh_path = "/usr/sbin/sshd"
+ssh_cmd = ssh_path + " -D -o UseDNS=no -u0"
 
 
 class HostConnectedNode(Node):
@@ -15,6 +19,7 @@ class HostConnectedNode(Node):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Connect to Host Only Net
         intf_lo, intf_s0 = (lambda x: (x.intf1, x.intf2))(
             Link(node1=self, intfName1='local0',
                  node2=HostConnectedNode.s0, intfName2=None)
@@ -24,6 +29,11 @@ class HostConnectedNode(Node):
 
         HostConnectedNode.hostOnlyNetNextNode += 1
         HostConnectedNode.hostNum += 1
+
+        # SSH start
+        self.cmd(ssh_cmd + f' -o ListenAddress={self.IP(intf_lo)} &')
+        info(f"\n*** Start SSH server on {self.name} via {self.IP(intf_lo)}\n")
+
 
     def defaultIntf(self):
         "Return interface for lowest port"
@@ -49,6 +59,7 @@ class HostConnectedNode(Node):
     #     if HostConnectedNode.hostNum == 0:
     #         HostConnectedNode.s0.stop()
     #         HostConnectedNode.c0.stop()
+    #         self.cmd('kill %' + ssh_path)
 
     @classmethod
     def setup(cls):
