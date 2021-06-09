@@ -73,7 +73,9 @@ class HostConnectedNode(Node):
             return None
 
     def terminate(self):
-        self.hostOnlyLink.stop()
+        self.cmd('ip link del ' + self.hostOnlyLink.intf1.name)
+        self.cmd('ip link del ' + self.hostOnlyLink.intf2.name)
+        del self.hostOnlyLink
         HostConnectedNode.hostONet['hostNum'] -= 1
         if HostConnectedNode.hostONet['hostNum'] == 0:
             for ssh in self.hostONet['ssh_pid']:
