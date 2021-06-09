@@ -23,22 +23,40 @@ class HostConnectedNode(Node):
     hostSwitch: OVSKernelSwitch = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(HostConnectedNode, self).__init__(*args, **kwargs)
+        print(self.hostONet["hostNum"])
+        print(self.hostSwitch)
+        self.hostOnlyLink: Link = None
+        HostConnectedNode.checkHostOnlySetup()
+        self.setupHostOnlyIntf()
+        self.startHostOnlySSH()
+
+    def setupHostOnlyIntf(self):
         # Connect to Host Only Net
-        intf_lo, intf_s0 = (lambda x: (x.intf1, x.intf2))(
-            Link(node1=self, intfName1='local0',
-                 node2=self.hostSwitch, intfName2=None)
-        )
-        self.hostSwitch.attach(intf_s0)
-        self.setIP('66.0.0.%d/24' % (int(self.name[-1]) + 1), intf=intf_lo)
+        self.hostOnlyLink = Link(node1=self, intfName1=f'{self.name}-local0',
+                                 node2=self.hostSwitch, intfName2=None)
 
-        self.hostONet['nextNodeID'] += 1
-        self.hostONet['hostNum'] += 1
+        HostConnectedNode.hostSwitch.attach(self.getHostOnlyIntf())
+        self.setHostOnlyIP()
+        HostConnectedNode.hostONet['hostNum'] += 1
 
+    def getHostOnlyIntf(self):
+        return self.hostOnlyLink.intf1
+
+    def setHostOnlyIP(self):
+        self.setIP(self.getNextHostOnlyIP(), intf=self.getHostOnlyIntf())
+        HostConnectedNode.hostONet['nextNodeID'] += 1
+
+    def getNextHostOnlyIP(self):
+        return '66.0.0.%d/24' % (int(self.name[-1]) + 1)
+
+    def startHostOnlySSH(self):
         # SSH start
-        self.cmd(self.hostONet['ssh_cmd'] + f' -o ListenAddress={self.IP(intf_lo)} &')
-        info(f"\n*** Start SSH server on {self.name} via {self.IP(intf_lo)} with PID={self.lastPid}\n")
-        self.hostONet['ssh_pid'].append(self.lastPid)
+        if self.getHostOnlyIntf() is None:
+            warn(f"Warning: No Host Only Interface! Can not start SSH for {self.name}\n")
+        self.cmd(HostConnectedNode.hostONet['ssh_cmd'] + f' -o ListenAddress={self.IP(self.getHostOnlyIntf())} &')
+        info(f"\n*** Start SSH server on {self.name} via {self.IP(self.getHostOnlyIntf())} with PID={self.lastPid}\n")
+        HostConnectedNode.hostONet['ssh_pid'].append(self.lastPid)
 
     def defaultIntf(self):
         """Return interface for lowest port except of Host Only Interface"""
@@ -48,7 +66,7 @@ class HostConnectedNode(Node):
             return None
 
         min_port = min(ports)
-        if self.intfs[min_port].name == 'local0':
+        if self.intfs[min_port].name.endswith('-local0'):
             ports.remove(min_port)
         if ports:
             return self.intfs[min(ports)]
@@ -56,25 +74,33 @@ class HostConnectedNode(Node):
             warn('*** defaultIntf: warning:', self.name, 'has no interfaces\n')
             return None
 
-    def __del__(self):
-        self.hostONet['hostNum'] -= 1
-        if self.hostONet['hostNum'] == 0:
+    def terminate(self):
+        self.hostOnlyLink.stop()
+        HostConnectedNode.hostONet['hostNum'] -= 1
+        if HostConnectedNode.hostONet['hostNum'] == 0:
             for ssh in self.hostONet['ssh_pid']:
-                os.system(f"kill {ssh}")
-            for i_name in self.hostSwitch.intfNames():
+                os.system(f"kill {ssh} 2> /dev/null")
+            HostConnectedNode.hostONet['ssh_pid'].clear()
+            for i_name in HostConnectedNode.hostSwitch.intfNames():
                 if i_name != "lo":
-                    os.system('ip l del ' + i_name + ' 2> /dev/null')
-            os.system('ovs-vsctl del-br ' + self.hostSwitch.name)
+                    os.system(f'ip l del {i_name} 2> /dev/null')
+            os.system(f'ovs-vsctl del-br {HostConnectedNode.hostSwitch.name} 2> /dev/null')
+            HostConnectedNode.hostSwitch = None
+            HostConnectedNode.hostONet['nextNodeID'] = 2
+            info("*** Stop Host Only Network !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+        super(HostConnectedNode, self).terminate()
 
     @classmethod
-    def setup(cls):
-        cls.hostSwitch = OVSKernelSwitch('s0', inNamespace=False, failMode="standalone")
+    def checkHostOnlySetup(cls):
+        if cls.hostSwitch is None:
+            info("*** Start Host Only Network !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            cls.hostSwitch = OVSKernelSwitch('s0', inNamespace=False, failMode="standalone")
 
-        root_node = Host('h0', inNamespace=False)
-        intf = Link(root_node, cls.hostSwitch).intf1
-        root_node.setIP('66.0.0.1/24', intf=intf)
+            root_node = Host('h0', inNamespace=False)
+            intf = Link(root_node, cls.hostSwitch).intf1
+            root_node.setIP('66.0.0.1/24', intf=intf)
 
-        cls.hostSwitch.start([])
+            cls.hostSwitch.start([])
 
 
 hosts = {"deb_host": HostConnectedNode}
