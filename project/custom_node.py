@@ -24,8 +24,6 @@ class HostConnectedNode(Node):
 
     def __init__(self, *args, **kwargs):
         super(HostConnectedNode, self).__init__(*args, **kwargs)
-        print(self.hostONet["hostNum"])
-        print(self.hostSwitch)
         self.hostOnlyLink: Link = None
         HostConnectedNode.checkHostOnlySetup()
         self.setupHostOnlyIntf()
@@ -36,7 +34,7 @@ class HostConnectedNode(Node):
         self.hostOnlyLink = Link(node1=self, intfName1=f'{self.name}-local0',
                                  node2=self.hostSwitch, intfName2=None)
 
-        HostConnectedNode.hostSwitch.attach(self.getHostOnlyIntf())
+        HostConnectedNode.hostSwitch.attach(self.hostOnlyLink.intf2)
         self.setHostOnlyIP()
         HostConnectedNode.hostONet['hostNum'] += 1
 
