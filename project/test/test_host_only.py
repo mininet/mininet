@@ -1,82 +1,45 @@
 #!/usr/bin/env python
 
 """Project: Test Host Only
-   Test creation and all-pairs ping for each included mininet topo type."""
+   Test Encapsulation test"""
 
 import unittest
 import sys
-sys.path.insert(0, '..')
+sys.path.append('..')
 
 from custom_node import HostConnectedNode
 from mininet.net import Mininet
-from mininet.topo import SingleSwitchTopo
-from mininet.log import setLogLevel
+from mininet.node import Host
 from mininet.clean import cleanup
+from mininet.log import setLogLevel
 
 
-class testHostOnly(unittest.TestCase):
+class Test(unittest.TestCase):
     @staticmethod
     def tearDown():
         cleanup()
 
-    def testSingle5(self):
-        "Ping test on 5-host single-switch topology"
-        mn = Mininet(host=HostConnectedNode, inNamespace=True)
-        h1 = mn.addHost('h1', inNamespace=True)
-        h2 = mn.addHost('h2', inNamespace=True)
-        s1 = mn.addSwitch('s1', inNamespace=False, failMode="standalone")
-
-        mn.addLink(h1, s1)
-        mn.addLink(h2, s1)
-
-        mn.start()
-
-        dropped = mn.run(mn.ping)
-
-        mn.stop()
-
-        self.assertEqual(dropped, 0)
-
     def testChangeIP(self):
-        mn = Mininet(host=HostConnectedNode, inNamespace=True, waitConnected=True)
+        mn = Mininet()
 
-        h1 = mn.addHost('h1', inNamespace=True)
-        h2 = mn.addHost('h2', inNamespace=True)
+        h1 = mn.addHost('h1', inNamespace=True, cls=HostConnectedNode)
+        h2 = mn.addHost('h2', inNamespace=True, cls=HostConnectedNode)
+        h3 = mn.addHost('h3', inNamespace=True, cls=HostConnectedNode)
+        h4 = mn.addHost('h4', inNamespace=True, cls=Host)
         s1 = mn.addSwitch('s1', inNamespace=False, failMode="standalone")
 
-        mn.addLink(h1, s1)
-        mn.addLink(h2, s1)
+        mn.addLink(h4, s1)
+        mn.addLink(h3, s1)
 
         mn.start()
-
-        h2.config(ip="10.0.0.20")
-
-        dropped = mn.pingAll()
-
-        mn.stop()
-        self.assertEqual(dropped, 0)
-
-
-    def testDropInterface(self):
-        mn = Mininet(host=HostConnectedNode, inNamespace=True, waitConnected=True)
-
-        h1 = mn.addHost('h1', inNamespace=True)
-        h2 = mn.addHost('h2', inNamespace=True)
-        s1 = mn.addSwitch('s1', inNamespace=False, failMode="standalone")
-
-        mn.addLink(h1, s1)
-        mn.addLink(h2, s1)
-
-        mn.start()
-
-        h2.intf(intf="h2-eth1").delete()
-
-        dropped = mn.pingAll()
+        dropped_h3_h4 = mn.ping(hosts=[h3, h4])
+        dropped_h1_h2_h3 = mn.ping(hosts=[h1, h2, h3])
+        self.assertEqual(dropped_h3_h4, 0)
+        self.assertEqual(dropped_h1_h2_h3, 0)
 
         mn.stop()
-        self.assertEqual(dropped, 0)
 
 
 if __name__ == '__main__':
-    setLogLevel('warning')
+    # setLogLevel('debug')
     unittest.main()
