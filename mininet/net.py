@@ -671,7 +671,7 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' %
+                        result = node.cmd( 'LANG=C ping -c1 %s %s' %
                                            (opts, dest.IP()) )
                         sent, received = self._parsePing( result )
                     else:
