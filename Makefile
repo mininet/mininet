@@ -4,6 +4,8 @@ EXAMPLES = mininet/examples/*.py
 MN = bin/mn
 PYTHON ?= python
 PYMN = $(PYTHON) -B bin/mn
+PYFLAKES ?= `command -v pyflakes3 >/dev/null && echo pyflakes3 || echo pyflakes`
+PYCODESTYLE ?= `command -v pycodestyle >/dev/null && echo pycodestyle || echo pep8`
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
 MNEXEC = mnexec
@@ -26,14 +28,14 @@ clean:
 codecheck: $(PYSRC)
 	-echo "Running code check"
 	util/versioncheck.py
-	pyflakes $(PYSRC)
+	$(PYFLAKES) $(PYSRC)
 	pylint --rcfile=.pylint $(PYSRC)
 #	Exclude miniedit from pep8 checking for now
-	pep8 --repeat --ignore=$(P8IGN) `ls $(PYSRC) | grep -v miniedit.py`
+	$(PYCODESTYLE) --repeat --ignore=$(P8IGN) `ls $(PYSRC) | grep -v miniedit.py`
 
 errcheck: $(PYSRC)
 	-echo "Running check for errors only"
-	pyflakes $(PYSRC)
+	$(PYFLAKES) $(PYSRC)
 	pylint -E --rcfile=.pylint $(PYSRC)
 
 test: $(MININET) $(TEST)

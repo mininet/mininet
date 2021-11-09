@@ -455,13 +455,6 @@ class CLI( Cmd ):
         while True:
             try:
                 bothPoller.poll()
-                # XXX BL: this doesn't quite do what we want.
-                if False and self.inputFile:
-                    key = self.inputFile.read( 1 )
-                    if key != '':
-                        node.write( key )
-                    else:
-                        self.inputFile = None
                 if isReadable( self.inPoller ):
                     key = self.stdin.read( 1 )
                     node.write( key )

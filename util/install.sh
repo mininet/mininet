@@ -174,15 +174,15 @@ function mn_deps {
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
-        # Starting around 20.04, installing pyflakes instead of pyflakes3
+        # Starting Ubuntu 18.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
-        if [ `expr $RELEASE '>=' 20.04` = "1" ]; then
-                pf=pyflakes3
+        if ( [[ $DIST == Ubuntu ]] && [[ `expr $RELEASE '>=' 18.04` == 1 ]] ) ||
+           ( [[ $DIST == Debian ]] && [[ $RELEASE -ge 10 ]] ); then
+            pf=pyflakes3
         fi
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man $pf pylint pep8 \
-                 net-tools \
-                 ${PYPKG}-pexpect ${PYPKG}-tk
+                 ethtool help2man net-tools \
+                 pycodestyle pylint $pf ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
         if ! ${PYTHON} -m pip -V; then

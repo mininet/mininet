@@ -1429,8 +1429,11 @@ class MiniEdit( Frame ):
             return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
         if isinstance(text, list):
             return [self.convertJsonUnicode(element) for element in text]
-        if isinstance(text, unicode):  # pylint: disable=undefined-variable
-            return text.encode('utf-8')
+        try:
+            if isinstance(text, unicode):
+                return text.encode('utf-8')
+        except NameError:
+            return text
         return text
 
     def loadTopology( self ):
