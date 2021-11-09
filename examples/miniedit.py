@@ -1607,7 +1607,7 @@ class MiniEdit( Frame ):
 
     def newTopology( self ):
         "New command."
-        for widget in self.widgetToItem:
+        for widget in tuple( self.widgetToItem ):
             self.deleteItem( self.widgetToItem[ widget ] )
         self.hostCount = 0
         self.switchCount = 0
