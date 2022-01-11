@@ -25,7 +25,7 @@ if [ -e /etc/rc.local.backup ]; then
 fi
 # Fetch Mininet
 sudo apt-get -y -qq install git-core openssh-server
-git clone git://github.com/mininet/mininet
+git clone https://github.com/mininet/mininet
 # Optionally check out branch
 if [ "$1" != "" ]; then
     pushd mininet
