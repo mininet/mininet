@@ -100,7 +100,7 @@ def linearBandwidthTest( lengths ):
             src, dst = net.hosts[ 0 ], net.hosts[ n ]
             # Try to prime the pump to reduce PACKET_INs during test
             # since the reference controller is reactive
-            src.cmd( 'telnet', dst.IP(), '5001' )
+            src.cmd( 'nc', dst.IP(), '5001' )
             info( "testing", src.name, "<->", dst.name, '\n' )
             # serverbw = received; _clientbw = buffered
             serverbw, _clientbw = net.iperf( [ src, dst ], seconds=5 )
