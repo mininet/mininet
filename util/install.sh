@@ -536,7 +536,7 @@ function ryu {
 
     # fetch RYU
     cd $BUILD_DIR/
-    git clone https://github.com/osrg/ryu.git ryu
+    git clone https://github.com/faucetsdn/ryu.git ryu
     cd ryu
 
     # install ryu
@@ -545,7 +545,7 @@ function ryu {
     sudo ${PYPKG} setup.py install
 
     # Add symbolic link to /usr/bin
-    sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
+    sudo ln -sf ./bin/ryu-manager /usr/local/bin/ryu-manager
 }
 
 # Install NOX with tutorial files
