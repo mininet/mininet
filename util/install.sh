@@ -348,7 +348,7 @@ function ubuntuOvs {
 
     if ! echo "$DIST" | egrep "Ubuntu|Debian" > /dev/null; then
         echo "OS must be Ubuntu or Debian"
-        $cd BUILD_DIR
+        cd $BUILD_DIR
         return
     fi
     if [ "$DIST" = "Ubuntu" ] && ! version_ge $RELEASE 12.04; then
