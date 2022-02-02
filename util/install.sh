@@ -163,15 +163,15 @@ function mn_deps {
     echo "Installing Mininet dependencies"
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
-            iproute telnet python-setuptools libcgroup-tools \
+            iproute telnet ${PYPKG}-setuptools libcgroup-tools \
             ethtool help2man net-tools
-        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
-            ${PYPKG}-pexpect
+        $install ${PYPKG}-pyflakes ${PYPKG}-pylint \
+            ${PYPKG}-pep8-naming ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
         $install gcc make socat psmisc xterm openssh iperf \
             iproute telnet ${PYPKG}-setuptools libcgroup-tools \
-            ethtool help2man python-pyflakes python3-pylint \
-            python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
+            ethtool help2man ${PYPKG}-pyflakes ${PYPKG}-pylint \
+            ${PYPKG}-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
         pep8=pep8
@@ -519,7 +519,7 @@ function ryu {
     echo "Installing RYU..."
 
     # install Ryu dependencies"
-    $install autoconf automake g++ libtool python make
+    $install autoconf automake g++ libtool ${PYPKG} make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
         $install gcc ${PYPKG}-pip ${PYPKG}-dev libffi-dev libssl-dev \
             libxml2-dev libxslt1-dev zlib1g-dev
@@ -544,7 +544,7 @@ function nox {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
+    $install autoconf automake g++ libtool ${PYPKG} ${PYPKG}-twisted \
         swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
@@ -592,7 +592,7 @@ function nox13 {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
+    $install autoconf automake g++ libtool ${PYPKG} ${PYPKG}-twisted \
         swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
