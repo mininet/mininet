@@ -134,7 +134,7 @@ OVS_BUILDSUFFIX=-ignore # was -2
 OVS_PACKAGE_NAME=ovs-$OVS_RELEASE-core-$DIST_LC-$RELEASE-$ARCH$OVS_BUILDSUFFIX.tar
 OVS_TAG=v$OVS_RELEASE
 
-OF13_SWITCH_REV=${OF13_SWITCH_REV:-""}
+OF13_SWITCH_REV=${OF13_SWITCH_REV:-"aaebdbce3dae0f3d9af62f059e3ec5a2813469c4"}
 
 
 function kernel {
@@ -290,6 +290,7 @@ function of13 {
     # Resume the install:
     cd $BUILD_DIR/ofsoftswitch13
     ./boot.sh
+    sed -i 's/^AM_CFLAGS = -Wstrict-prototypes -Werror$/AM_CFLAGS = -Wstrict-prototypes -Werror -Wno-error=stringop-truncation -Wno-error=format-truncation=/g' Makefile.am
     ./configure
     make
     sudo make install
