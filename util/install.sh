@@ -106,7 +106,7 @@ function version_ge {
 PYTHON=${PYTHON:-python}
 PRINTVERSION='import sys; print(sys.version_info)'
 PYTHON_VERSION=unknown
-for python in $PYTHON python2 python3; do
+for python in python3 $PYTHON python2; do
     if $python -c "$PRINTVERSION" |& grep 'major=2'; then
         PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
         break
@@ -116,12 +116,12 @@ for python in $PYTHON python2 python3; do
     fi
 done
 if [ "$PYTHON_VERSION" == unknown ]; then
-    echo "Can't find a working python command ('$PYTHON' doesn't work.)"
+    echo "Can't find a working python command ('python3', 'python2' and '$PYTHON' didn't work.)"
     echo "You may wish to export PYTHON or install a working 'python'."
     exit 1
 fi
 
-echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
+echo "Detected Python (${PYPKG}) version ${PYTHON_VERSION}"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
