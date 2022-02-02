@@ -196,7 +196,7 @@ function mn_deps {
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
         if ! ${PYTHON} -m pip -V; then
             if [ $PYTHON_VERSION == 2 ]; then
-                wget https://bootstrap.pypa.io/pip/2.6/get-pip.py
+                wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
             else
                 wget https://bootstrap.pypa.io/get-pip.py
             fi
