@@ -17,8 +17,8 @@ MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
-  *) BUILD_DIR=$BUILD_DIR;;
+    $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+    *) BUILD_DIR=$BUILD_DIR;;
 esac
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
@@ -65,7 +65,7 @@ if [ "$DIST" = "SUSE Linux" ]; then
     pkginst='sudo rpm -ivh'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-		$install openSUSE-release
+        $install openSUSE-release
     fi
 fi
 if which lsb_release &> /dev/null; then
@@ -168,17 +168,17 @@ function mn_deps {
         $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
             ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install gcc make socat psmisc xterm openssh iperf \
-			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
-			ethtool help2man python-pyflakes python3-pylint \
-                        python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
+        $install gcc make socat psmisc xterm openssh iperf \
+            iproute telnet ${PYPKG}-setuptools libcgroup-tools \
+            ethtool help2man python-pyflakes python3-pylint \
+            python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
         pep8=pep8
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
         if [ "$DIST" = "Ubuntu" -a $(expr $RELEASE '>=' 20.04) = "1" ]; then
-                pf=pyflakes3
+            pf=pyflakes3
         fi
         # Debian 11 "bullseye" renamed
         # * pep8 to python3-pep8
@@ -189,9 +189,9 @@ function mn_deps {
         fi
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man $pf pylint $pep8 \
-                 net-tools \
-                 ${PYPKG}-pexpect ${PYPKG}-tk
+            ethtool help2man $pf pylint $pep8 \
+            net-tools \
+            ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
         if ! ${PYTHON} -m pip -V; then
@@ -233,8 +233,8 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-       $install git pkgconfig glibc-devel
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
@@ -302,8 +302,8 @@ function install_wireshark {
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
             $install wireshark wireshark-gnome
-		elif [ "$DIST" = "SUSE LINUX"  ]; then
-			$install wireshark
+        elif [ "$DIST" = "SUSE LINUX"  ]; then
+            $install wireshark
         else
             $install wireshark tshark
         fi
@@ -377,18 +377,18 @@ function ubuntuOvs {
     # Remove any old packages
 
     $remove openvswitch-common openvswitch-datapath-dkms openvswitch-pki openvswitch-switch \
-            openvswitch-controller || true
+        openvswitch-controller || true
 
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
-             pkg-config bzip2 openssl ${PYPKG}-all procps ${PYPKG}-qt4 \
-             ${PYPKG}-zopeinterface ${PYPKG}-twisted-conch dkms dh-python dh-autoreconf \
-             uuid-runtime
+        pkg-config bzip2 openssl ${PYPKG}-all procps ${PYPKG}-qt4 \
+        ${PYPKG}-zopeinterface ${PYPKG}-twisted-conch dkms dh-python dh-autoreconf \
+        uuid-runtime
 
     # Build OVS
     parallel=$(grep processor /proc/cpuinfo | wc -l)
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
-            DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
+    DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
     for pkg in common datapath-dkms pki switch; do
         pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
@@ -464,9 +464,9 @@ function ovs {
     fi
     # This service seems to hang on 20.04
     if systemctl list-units | \
-            grep status netplan-ovs-cleanup.service>&/dev/null; then
-        echo 'TimeoutSec=10' | sudo EDITOR='tee -a' \
-        sudo systemctl edit --full netplan-ovs-cleanup.service
+        grep status netplan-ovs-cleanup.service>&/dev/null; then
+            echo 'TimeoutSec=10' | sudo EDITOR='tee -a' \
+                sudo systemctl edit --full netplan-ovs-cleanup.service
     fi
 }
 
@@ -545,7 +545,7 @@ function nox {
 
     # Install NOX deps:
     $install autoconf automake g++ libtool python ${PYPKG}-twisted \
-		swig libssl-dev make
+        swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
@@ -647,8 +647,8 @@ function cbench {
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install net-snmp-devel libpcap-devel libconfig-devel
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install net-snmp-devel libpcap-devel libconfig-devel
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
@@ -752,10 +752,10 @@ function modprobe {
     echo "Setting up modprobe for OVS kmod..."
     set +o nounset
     if [ -z "$OVS_KMODS" ]; then
-      echo "OVS_KMODS not set. Aborting."
+        echo "OVS_KMODS not set. Aborting."
     else
-      sudo cp $OVS_KMODS $DRIVERS_DIR
-      sudo depmod -a ${KERNEL_NAME}
+        sudo cp $OVS_KMODS $DRIVERS_DIR
+        sudo depmod -a ${KERNEL_NAME}
     fi
     set -o nounset
 }
@@ -880,44 +880,43 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION
-    do
-      case $OPTION in
-      a)    all;;
-      b)    cbench;;
-      c)    kernel_clean;;
-      d)    vm_clean;;
-      e)    mn_doc;;
-      f)    case $OF_VERSION in
-            1.0) of;;
-            1.3) of13;;
-            *)  echo "Invalid OpenFlow version $OF_VERSION";;
-            esac;;
-      h)    usage;;
-      i)    ivs;;
-      k)    kernel;;
-      m)    modprobe;;
-      n)    mn_deps;;
-      p)    pox;;
-      r)    remove_ovs;;
-      s)    mkdir -p $OPTARG; # ensure the directory is created
-            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path
-            echo "Dependency installation directory: $BUILD_DIR";;
-      t)    vm_other;;
-      v)    ovs;;
-      V)    OVS_RELEASE=$OPTARG;
-            ubuntuOvs;;
-      w)    install_wireshark;;
-      x)    case $OF_VERSION in
-            1.0) nox;;
-            1.3) nox13;;
-            *)  echo "Invalid OpenFlow version $OF_VERSION";;
-            esac;;
-      y)    ryu;;
-      0)    OF_VERSION=1.0;;
-      3)    OF_VERSION=1.3;;
-      ?)    usage;;
-      esac
+    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION; do
+        case $OPTION in
+            a)    all;;
+            b)    cbench;;
+            c)    kernel_clean;;
+            d)    vm_clean;;
+            e)    mn_doc;;
+            f)    case $OF_VERSION in
+                      1.0) of;;
+                      1.3) of13;;
+                      *)  echo "Invalid OpenFlow version $OF_VERSION";;
+                  esac;;
+            h)    usage;;
+            i)    ivs;;
+            k)    kernel;;
+            m)    modprobe;;
+            n)    mn_deps;;
+            p)    pox;;
+            r)    remove_ovs;;
+            s)    mkdir -p $OPTARG; # ensure the directory is created
+                  BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path
+                  echo "Dependency installation directory: $BUILD_DIR";;
+            t)    vm_other;;
+            v)    ovs;;
+            V)    OVS_RELEASE=$OPTARG;
+                ubuntuOvs;;
+            w)    install_wireshark;;
+            x)    case $OF_VERSION in
+                    1.0) nox;;
+                    1.3) nox13;;
+                    *)  echo "Invalid OpenFlow version $OF_VERSION";;
+                  esac;;
+            y)    ryu;;
+            0)    OF_VERSION=1.0;;
+            3)    OF_VERSION=1.3;;
+            ?)    usage;;
+        esac
     done
     shift $(($OPTIND - 1))
 fi
