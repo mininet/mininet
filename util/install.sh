@@ -178,7 +178,7 @@ function mn_deps {
             ${PYPKG}-pep8-naming ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
         $install gcc make socat psmisc xterm openssh iperf \
-            iproute telnet ${PYPKG}-setuptools libcgroup-tools \
+            iproute2 telnet ${PYPKG}-setuptools libcgroup-tools \
             ethtool help2man ${PYPKG}-pyflakes ${PYPKG}-pylint \
             ${PYPKG}-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
