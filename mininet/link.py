@@ -355,7 +355,7 @@ class TCIntf( Intf ):
 
         # Optimization: return if nothing else to configure
         # Question: what happens if we want to reset things?
-        if ( bw is None and not delay and not loss
+        if ( bw is None and delay is None and loss is None
              and max_queue_size is None ):
             return None
 
