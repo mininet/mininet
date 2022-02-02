@@ -41,6 +41,7 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
     pkginst='sudo dpkg -i'
     update='sudo apt-get'
+    sudo apt-get update
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install lsb-release
