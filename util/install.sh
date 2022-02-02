@@ -10,16 +10,12 @@ set -e
 set -o nounset
 
 # Get directory containing mininet folder
-MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
+MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd -P )"
 
-# Set up build directory, which by default is the working directory
-#  unless the working directory is a subdirectory of mininet,
-#  in which case we use the directory containing mininet
-BUILD_DIR="$(pwd -P)"
-case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
-  *) BUILD_DIR=$BUILD_DIR;;
-esac
+# Set up build directory, which lies in the mininet folder containin
+# the install script.
+BUILD_DIR="${MININET_DIR}/build"
+mkdir -p $BUILD_DIR
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
 KERNEL_LOC=http://www.openflow.org/downloads/mininet
@@ -208,7 +204,7 @@ function mn_deps {
     fi
 
     echo "Installing Mininet core"
-    pushd $MININET_DIR/mininet
+    pushd $MININET_DIR
     sudo PYTHON=${PYTHON} make install
     popd
 }
@@ -244,7 +240,7 @@ function of {
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
@@ -312,7 +308,7 @@ function install_wireshark {
     # Copy coloring rules: OF is white-on-blue:
     echo "Optionally installing wireshark color filters"
     mkdir -p $HOME/.wireshark
-    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+    cp -n $MININET_DIR/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
     WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
@@ -566,9 +562,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
-        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build
