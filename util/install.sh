@@ -104,14 +104,22 @@ function version_ge {
 
 # Attempt to detect Python version
 PYTHON=${PYTHON:-python}
+PRINTVERSION_INFO='import sys; print(sys.version_info)'
 PRINTVERSION='import sys; print(sys.version_info)'
 PYTHON_VERSION=unknown
 for python in python3 $PYTHON python2; do
-    if $python -c "$PRINTVERSION" |& grep 'major=2'; then
-        PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
+    PYTHON_VERSION=$($python -c "$PRINTVERSION")
+
+    if $python -c "$PRINTVERSION_INFO" |& grep 'major=2'; then
+        echo '=======================================================
+WARNING, using python2 for the installation!
+Python 2 is deprecated and you should install python 3.
+The installation will continue in 10 seconds.'
+        sleep 10
+        PYPKG=python
         break
-    elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
-        PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
+    elif $python -c "$PRINTVERSION_INFO" |& grep 'major=3'; then
+        PYPKG=python3
         break
     fi
 done
