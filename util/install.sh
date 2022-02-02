@@ -194,13 +194,13 @@ function mn_deps {
             ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
-        if ! ${PYTHON} -m pip -V; then
+        if ! ${PYPKG} -m pip -V; then
             if [ $PYTHON_VERSION == 2 ]; then
                 wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
             else
                 wget https://bootstrap.pypa.io/get-pip.py
             fi
-            sudo ${PYTHON} get-pip.py
+            sudo ${PYPKG} get-pip.py
             rm get-pip.py
         fi
         $install iproute2 || $install iproute
@@ -209,7 +209,7 @@ function mn_deps {
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
-    sudo PYTHON=${PYTHON} make install
+    sudo PYTHON=${PYPKG} make install
     popd
 }
 
@@ -220,7 +220,7 @@ function mn_doc {
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
-    sudo pip install doxypy
+    sudo ${PYPKG} -m pip install doxypy
 }
 
 # The following will cause a full OF install, covering:
@@ -531,9 +531,9 @@ function ryu {
     cd ryu
 
     # install ryu
-    sudo pip install -r tools/pip-requires -r tools/optional-requires \
+    sudo ${PYPKG} -m pip install -r tools/pip-requires -r tools/optional-requires \
         -r tools/test-requires
-    sudo python setup.py install
+    sudo ${PYPKG} setup.py install
 
     # Add symbolic link to /usr/bin
     sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
@@ -634,7 +634,7 @@ function oftest {
 
     # Install deps:
     $install tcpdump
-    $install ${PYPKG}-scapy || sudo $PYTHON -m pip install scapy
+    $install ${PYPKG}-scapy || sudo ${PYPKG} -m pip install scapy
 
     # Install oftest:
     cd $BUILD_DIR/
