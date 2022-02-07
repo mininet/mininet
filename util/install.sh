@@ -830,7 +830,9 @@ exit 0
     # Clear git changes
     git config --global user.name "None"
     git config --global user.email "None"
+}
 
+function zero_out {
     # Note: you can shrink the .vmdk in vmware using
     # vmware-vdiskmanager -k *.vmdk
     echo "Zeroing out disk blocks for efficient compaction..."
@@ -869,6 +871,7 @@ function usage {
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
     printf -- ' -y: install R(y)u Controller\n' >&2
     printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
+    printf -- ' -z: zero out /tmp\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
     exit 2
@@ -914,6 +917,7 @@ else
             *)  echo "Invalid OpenFlow version $OF_VERSION";;
             esac;;
       y)    ryu;;
+      z)    zero_out;;
       0)    OF_VERSION=1.0;;
       3)    OF_VERSION=1.3;;
       ?)    usage;;

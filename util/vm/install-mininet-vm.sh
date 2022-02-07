@@ -41,7 +41,7 @@ python --version || $APT install python-is-python3
 time PYTHON=python2 mininet/util/install.sh -n
 time PYTHON=python3 mininet/util/install.sh
 # Finalize VM
-time mininet/util/install.sh -tcd
+time mininet/util/install.sh -tcdz
 # Ignoring this since NOX classic is deprecated
 #if ! grep NOX_CORE_DIR .bashrc; then
 #  echo "export NOX_CORE_DIR=~/noxcore/build/src/" >> .bashrc
