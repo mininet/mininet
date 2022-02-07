@@ -727,6 +727,10 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
         $install vlan
     fi
 
+    # Clear git changes
+    git config --global user.name "None"
+    git config --global user.email "None"
+
     # Set git to colorize everything.
     git config --global color.diff auto
     git config --global color.status auto
@@ -826,10 +830,6 @@ exit 0
 
     # Remove leftover install script if any
     rm -f install-mininet-vm.sh
-
-    # Clear git changes
-    git config --global user.name "None"
-    git config --global user.email "None"
 }
 
 function zero_out {
