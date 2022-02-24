@@ -184,7 +184,7 @@ class CLI( Cmd ):
         try:
             # pylint: disable=eval-used
             result = eval( line, globals(), self.getLocals() )
-            if not result:
+            if result is None:
                 return
             elif isinstance( result, str ):
                 output( result + '\n' )
