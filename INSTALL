@@ -2,7 +2,7 @@
 Mininet Installation/Configuration Notes
 ----------------------------------------
 
-Mininet 2.3.0
+Mininet 2.3.1b1
 ---
 
 The supported installation methods for Mininet are 1) using a
@@ -165,7 +165,7 @@ like to contribute an installation script, we would welcome it!)
 
     Note that `install.sh -fnv `may not install all dependencies on Fedora,
     and many tests may still fail.
-    
+
 4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
