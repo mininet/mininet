@@ -174,13 +174,22 @@ function mn_deps {
                         python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
+        pep8=pep8
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
-        if [ `expr $RELEASE '>=' 20.04` = "1" ]; then
+        if [ "$DIST" = "Ubuntu" -a `expr $RELEASE '>=' 20.04` = "1" ]; then
                 pf=pyflakes3
         fi
+        # Debian 11 "bullseye" renamed 
+        # * pep8 to python3-pep8
+        # * pyflakes to pyflakes3
+        if [ "$DIST" = "Debian" -a `expr $RELEASE '>=' 11` = "1" ]; then
+                pf=pyflakes3
+                pep8=python3-pep8
+        fi
+
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man $pf pylint pep8 \
+                 ethtool help2man $pf pylint $pep8 \
                  net-tools \
                  ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
@@ -231,7 +240,7 @@ function of {
     fi
     # was: git clone git://openflowswitch.org/openflow.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/openflow
+    git clone https://github.com/mininet/openflow
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
@@ -498,7 +507,7 @@ function ivs {
 
     # Install IVS from source
     cd $BUILD_DIR
-    git clone git://github.com/floodlight/ivs $IVS_SRC
+    git clone https://github.com/floodlight/ivs $IVS_SRC
     cd $IVS_SRC
     git submodule update --init
     make
@@ -518,7 +527,7 @@ function ryu {
 
     # fetch RYU
     cd $BUILD_DIR/
-    git clone git://github.com/osrg/ryu.git ryu
+    git clone https://github.com/osrg/ryu.git ryu
     cd ryu
 
     # install ryu
@@ -629,7 +638,7 @@ function oftest {
 
     # Install oftest:
     cd $BUILD_DIR/
-    git clone git://github.com/floodlight/oftest
+    git clone https://github.com/floodlight/oftest
 }
 
 # Install cbench
@@ -646,7 +655,7 @@ function cbench {
     cd $BUILD_DIR/
     # was:  git clone git://gitosis.stanford.edu/oflops.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/oflops
+    git clone https://github.com/mininet/oflops
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
