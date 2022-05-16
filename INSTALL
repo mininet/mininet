@@ -2,7 +2,7 @@
 Mininet Installation/Configuration Notes
 ----------------------------------------
 
-Mininet 2.3.0
+Mininet 2.3.1b1
 ---
 
 The supported installation methods for Mininet are 1) using a
@@ -51,7 +51,7 @@ like to contribute an installation script, we would welcome it!)
    If you're reading this, you've probably already done so, but the
    command to download the Mininet source code is:
 
-        git clone git://github.com/mininet/mininet.git
+        git clone https://github.com/mininet/mininet.git
 
    Note that the above git command will check out the latest and greatest
    Mininet (which we recommend!) If you want to run the last
@@ -147,7 +147,7 @@ like to contribute an installation script, we would welcome it!)
 
     * clone the Mininet repository
 
-        git clone git://github.com/mininet/mininet.git
+        git clone https://github.com/mininet/mininet.git
 
     * install Mininet, the OpenFlow reference implementation, and
       Open vSwitch
@@ -165,7 +165,7 @@ like to contribute an installation script, we would welcome it!)
 
     Note that `install.sh -fnv `may not install all dependencies on Fedora,
     and many tests may still fail.
-    
+
 4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial

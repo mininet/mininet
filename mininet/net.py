@@ -109,7 +109,7 @@ from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
 from mininet.term import cleanUpScreens, makeTerms
 
 # Mininet version: should be consistent with README and LICENSE
-VERSION = "2.3.0"
+VERSION = "2.3.1b1"
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -671,7 +671,7 @@ class Mininet( object ):
                     if timeout:
                         opts = '-W %s' % timeout
                     if dest.intfs:
-                        result = node.cmd( 'ping -c1 %s %s' %
+                        result = node.cmd( 'LANG=C ping -c1 %s %s' %
                                            (opts, dest.IP()) )
                         sent, received = self._parsePing( result )
                     else:
