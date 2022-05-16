@@ -52,7 +52,7 @@ test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
 test -e /etc/centos-release && DIST="CentOS"
 test -e /etc/rocky-release && DIST="Rocky"
-if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" -i "$DIST" = "Rocky" ]; then
+if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "CentOS" -o "$DIST" = "Rocky" ]; then
     install='sudo yum -y install'
     pipinstall='sudo pip install'
     remove='sudo yum -y erase'
