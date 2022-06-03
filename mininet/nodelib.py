@@ -29,38 +29,38 @@ class LinuxBridge( Switch ):
     def connected( self ):
         "Are we forwarding yet?"
         if self.stp:
-            return 'forwarding' in self.cmd( 'brctl showstp', self )
+            return 'forwarding' in self.cmd( 'ip -d link show master', self )
         else:
             return True
 
     def start( self, _controllers ):
         "Start Linux bridge"
-        self.cmd( 'ifconfig', self, 'down' )
-        self.cmd( 'brctl delbr', self )
-        self.cmd( 'brctl addbr', self )
+        self.cmd( 'ip link set', self, 'down' )
+        self.cmd( 'ip link del', self )
+        self.cmd( 'ip link add', self, 'type bridge' )
         if self.stp:
-            self.cmd( 'brctl setbridgeprio', self.prio )
-            self.cmd( 'brctl stp', self, 'on' )
+            self.cmd( 'ip link set', self, 'type bridge priority', self.prio )
+            self.cmd( 'ip link set', self, 'type bridge stp_state 1' )
         for i in self.intfList():
             if self.name in i.name:
-                self.cmd( 'brctl addif', self, i )
-        self.cmd( 'ifconfig', self, 'up' )
+                self.cmd( 'ip link set', i, 'master', self )
+        self.cmd( 'ip link set', self, 'up' )
 
     def stop( self, deleteIntfs=True ):
         """Stop Linux bridge
            deleteIntfs: delete interfaces? (True)"""
-        self.cmd( 'ifconfig', self, 'down' )
-        self.cmd( 'brctl delbr', self )
+        self.cmd( 'ip link set', self, 'down' )
+        self.cmd( 'ip link del', self )
         super( LinuxBridge, self ).stop( deleteIntfs )
 
     def dpctl( self, *args ):
-        "Run brctl command"
-        return self.cmd( 'brctl', *args )
+        "Run ip command"
+        return self.cmd( 'ip', *args )
 
     @classmethod
     def setup( cls ):
         "Check dependencies and warn about firewalling"
-        pathCheck( 'brctl', moduleName='bridge-utils' )
+        pathCheck( 'ip', moduleName='iproute' )
         # Disable Linux bridge firewalling so that traffic can flow!
         for table in 'arp', 'ip', 'ip6':
             cmd = 'sysctl net.bridge.bridge-nf-call-%stables' % table
