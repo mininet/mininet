@@ -1518,7 +1518,7 @@ class Ryu( Controller ):
         """Init.
            name: name to give controller.
            ryuArgs: modules to pass to Ryu (ryu.app.simple_switch)
-           command: comand to run Ryu ('ryu run')"""
+           command: command to run Ryu ('ryu run')"""
         if isinstance( ryuArgs, ( list, tuple ) ):
             ryuArgs = ' '.join( ryuArgs )
         cargs = kwargs.pop(
