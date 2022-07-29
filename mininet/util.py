@@ -543,6 +543,8 @@ def mountCgroups():
     mounts = quietRun( 'grep cgroup /proc/mounts' )
     cgdir = '/sys/fs/cgroup'
     csdir = cgdir + '/cpuset'
+    if '%s cgroup2' % cgdir in mounts:
+        return  # pure cgroup2 mounted, no further action necessary
     if ('cgroup %s' % cgdir not in mounts and
             'cgroups %s' % cgdir not in mounts):
         raise Exception( "cgroups not mounted on " + cgdir )
