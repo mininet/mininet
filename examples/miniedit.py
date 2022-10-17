@@ -3203,7 +3203,7 @@ class MiniEdit( Frame ):
         addDictOption( opts, LINKS, LINKDEF, 'link' )
 
         opts.add_option( '--custom', type='string', default=None,
-                         help='read custom topo and node params from .py' +
+                         help='read custom topo and node params from .py ' +
                          'file' )
 
         self.options, self.args = opts.parse_args()
