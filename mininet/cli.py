@@ -412,6 +412,15 @@ class CLI( Cmd ):
     def do_wait( self, _line ):
         "Wait until all switches have connected to a controller"
         self.mn.waitConnected()
+    
+    def do_clear( self, _line):
+        "Clear the terminal screen"
+        # windows
+        if os.name == 'nt':
+            _ = os.system('cls')
+        # for mac and linux(here, os.name is 'posix')
+        else:
+            _ = os.system('clear')
 
     def default( self, line ):
         """Called on an input line when the command prefix is not recognized.
