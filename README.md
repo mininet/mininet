@@ -122,9 +122,9 @@ Mininet mailing list, `mininet-discuss` at:
 Thanks again to all of the Mininet contributors and users!
 
 Mininet is an open source project and is currently hosted
-at <https://github.com/mininet>.  You are encouraged to download
-the code, examine it, modify it, and submit bug reports, bug fixes,
-feature requests, new features and other issues and pull requests.
+at <https://github.com/mininet>. You are encouraged to download,
+examine, and modify the code, and to submit bug reports, bug fixes,
+feature requests, new features, and other issues and pull requests.
 Thanks to everyone who has contributed code to the Mininet project
 (see CONTRIBUTORS for more info!) It is because of everyone's
 hard work that Mininet continues to grow and improve.
