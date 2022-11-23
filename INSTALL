@@ -124,7 +124,7 @@ like to contribute an installation script, we would welcome it!)
 
    Whichever version was installed last will be the default for `mn`.
    As long as Mininet is installed for the appropriate version of
-   Python, you can run it using that versinon of Python:
+   Python, you can run it using that version of Python:
 
        python3 `which mn`
        python2 `which mn`
