@@ -158,7 +158,7 @@ A simple example of configuring network and CPU bandwidth limits.
 
 This example shows how to run an `sshd` process in each host, allowing
 you to log in via `ssh`. This requires connecting the Mininet data network
-to an interface in the root namespace (generaly the control network
+to an interface in the root namespace (generally the control network
 already lives in the root namespace, so it does not need to be explicitly
 connected.)
 
