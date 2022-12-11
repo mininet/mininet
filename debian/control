@@ -16,7 +16,7 @@ Package: mininet
 Architecture: any
 Depends:
  openvswitch-switch,
- telnet,
+ netcat,
  socat,
  iperf,
  cgroup-bin,

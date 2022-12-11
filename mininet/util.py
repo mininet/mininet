@@ -676,14 +676,14 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
        returns True if server is listening"""
     runCmd = ( client.cmd if client else
                partial( quietRun, shell=True ) )
-    if not runCmd( 'which telnet' ):
-        raise Exception('Could not find telnet' )
+    if not runCmd( 'which nc' ):
+        raise Exception('Could not find nc' )
     # pylint: disable=maybe-no-member
     serverIP = server if isinstance( server, BaseString ) else server.IP()
-    cmd = ( 'echo A | telnet -e A %s %s' % ( serverIP, port ) )
+    cmd = ( 'nc -zv %s %s' % ( serverIP, port ) )
     time = 0
     result = runCmd( cmd )
-    while 'Connected' not in result:
+    while 'succeeded' not in result:
         if 'No route' in result:
             rtable = runCmd( 'route' )
             error( 'no route to %s:\n%s' % ( server, rtable ) )

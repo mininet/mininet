@@ -1418,15 +1418,14 @@ class Controller( Node ):
 
     def checkListening( self ):
         "Make sure no controllers are running on our port"
-        # Verify that Telnet is installed first:
-        out, _err, returnCode = errRun( "which telnet" )
-        if 'telnet' not in out or returnCode != 0:
-            raise Exception( "Error running telnet to check for listening "
+        # Verify that Netcat is installed first:
+        out, _err, returnCode = errRun( "which nc" )
+        if 'nc' not in out or returnCode != 0:
+            raise Exception( "Error running netcat to check for listening "
                              "controllers; please check that it is "
                              "installed." )
-        listening = self.cmd( "echo A | telnet -e A %s %d" %
-                              ( self.ip, self.port ) )
-        if 'Connected' in listening:
+        listening = self.cmd( "nc -zv %s %d" % ( self.ip, self.port ) )
+        if 'succeeded' in listening:
             servers = self.cmd( 'netstat -natp' ).split( '\n' )
             pstr = ':%d ' % self.port
             clist = servers[ 0:1 ] + [ s for s in servers if pstr in s ]
@@ -1567,8 +1566,8 @@ class RemoteController( Controller ):
 
     def isListening( self, ip, port ):
         "Check if a remote controller is listening at a specific ip and port"
-        listening = self.cmd( "echo A | telnet -e A %s %d" % ( ip, port ) )
-        if 'Connected' not in listening:
+        listening = self.cmd( "nc -zv %s %d" % ( ip, port ) )
+        if 'succeeded' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( ip, port ) )
             return False
