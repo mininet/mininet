@@ -48,8 +48,9 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
 fi
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
+test -e /etc/centos-release && DIST="RedHatEnterpriseServer"
 if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-    install='sudo yum -y install'
+    install='sudo yum -y install --exclude=*qpid*'
     remove='sudo yum -y erase'
     pkginst='sudo rpm -ivh'
     update='sudo yum'
@@ -69,7 +70,7 @@ if [ "$DIST" = "SUSE Linux" ]; then
     fi
 fi
 if which lsb_release &> /dev/null; then
-    DIST=`lsb_release -is`
+#    DIST=`lsb_release -is`
     RELEASE=`lsb_release -rs`
     CODENAME=`lsb_release -cs`
 fi
@@ -164,7 +165,7 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man net-tools
+            ethtool help2man net-tools python-pip
         $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
             ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
@@ -199,7 +200,7 @@ function mn_deps {
     fi
 
     echo "Installing Mininet core"
-    pushd $MININET_DIR/mininet
+    pushd $MININET_DIR/mininet_centos7
     sudo PYTHON=${PYTHON} make install
     popd
 }
@@ -231,11 +232,11 @@ function of {
     fi
     # was: git clone git://openflowswitch.org/openflow.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/openflow
+    git clone https://github.com/mininet/openflow
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/mininet_centos7/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
@@ -303,7 +304,7 @@ function install_wireshark {
     # Copy coloring rules: OF is white-on-blue:
     echo "Optionally installing wireshark color filters"
     mkdir -p $HOME/.wireshark
-    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+    cp -n $MININET_DIR/mininet_centos7/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
     WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
@@ -557,9 +558,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/mininet_centos7/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
-        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/mininet_centos7/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build
@@ -646,7 +647,7 @@ function cbench {
     cd $BUILD_DIR/
     # was:  git clone git://gitosis.stanford.edu/oflops.git
     # Use our own fork on github for now:
-    git clone git://github.com/mininet/oflops
+    git clone https://github.com/mininet/oflops
     cd oflops
     sh boot.sh || true # possible error in autoreconf, so run twice
     sh boot.sh
@@ -767,15 +768,15 @@ function all {
     # Skip mn_doc (doxypy/texlive/fonts/etc.) because it's huge
     # mn_doc
     of
-    install_wireshark
+    #install_wireshark
     ovs
     # We may add ivs once it's more mature
     # ivs
     # NOX-classic is deprecated, but you can install it manually if desired.
     # nox
-    pox
-    oftest
-    cbench
+    #pox
+    #oftest
+    #cbench
     echo "Enjoy Mininet!"
 }
 
