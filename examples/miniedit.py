@@ -1449,7 +1449,7 @@ class MiniEdit( Frame ):
 
         # Load application preferences
         if 'application' in loadedTopology:
-            self.appPrefs = dict(self.appPrefs.items() + loadedTopology['application'].items())
+            self.appPrefs = {**self.appPrefs, **loadedTopology['application']}
             if "ovsOf10" not in self.appPrefs["openFlowVersions"]:
                 self.appPrefs["openFlowVersions"]["ovsOf10"] = '0'
             if "ovsOf11" not in self.appPrefs["openFlowVersions"]:
