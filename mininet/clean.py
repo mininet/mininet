@@ -51,8 +51,8 @@ class Cleanup( object ):
 
         info( "*** Removing excess controllers/ofprotocols/ofdatapaths/"
               "pings/noxes\n" )
-        zombies = ( 'controller ofprotocol ofdatapath ping nox_core'
-                    'lt-nox_core ovs-openflowd ovs-controller'
+        zombies = ( 'controller ofprotocol ofdatapath ping nox_core '
+                    'lt-nox_core ovs-openflowd ovs-controller '
                     'ovs-testcontroller udpbwtest mnexec ivs ryu-manager' )
         # Note: real zombie processes can't actually be killed, since they
         # are already (un)dead. Then again,
