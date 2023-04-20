@@ -316,8 +316,9 @@ class TCIntf( Intf ):
         debug(" *** executing command: %s\n" % c)
         return self.cmd( c )
 
-    # pylint: disable=arguments-differ
-    def config( self, bw=None, delay=None, jitter=None, loss=None,
+    def config(  # pylint: disable=arguments-renamed,arguments-differ
+                self,
+                bw=None, delay=None, jitter=None, loss=None,
                 gro=False, txo=True, rxo=True,
                 speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False,
@@ -539,9 +540,7 @@ class OVSLink( Link ):
 
     def __init__( self, node1, node2, **kwargs ):
         "See Link.__init__() for options"
-        try:
-            OVSSwitch
-        except NameError:
+        if 'OVSSwitch' not in globals():
             # pylint: disable=import-outside-toplevel,cyclic-import
             from mininet.node import OVSSwitch
         self.isPatchLink = False
@@ -551,7 +550,7 @@ class OVSLink( Link ):
             kwargs.update( cls1=OVSIntf, cls2=OVSIntf )
         Link.__init__( self, node1, node2, **kwargs )
 
-    # pylint: disable=arguments-differ, signature-differs
+    # pylint: disable=arguments-renamed, arguments-differ, signature-differs
     def makeIntfPair( self, *args, **kwargs ):
         "Usually delegated to OVSSwitch"
         if self.isPatchLink:

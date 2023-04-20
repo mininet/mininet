@@ -18,16 +18,15 @@ import os
 import re
 import sys
 
-from distutils.version import StrictVersion
 from functools import partial
-from optparse import OptionParser
+from optparse import OptionParser  # pylint: disable=deprecated-module
 from subprocess import call
 from sys import exit  # pylint: disable=redefined-builtin
 
 from mininet.log import info, debug, warn, setLogLevel
 from mininet.net import Mininet, VERSION
 from mininet.util import (netParse, ipAdd, quietRun,
-                          buildTopo, custom, customClass )
+                          buildTopo, custom, customClass, StrictVersion )
 from mininet.term import makeTerm, cleanUpScreens
 from mininet.node import (Controller, RemoteController, NOX, OVSController,
                           CPULimitedHost, Host, Node,
@@ -1363,7 +1362,7 @@ class MiniEdit( Frame ):
 
         # Tools
         for tool in self.tools:
-            cmd = ( lambda t=tool: self.activate( t ) )
+            cmd = partial( self.activate, tool )
             b = Button( toolbar, text=tool, font=self.smallFont, command=cmd)
             if tool in self.images:
                 b.config( height=35, image=self.images[ tool ] )
@@ -1421,10 +1420,7 @@ class MiniEdit( Frame ):
 
     def convertJsonUnicode(self, text):
         "Some part of Mininet don't like Unicode"
-        try:
-            unicode
-        except NameError:
-            return text
+        unicode = globals.get( 'unicode', str )
         if isinstance(text, dict):
             return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
         if isinstance(text, list):
@@ -1635,10 +1631,10 @@ class MiniEdit( Frame ):
             hostsToSave = []
             switchesToSave = []
             controllersToSave = []
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
-                x1, y1 = self.canvas.coords( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
+                x1, y1 = self.canvas.coords( item )
                 if 'Switch' in tags or 'LegacySwitch' in tags or 'LegacyRouter' in tags:
                     nodeNum = self.switchOpts[name]['nodeNum']
                     nodeToSave = {'number':str(nodeNum),
@@ -1683,14 +1679,13 @@ class MiniEdit( Frame ):
             savingDictionary['application'] = self.appPrefs
 
             try:
-                f = open(fileName, 'w')
-                f.write(json.dumps(savingDictionary, sort_keys=True, indent=4, separators=(',', ': ')))
-            # pylint: disable=broad-except
-            except Exception as er:
+                with open(fileName, 'w') as f:
+                    f.write(
+                        json.dumps(savingDictionary,
+                                   sort_keys=True,
+                                   indent=4, separators=(',', ': ')))
+            except Exception as er:  # pylint: disable=broad-except
                 warn( er, '\n' )
-            # pylint: enable=broad-except
-            finally:
-                f.close()
 
     def exportScript( self ):
         "Export command."
@@ -1702,7 +1697,7 @@ class MiniEdit( Frame ):
         fileName = tkFileDialog.asksaveasfilename(filetypes=myFormats ,title="Export the topology as...")
         if len(fileName ) > 0:
             # debug( "Now saving under %s\n" % fileName )
-            f = open(fileName, 'w')
+            f = open(fileName, 'w')  # pylint: disable=consider-using-with
 
             f.write("#!/usr/bin/env python\n")
             f.write("\n")
@@ -1718,9 +1713,9 @@ class MiniEdit( Frame ):
             f.write("from subprocess import call\n")
 
             inBandCtrl = False
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
 
                 if 'Controller' in tags:
                     opts = self.controllers[name]
@@ -1746,9 +1741,9 @@ class MiniEdit( Frame ):
             f.write("                   ipBase='"+self.appPrefs['ipBase']+"')\n")
             f.write("\n")
             f.write("    info( '*** Adding controller\\n' )\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
 
                 if 'Controller' in tags:
                     opts = self.controllers[name]
@@ -1780,9 +1775,9 @@ class MiniEdit( Frame ):
 
             # Save Switches and Hosts
             f.write("    info( '*** Add switches\\n')\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'LegacyRouter' in tags:
                     f.write("    "+name+" = net.addHost('"+name+"', cls=Node, ip='0.0.0.0')\n")
                     f.write("    "+name+".cmd('sysctl -w net.ipv4.ip_forward=1')\n")
@@ -1820,9 +1815,9 @@ class MiniEdit( Frame ):
 
             f.write("\n")
             f.write("    info( '*** Add hosts\\n')\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Host' in tags:
                     opts = self.hostOpts[name]
                     ip = None
@@ -1915,9 +1910,9 @@ class MiniEdit( Frame ):
             f.write("\n")
 
             f.write("    info( '*** Starting switches\\n')\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Switch' in tags or 'LegacySwitch' in tags:
                     opts = self.switchOpts[name]
                     ctrlList = ",".join(opts['controllers'])
@@ -1926,9 +1921,9 @@ class MiniEdit( Frame ):
             f.write("\n")
 
             f.write("    info( '*** Post configure switches and hosts\\n')\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
                     if opts['switchType'] == 'default':
@@ -1956,9 +1951,9 @@ class MiniEdit( Frame ):
                         if 'switchIP' in opts:
                             if len(opts['switchIP']) > 0:
                                 f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Host' in tags:
                     opts = self.hostOpts[name]
                     # Attach vlan interfaces
@@ -1980,9 +1975,9 @@ class MiniEdit( Frame ):
             if len(nflowValues['nflowTarget']) > 0:
                 nflowEnabled = False
                 nflowSwitches = ''
-                for widget in self.widgetToItem:
+                for widget, item in self.widgetToItem.items():
                     name = widget[ 'text' ]
-                    tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                    tags = self.canvas.gettags( item )
 
                     if 'Switch' in tags:
                         opts = self.switchOpts[name]
@@ -2004,9 +1999,9 @@ class MiniEdit( Frame ):
             if len(sflowValues['sflowTarget']) > 0:
                 sflowEnabled = False
                 sflowSwitches = ''
-                for widget in self.widgetToItem:
+                for widget, item in self.widgetToItem.items():
                     name = widget[ 'text' ]
-                    tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                    tags = self.canvas.gettags( item )
 
                     if 'Switch' in tags:
                         opts = self.switchOpts[name]
@@ -2021,9 +2016,9 @@ class MiniEdit( Frame ):
 
             f.write("\n")
             f.write("    CLI(net)\n")
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem:
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Host' in tags:
                     opts = self.hostOpts[name]
                     # Run User Defined Stop Command
@@ -2445,7 +2440,8 @@ class MiniEdit( Frame ):
             line3.pack(pady=10 )
             line4.pack(pady=10 )
             line5.pack(pady=10 )
-            hide = ( lambda about=about: about.withdraw() )
+            def hide():
+                about.withdraw()
             self.aboutBox = about
             # Hide on close rather than destroying window
             Wm.wm_protocol( about, name='WM_DELETE_WINDOW', func=hide )
@@ -2620,9 +2616,9 @@ class MiniEdit( Frame ):
             info( 'New controller details for ' + name + ' = ' + str(self.controllers[name]), '\n' )
             # Find references to controller and change name
             if oldName != name:
-                for widget in self.widgetToItem:
+                for widget, item in self.widgetToItem.items():
                     switchName = widget[ 'text' ]
-                    tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                    tags = self.canvas.gettags( item )
                     if 'Switch' in tags:
                         switch = self.switchOpts[switchName]
                         if oldName in switch['controllers']:
@@ -2703,9 +2699,9 @@ class MiniEdit( Frame ):
         tags = self.canvas.gettags(item)
         if 'Controller' in tags:
             # remove from switch controller lists
-            for searchwidget in self.widgetToItem:
+            for searchwidget, searchitem in self.widgetToItem.items():
                 name = searchwidget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ searchwidget ] )
+                tags = self.canvas.gettags( searchitem )
                 if 'Switch' in tags:
                     if widget['text'] in self.switchOpts[name]['controllers']:
                         self.switchOpts[name]['controllers'].remove(widget['text'])
@@ -2718,9 +2714,9 @@ class MiniEdit( Frame ):
     def buildNodes( self, net):
         # Make nodes
         info( "Getting Hosts and Switches.\n" )
-        for widget in self.widgetToItem:
+        for widget, item in self.widgetToItem.items():
             name = widget[ 'text' ]
-            tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+            tags = self.canvas.gettags( item )
             # debug( name+' has '+str(tags), '\n' )
 
             if 'Switch' in tags:
@@ -2934,9 +2930,9 @@ class MiniEdit( Frame ):
     def postStartSetup( self ):
 
         # Setup host details
-        for widget in self.widgetToItem:
+        for widget, item in self.widgetToItem.items():
             name = widget[ 'text' ]
-            tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+            tags = self.canvas.gettags( item )
             if 'Host' in tags:
                 newHost = self.net.get(name)
                 opts = self.hostOpts[name]
@@ -2961,9 +2957,9 @@ class MiniEdit( Frame ):
         if len(nflowValues['nflowTarget']) > 0:
             nflowEnabled = False
             nflowSwitches = ''
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
 
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
@@ -2991,9 +2987,9 @@ class MiniEdit( Frame ):
         if len(sflowValues['sflowTarget']) > 0:
             sflowEnabled = False
             sflowSwitches = ''
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
 
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
@@ -3036,9 +3032,9 @@ class MiniEdit( Frame ):
             #for switch in self.net.switches:
             #    info( switch.name + ' ')
             #    switch.start( self.net.controllers )
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Switch' in tags:
                     opts = self.switchOpts[name]
                     switchControllers = []
@@ -3058,9 +3054,9 @@ class MiniEdit( Frame ):
         "Stop network."
         if self.net is not None:
             # Stop host details
-            for widget in self.widgetToItem:
+            for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
-                tags = self.canvas.gettags( self.widgetToItem[ widget ] )
+                tags = self.canvas.gettags( item )
                 if 'Host' in tags:
                     newHost = self.net.get(name)
                     opts = self.hostOpts[name]

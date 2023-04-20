@@ -16,7 +16,7 @@
 #init-hook=
 
 # Profiled execution.
-profile=no
+#profile=no
 
 # Add <file or directory> to the black list. It should be a base name, not a
 # path. You may set this option multiple times.
@@ -45,12 +45,13 @@ load-plugins=
 # Note: we may want to re-enable some of these at some point, but many of them
 # are just style issues rather than errors.
 #
-disable=pointless-except, invalid-name, super-init-not-called, fixme, star-args,
+disable=invalid-name, super-init-not-called, fixme,
         too-many-instance-attributes, too-few-public-methods,
-        too-many-locals, too-many-public-methods, duplicate-code, bad-whitespace,
-        locally-disabled, locally-enabled, bad-continuation,
+        too-many-locals, too-many-public-methods, duplicate-code,
+        locally-disabled,
         useless-object-inheritance, unnecessary-pass, no-else-return,
-        no-else-raise, no-else-continue, super-with-arguments
+        no-else-raise, no-else-continue, super-with-arguments,
+        consider-using-f-string, unspecified-encoding
 
 # bad-continuation, wrong-import-order
 
@@ -62,12 +63,12 @@ output-format=colorized
 msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 # Include message's id in output
-include-ids=yes
+# include-ids=yes
 
 # Put messages in a separate file for each module / package specified on the
 # command line instead of printing them on stdout. Reports (if any) will be
 # written in a file name "pylint_global.[txt|html]".
-files-output=no
+# files-output=no
 
 # Tells whether to display a full report or only the messages
 reports=no
@@ -81,7 +82,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 
 # Add a comment according to your evaluation note. This is used by the global
 # evaluation report (R0004).
-comment=no
+#comment=no
 
 # Enable the report(s) with the given id(s).
 #enable-report=
@@ -103,7 +104,7 @@ comment=no
 [BASIC]
 
 # Required attributes for module, separated by a comma
-required-attributes=
+#required-attributes=
 
 # Regular expression which should only match functions or classes name which do
 # not require a docstring
@@ -144,7 +145,7 @@ good-names=i,j,k,ex,Run,_
 bad-names=foo,bar,baz,toto,tutu,tata
 
 # List of builtins function names that should not be used, separated by a comma
-bad-functions=map,filter,apply,inpu
+#bad-functions=map,filter,apply,inpu
 
 
 # try to find bugs in the code using type inference
@@ -161,7 +162,7 @@ ignored-classes=SQLObjec
 
 # When zope mode is activated, add a predefined set of Zope acquired attributes
 # to generated-members.
-zope=no
+#zope=no
 
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed.
@@ -199,7 +200,7 @@ additional-builtins=
 
 # List of interface methods to ignore, separated by a comma. This is used for
 # instance to not check methods defines in Zope's Interface base class.
-ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+#ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
 
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp,build
@@ -221,7 +222,7 @@ max-locals=15
 max-returns=6
 
 # Maximum number of branch for function / method body
-max-branchs=12
+#max-branchs=12
 
 # Maximum number of statements in function / method body
 max-statements=50

@@ -21,7 +21,9 @@ from mininet.util import decode
 def sh( cmd ):
     "Print a command and send it to the shell"
     info( cmd + '\n' )
-    result = Popen( [ '/bin/sh', '-c', cmd ], stdout=PIPE ).communicate()[ 0 ]
+    p = Popen(  # pylint: disable=consider-using-with
+        [ '/bin/sh', '-c', cmd ], stdout=PIPE )
+    result = p.communicate()[ 0 ]
     return decode( result )
 
 def killprocs( pattern ):

@@ -17,9 +17,9 @@ from mininet.topo import SingleSwitchTopo
 from mininet.log import info, setLogLevel
 
 
-def chunks( l, n ):
+def chunks( items, n ):
     "Divide list l into chunks of size n - thanks Stackoverflow"
-    return [ l[ i: i + n ] for i in range( 0, len( l ), n ) ]
+    return [ items[ i: i + n ] for i in range( 0, len( items ), n ) ]
 
 def startpings( host, targetips ):
     "Tell host to repeatedly ping targets"

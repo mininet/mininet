@@ -25,9 +25,8 @@ def treePing64():
     switches = { 'reference user': UserSwitch,
                  'Open vSwitch kernel': OVSKernelSwitch }
 
-    for name in switches:
+    for name, switch in switches.items():
         info( "*** Testing", name, "datapath\n" )
-        switch = switches[ name ]
         network = TreeNet( depth=2, fanout=8, switch=switch,
                            waitConnected=True )
         result = network.run( network.pingAll )

@@ -17,6 +17,6 @@ jobs:
       - name: Install Mininet code check dependencies
         run: |
           PYTHON=`which python` util/install.sh -n
-          python -m pip install pylint==2.4.4
+          python -m pip install pylint==2.15.7
       - name: Run code check
         run:  make codecheck

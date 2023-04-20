@@ -18,11 +18,12 @@ from mininet.util import decode
 
 def monitorFiles( outfiles, seconds, timeoutms ):
     "Monitor set of files and return [(host, line)...]"
-    devnull = open( '/dev/null', 'w' )
+    devnull = open( '/dev/null', 'w' )  # pylint: disable=consider-using-with
     tails, fdToFile, fdToHost = {}, {}, {}
     for h, outfile in outfiles.items():
-        tail = Popen( [ 'tail', '-f', outfile ],
-                      stdout=PIPE, stderr=devnull )
+        tail = Popen(  # pylint: disable=consider-using-with
+            [ 'tail', '-f', outfile ],
+            stdout=PIPE, stderr=devnull )
         fd = tail.stdout.fileno()
         tails[ h ] = tail
         fdToFile[ fd ] = tail.stdout

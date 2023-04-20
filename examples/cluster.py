@@ -82,14 +82,13 @@ import sys
 import re
 from itertools import groupby
 from operator import attrgetter
-from distutils.version import StrictVersion
 
 from mininet.node import Node, Host, OVSSwitch, Controller
 from mininet.link import Link, Intf
 from mininet.net import Mininet
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo
-from mininet.util import quietRun, errRun, decode
+from mininet.util import quietRun, errRun, decode, StrictVersion
 from mininet.examples.clustercli import CLI
 from mininet.log import setLogLevel, debug, info, error
 from mininet.clean import addCleanupCallback
@@ -314,7 +313,7 @@ class RemoteOVSSwitch( RemoteMixin, OVSSwitch ):
         kwargs.update( batch=True )
         super( RemoteOVSSwitch, self ).__init__( *args, **kwargs )
 
-    def isOldOVS( self ):
+    def isOldOVS( self ):  # pylint: disable=arguments-differ
         "Is remote switch using an old OVS version?"
         cls = type( self )
         if self.server not in cls.OVSVersions:
@@ -376,8 +375,9 @@ class RemoteLink( Link ):
             Link.stop( self )
         self.tunnel = None
 
-    def makeIntfPair( self, intfname1, intfname2, addr1=None, addr2=None,
-                      node1=None, node2=None, deleteIntfs=True   ):
+    def makeIntfPair( self,  # pylint: disable=arguments-renamed
+                      intfname1, intfname2, addr1=None, addr2=None,
+                      node1=None, node2=None, deleteIntfs=True ):
         """Create pair of interfaces
             intfname1: name of interface 1
             intfname2: name of interface 2
@@ -781,7 +781,9 @@ class MininetCluster( Mininet ):
         "Popen() for server connections"
         assert self  # please pylint
         old = signal( SIGINT, SIG_IGN )
+        # pylint: disable=consider-using-with
         conn = Popen( cmd, stdin=PIPE, stdout=PIPE, close_fds=True )
+        # pylint: enable=consider-using-with
         signal( SIGINT, old )
         return conn
 
