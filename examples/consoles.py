@@ -69,7 +69,10 @@ class Console( Frame ):
         self.bindEvents()
         self.sendCmd( 'export TERM=dumb' )
 
-        self.outputHook = None
+        def outputHook( _obj, _text):
+            return True
+
+        self.outputHook = outputHook
 
     def makeWidgets( self ):
         "Make a label, a text area, and a scroll bar."
@@ -111,10 +114,8 @@ class Console( Frame ):
         self.text.insert( 'end', text )
         self.text.mark_set( 'insert', 'end' )
         self.text.see( 'insert' )
-        outputHook = lambda x, y: True  # make pylint happier
-        if self.outputHook:
-            outputHook = self.outputHook
-        outputHook( self, text )
+        if callable( self.outputHook ):
+            self.outputHook( self, text )
 
     def handleKey( self, event ):
         "If it's an interactive command, send it to the node."
@@ -294,10 +295,10 @@ class ConsoleApp( Frame ):
             'switches': 'Switch',
             'controllers': 'Controller'
         }
-        for name in titles:
+        for name, title in titles.items():
             nodes = getattr( net, name )
             frame, consoles = self.createConsoles(
-                cframe, nodes, width, titles[ name ] )
+                cframe, nodes, width, title )
             self.consoles[ name ] = Object( frame=frame, consoles=consoles )
         self.selected = None
         self.select( 'hosts' )

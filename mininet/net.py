@@ -201,7 +201,7 @@ class Mininet( object ):
             sleep( delay )
             time += delay
         warn( 'Timed out after %d seconds\n' % time )
-        for switch in remaining:
+        for switch in remaining.copy():
             if not switch.connected():
                 warn( 'Warning: %s is not connected to a controller\n'
                       % switch.name )

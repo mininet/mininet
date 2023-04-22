@@ -53,9 +53,11 @@ class TorusTopo( Topo ):
             raise Exception( 'Please use 3x3 or greater for compatibility '
                              'with 2.1' )
         if n == 1:
-            genHostName = lambda loc, k: 'h%s' % ( loc )
+            def genHostName( loc, _k ):
+                return 'h%s' % ( loc )
         else:
-            genHostName = lambda loc, k: 'h%sx%d' % ( loc, k )
+            def genHostName( loc, k ):
+                return 'h%sx%d' % ( loc, k )
 
         hosts, switches, dpid = {}, {}, 0
         # Create and wire interior

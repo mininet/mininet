@@ -46,6 +46,7 @@ if Python3:
         "Encode buffer for Python 3"
         return buf.encode( Encoding )
     getincrementaldecoder = codecs.getincrementaldecoder( Encoding )
+
 else:
     decode, encode = NullCodec.decode, NullCodec.encode
 
@@ -54,11 +55,16 @@ else:
         return NullCodec
 
 try:
-    # pylint: disable=import-error
-    oldpexpect = None
-    import pexpect as oldpexpect
+    import packaging.version  # replacement for distutils.version
+    StrictVersion = packaging.version.parse
+except ImportError:  # python2.7 lacks ModuleNotFoundError
+    import distutils.version  # pylint: disable=deprecated-module
+    StrictVersion = distutils.version.StrictVersion
 
-    # pylint: enable=import-error
+try:
+    oldpexpect = None
+    import pexpect as oldpexpect  # pylint: disable=import-error
+
     class Pexpect( object ):
         "Custom pexpect that is compatible with str"
         @staticmethod
@@ -97,11 +103,12 @@ def oldQuietRun( *cmd ):
         cmd = cmd[ 0 ]
         if isinstance( cmd, BaseString ):
             cmd = cmd.split( ' ' )
-    popen = Popen( cmd, stdout=PIPE, stderr=STDOUT )
+    out = ''
+    popen = Popen(  # pylint: disable=consider-using-with
+        cmd, stdout=PIPE, stderr=STDOUT )
     # We can't use Popen.communicate() because it uses
     # select(), which can't handle
     # high file descriptor numbers! poll() can, however.
-    out = ''
     readable = poll()
     readable.register( popen.stdout )
     while True:
@@ -142,6 +149,7 @@ def errRun( *cmd, **kwargs ):
     elif isinstance( cmd, list ) and shell:
         cmd = " ".join( arg for arg in cmd )
     debug( '*** errRun:', cmd, '\n' )
+    # pylint: disable=consider-using-with
     popen = Popen( cmd, stdout=PIPE, stderr=stderr, shell=shell )
     # We use poll() because select() doesn't work with large fd numbers,
     # and thus communicate() doesn't work either

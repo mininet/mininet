@@ -83,9 +83,8 @@ def linearBandwidthTest( lengths ):
     output = quietRun( 'sysctl -w net.ipv4.tcp_congestion_control=reno' )
     assert 'reno' in output
 
-    for datapath in switches:
+    for datapath, Switch in switches.items():
         info( "*** testing", datapath, "datapath\n" )
-        Switch = switches[ datapath ]
         results[ datapath ] = []
         link = partial( TCLink, delay='30ms', bw=100 )
         net = Mininet( topo=topo, switch=Switch,

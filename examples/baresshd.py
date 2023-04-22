@@ -27,9 +27,8 @@ h1.setIP( '10.0.0.1', 8 )
 root.setIP( '10.0.0.2', 8 )
 
 info( "*** Creating banner file\n" )
-f = open( '/tmp/%s.banner' % h1.name, 'w' )
-f.write( 'Welcome to %s at %s\n' % ( h1.name, h1.IP() ) )
-f.close()
+with open( '/tmp/%s.banner' % h1.name, 'w' ) as f:
+    f.write( 'Welcome to %s at %s\n' % ( h1.name, h1.IP() ) )
 
 info( "*** Running sshd\n" )
 cmd = '/usr/sbin/sshd -o UseDNS=no -u0 -o "Banner /tmp/%s.banner"' % h1.name

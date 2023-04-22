@@ -10,10 +10,9 @@ import os
 import re
 import unittest
 
-from distutils.version import StrictVersion
 from sys import stdout
 
-from mininet.util import quietRun, pexpect
+from mininet.util import quietRun, pexpect, StrictVersion
 from mininet.clean import cleanup
 
 

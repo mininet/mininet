@@ -150,7 +150,7 @@ class CLI( Cmd ):
         '  mininet> xterm h2\n\n'
     )
 
-    def do_help( self, line ):  # pylint: disable=arguments-differ
+    def do_help( self, line ):  # pylint: disable=arguments-renamed
         "Describe available CLI commands."
         Cmd.do_help( self, line )
         if line == '':
@@ -352,13 +352,13 @@ class CLI( Cmd ):
             error( 'usage: source <file>\n' )
             return
         try:
-            self.inputFile = open( args[ 0 ] )
-            while True:
-                line = self.inputFile.readline()
-                if len( line ) > 0:
-                    self.onecmd( line )
-                else:
-                    break
+            with open( args[ 0 ] ) as self.inputFile:
+                while True:
+                    line = self.inputFile.readline()
+                    if len( line ) > 0:
+                        self.onecmd( line )
+                    else:
+                        break
         except IOError:
             error( 'error reading file %s\n' % args[ 0 ] )
         self.inputFile.close()
@@ -456,12 +456,14 @@ class CLI( Cmd ):
             try:
                 bothPoller.poll()
                 # XXX BL: this doesn't quite do what we want.
+                # pylint: disable=condition-evals-to-constant
                 if False and self.inputFile:
                     key = self.inputFile.read( 1 )
                     if key != '':
                         node.write( key )
                     else:
                         self.inputFile = None
+                # pylint: enable=condition-evals-to-constant
                 if isReadable( self.inPoller ):
                     key = self.stdin.read( 1 )
                     node.write( key )

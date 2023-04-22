@@ -57,7 +57,6 @@ import pty
 import re
 import signal
 import select
-from distutils.version import StrictVersion
 from re import findall
 from subprocess import Popen, PIPE
 from sys import exit  # pylint: disable=redefined-builtin
@@ -66,7 +65,8 @@ from time import sleep
 from mininet.log import info, error, warn, debug
 from mininet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups, BaseString, decode,
-                           encode, getincrementaldecoder, Python3, which )
+                           encode, getincrementaldecoder, Python3, which,
+                           StrictVersion )
 from mininet.moduledeps import moduleDeps, pathCheck, TUN
 from mininet.link import Link, Intf, TCIntf, OVSIntf
 
@@ -219,7 +219,7 @@ class Node( object ):
             params: parameters to Popen()"""
         # Leave this is as an instance method for now
         assert self
-        popen = Popen( cmd, **params )
+        popen = Popen( cmd, **params )  # pylint: disable=consider-using-with
         debug( '_popen', cmd, popen.pid )
         return popen
 
