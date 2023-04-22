@@ -131,7 +131,7 @@ class testWalkthrough( unittest.TestCase ):
                 ifcount += 1
             else:
                 break
-        self.assertTrue( ifcount <= 3, 'Missing interfaces on s1')
+        self.assertTrue( ifcount >= 3, 'Missing interfaces on s1')
         # h1 ps
         p.sendline( "h1 ps -a | egrep -v 'ps|grep'" )
         p.expect( self.prompt )
