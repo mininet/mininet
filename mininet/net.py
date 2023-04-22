@@ -782,11 +782,10 @@ class Mininet( object ):
         return self.pingFull( hosts=hosts )
 
     @staticmethod
-    def _iperfVals( iperfcsv, serverip, _l4Type='TCP' ):
+    def _iperfVals( iperfcsv, serverip ):
         """Return iperf CSV as dict
            iperfcsv: iperf -y C output
            serverip: iperf server IP address
-           l4Type: TCP|UDP
         """
         fields = 'date cip cport sip sport ipver interval sent rate'
         lines = iperfcsv.strip().split('\n')
