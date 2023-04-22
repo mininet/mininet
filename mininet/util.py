@@ -5,6 +5,7 @@ import os
 import re
 import sys
 
+from collections import namedtuple
 from fcntl import fcntl, F_GETFL, F_SETFL
 from functools import partial
 from os import O_NONBLOCK
@@ -126,6 +127,8 @@ def oldQuietRun( *cmd ):
 # This is a bit complicated, but it enables us to
 # monitor command output as it is happening
 
+CmdResult = namedtuple( 'CmdResult', 'out err ret' )
+
 # pylint: disable=too-many-branches,too-many-statements
 def errRun( *cmd, **kwargs ):
     """Run a command and return stdout, stderr and return code
@@ -194,7 +197,8 @@ def errRun( *cmd, **kwargs ):
     if stderr == PIPE:
         popen.stderr.close()
     debug( out, err, returncode )
-    return out, err, returncode
+    return CmdResult( out, err, returncode )
+
 # pylint: enable=too-many-branches
 
 def errFail( *cmd, **kwargs ):
@@ -203,11 +207,11 @@ def errFail( *cmd, **kwargs ):
     if ret:
         raise Exception( "errFail: %s failed with return code %s: %s"
                          % ( cmd, ret, err ) )
-    return out, err, ret
+    return CmdResult( out, err, ret )
 
 def quietRun( cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
-    return errRun( cmd, stderr=STDOUT, **kwargs )[ 0 ]
+    return errRun( cmd, stderr=STDOUT, **kwargs ).out
 
 def which(cmd, **kwargs ):
     "Run a command and return merged stdout and stderr"
@@ -545,18 +549,25 @@ def fixLimits():
               "Mininet's performance may be affected.\n" )
     # pylint: enable=broad-except
 
-
-def mountCgroups():
-    "Make sure cgroups file system is mounted"
-    mounts = quietRun( 'grep cgroup /proc/mounts' )
-    cgdir = '/sys/fs/cgroup'
-    csdir = cgdir + '/cpuset'
-    if ('cgroup %s' % cgdir not in mounts and
-            'cgroups %s' % cgdir not in mounts):
-        raise Exception( "cgroups not mounted on " + cgdir )
-    if 'cpuset %s' % csdir not in mounts:
-        errRun( 'mkdir -p ' + csdir )
-        errRun( 'mount -t cgroup -ocpuset cpuset ' + csdir )
+def mountCgroups( cgcontrol='cpu cpuacct cpuset' ):
+    """Mount cgroupfs if needed and return cgroup version
+       cgcontrol: cgroup controllers to check ('cpu cpuacct cpuset')
+       Returns: 'cgroup' | 'cgroup2' """
+    # Try to read the cgroup controllers in cgcontrol
+    cglist = cgcontrol.split()
+    paths = ' '.join( '-g ' + c for c in cglist )
+    cmd = 'cgget -n %s /' % paths
+    result = errRun( cmd )
+    # If it failed, mount cgroupfs and retry
+    if result.ret or result.err or any(
+            c not in result.out for c in cglist ):
+        errFail( 'cgroupfs-mount' )
+        result = errRun( cmd )
+        errFail( cmd )
+    # cpu.cfs_period_us is used for cgroup but not cgroup2
+    if 'cpu.cfs_period_us' in result.out:
+        return 'cgroup'
+    return 'cgroup2'
 
 def natural( text ):
     "To sort sanely/alphabetically: sorted( l, key=natural )"

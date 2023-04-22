@@ -68,11 +68,16 @@ def bwtest( cpuLimits, period_us=100000, seconds=10 ):
             # the client's buffer fill rate
             popen = server.popen( 'iperf -yc -s -p 5001' )
             waitListening( client, server, 5001 )
-            # ignore empty result from waitListening/telnet
-            popen.stdout.readline()
             client.cmd( 'iperf -yc -t %s -c %s' % ( seconds, server.IP() ) )
-            result = decode( popen.stdout.readline() ).split( ',' )
-            bps = float( result[ -1 ] )
+            # ignore empty result from waitListening/telnet for old iperf
+            svals = {}
+            while not svals or int( svals[ 'rate' ] ) == 0:
+                line = decode( popen.stdout.readline() )
+                # Probably shouldn't depend on an internal method, but
+                # this is the easiest way
+                svals = Mininet._iperfVals(  # pylint: disable=protected-access
+                    line, server.IP() )
+            bps = float( svals[ 'rate' ] )
             popen.terminate()
             net.stop()
             updated = results.get( sched, [] )

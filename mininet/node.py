@@ -708,20 +708,20 @@ class CPULimitedHost( Host ):
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
-        cmd = 'cgset -r %s.%s=%s /%s' % (
-            resource, param, value, self.name )
-        quietRun( cmd )
-        nvalue = int( self.cgroupGet( param, resource ) )
-        if nvalue != value:
+        cmd = [ 'cgset', '-r', "%s.%s=%s" % (
+            resource, param, value), '/' + self.name ]
+        errFail( cmd )
+        nvalue = self.cgroupGet( param, resource )
+        if nvalue != str( value ):
             error( '*** error: cgroupSet: %s set to %s instead of %s\n'
                    % ( param, nvalue, value ) )
         return nvalue
 
     def cgroupGet( self, param, resource='cpu' ):
         "Return value of cgroup parameter"
-        cmd = 'cgget -r %s.%s /%s' % (
-            resource, param, self.name )
-        return int( quietRun( cmd ).split()[ -1 ] )
+        pname = '%s.%s' % ( resource, param )
+        cmd = 'cgget -n -r %s /%s' % ( pname, self.name )
+        return quietRun( cmd )[len(pname)+1:].strip()
 
     def cgroupDel( self ):
         "Clean up our cgroup"
@@ -788,6 +788,8 @@ class CPULimitedHost( Host ):
     def cfsInfo( self, f ):
         "Internal method: return parameters for CFS bandwidth"
         pstr, qstr = 'cfs_period_us', 'cfs_quota_us'
+        if self.cgversion == 'cgroup2':
+            pstr, qstr = 'max', ''
         # CFS uses wall clock time for period and CPU time for quota.
         quota = int( self.period_us * f * numCores() )
         period = self.period_us
@@ -797,7 +799,7 @@ class CPULimitedHost( Host ):
             period = int( quota / f / numCores() )
         # Reset to unlimited on negative quota
         if quota < 0:
-            quota = -1
+            quota = 'max' if self.cgversion == 'cgroup2' else -1
         return pstr, qstr, period, quota
 
     # BL comment:
@@ -827,12 +829,16 @@ class CPULimitedHost( Host ):
         else:
             return
         # Set cgroup's period and quota
-        setPeriod = self.cgroupSet( pstr, period )
-        setQuota = self.cgroupSet( qstr, quota )
+        if self.cgversion == 'cgroup':
+            setPeriod = self.cgroupSet( pstr, period )
+            setQuota = self.cgroupSet( qstr, quota )
+        else:
+            setQuota, setPeriod = self.cgroupSet(
+                    pstr, '%s %s' % (quota, period) ).split()
         if sched == 'rt':
             # Set RT priority if necessary
             sched = self.chrt()
-        info( '(%s %d/%dus) ' % ( sched, setQuota, setPeriod ) )
+        info( '(%s %s/%dus) ' % ( sched, setQuota, int( setPeriod ) ) )
 
     def setCPUs( self, cores, mems=0 ):
         "Specify (real) cores that our cgroup can run on"
@@ -864,11 +870,12 @@ class CPULimitedHost( Host ):
         return r
 
     inited = False
+    cgversion = 'cgroup2'
 
     @classmethod
     def init( cls ):
         "Initialization for CPULimitedHost class"
-        mountCgroups()
+        cls.cgversion = mountCgroups()
         cls.inited = True
 
 

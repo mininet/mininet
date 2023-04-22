@@ -789,8 +789,11 @@ class Mininet( object ):
         """
         fields = 'date cip cport sip sport ipver interval sent rate'
         lines = iperfcsv.strip().split('\n')
-        if lines:
-            line = lines[ -1 ].split( ',' )
+        svals = {}
+        for line in lines:
+            if ',' not in line:
+                continue
+            line = line.split( ',' )
             svals = dict( zip( fields.split(), line ) )
             # Return client in cip:cport, server in sip:sport
             if svals[ 'cip' ] == serverip:
@@ -798,8 +801,7 @@ class Mininet( object ):
                     svals[ 'sip' ], svals[ 'cip' ] )
                 svals[ 'cport' ], svals[ 'sport' ] = (
                     svals[ 'sport' ], svals[ 'cport' ] )
-            return svals
-        return {}
+        return svals
 
     # XXX This should be cleaned up
 
