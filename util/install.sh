@@ -180,7 +180,7 @@ function mn_deps {
         if [ "$DIST" = "Ubuntu" -a `expr $RELEASE '>=' 20.04` = "1" ]; then
                 pf=pyflakes3
         fi
-        # Debian 11 "bullseye" renamed 
+        # Debian 11 "bullseye" renamed
         # * pep8 to python3-pep8
         # * pyflakes to pyflakes3
         if [ "$DIST" = "Debian" -a `expr $RELEASE '>=' 11` = "1" ]; then
@@ -205,6 +205,7 @@ function mn_deps {
         fi
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
+        $install cgroupfs-mount
     fi
 
     echo "Installing Mininet core"
