@@ -705,3 +705,26 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
         time += .5
         result = runCmd( cmd )
     return True
+
+def unitScale( num, prefix='' ):
+    "Return unit scale prefix and factor"
+    scale = 'kMGTP'
+    if prefix:
+        pos = scale.lower().index( prefix.lower() )
+        return prefix, float( 10**(3*(pos+1)) )
+    num, prefix, factor = float( num ), '', 1
+    for i, c in enumerate(scale, start=1):
+        f = 10**(3*i)
+        if num < f:
+            break
+        prefix, factor = c, f
+    return prefix, float( factor )
+
+def fmtBps( bps, prefix='', fmt='%.1f %sbits/sec' ):
+    """Return bps as iperf-style formatted rate string
+       prefix: lock to specific prefix (k, M, G, ...)
+       fmt: default format string for bps, prefix"""
+    bps = float( bps )
+    prefix, factor = unitScale( bps, prefix )
+    bps /= factor
+    return fmt % ( bps, prefix)
