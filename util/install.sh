@@ -17,8 +17,8 @@ MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
-  *) BUILD_DIR=$BUILD_DIR;;
+    $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+    *) BUILD_DIR=$BUILD_DIR;;
 esac
 
 # Location of CONFIG_NET_NS-enabled kernel(s)
@@ -29,7 +29,7 @@ KERNEL_LOC=http://www.openflow.org/downloads/mininet
 DIST=Unknown
 RELEASE=Unknown
 CODENAME=Unknown
-ARCH=`uname -m`
+ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
 if [ "$ARCH" = "i686" ]; then ARCH="i386"; fi
 
@@ -41,6 +41,7 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
     remove='sudo DEBIAN_FRONTEND=noninteractive apt-get -y -q remove'
     pkginst='sudo dpkg -i'
     update='sudo apt-get'
+    sudo apt-get update
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
         $install lsb-release
@@ -65,19 +66,19 @@ if [ "$DIST" = "SUSE Linux" ]; then
     pkginst='sudo rpm -ivh'
     # Prereqs for this script
     if ! which lsb_release &> /dev/null; then
-		$install openSUSE-release
+        $install openSUSE-release
     fi
 fi
 if which lsb_release &> /dev/null; then
-    DIST=`lsb_release -is`
-    RELEASE=`lsb_release -rs`
-    CODENAME=`lsb_release -cs`
+    DIST=$(lsb_release -is)
+    RELEASE=$(lsb_release -rs)
+    CODENAME=$(lsb_release -cs)
 fi
 echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
 # Kernel params
 
-KERNEL_NAME=`uname -r`
+KERNEL_NAME=$(uname -r)
 KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 
 # Treat Raspbian as Debian
@@ -90,38 +91,46 @@ if ! echo $DIST | egrep "$DISTS" >/dev/null; then
 fi
 
 # More distribution info
-DIST_LC=`echo $DIST | tr [A-Z] [a-z]` # as lower case
+DIST_LC=$(echo $DIST | tr [A-Z] [a-z]) # as lower case
 
 
 # Determine whether version $1 >= version $2
 # usage: if version_ge 1.20 1.2.3; then echo "true!"; fi
 function version_ge {
     # sort -V sorts by *version number*
-    latest=`printf "$1\n$2" | sort -V | tail -1`
+    latest=$(printf "$1\n$2" | sort -V | tail -1)
     # If $1 is latest version, then $1 >= $2
     [ "$1" == "$latest" ]
 }
 
 # Attempt to detect Python version
 PYTHON=${PYTHON:-python}
+PRINTVERSION_INFO='import sys; print(sys.version_info)'
 PRINTVERSION='import sys; print(sys.version_info)'
 PYTHON_VERSION=unknown
-for python in $PYTHON python2 python3; do
-    if $python -c "$PRINTVERSION" |& grep 'major=2'; then
-        PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
+for python in python3 $PYTHON python2; do
+    PYTHON_VERSION=$($python -c "$PRINTVERSION")
+
+    if $python -c "$PRINTVERSION_INFO" |& grep 'major=2'; then
+        echo '=======================================================
+WARNING, using python2 for the installation!
+Python 2 is deprecated and you should install python 3.
+The installation will continue in 10 seconds.'
+        sleep 10
+        PYPKG=python
         break
-    elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
-        PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
+    elif $python -c "$PRINTVERSION_INFO" |& grep 'major=3'; then
+        PYPKG=python3
         break
     fi
 done
 if [ "$PYTHON_VERSION" == unknown ]; then
-    echo "Can't find a working python command ('$PYTHON' doesn't work.)"
+    echo "Can't find a working python command ('python3', 'python2' and '$PYTHON' didn't work.)"
     echo "You may wish to export PYTHON or install a working 'python'."
     exit 1
 fi
 
-echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
+echo "Detected Python (${PYPKG}) version ${PYTHON_VERSION}"
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
@@ -163,22 +172,22 @@ function mn_deps {
     echo "Installing Mininet dependencies"
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
-            iproute telnet python-setuptools libcgroup-tools \
+            iproute telnet ${PYPKG}-setuptools libcgroup-tools \
             ethtool help2man net-tools
-        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
-            ${PYPKG}-pexpect
+        $install ${PYPKG}-pyflakes ${PYPKG}-pylint \
+            ${PYPKG}-pep8-naming ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install gcc make socat psmisc xterm openssh iperf \
-			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
-			ethtool help2man python-pyflakes python3-pylint \
-                        python-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
+        $install gcc make socat psmisc xterm openssh iperf \
+            iproute2 telnet ${PYPKG}-setuptools libcgroup-tools \
+            ethtool help2man ${PYPKG}-pyflakes ${PYPKG}-pylint \
+            ${PYPKG}-pep8 ${PYPKG}-pexpect ${PYPKG}-tk
     else  # Debian/Ubuntu
         pf=pyflakes
         pep8=pep8
         # Starting around 20.04, installing pyflakes instead of pyflakes3
         # causes Python 2 to be installed, which is exactly NOT what we want.
-        if [ "$DIST" = "Ubuntu" -a `expr $RELEASE '>=' 20.04` = "1" ]; then
-                pf=pyflakes3
+        if [ "$DIST" = "Ubuntu" -a $(expr $RELEASE '>=' 20.04) = "1" ]; then
+            pf=pyflakes3
         fi
         # Debian 11 "bullseye" renamed
         # * pep8 to python3-pep8
@@ -189,18 +198,18 @@ function mn_deps {
         fi
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
-                 ethtool help2man $pf pylint $pep8 \
-                 net-tools \
-                 ${PYPKG}-pexpect ${PYPKG}-tk
+            ethtool help2man $pf pylint $pep8 \
+            net-tools \
+            ${PYPKG}-pexpect ${PYPKG}-tk
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
-        if ! ${PYTHON} -m pip -V; then
+        if ! ${PYPKG} -m pip -V; then
             if [ $PYTHON_VERSION == 2 ]; then
-                wget https://bootstrap.pypa.io/pip/2.6/get-pip.py
+                wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
             else
                 wget https://bootstrap.pypa.io/get-pip.py
             fi
-            sudo ${PYTHON} get-pip.py
+            sudo ${PYPKG} get-pip.py
             rm get-pip.py
         fi
         $install iproute2 || $install iproute
@@ -210,7 +219,7 @@ function mn_deps {
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
-    sudo PYTHON=${PYTHON} make install
+    sudo PYTHON=${PYPKG} make install
     popd
 }
 
@@ -221,7 +230,7 @@ function mn_doc {
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
-    sudo pip install doxypy
+    sudo ${PYPKG} -m pip install doxypy
 }
 
 # The following will cause a full OF install, covering:
@@ -234,8 +243,8 @@ function of {
     $install autoconf automake libtool make gcc
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install git pkgconfig glibc-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-       $install git pkgconfig glibc-devel
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install git pkgconfig glibc-devel
     else
         $install git-core autotools-dev pkg-config libc6-dev
     fi
@@ -303,8 +312,8 @@ function install_wireshark {
         echo "Installing Wireshark"
         if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
             $install wireshark wireshark-gnome
-		elif [ "$DIST" = "SUSE LINUX"  ]; then
-			$install wireshark
+        elif [ "$DIST" = "SUSE LINUX"  ]; then
+            $install wireshark
         else
             $install wireshark tshark
         fi
@@ -316,7 +325,7 @@ function install_wireshark {
     cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
-    WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
+    WSVER=$(wireshark -v | egrep -o '[0-9\.]+' | head -1)
     if version_ge $WSVER 1.12; then
         echo "Wireshark version $WSVER >= 1.12 - returning"
         return
@@ -330,7 +339,7 @@ function install_wireshark {
 
     # Copy into plugin directory
     # libwireshark0/ on 11.04; libwireshark1/ on later
-    WSDIR=`find /usr/lib -type d -name 'libwireshark*' | head -1`
+    WSDIR=$(find /usr/lib -type d -name 'libwireshark*' | head -1)
     WSPLUGDIR=$WSDIR/plugins/
     PLUGIN=loxi_output/wireshark/openflow.lua
     sudo cp $PLUGIN $WSPLUGDIR
@@ -378,18 +387,18 @@ function ubuntuOvs {
     # Remove any old packages
 
     $remove openvswitch-common openvswitch-datapath-dkms openvswitch-pki openvswitch-switch \
-            openvswitch-controller || true
+        openvswitch-controller || true
 
     # Get build deps
     $install build-essential fakeroot debhelper autoconf automake libssl-dev \
-             pkg-config bzip2 openssl ${PYPKG}-all procps ${PYPKG}-qt4 \
-             ${PYPKG}-zopeinterface ${PYPKG}-twisted-conch dkms dh-python dh-autoreconf \
-             uuid-runtime
+        pkg-config bzip2 openssl ${PYPKG}-all procps ${PYPKG}-qt4 \
+        ${PYPKG}-zopeinterface ${PYPKG}-twisted-conch dkms dh-python dh-autoreconf \
+        uuid-runtime
 
     # Build OVS
-    parallel=`grep processor /proc/cpuinfo | wc -l`
+    parallel=$(grep processor /proc/cpuinfo | wc -l)
     cd $BUILD_DIR/openvswitch/openvswitch-$OVS_RELEASE
-            DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
+    DEB_BUILD_OPTIONS='parallel=$parallel nocheck' fakeroot debian/rules binary
     cd ..
     for pkg in common datapath-dkms pki switch; do
         pkg=openvswitch-${pkg}_$OVS_RELEASE*.deb
@@ -465,21 +474,21 @@ function ovs {
     fi
     # This service seems to hang on 20.04
     if systemctl list-units | \
-            grep status netplan-ovs-cleanup.service>&/dev/null; then
-        echo 'TimeoutSec=10' | sudo EDITOR='tee -a' \
-        sudo systemctl edit --full netplan-ovs-cleanup.service
+        grep status netplan-ovs-cleanup.service>&/dev/null; then
+            echo 'TimeoutSec=10' | sudo EDITOR='tee -a' \
+                sudo systemctl edit --full netplan-ovs-cleanup.service
     fi
 }
 
 function remove_ovs {
-    pkgs=`dpkg --get-selections | grep openvswitch | awk '{ print $1;}'`
+    pkgs=$(dpkg --get-selections | grep openvswitch | awk '{ print $1;}')
     echo "Removing existing Open vSwitch packages:"
     echo $pkgs
     if ! $remove $pkgs; then
         echo "Not all packages removed correctly"
     fi
     # For some reason this doesn't happen
-    if scripts=`ls /etc/init.d/*openvswitch* 2>/dev/null`; then
+    if scripts=$(ls /etc/init.d/*openvswitch* 2>/dev/null); then
         echo $scripts
         for s in $scripts; do
             s=$(basename $s)
@@ -520,7 +529,7 @@ function ryu {
     echo "Installing RYU..."
 
     # install Ryu dependencies"
-    $install autoconf automake g++ libtool python make
+    $install autoconf automake g++ libtool ${PYPKG} make
     if [ "$DIST" = "Ubuntu" -o "$DIST" = "Debian" ]; then
         $install gcc ${PYPKG}-pip ${PYPKG}-dev libffi-dev libssl-dev \
             libxml2-dev libxslt1-dev zlib1g-dev
@@ -528,16 +537,16 @@ function ryu {
 
     # fetch RYU
     cd $BUILD_DIR/
-    git clone https://github.com/osrg/ryu.git ryu
+    git clone https://github.com/faucetsdn/ryu.git ryu
     cd ryu
 
     # install ryu
-    sudo pip install -r tools/pip-requires -r tools/optional-requires \
+    sudo ${PYPKG} -m pip install -r tools/pip-requires -r tools/optional-requires \
         -r tools/test-requires
-    sudo python setup.py install
+    sudo ${PYPKG} setup.py install
 
     # Add symbolic link to /usr/bin
-    sudo ln -s ./bin/ryu-manager /usr/local/bin/ryu-manager
+    sudo ln -sf ./bin/ryu-manager /usr/local/bin/ryu-manager
 }
 
 # Install NOX with tutorial files
@@ -545,8 +554,8 @@ function nox {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
-		swig libssl-dev make
+    $install autoconf automake g++ libtool ${PYPKG} ${PYPKG}-twisted \
+        swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
     elif [ "$DIST" = "Ubuntu" ]; then
@@ -593,7 +602,7 @@ function nox13 {
     echo "Installing NOX w/tutorial files..."
 
     # Install NOX deps:
-    $install autoconf automake g++ libtool python ${PYPKG}-twisted \
+    $install autoconf automake g++ libtool ${PYPKG} ${PYPKG}-twisted \
         swig libssl-dev make
     if [ "$DIST" = "Debian" ]; then
         $install libboost1.35-dev
@@ -635,7 +644,7 @@ function oftest {
 
     # Install deps:
     $install tcpdump
-    $install ${PYPKG}-scapy || sudo $PYTHON -m pip install scapy
+    $install ${PYPKG}-scapy || sudo ${PYPKG} -m pip install scapy
 
     # Install oftest:
     cd $BUILD_DIR/
@@ -648,8 +657,8 @@ function cbench {
 
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
-	elif [ "$DIST" = "SUSE LINUX"  ]; then
-		$install net-snmp-devel libpcap-devel libconfig-devel
+    elif [ "$DIST" = "SUSE LINUX"  ]; then
+        $install net-snmp-devel libpcap-devel libconfig-devel
     else
         $install libsnmp-dev libpcap-dev libconfig-dev
     fi
@@ -753,10 +762,10 @@ function modprobe {
     echo "Setting up modprobe for OVS kmod..."
     set +o nounset
     if [ -z "$OVS_KMODS" ]; then
-      echo "OVS_KMODS not set. Aborting."
+        echo "OVS_KMODS not set. Aborting."
     else
-      sudo cp $OVS_KMODS $DRIVERS_DIR
-      sudo depmod -a ${KERNEL_NAME}
+        sudo cp $OVS_KMODS $DRIVERS_DIR
+        sudo depmod -a ${KERNEL_NAME}
     fi
     set -o nounset
 }
@@ -881,44 +890,43 @@ if [ $# -eq 0 ]
 then
     all
 else
-    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION
-    do
-      case $OPTION in
-      a)    all;;
-      b)    cbench;;
-      c)    kernel_clean;;
-      d)    vm_clean;;
-      e)    mn_doc;;
-      f)    case $OF_VERSION in
-            1.0) of;;
-            1.3) of13;;
-            *)  echo "Invalid OpenFlow version $OF_VERSION";;
-            esac;;
-      h)    usage;;
-      i)    ivs;;
-      k)    kernel;;
-      m)    modprobe;;
-      n)    mn_deps;;
-      p)    pox;;
-      r)    remove_ovs;;
-      s)    mkdir -p $OPTARG; # ensure the directory is created
-            BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path
-            echo "Dependency installation directory: $BUILD_DIR";;
-      t)    vm_other;;
-      v)    ovs;;
-      V)    OVS_RELEASE=$OPTARG;
-            ubuntuOvs;;
-      w)    install_wireshark;;
-      x)    case $OF_VERSION in
-            1.0) nox;;
-            1.3) nox13;;
-            *)  echo "Invalid OpenFlow version $OF_VERSION";;
-            esac;;
-      y)    ryu;;
-      0)    OF_VERSION=1.0;;
-      3)    OF_VERSION=1.3;;
-      ?)    usage;;
-      esac
+    while getopts 'abcdefhikmnprs:tvV:wxy03' OPTION; do
+        case $OPTION in
+            a)    all;;
+            b)    cbench;;
+            c)    kernel_clean;;
+            d)    vm_clean;;
+            e)    mn_doc;;
+            f)    case $OF_VERSION in
+                      1.0) of;;
+                      1.3) of13;;
+                      *)  echo "Invalid OpenFlow version $OF_VERSION";;
+                  esac;;
+            h)    usage;;
+            i)    ivs;;
+            k)    kernel;;
+            m)    modprobe;;
+            n)    mn_deps;;
+            p)    pox;;
+            r)    remove_ovs;;
+            s)    mkdir -p $OPTARG; # ensure the directory is created
+                  BUILD_DIR="$( cd -P "$OPTARG" && pwd )"; # get the full path
+                  echo "Dependency installation directory: $BUILD_DIR";;
+            t)    vm_other;;
+            v)    ovs;;
+            V)    OVS_RELEASE=$OPTARG;
+                ubuntuOvs;;
+            w)    install_wireshark;;
+            x)    case $OF_VERSION in
+                    1.0) nox;;
+                    1.3) nox13;;
+                    *)  echo "Invalid OpenFlow version $OF_VERSION";;
+                  esac;;
+            y)    ryu;;
+            0)    OF_VERSION=1.0;;
+            3)    OF_VERSION=1.3;;
+            ?)    usage;;
+        esac
     done
     shift $(($OPTIND - 1))
 fi
