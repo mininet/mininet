@@ -9,8 +9,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
-        python-version: [3.x, 2.x]
+        include:
+          - os: ubuntu-22.04
+            python-version: 3.x
+          - os: ubuntu-20.04
+            python-version: 3.x
+          - os: ubuntu-20.04
+            python-version: 2.x
     steps:
       - name: Check out Mininet source
         uses: actions/checkout@v2
