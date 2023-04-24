@@ -165,7 +165,7 @@ function mn_deps {
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
             ethtool help2man net-tools
-        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
+        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming
             ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
@@ -190,19 +190,20 @@ function mn_deps {
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint $pep8 \
-                 net-tools \
-                 ${PYPKG}-pexpect ${PYPKG}-tk
+                 net-tools ${PYPKG}-tk
+
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
         if ! ${PYTHON} -m pip -V; then
             if [ $PYTHON_VERSION == 2 ]; then
-                wget https://bootstrap.pypa.io/pip/2.6/get-pip.py
+                wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
             else
                 wget https://bootstrap.pypa.io/get-pip.py
             fi
             sudo ${PYTHON} get-pip.py
             rm get-pip.py
         fi
+       ${python} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
         $install cgroupfs-mount
@@ -221,7 +222,7 @@ function mn_doc {
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
     fi
-    sudo pip install doxypy
+    sudo pip2 install doxypy
 }
 
 # The following will cause a full OF install, covering:
