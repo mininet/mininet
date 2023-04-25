@@ -1,6 +1,7 @@
 "Library of potentially useful topologies for Mininet"
 
 from mininet.topo import Topo
+from mininet.nodelib import NAT
 from mininet.net import Mininet
 
 # The build() method is expected to do this:
@@ -80,5 +81,32 @@ class TorusTopo( Topo ):
                 sw3 = switches[ ( i + 1 ) % x, j ]
                 self.addLink( sw1, sw2 )
                 self.addLink( sw1, sw3 )
+
+def Natted( topoClass ):
+    "Return a natted Topo class based on topoClass"
+    class NattedTopo( topoClass ):
+        "Customized topology with attached NAT"
+        def build( self, *args, **kwargs ):
+            """Build topo with NAT attachment
+                natIP: local IP address of NAT node for routing ('10.0.0.254')
+                connect: switch to connect NAT node to ('s1')"""
+            self.natIP = kwargs.pop( 'natIP', '10.0.0.254')
+            self.connect = kwargs.pop( 'connect', 's1' )
+            self.hopts.update( defaultRoute='via ' + self.natIP )
+            super( NattedTopo, self ).build( *args, **kwargs )
+            nat1 = self.addNode( 'nat1', cls=NAT, ip=self.natIP,
+                                inNamespace=False )
+            self.addLink( self.connect, nat1 )
+    return NattedTopo
+
+
+def natted( topoClass, *args, **kwargs ):
+    """Create and invoke natted version of topoClass
+        natIP: local IP address of NAT node for routing ('10.0.0.254')
+        connect: switch to connect NAT node to ('s1')
+        usage: topo = natted( TreeTopo, depth=2, fanout=2 )"""
+    topoClass = Natted( topoClass )
+    return topoClass( *args, **kwargs )
+
 
 # pylint: enable=arguments-differ
