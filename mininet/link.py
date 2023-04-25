@@ -95,7 +95,7 @@ class Intf( object ):
                  self.ifconfig( 'hw', 'ether', macstr ) +
                  self.ifconfig( 'up' ) )
 
-    _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
+    _ipMatchRegex = re.compile( r'(?<=inet addr:)\d+\.\d+\.\d+\.\d+' )
     _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
 
     def updateIP( self ):
