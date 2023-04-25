@@ -449,6 +449,13 @@ class Mininet( object ):
             # it needs to be done somewhere.
         info( '\n' )
 
+    def configSwitches( self ):
+        "Configure a set of switches."
+        for switch in self.switches:
+            info( switch.name + ' ')
+            switch.configDefault()
+        info( '\n' )
+
     def buildFromTopo( self, topo=None ):
         """Build mininet from a topology object
            At the end of this function, everything should be connected
@@ -510,6 +517,8 @@ class Mininet( object ):
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
+        info( '*** Configuring switches\n' )
+        self.configSwitches()
         if self.xterms:
             self.startTerms()
         if self.autoStaticArp:

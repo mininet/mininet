@@ -942,6 +942,12 @@ class Switch( Node ):
         else:
             return Node.defaultIntf( self )
 
+    def configDefault( self ):
+        "Configure with switch default parameters"
+        for intf in self.intfList():
+            # Disable IPv6 on switch ports
+            intf.cmd('sysctl -w net.ipv6.conf.' + intf.name + '.disable_ipv6=1')
+
     def sendCmd( self, *cmd, **kwargs ):
         """Send command to Node.
            cmd: string"""
