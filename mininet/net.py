@@ -540,7 +540,7 @@ class Mininet( object ):
                 if src != dst:
                     src.setARP( ip=dst.IP(), mac=dst.MAC() )
 
-    def start( self ):
+    def start( self , switchControllerMap={}):
         "Start controller and switches."
         if not self.built:
             self.build()
@@ -549,10 +549,20 @@ class Mininet( object ):
             info( controller.name + ' ')
             controller.start()
         info( '\n' )
+        if switchControllerMap:
+            info( 'Custom Switch Controller map is provided and being used' )
+            self.switchControllerMap=switchControllerMap
         info( '*** Starting %s switches\n' % len( self.switches ) )
         for switch in self.switches:
             info( switch.name + ' ')
-            switch.start( self.controllers )
+            if switchControllerMap:
+                if type( switchControllerMap[switch.name] ) is list:
+                    controllers = switchControllerMap[switch.name]
+                else:
+                    controllers = [switchControllerMap[switch.name]]
+            else:
+                controllers=self.controllers
+            switch.start( controllers )
         started = {}
         for swclass, switches in groupby(
                 sorted( self.switches,
