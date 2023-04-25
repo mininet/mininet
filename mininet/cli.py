@@ -264,6 +264,26 @@ class CLI( Cmd ):
             error( 'invalid number of args: iperfudp bw src dst\n' +
                    'bw examples: 10M\n' )
 
+    def do_iperfmulti(self, line):
+        """TCP iperf test between a server and multiple clients 
+           Usage: iperfmulti server client1 client2 ... clientN"""
+        args = line.split()
+        if not args:
+            self.mn.iperfMulti()
+        elif len(args) < 2:
+            error('invalid number of args: iperfmulti server client1 ... clientN\n')
+        else:
+            hosts = []
+            err = False
+            for arg in args:
+                if arg not in self.mn:
+                    err = True
+                    ouput("node '%s' not in netwrok\n" % arg)
+                else:
+                    hosts.append(self.mn[arg])
+            if not err:
+                self.mn.iperfMulti( hosts )
+
     def do_intfs( self, _line ):
         "List interfaces."
         for node in self.mn.values():
