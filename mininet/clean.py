@@ -65,7 +65,10 @@ class Cleanup( object ):
         sh( 'killall -9 ' + zombies + ' 2> /dev/null' )
 
         # And kill off sudo mnexec
-        sh( 'pkill -9 -f "sudo mnexec"')
+        sh( 'pkill -9 -f "sudo mnexec"' )
+
+        # And kill off mn, mn doesn't exit when start twice "mn".
+        sh( 'pkill -9 -f "mn"' )
 
         info( "*** Removing junk from /tmp\n" )
         sh( 'rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log' )
