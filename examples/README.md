@@ -177,3 +177,17 @@ connectivity using `ping`, for different switch/datapath types.
 
 An example of how to subclass Host to use a VLAN on its primary interface.
 
+#### xiaecho.py:
+
+This example sets up a topology with 2 nodes, pre-configured with
+XIA Host Identifiers to test the XIA net-echo application.
+
+#### xiatunnel.py:
+
+The example creates a network for testing the communication
+of XIA hosts over an existing ipv4 network. The U4ID principal creates
+UDP sockets that carry the XIP packet as UDP/IP payload.
+
+#### xiazFilter.py:
+
+This example tests XIA multicasting with net-echo.

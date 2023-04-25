@@ -73,6 +73,10 @@ class Intf( object ):
         "Configure ourselves using ifconfig"
         return self.cmd( 'ifconfig', self.name, *args )
 
+    def xip( self, *args ):
+        "Configure the interface with XIDs"
+        return self.cmd( 'xip', *args )
+
     def setIP( self, ipstr, prefixLen=None ):
         """Set our IP address"""
         # This is a sign that we should perhaps rethink our prefix
@@ -97,6 +101,12 @@ class Intf( object ):
 
     _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
     _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
+
+    def setEthID( self ):
+        """Set the ether ID for the interface.
+           The ether principal is the only
+           interface bound principal of XIA so far."""
+        return self.xip( 'ether', 'addif', '%s-%s' % ( self.node, self.name ) )
 
     def updateIP( self ):
         "Return updated IP address based on ifconfig"

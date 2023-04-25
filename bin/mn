@@ -29,9 +29,9 @@ from mininet.clean import cleanup
 import mininet.cli
 from mininet.log import lg, LEVELS, info, debug, warn, error, output
 from mininet.net import Mininet, MininetWithControlNet, VERSION
-from mininet.node import ( Host, CPULimitedHost, Controller, OVSController,
-                           Ryu, NOX, RemoteController, findController,
-                           DefaultController, NullController,
+from mininet.node import ( Host, CPULimitedHost, XIAHost, Controller,
+                           OVSController, Ryu, NOX, RemoteController,
+                           findController, DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
 from mininet.nodelib import LinuxBridge
@@ -73,7 +73,8 @@ SWITCHES = { 'user': UserSwitch,
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
           'rt': specialClass( CPULimitedHost, defaults=dict( sched='rt' ) ),
-          'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
+          'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ),
+          'xia': XIAHost }
 
 CONTROLLERDEF = 'default'
 CONTROLLERS = { 'ref': Controller,
