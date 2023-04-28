@@ -22,6 +22,11 @@ jobs:
           # This seems too slow unfortunately:
           # sudo apt-get upgrade -y -qq
           PYTHON=${{ matrix.py }} util/install.sh -nv
+      - name: Disable slow udevd
+        run: sudo systemctl stop systemd-udevd
+             systemd-udevd-kernel.socket
+             systemd-udevd-control.socket
+             || echo "couldn't disable udevd"
       - name: Sanity test
         run: |
           export sudo="sudo env PATH=$PATH"
@@ -39,8 +44,8 @@ jobs:
           export sudo="sudo env PATH=$PATH"
           export PYTHON=${{ matrix.py }}
           $sudo $PYTHON mininet/test/runner.py -v
-      - name: Run examples tests (quick)
+      - name: Run examples tests
         run: |
           export sudo="sudo env PATH=$PATH"
           export PYTHON=${{ matrix.py }}
-          $sudo $PYTHON examples/test/runner.py -v -quick
+          $sudo $PYTHON examples/test/runner.py -v
