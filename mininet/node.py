@@ -685,8 +685,21 @@ class CPULimitedHost( Host ):
 
     "CPU limited host"
 
-    def __init__( self, name, sched='cfs', **kwargs ):
-        Host.__init__( self, name, **kwargs )
+    def __init__( self, name, sched='cfs', **params ):
+        Host.__init__( self, name, **params )
+        # BL: Setting the correct period/quota is tricky, particularly
+        # for RT. RT allows very small quotas, but the overhead
+        # seems to be high. CFS has a mininimum quota of 1 ms, but
+        # still does better with larger period values.
+        self.period_us = params.get( 'period_us', 100000 )
+        self.sched = sched
+        self.cgroupsInited = False
+        self.cgroup, self.rtprio = None, None
+
+    def initCgroups( self ):
+        "Deferred cgroup initialization"
+        if self.cgroupsInited:
+            return
         # Initialize class if necessary
         if not CPULimitedHost.inited:
             CPULimitedHost.init()
@@ -696,13 +709,7 @@ class CPULimitedHost( Host ):
         # We don't add ourselves to a cpuset because you must
         # specify the cpu and memory placement first
         errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid ) )
-        # BL: Setting the correct period/quota is tricky, particularly
-        # for RT. RT allows very small quotas, but the overhead
-        # seems to be high. CFS has a mininimum quota of 1 ms, but
-        # still does better with larger period values.
-        self.period_us = kwargs.get( 'period_us', 100000 )
-        self.sched = sched
-        if sched == 'rt':
+        if self.sched == 'rt':
             self.checkRtGroupSched()
             self.rtprio = 20
 
@@ -863,6 +870,7 @@ class CPULimitedHost( Host ):
            cores: (real) core(s) this host can run on
            params: parameters for Node.config()"""
         r = Node.config( self, **params )
+        self.initCgroups()
         # Was considering cpu={'cpu': cpu , 'sched': sched}, but
         # that seems redundant
         self.setParam( r, 'setCPUFrac', cpu=cpu )
@@ -877,6 +885,11 @@ class CPULimitedHost( Host ):
         "Initialization for CPULimitedHost class"
         cls.cgversion = mountCgroups()
         cls.inited = True
+
+    def unlimit( self ):
+        "Unlimit cpu for cfs"
+        if self.sched == 'cfs' and self.params.get( 'cpu', -1 ) != -1:
+            self.setCPUFrac( -1, sched=self.sched )
 
 
 # Some important things to note:

@@ -572,6 +572,10 @@ class Mininet( object ):
             info( controller.name + ' ' )
             controller.stop()
         info( '\n' )
+        # Unlimit cfs hosts to speed up shutdown
+        for h in self.hosts:
+            if hasattr( h, 'unlimit' ):
+                h.unlimit()
         if self.terms:
             info( '*** Stopping %i terms\n' % len( self.terms ) )
             self.stopXterms()
