@@ -49,13 +49,19 @@ def perfTest( lossy=True ):
     net.start()
     info( "Dumping host connections\n" )
     dumpNodeConnections(net.hosts)
-    info( "Testing bandwidth between h1 and h4\n" )
+    info( "Testing bandwidth between h1 and h4 (lossy=%s)\n" % lossy )
     h1, h4 = net.getNodeByName('h1', 'h4')
     net.iperf( ( h1, h4 ), l4Type='UDP' )
+    # Debugging
+    h1.cmd('jobs')
+    h4.cmd('jobs')
     net.stop()
 
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
+    # Debug for now
+    if 'testmode' in argv:
+        setLogLevel( 'debug' )
     # Prevent test_simpleperf from failing due to packet loss
     perfTest( lossy=( 'testmode' not in argv ) )
