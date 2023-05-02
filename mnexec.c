@@ -24,6 +24,9 @@
 #include <sched.h>
 #include <ctype.h>
 #include <sys/mount.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #if !defined(VERSION)
 #define VERSION "(devel)"
@@ -95,19 +98,23 @@ void cgroup(char *gname)
 int main(int argc, char *argv[])
 {
     int c;
-    int fd;
+    DIR *dir;
+    struct dirent *de;
     char path[PATH_MAX];
     int nsid;
     int pid;
     char *cwd = get_current_dir_name();
-
     static struct sched_param sp;
+
     while ((c = getopt(argc, argv, "+cdnpa:g:r:vh")) != -1)
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
-            for (fd = getdtablesize(); fd > 2; fd--)
-                close(fd);
+            dir = opendir("/proc/self/fd");
+            while ((de = readdir(dir))) {
+                int fd = atoi(de->d_name);
+                if (fd>2) close(fd);
+            }
             break;
         case 'd':
             /* detach from tty */
