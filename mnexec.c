@@ -98,6 +98,7 @@ void cgroup(char *gname)
 int main(int argc, char *argv[])
 {
     int c;
+    int fd;
     DIR *dir;
     struct dirent *de;
     char path[PATH_MAX];
@@ -110,11 +111,14 @@ int main(int argc, char *argv[])
         switch(c) {
         case 'c':
             /* close file descriptors except stdin/out/error */
-            dir = opendir("/proc/self/fd");
-            while ((de = readdir(dir))) {
-                int fd = atoi(de->d_name);
-                if (fd>2) close(fd);
+            if ((dir = opendir("/proc/self/fd"))) {
+                while ((de = readdir(dir)))
+                    if ((fd = atoi(de->d_name)) > 2)
+                        close(fd);
             }
+            /* fall back to old method if needed */
+            else for (fd = getdtablesize(); fd > 2; fd--)
+                     close(fd);
             break;
         case 'd':
             /* detach from tty */
