@@ -98,7 +98,7 @@ from itertools import chain, groupby
 from math import ceil
 
 from mininet.cli import CLI
-from mininet.log import info, error, output, warn
+from mininet.log import info, error, output, warn, debug
 from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
                            Controller )
 from mininet.nodelib import NAT
@@ -843,6 +843,7 @@ class Mininet( object ):
         cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
                              server.IP() + ' ' + bwArgs )
         cvals = self._iperfVals( cliout, serverip )
+        debug( 'iperf client output:', cliout, cvals )
         serverout = ''
         # Wait for output from the client session
         while True:
@@ -852,6 +853,7 @@ class Mininet( object ):
             if ( svals and cvals[ 'sport' ] == svals[ 'sport' ]
                  and int( svals[ 'rate' ] ) > 0 ):
                 break
+        debug( 'iperf server output:', serverout, svals )
         server.sendInt()
         serverout += server.waitOutput()
         result = [ fmtBps( svals[ 'rate'], fmt ),
