@@ -1420,7 +1420,7 @@ class MiniEdit( Frame ):
 
     def convertJsonUnicode(self, text):
         "Some part of Mininet don't like Unicode"
-        unicode = globals.get( 'unicode', str )
+        unicode = globals().get( 'unicode', str )
         if isinstance(text, dict):
             return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
         if isinstance(text, list):
