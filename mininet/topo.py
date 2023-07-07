@@ -105,7 +105,7 @@ class Topo( object ):
     def __init__( self, *args, **params ):
         """Topo object.
            Optional named parameters:
-           hinfo: default host options
+           hopts: default host options
            sopts: default switch options
            lopts: default link options
            calls build()"""
@@ -134,8 +134,7 @@ class Topo( object ):
            name: host name
            opts: host options
            returns: host name"""
-        if not opts and self.hopts:
-            opts = self.hopts
+        opts.update({k:v for k,v in self.hopts.items() if k not in opts})
         return self.addNode( name, **opts )
 
     def addSwitch( self, name, **opts ):
@@ -143,8 +142,7 @@ class Topo( object ):
            name: switch name
            opts: switch options
            returns: switch name"""
-        if not opts and self.sopts:
-            opts = self.sopts
+        opts.update({k:v for k,v in self.sopts.items() if k not in opts})
         result = self.addNode( name, isSwitch=True, **opts )
         return result
 
@@ -154,8 +152,7 @@ class Topo( object ):
            port1, port2: ports (optional)
            opts: link options (optional)
            returns: link info key"""
-        if not opts and self.lopts:
-            opts = self.lopts
+        opts.update({k:v for k,v in self.lopts.items() if k not in opts})
         port1, port2 = self.addPort( node1, node2, port1, port2 )
         opts = dict( opts )
         opts.update( node1=node1, node2=node2, port1=port1, port2=port2 )
