@@ -29,6 +29,19 @@ like to contribute an installation script, we would welcome it!)
    it's running on.  Therefore, if you have a multiuser system, you
    may wish to consider running Mininet in a VM.
 
+1.1 Use a Vagrant VM
+
+    If you have Vagrant installed, you can also simply issue the `vagrant up`
+    command within the project root. This will download an Ubuntu base box
+    and customize it. By default, it clones the master branch of the Mininet
+    GitHub repo and checks out master.
+
+    This can be overridden by setting the environment variable `BRANCH`, i.e.,
+    `BRANCH=feat-1 vagrant up` to clone Mininet and check out the `feat-1`
+    branch.
+
+    To connect to the VM you can then type `vagrant ssh`.
+
 2. Next-easiest option: use our Ubuntu package!
 
    To install Mininet itself (i.e. `mn` and the Python API) on Ubuntu
