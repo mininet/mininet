@@ -681,9 +681,9 @@ class Host( Node ):
     "A host is simply a Node with ip netns support of format mininet:NAME ."
     def startShell(self, mnopts=None):
         super().startShell(mnopts)
-        self.cmd('ip netns attach mininet:' + self.name + ' ' + str(self.shell.pid))
+        self._popen(f'ip netns attach mininet:{self.name} {self.shell.pid}'.split(), close_fds=True)
     def terminate(self):
-        self.cmd('ip netns del mininet:' + self.name)
+        self._popen(f'ip netns del mininet:{self.name}'.split(), close_fds=True)
         return super().terminate()
 
 class CPULimitedHost( Host ):
