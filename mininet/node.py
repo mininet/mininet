@@ -679,13 +679,15 @@ class Node( object ):
 
 class Host( Node ):
     "A host is simply a Node with ip netns support of format mininet:NAME ."
-    # pass
+    _var_netns_dir = False
     def startShell(self, mnopts=None):
         super().startShell(mnopts)
-        # self._popen(f'ip netns attach mininet:{self.name} {self.pid}'.split(), close_fds=True)
-        self._popen(f'ln -s /proc/{self.pid}/ns/net /var/run/netns/mininet:{self.name}'.split(), close_fds=True)
+        if not Host._var_netns_dir:
+            Host._var_netns_dir = True
+            self._popen('mkdir -p /var/run/netns', close_fds=True)
+        cmd = f'ln -s /proc/{self.pid}/ns/net /var/run/netns/mininet:{self.name}'
+        self._popen(cmd.split(), close_fds=True)
     def terminate(self):
-        # self._popen(f'ip netns del mininet:{self.name}'.split(), close_fds=True)
         self._popen(f'rm /var/run/netns/mininet:{self.name}'.split(), close_fds=True)
         return super().terminate()
 
