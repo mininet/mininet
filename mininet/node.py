@@ -684,7 +684,7 @@ class Host( Node ):
         super().startShell(mnopts)
         if not Host._var_netns_dir:
             Host._var_netns_dir = True
-            self._popen('mkdir -p /var/run/netns', close_fds=True)
+            self._popen('mkdir -p /var/run/netns'.split(), close_fds=True)
         cmd = f'ln -s /proc/{self.pid}/ns/net /var/run/netns/mininet:{self.name}'
         self._popen(cmd.split(), close_fds=True)
     def terminate(self):
