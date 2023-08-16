@@ -678,8 +678,13 @@ class Node( object ):
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
 
 class Host( Node ):
-    "A host is simply a Node"
-    pass
+    "A host is simply a Node with ip netns support of format mininet:NAME ."
+    def startShell(self, mnopts=None):
+        super().startShell(mnopts)
+        self.cmd('ip netns attach mininet:' + self.name + ' ' + str(self.shell.pid))
+    def terminate(self):
+        self.cmd('ip netns del mininet:' + self.name)
+        return super().terminate()
 
 class CPULimitedHost( Host ):
 
