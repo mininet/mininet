@@ -80,7 +80,7 @@ class OVSUser( OVSSwitch):
         OVSSwitch.__init__( self, *args, **kwargs )
 
 class testSwitchOVSUser( TestSwitchDpidAssignmentOVS ):
-    "Test dpid assignnment of OVS User Switch."
+    "Test dpid assignment of OVS User Switch."
     switchClass = OVSUser
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ),
