@@ -211,7 +211,7 @@ class MininetRunner( object ):
             # Add or modify global variable or class
             globals()[ name ] = value
 
-    def setNat( self, _option, opt_str, value, parser ):
+    def setNat( self, _option, opt_str, parser ):
         "Set NAT option(s)"
         assert self  # satisfy pylint
         parser.values.nat = True
