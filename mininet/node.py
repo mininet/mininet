@@ -99,7 +99,7 @@ class Node( object ):
         # Stash configuration parameters for future reference
         self.params = params
 
-        # dict of port numbers to interfacse
+        # dict of port numbers to interfaces
         self.intfs = {}
 
         # dict of interfaces to port numbers
