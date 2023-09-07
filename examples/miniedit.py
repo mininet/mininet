@@ -2017,15 +2017,15 @@ class MiniEdit( Frame ):
             f.write("\n")
             f.write("    CLI(net)\n")
             for widget, item in self.widgetToItem:
-                name = widget[ 'text' ]
-                tags = self.canvas.gettags( item )
+                name = str(widget[ 'text' ])
+                tags = str(self.canvas.gettags( item ))
                 if 'Host' in tags:
-                    opts = self.hostOpts[name]
+                    opts = str(self.hostOpts[name])
                     # Run User Defined Stop Command
                     if 'stopCommand' in opts:
                         f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
                 if 'Switch' in tags:
-                    opts = self.switchOpts[name]
+                    opts = str(self.switchOpts[name])
                     # Run User Defined Stop Command
                     if 'stopCommand' in opts:
                         f.write("    "+name+".cmdPrint('"+opts['stopCommand']+"')\n")
