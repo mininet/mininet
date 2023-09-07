@@ -397,10 +397,8 @@ class CLI( Cmd ):
         sw = args[ 0 ]
         command = args[ 1 ]
         if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches:
-            error( 'invalid switch: %s\n' % args[ 1 ] )
+            error( 'invalid switch: %s\n' % command )
         else:
-            sw = args[ 0 ]
-            command = args[ 1 ]
             if command == 'start':
                 self.mn.get( sw ).start( self.mn.controllers )
             elif command == 'stop':
