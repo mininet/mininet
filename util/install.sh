@@ -798,7 +798,7 @@ function vm_clean {
     sudo rm -rf /tmp/*
     sudo rm -rf openvswitch*.tar.gz
 
-    # Remove sensistive files
+    # Remove sensitive files
     history -c  # note this won't work if you have multiple bash sessions
     rm -f ~/.bash_history  # need to clear in memory and remove on disk
     rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
