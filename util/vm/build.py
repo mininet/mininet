@@ -227,7 +227,7 @@ def attachNBD( cow, flags='' ):
 
 
 def detachNBD( nbd ):
-    "Detatch an nbd device"
+    "Detach an nbd device"
     srun( 'qemu-nbd -d ' + nbd )
 
 
