@@ -1420,10 +1420,10 @@ class Controller( Node ):
     def __init__( self, name, inNamespace=False, command='controller',
                   cargs='ptcp:%d', cdir=None, ip="127.0.0.1",
                   port=6653, protocol='tcp', verbose=False, **params ):
-        self.command = command
-        self.cargs = cargs
         if verbose:
-            cargs = '-v ' + cargs
+            cargs = '-v ' + cargs                      
+        self.cargs = cargs
+        self.command = command                      
         self.cdir = cdir
         # Accept 'ip:port' syntax as shorthand
         if ':' in ip:
