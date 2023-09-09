@@ -17,7 +17,7 @@ MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # current directory is a subdirectory
   *) BUILD_DIR=$BUILD_DIR;;
 esac
 
