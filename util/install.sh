@@ -17,7 +17,7 @@ MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # current directory is a subdirectory
   *) BUILD_DIR=$BUILD_DIR;;
 esac
 
@@ -798,7 +798,7 @@ function vm_clean {
     sudo rm -rf /tmp/*
     sudo rm -rf openvswitch*.tar.gz
 
-    # Remove sensistive files
+    # Remove sensitive files
     history -c  # note this won't work if you have multiple bash sessions
     rm -f ~/.bash_history  # need to clear in memory and remove on disk
     rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
