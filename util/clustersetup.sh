@@ -169,7 +169,7 @@ echo
 if $persistent; then
     echo '***Setting up persistent SSH configuration between all nodes'
     persistentSetup
-    echo $'\n*** Sucessfully set up ssh throughout the cluster!'
+    echo $'\n*** Successfully set up ssh throughout the cluster!'
 
 else
     echo '*** Setting up temporary SSH configuration between all nodes'

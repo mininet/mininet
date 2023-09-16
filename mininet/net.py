@@ -443,7 +443,7 @@ class Mininet( object ):
                 host.configDefault( ip=None, mac=None )
             # You're low priority, dude!
             # BL: do we want to do this here or not?
-            # May not make sense if we have CPU lmiting...
+            # May not make sense if we have CPU limiting...
             # quietRun( 'renice +18 -p ' + repr( host.pid ) )
             # This may not be the right place to do this, but
             # it needs to be done somewhere.
