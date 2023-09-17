@@ -131,7 +131,7 @@ class testOptionsTopoCommon( object ):
         BW_TOLERANCE = 0.8  # BW fraction below which test should fail
         # Verify ability to create limited-link topo first;
         lopts = { 'bw': BW, 'use_htb': True }
-        # Also verify correctness of limit limitng within a bound.
+        # Also verify correctness of limit limiting within a bound.
         mn = Mininet( SingleSwitchOptionsTopo( n=N, lopts=lopts ),
                       link=TCLink, switch=self.switchClass,
                       waitConnected=True )
