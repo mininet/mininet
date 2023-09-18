@@ -74,7 +74,7 @@ def serverURL( version, arch ):
 
 def legacyURL( version, arch ):
     "Return .iso URL for Ubuntu version"
-    server = ( 'http://cdimage.ubuntu.com/ubuntu-legacy-server/'
+    server = ( 'https://cdimage.ubuntu.com/ubuntu-legacy-server/'
                'releases/%s/release/' )
     iso = 'ubuntu-%s-legacy-server-%s.iso'
     return (server + iso ) % ( version, version, arch )
@@ -85,18 +85,20 @@ isoURLs = {
     'ubuntu-12.04.5-server-amd64.iso',
     'trusty32server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04.4-server-i386.iso',
+    'ubuntu-14.04.6-server-i386.iso',
     'trusty64server':
     'http://mirrors.kernel.org/ubuntu-releases/14.04/'
-    'ubuntu-14.04.4-server-amd64.iso',
+    'ubuntu-14.04.6-server-amd64.iso',
     'xenial32server':
     'http://mirrors.kernel.org/ubuntu-releases/16.04/'
     'ubuntu-16.04.6-server-i386.iso',
     'xenial64server':
     'http://mirrors.kernel.org/ubuntu-releases/16.04/'
     'ubuntu-16.04.7-server-amd64.iso',
-    'bionic64server': serverURL( '18.04.5', 'amd64' ),
-    'focal64server':  legacyURL( '20.04.1', 'amd64' ),
+    'bionic64server': serverURL( '18.04.6', 'amd64' ),
+    'focal64server':
+    'https://cdimage.ubuntu.com/ubuntu-legacy-server/'
+    'releases/20.04/release/ubuntu-20.04.1-legacy-server-amd64.iso',
 }
 
 
