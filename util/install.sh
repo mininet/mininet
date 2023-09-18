@@ -627,7 +627,7 @@ function nox13 {
 function pox {
     echo "Installing POX into $BUILD_DIR/pox..."
     cd $BUILD_DIR
-    git clone https://github.com/noxrepo/pox.git
+    git clone git@github.com:noxrepo/pox.git
 }
 
 # Install OFtest
