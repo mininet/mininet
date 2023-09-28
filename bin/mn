@@ -436,7 +436,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         info( "\n\nKeyboard Interrupt. Shutting down and cleaning up...\n\n")
         cleanup()
-    except Exception:  # pylint: disable=broad-except
+    except Exception as ex:  # pylint: disable=broad-except
         # Print exception
         type_, val_, trace_ = sys.exc_info()
         errorMsg = ( "-"*80 + "\n" +
@@ -449,3 +449,5 @@ if __name__ == "__main__":
         stackTrace = traceback.format_exc()
         debug( stackTrace + "\n" )
         cleanup()
+        error( "\nMininet caught an Exception!\n" + errorMsg )
+        raise ex
