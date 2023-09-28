@@ -1419,14 +1419,14 @@ class MiniEdit( Frame ):
         icon.links = {}
 
     def convertJsonUnicode(self, text):
-        "Some part of Mininet don't like Unicode"
-        unicode = globals().get( 'unicode', str )
         if isinstance(text, dict):
             return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
         if isinstance(text, list):
             return [self.convertJsonUnicode(element) for element in text]
-        if isinstance(text, unicode):  # pylint: disable=undefined-variable
-            return text.encode('utf-8')
+        "Some part of Mininet don't like Unicode"
+        if sys.version_info[0] == 2:
+            if isinstance(text, unicode):  # pylint: disable=undefined-variable
+                return text.encode('utf-8')
         return text
 
     def loadTopology( self ):
