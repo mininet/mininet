@@ -390,24 +390,31 @@ class CLI( Cmd ):
     def do_switch( self, line ):
         "Starts or stops a switch"
         args = line.split()
-        if len(args) != 2:
-            error( 'invalid number of args: switch <switch name>'
-                   '{start, stop}\n' )
+        if len(args) < 2:
+            error( 'invalid number of args: switch {start, stop} '
+                '<switch name> [<switch name>] [...]\n' )
             return
-        sw = args[ 0 ]
-        command = args[ 1 ]
-        if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches:
-            error( 'invalid switch: %s\n' % args[ 1 ] )
-        else:
-            sw = args[ 0 ]
-            command = args[ 1 ]
+        # Get start/stop command
+        command = args[ 0 ]
+        if command not in [ 'start', 'stop' ]:
+            error( 'first argument for the switch command must '
+                'be "start" or "stop"\n' )
+            return
+
+        switches = args[ 1: ]
+
+        # Iterate over args twice, so we either execute <command> for all
+        # switches or none (avoid inconsistencies
+        for sw in switches:
+            if sw not in self.mn or self.mn.get( sw ) not in self.mn.switches:
+                error( 'invalid switch: %s\n' % sw )
+                return
+
+        for sw in switches:
             if command == 'start':
                 self.mn.get( sw ).start( self.mn.controllers )
             elif command == 'stop':
                 self.mn.get( sw ).stop( deleteIntfs=False )
-            else:
-                error( 'invalid command: '
-                       'switch <switch name> {start, stop}\n' )
 
     def do_wait( self, _line ):
         "Wait until all switches have connected to a controller"
