@@ -58,6 +58,7 @@ import re
 import signal
 import select
 from re import findall
+from shlex import quote
 from subprocess import Popen, PIPE
 from sys import exit  # pylint: disable=redefined-builtin
 from time import sleep
@@ -1430,6 +1431,7 @@ class Controller( Node ):
             ip, port = ip.split( ':' )
             port = int( port )
         self.ip = ip
+        assert isinstance( port, int )
         self.port = port
         self.protocol = protocol
         Node.__init__( self, name, inNamespace=inNamespace,
@@ -1444,8 +1446,8 @@ class Controller( Node ):
             raise Exception( "Error running telnet to check for listening "
                              "controllers; please check that it is "
                              "installed." )
-        listening = self.cmd( "echo A | telnet -e A %s %d" %
-                              ( self.ip, self.port ) )
+        listening = self.cmd( "echo A | telnet -e A %s %s" %
+                              ( quote( self.ip ), quote( self.port ) ) )
         if 'Connected' in listening:
             servers = self.cmd( 'netstat -natp' ).split( '\n' )
             pstr = ':%d ' % self.port
@@ -1587,7 +1589,8 @@ class RemoteController( Controller ):
 
     def isListening( self, ip, port ):
         "Check if a remote controller is listening at a specific ip and port"
-        listening = self.cmd( "echo A | telnet -e A %s %d" % ( ip, port ) )
+        listening = self.cmd( "echo A | telnet -e A %s %s" %
+            ( quote( ip ), quote( port ) ) )
         if 'Connected' not in listening:
             warn( "Unable to contact the remote controller"
                   " at %s:%d\n" % ( ip, port ) )
