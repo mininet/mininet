@@ -1804,6 +1804,19 @@ class MiniEdit( Frame ):
                         f.write(", cls=UserSwitch, inNamespace=True")
                     else:
                         f.write(", cls=OVSKernelSwitch")
+
+                    self.openFlowVersions = []
+                    if self.appPrefs['openFlowVersions']['ovsOf10'] == '1':
+                        self.openFlowVersions.append('OpenFlow10')
+                    if self.appPrefs['openFlowVersions']['ovsOf11'] == '1':
+                        self.openFlowVersions.append('OpenFlow11')
+                    if self.appPrefs['openFlowVersions']['ovsOf12'] == '1':
+                        self.openFlowVersions.append('OpenFlow12')
+                    if self.appPrefs['openFlowVersions']['ovsOf13'] == '1':
+                        self.openFlowVersions.append('OpenFlow13')
+                    protoList = ",".join(self.openFlowVersions)
+                    f.write(", protocols='"+protoList+"'")
+
                     if 'dpctl' in opts:
                         f.write(", listenPort="+opts['dpctl'])
                     if 'dpid' in opts:
