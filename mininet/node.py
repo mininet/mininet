@@ -678,8 +678,18 @@ class Node( object ):
         pathCheck( 'mnexec', 'ifconfig', moduleName='Mininet')
 
 class Host( Node ):
-    "A host is simply a Node"
-    pass
+    "A host is simply a Node with ip netns support of format mininet:NAME ."
+    _var_netns_dir = False
+    def startShell(self, mnopts=None):
+        super().startShell(mnopts)
+        if not Host._var_netns_dir:
+            Host._var_netns_dir = True
+            self._popen('mkdir -p /var/run/netns'.split(), close_fds=True)
+        cmd = f'ln -s /proc/{self.pid}/ns/net /var/run/netns/mininet:{self.name}'
+        self._popen(cmd.split(), close_fds=True)
+    def terminate(self):
+        self._popen(f'rm /var/run/netns/mininet:{self.name}'.split(), close_fds=True)
+        return super().terminate()
 
 class CPULimitedHost( Host ):
 
