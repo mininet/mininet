@@ -64,7 +64,7 @@ VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 Prompt = '\$ '              # Shell prompt that pexpect will wait for
 
 
-# URLs for Ubunto .iso images
+# URLs for Ubuntu .iso images
 
 def serverURL( version, arch ):
     "Return .iso URL for Ubuntu version and arch"
@@ -227,7 +227,7 @@ def attachNBD( cow, flags='' ):
 
 
 def detachNBD( nbd ):
-    "Detatch an nbd device"
+    "Detach an nbd device"
     srun( 'qemu-nbd -d ' + nbd )
 
 

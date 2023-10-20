@@ -2,7 +2,7 @@
 
 "Setuptools params"
 
-from setuptools import setup, find_packages
+from setuptools import setup
 from os.path import join
 
 # Get version number from source tree

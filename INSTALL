@@ -112,7 +112,7 @@ like to contribute an installation script, we would welcome it!)
 
    Mininet supports Python 3 and Python 2. By default, `install.sh`
    will use whatever `python` is on your system.  To specify a
-   specific version of Pythonm, you can set the PYTHON environment
+   specific version of Python, you can set the PYTHON environment
    variable:
 
        PYTHON=python3 util/install.sh -fnv

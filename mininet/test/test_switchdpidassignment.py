@@ -51,7 +51,7 @@ class TestSwitchDpidAssignmentOVS( unittest.TestCase ):
 
     def testDefaultDpidAssignmentFailure( self ):
         """Verify that Default dpid assignment raises an Exception if the
-        name of the switch does not contin a digit. Also verify the
+        name of the switch does not contain a digit. Also verify the
         exception message."""
         net = Mininet( Topo(), self.switchClass, Host, Controller )
         with self.assertRaises( Exception ) as raises_cm:
@@ -80,7 +80,7 @@ class OVSUser( OVSSwitch):
         OVSSwitch.__init__( self, *args, **kwargs )
 
 class testSwitchOVSUser( TestSwitchDpidAssignmentOVS ):
-    "Test dpid assignnment of OVS User Switch."
+    "Test dpid assignment of OVS User Switch."
     switchClass = OVSUser
 
 @unittest.skipUnless( quietRun( 'which ivs-ctl' ),

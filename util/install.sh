@@ -17,7 +17,7 @@ MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
-  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
+  $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # current directory is a subdirectory
   *) BUILD_DIR=$BUILD_DIR;;
 esac
 
@@ -798,7 +798,7 @@ function vm_clean {
     sudo rm -rf /tmp/*
     sudo rm -rf openvswitch*.tar.gz
 
-    # Remove sensistive files
+    # Remove sensitive files
     history -c  # note this won't work if you have multiple bash sessions
     rm -f ~/.bash_history  # need to clear in memory and remove on disk
     rm -f ~/.ssh/id_rsa* ~/.ssh/known_hosts
@@ -842,7 +842,7 @@ exit 0
 }
 
 function usage {
-    printf '\nUsage: %s [-abcdfhikmnprtvVwxy03]\n\n' $(basename $0) >&2
+    printf '\nUsage: %s [-abcdefhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
     printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
@@ -869,8 +869,8 @@ function usage {
     printf -- ' -v: install Open (V)switch\n' >&2
     printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
+    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2    
     printf -- ' -y: install R(y)u Controller\n' >&2
-    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
     exit 2

@@ -99,7 +99,7 @@ class Node( object ):
         # Stash configuration parameters for future reference
         self.params = params
 
-        # dict of port numbers to interfacse
+        # dict of port numbers to interfaces
         self.intfs = {}
 
         # dict of interfaces to port numbers
@@ -699,7 +699,7 @@ class CPULimitedHost( Host ):
         Host.__init__( self, name, **params )
         # BL: Setting the correct period/quota is tricky, particularly
         # for RT. RT allows very small quotas, but the overhead
-        # seems to be high. CFS has a mininimum quota of 1 ms, but
+        # seems to be high. CFS has a minimum quota of 1 ms, but
         # still does better with larger period values.
         self.period_us = params.get( 'period_us', 100000 )
         self.sched = sched
