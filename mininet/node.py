@@ -916,6 +916,7 @@ class Switch( Node ):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
 
+    isSetup = False # Automatic class setup support
     portBase = 1  # Switches start with port 1 in OpenFlow
     dpidLen = 16  # digits in dpid passed to switch
 
@@ -1137,7 +1138,7 @@ class OVSSwitch( Switch ):
 
     @classmethod
     def isOldOVS( cls ):
-        "Is OVS ersion < 1.10?"
+        "Is OVS version < 1.10?"
         return ( StrictVersion( cls.OVSVersion ) <
                  StrictVersion( '1.10' ) )
 
