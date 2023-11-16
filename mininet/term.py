@@ -56,7 +56,7 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
         return []
     term = node.popen( cmds[ term ] +
                        [ display, '-e', 'env TERM=ansi %s' % cmd ] )
-    return [ tunnel, term ] if tunnel else [ term ]
+    return [ tunnel, term ] if tunnel else term
 
 def runX11( node, cmd ):
     "Run an X11 client on a node"
