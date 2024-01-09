@@ -73,19 +73,36 @@ class Intf( object ):
         "Configure ourselves using ifconfig"
         return self.cmd( 'ifconfig', self.name, *args )
 
-    def setIP( self, ipstr, prefixLen=None ):
-        """Set our IP address"""
+    def setIP( self, ip, prefixLen=8, action='add' ):
+        """Set our IP address(es) and bring interface up
+           ip: IP address string or list
+           prefixLen: optional default prefix length if '/' not in addr (8)
+           action: optional action for IPv6 addrs (default 'add')"""
+        if isinstance( ip, basestring ):
+            ip = ( ip, )
+        ipstr = ip[ 0 ]
         # This is a sign that we should perhaps rethink our prefix
         # mechanism and/or the way we specify IP addresses
-        if '/' in ipstr:
-            self.ip, self.prefixLen = ipstr.split( '/' )
-            return self.ifconfig( ipstr, 'up' )
-        else:
-            if prefixLen is None:
-                raise Exception( 'No prefix length set for IP address %s'
-                                 % ( ipstr, ) )
-            self.ip, self.prefixLen = ipstr, prefixLen
-            return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
+        result = ''
+        self.ips = []
+        for index, ipstr in enumerate( ip ):
+            if '/' in ipstr:
+                ip, prefixLen = ipstr.split( '/' )
+            else:
+                ipstr = '%s/%s' % ( ipstr, prefixLen )
+            if index == 0:
+                dev = self.name
+                self.ip, self.prefixLen = ip, prefixLen
+            else:
+                dev = '%s:%d' % ( self, index )
+            if ':' not in ipstr:
+                result += self.cmd( 'ifconfig', dev, ipstr, 'up' )
+            else:
+                # IPv6
+                result += self.cmd( 'ifconfig', dev, 'inet6', action, ipstr,
+                                    'up' )
+            self.ips += [ ipstr ]
+        return result
 
     def setMAC( self, macstr ):
         """Set the MAC address for an interface.
@@ -95,18 +112,23 @@ class Intf( object ):
                  self.ifconfig( 'hw', 'ether', macstr ) +
                  self.ifconfig( 'up' ) )
 
-    _ipMatchRegex = re.compile( r'\d+\.\d+\.\d+\.\d+' )
+    _ipMatchRegex = re.compile( r'inet.? (.*)/' )
     _macMatchRegex = re.compile( r'..:..:..:..:..:..' )
 
-    def updateIP( self ):
-        "Return updated IP address based on ifconfig"
+    def updateIP( self, all=False ):
+        """Return updated IP address based on ifconfig
+           all: return list of all IP addresses for this interface"""
         # use pexec instead of node.cmd so that we dont read
         # backgrounded output from the cli.
-        ifconfig, _err, _exitCode = self.node.pexec(
-            'ifconfig %s' % self.name )
-        ips = self._ipMatchRegex.findall( ifconfig )
+        ipaddr, _err, _exitCode = self.node.pexec(
+            'ip', 'addr', 'show', self.name )
+        ips = self._ipMatchRegex.findall( ipaddr )
         self.ip = ips[ 0 ] if ips else None
-        return self.ip
+        self.ips = ips
+        if all:
+            return self.ips
+        else:
+            return self.ip
 
     def updateMAC( self ):
         "Return updated MAC address based on ifconfig"
@@ -128,9 +150,10 @@ class Intf( object ):
         self.mac = macs[ 0 ] if macs else None
         return self.ip, self.mac
 
-    def IP( self ):
-        "Return IP address"
-        return self.ip
+    def IP( self, all=False):
+        """Return IP address
+           all: return list of IP addresses for this interface (False)"""
+        return self.ips if all else self.ip
 
     def MAC( self ):
         "Return MAC address"
