@@ -491,6 +491,128 @@ class CLI( Cmd ):
             line = line.split( '#' )[ 0 ]
         return line
 
+    def do_update( self ):
+        '''
+        Updates the address and status for each host and switch
+        interface in the network
+        usage: update
+        '''
+        self.mn.update()
+
+    def do_delswitch( self, line ):
+        "usage: delswitch switchname"
+        args = line.split()
+        if len( args ) != 1:
+            error( 'usage: delswitch switchname\n' )
+            return
+        switchname = args[ 0 ]
+        if switchname not in self.mn.nameToNode.keys():
+            error( '*** no switch named %s\n' % switchname )
+            return
+        switch = self.mn.nameToNode[ switchname ]
+        self.mn.delNode( switch )
+
+    def do_dellink( self, line ):
+        "usage: dellink node1 node2"
+        args = line.split()
+        if len( args ) != 2:
+            error( 'usage: dellink node1 node2\n' )
+            return
+        node1Name = args[ 0 ]
+        node2Name = args[ 1 ]
+        for node in node1Name, node2Name:
+            if node not in self.mn.nameToNode.keys():
+                error( '*** no node named %s\n' % node )
+                return
+        node1 = self.mn.nameToNode[ node1Name ]
+        node2 = self.mn.nameToNode[ node2Name ]
+        self.mn.delLink( node1, node2 )
+
+    def do_delhost( self, line ):
+        "usage: delhost hostname"
+        args = line.split()
+        if len( args ) != 1:
+            error( 'usage: delhost hostname\n' )
+            return
+        hostname = args[ 0 ]
+        if hostname not in self.mn.nameToNode.keys():
+            error( '*** no host named %s\n' % hostname )
+            return
+        host = self.mn.nameToNode[ hostname ]
+        self.mn.delNode( host )
+
+    def do_addhost( self, line ):
+        "usage: addhost hostname [ switch ]"
+        args = line.split()
+        if len( args ) < 1 or len( args ) > 2:
+            error( 'usage: addhost hostname [ switch ]\n' )
+            return
+        if len( args ) == 2:
+            connectSwitch = True
+        else:
+            connectSwitch = False
+        hostname = args[ 0 ]
+        if hostname in self.mn:
+            error( '%s already exists!\n' % hostname )
+            return
+        if connectSwitch:
+            switchname = args[ 1 ]
+            if switchname not in self.mn:
+                error( '%s doesnt exist!\n' % switchname )
+                return
+            switch = self.mn.nameToNode[ switchname ]
+        host = self.mn.addHost( hostname )
+        if connectSwitch:
+            link = self.mn.addLink( host, switch )
+            switch.attach( link.intf2 )
+            host.configDefault()
+        else:
+            host.config()
+
+    def do_addswitch( self, line ):
+        "usage: addswitch switchname"
+        args = line.split()
+        if len( args ) < 1 or len( args ) > 2:
+            error( 'usage: addswitch switchname [dpid]\n' )
+            return
+        switchname = args[ 0 ]
+        if switchname in self.mn:
+            error( '%s already exists!\n' % switchname )
+            return
+        if len( args ) == 2:
+            dpid = args[ 1 ]
+            switch = self.mn.addSwitch( switchname, dpid=dpid )
+        else:
+            switch = self.mn.addSwitch( switchname )
+        switch.start( self.mn.controllers )
+
+    def do_addlink( self, line ):
+        "usage: addlink node1 node2"
+        args = line.split()
+        if len( args ) < 2:
+            error( 'usage: addlink node1 node2\n' )
+            return
+        node1Name = args[ 0 ]
+        node2Name = args[ 1 ]
+        for node in node1Name, node2Name:
+            if node not in self.mn:
+                error( '%s doesnt exist!\n' % node )
+                return
+        node1 = self.mn.nameToNode[ node1Name ]
+        node2 = self.mn.nameToNode[ node2Name ]
+        link = self.mn.addLink( node1, node2  )
+        for node in node1, node2:
+            if node in self.mn.hosts:
+                node.configDefault( **node.params )
+            elif node in self.mn.switches:
+                if node is node1:
+                    node.attach( link.intf1 )
+                if node is node2:
+                    node.attach( link.intf2 )
+
+
+
+
 
 # Helper functions
 
