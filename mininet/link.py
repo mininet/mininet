@@ -48,6 +48,7 @@ class Intf( object ):
         self.link = link
         self.mac = mac
         self.ip, self.prefixLen = None, None
+        self.parent_queue = ' root '
 
         # if interface is lo, we know the ip is 127.0.0.1.
         # This saves an ifconfig command per node
@@ -286,6 +287,8 @@ class TCIntf( Intf ):
                           'burst 20 ' +
                           'bandwidth %fmbit probability 1' % bw ]
                 parent = ' parent 6: '
+        self.parent_queue = parent
+
         return cmds, parent
 
     @staticmethod
@@ -401,6 +404,7 @@ class TCIntf( Intf ):
         debug( "outputs:", tcoutputs, '\n' )
         result[ 'tcoutputs'] = tcoutputs
         result[ 'parent' ] = parent
+        self.parent_queue = parent
 
         return result
 
