@@ -162,7 +162,7 @@ class CLI( Cmd ):
         output( 'available nodes are: \n%s\n' % nodes )
 
     def do_ports( self, _line ):
-        "display ports and interfaces for each switch"
+        "Display ports and interfaces for each switch."
         dumpPorts( self.mn.switches )
 
     def do_net( self, _line ):
@@ -170,7 +170,7 @@ class CLI( Cmd ):
         dumpNodeConnections( self.mn.values() )
 
     def do_sh( self, line ):
-        """Run an external shell command
+        """Run an external shell command.
            Usage: sh [cmd args]"""
         assert self  # satisfy pylint and allow override
         call( line, shell=True )
@@ -383,12 +383,12 @@ class CLI( Cmd ):
         self.stdout.write("*** Elapsed time: %0.6f secs\n" % elapsed)
 
     def do_links( self, _line ):
-        "Report on links"
+        "Report on links."
         for link in self.mn.links:
             output( link, link.status(), '\n' )
 
     def do_switch( self, line ):
-        "Starts or stops a switch"
+        "Starts or stops a switch."
         args = line.split()
         if len(args) != 2:
             error( 'invalid number of args: switch <switch name>'
@@ -410,7 +410,7 @@ class CLI( Cmd ):
                        'switch <switch name> {start, stop}\n' )
 
     def do_wait( self, _line ):
-        "Wait until all switches have connected to a controller"
+        "Wait until all switches have connected to a controller."
         self.mn.waitConnected()
 
     def default( self, line ):
