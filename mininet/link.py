@@ -298,7 +298,7 @@ class TCIntf( Intf ):
         else:
             # Delay/jitter/loss/max queue size
             netemargs = '%s%s%s%s' % (
-                'delay %s ' % delay if delay is not None else '',
+                'delay %s ' % delay if (delay is not None and delay > 0) else '',
                 '%s ' % jitter if jitter is not None else '',
                 'loss %.5f ' % loss if (loss is not None and loss > 0) else '',
                 'limit %d' % max_queue_size if max_queue_size is not None
@@ -356,7 +356,7 @@ class TCIntf( Intf ):
 
         # Optimization: return if nothing else to configure
         # Question: what happens if we want to reset things?
-        if ( bw is None and not delay and not loss
+        if ( bw is None and delay is None and loss is None
              and max_queue_size is None ):
             return None
 
@@ -366,6 +366,7 @@ class TCIntf( Intf ):
             cmds = [ '%s qdisc del dev %s root' ]
         else:
             cmds = []
+
 
         # Bandwidth limits via various methods
         bwcmds, parent = self.bwCmds( bw=bw, speedup=speedup,
