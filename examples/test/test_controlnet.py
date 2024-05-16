@@ -36,7 +36,7 @@ class testControlNet( unittest.TestCase ):
         self.assertEqual( count, ip )
         count += 1
         for c in [ 'c0', 'c1' ]:
-            p.sendline( '%s ifconfig %s-eth0 down' % ( c, c) )
+            p.sendline( '%s ip link set %s-eth0 down' % ( c, c) )
             p.expect( self.prompt )
             lp.expect( 'tcp:\d+\.\d+\.\d+\.(\d+):\d+: connected' )
             ip = int( lp.match.group( 1 ) )

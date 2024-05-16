@@ -128,9 +128,9 @@ class CustomUserSwitch(UserSwitch):
         # Set Switch IP address
         if self.switchIP is not None:
             if not self.inNamespace:
-                self.cmd( 'ifconfig', self, self.switchIP )
+                self.cmd( 'ip addr add', self.switchIP, 'dev', self)
             else:
-                self.cmd( 'ifconfig lo', self.switchIP )
+                self.cmd( 'ip addr add', self.switchIP, 'dev lo' )
 
 class LegacyRouter( Node ):
     "Simple IP router"
@@ -139,9 +139,8 @@ class LegacyRouter( Node ):
 
     # pylint: disable=arguments-differ
     def config( self, **_params ):
-        if self.intfs:
-            self.setParam( _params, 'setIP', ip='0.0.0.0' )
-        r = Node.config( self, **_params )
+        par = {'ip':'0.0.0.0'} if self.intfs else _params
+        r = Node.config( self, **par )
         self.cmd('sysctl -w net.ipv4.ip_forward=1')
         return r
 
@@ -172,7 +171,7 @@ class customOvs(OVSSwitch):
         OVSSwitch.start( self, controllers )
         # Set Switch IP address
         if self.switchIP is not None:
-            self.cmd( 'ifconfig', self, self.switchIP )
+            self.cmd( 'ip addr add', self.switchIP, 'dev', self)
 
 class PrefsDialog(tkSimpleDialog.Dialog):
     "Preferences dialog"
@@ -1930,27 +1929,27 @@ class MiniEdit( Frame ):
                         if self.appPrefs['switchType'] == 'user':
                             if 'switchIP' in opts:
                                 if len(opts['switchIP']) > 0:
-                                    f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                                    f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev "+name+"')\n")
                         elif self.appPrefs['switchType'] == 'userns':
                             if 'switchIP' in opts:
                                 if len(opts['switchIP']) > 0:
-                                    f.write("    "+name+".cmd('ifconfig lo "+opts['switchIP']+"')\n")
+                                    f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev lo')\n")
                         elif self.appPrefs['switchType'] == 'ovs':
                             if 'switchIP' in opts:
                                 if len(opts['switchIP']) > 0:
-                                    f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                                    f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev "+name+"')\n")
                     elif opts['switchType'] == 'user':
                         if 'switchIP' in opts:
                             if len(opts['switchIP']) > 0:
-                                f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                                f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev "+name+"')\n")
                     elif opts['switchType'] == 'userns':
                         if 'switchIP' in opts:
                             if len(opts['switchIP']) > 0:
-                                f.write("    "+name+".cmd('ifconfig lo "+opts['switchIP']+"')\n")
+                                f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev lo')\n")
                     elif opts['switchType'] == 'ovs':
                         if 'switchIP' in opts:
                             if len(opts['switchIP']) > 0:
-                                f.write("    "+name+".cmd('ifconfig "+name+" "+opts['switchIP']+"')\n")
+                                f.write("    "+name+".cmd('ip addr add "+opts['switchIP']+" dev "+name+"')\n")
             for widget, item in self.widgetToItem.items():
                 name = widget[ 'text' ]
                 tags = self.canvas.gettags( item )
@@ -1959,8 +1958,9 @@ class MiniEdit( Frame ):
                     # Attach vlan interfaces
                     if 'vlanInterfaces' in opts:
                         for vlanInterface in opts['vlanInterfaces']:
-                            f.write("    "+name+".cmd('vconfig add "+name+"-eth0 "+vlanInterface[1]+"')\n")
-                            f.write("    "+name+".cmd('ifconfig "+name+"-eth0."+vlanInterface[1]+" "+vlanInterface[0]+"')\n")
+                            f.write("    "+name+".cmd('ip link add link "+name+"-eth0 name %s-eth0.%s" % (name,vlanInterface[1])+" type vlan id "+vlanInterface[1]+"')\n")
+                            f.write("    "+name+".cmd('ip addr add "+vlanInterface[0]+" dev "+name+"-eth0."+vlanInterface[1]+"')\n")
+                            f.write("    "+name+".cmd('ip link set dev "+name+"-eth0."+vlanInterface[1]+" up')\n")
                     # Run User Defined Start Command
                     if 'startCommand' in opts:
                         f.write("    "+name+".cmdPrint('"+opts['startCommand']+"')\n")
@@ -2458,7 +2458,7 @@ class MiniEdit( Frame ):
             showerror(title="Error",
                       message='External interface ' +intf + ' does not exist! Skipping.')
             return False
-        ips = re.findall( r'\d+\.\d+\.\d+\.\d+', quietRun( 'ifconfig ' + intf ) )
+        ips = re.findall( r'\d+\.\d+\.\d+\.\d+', quietRun( 'ip addr show ' + intf ) )
         if ips:
             showerror(title="Error",
                       message= intf + ' has an IP address and is probably in use! Skipping.' )
@@ -2940,7 +2940,9 @@ class MiniEdit( Frame ):
                 if 'vlanInterfaces' in opts:
                     for vlanInterface in opts['vlanInterfaces']:
                         info( 'adding vlan interface '+vlanInterface[1], '\n' )
-                        newHost.cmdPrint('ifconfig '+name+'-eth0.'+vlanInterface[1]+' '+vlanInterface[0])
+                        newHost.cmdPrint('ip link add link '+name+'-eth0 name %s-eth0.%s' % (name,vlanInterface[1])+' type vlan id '+vlanInterface[1])
+                        newHost.cmdPrint('ip addr add '+vlanInterface[0]+' dev '+name+'-eth0.'+vlanInterface[1])
+                        newHost.cmdPrint('ip link set dev '+name+'-eth0.'+vlanInterface[1]+' up')
                 # Run User Defined Start Command
                 if 'startCommand' in opts:
                     newHost.cmdPrint(opts['startCommand'])

@@ -45,7 +45,7 @@ def connectToRootNS( network, switch, ip, routes ):
     network.start()
     # Add routes from root ns to hosts
     for route in routes:
-        root.cmd( 'route add -net ' + route + ' dev ' + str( intf ) )
+        root.cmd( 'ip route add ' + route + ' dev ' + str( intf ) )
 
 # pylint: disable=too-many-arguments
 def sshd( network, cmd='/usr/sbin/sshd', opts='-D',

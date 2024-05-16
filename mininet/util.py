@@ -4,6 +4,7 @@ import codecs
 import os
 import re
 import sys
+import random
 
 from collections import namedtuple
 from fcntl import fcntl, F_GETFL, F_SETFL
@@ -378,6 +379,33 @@ def macColonHex( mac ):
        returns: macStr MAC colon-hex string"""
     return _colonHex( mac, 6 )
 
+def genRandomMac(valid=True, **kwargs):
+    """Generate unicast (valid) and multicast MAC adresses for testing purpose"""
+    second_digit = kwargs.get( 'second_digit' ) if kwargs and 'second_digit' in kwargs else ''
+    second_digit = second_digit if len(second_digit) == 1 and second_digit in '0123456789abcdef' else None
+    digits = [random.choice('0123456789abcdef') for _ in range(11)]
+    second_digit = second_digit if second_digit else random.choice('02468ace') if valid else random.choice('13579bdf')
+    digits.insert(1, second_digit)
+    mac_address = ':'.join(''.join(digits[i:i+2]) for i in range(0, 12, 2))
+    return mac_address
+
+def isMACValid(MAC):
+    """Validator for unicast MAC address"""
+    validMAC = re.match(r'^([0-9A-Fa-f][02468aceACE])(:[0-9A-Fa-f]{2}){5}$',MAC) and MAC != '00:00:00:00:00:00' and MAC != 'ff:ff:ff:ff:ff:ff'
+    return True if validMAC else False
+
+def isPrefixValid(prefix_str):
+    """Validator for ip address prefix"""
+    if prefix_str and ((isinstance(prefix_str, str) and prefix_str.isnumeric() and (0 <= int(prefix_str) < 33)) 
+                       or (isinstance(prefix_str, int) and 0 <= prefix_str < 33)):
+        return True
+    return False
+
+def isIpValid(ip):
+    """Validator for ip address"""
+    validip = re.match(r"^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",ip)
+    return True if validip else False
+
 def ipStr( ip ):
     """Generate IP address string from an unsigned int.
        ip: unsigned int of form w << 24 | x << 16 | y << 8 | z
@@ -704,7 +732,7 @@ def waitListening( client=None, server='127.0.0.1', port=80, timeout=None ):
     result = runCmd( cmd )
     while 'Connected' not in result:
         if 'No route' in result:
-            rtable = runCmd( 'route' )
+            rtable = runCmd( 'ip route' )
             error( 'no route to %s:\n%s' % ( server, rtable ) )
             return False
         if timeout and time >= timeout:

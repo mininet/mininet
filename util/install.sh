@@ -12,6 +12,9 @@ set -o nounset
 # Get directory containing mininet folder
 MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
+# Get mininet folder name
+MININET_FOLD="$(basename $( cd -P "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd -P ))"
+
 # Set up build directory, which by default is the working directory
 #  unless the working directory is a subdirectory of mininet,
 #  in which case we use the directory containing mininet
@@ -164,7 +167,7 @@ function mn_deps {
     if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
         $install gcc make socat psmisc xterm openssh-clients iperf \
             iproute telnet python-setuptools libcgroup-tools \
-            ethtool help2man net-tools
+            ethtool help2man
         $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming \
             ${PYPKG}-pexpect
     elif [ "$DIST" = "SUSE LINUX"  ]; then
@@ -190,7 +193,7 @@ function mn_deps {
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint $pep8 \
-                 net-tools ${PYPKG}-tk
+                 ${PYPKG}-tk
 
         # Install pip
         $install ${PYPKG}-pip || $install ${PYPKG}-pip-whl
@@ -210,7 +213,7 @@ function mn_deps {
     fi
 
     echo "Installing Mininet core"
-    pushd $MININET_DIR/mininet
+    pushd $MININET_DIR/$MININET_FOLD
     sudo PYTHON=${PYTHON} make install
     popd
 }
@@ -246,7 +249,7 @@ function of {
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/$MININET_FOLD/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
@@ -314,7 +317,7 @@ function install_wireshark {
     # Copy coloring rules: OF is white-on-blue:
     echo "Optionally installing wireshark color filters"
     mkdir -p $HOME/.wireshark
-    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+    cp -n $MININET_DIR/$MININET_FOLD/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
     WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
@@ -568,9 +571,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/$MININET_FOLD/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
-        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/$MININET_FOLD/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build

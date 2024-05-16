@@ -98,7 +98,7 @@ from itertools import chain, groupby
 from math import ceil
 
 from mininet.cli import CLI
-from mininet.log import info, error, output, warn, debug
+from mininet.log import info, error, output, warn
 from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
                            Controller )
 from mininet.nodelib import NAT
@@ -674,9 +674,8 @@ class Mininet( object ):
                     opts = ''
                     if timeout:
                         opts = '-W %s' % timeout
-                    if dest.intfs:
-                        result = node.cmd( 'LANG=C ping -c1 %s %s' %
-                                           (opts, dest.IP()) )
+                    if dest.intfs and dest.IP(update=True):
+                        result = node.cmd( 'LANG=C ping -c1 %s %s' % (opts, dest.IP(update=True)) )
                         sent, received = self._parsePing( result )
                     else:
                         sent, received = 0, 0
@@ -684,7 +683,7 @@ class Mininet( object ):
                     if received > sent:
                         error( '*** Error: received too many packets' )
                         error( '%s' % result )
-                        node.cmdPrint( 'route' )
+                        node.cmdPrint( 'ip route' )
                         exit( 1 )
                     lost += sent - received
                     output( ( '%s ' % dest.name ) if received else 'X ' )
@@ -748,11 +747,16 @@ class Mininet( object ):
                     opts = ''
                     if timeout:
                         opts = '-W %s' % timeout
-                    result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP()) )
-                    outputs = self._parsePingFull( result )
-                    sent, received, rttmin, rttavg, rttmax, rttdev = outputs
-                    all_outputs.append( (node, dest, outputs) )
-                    output( ( '%s ' % dest.name ) if received else 'X ' )
+                    if dest.intfs and dest.IP(update=True):
+                        result = node.cmd( 'ping -c1 %s %s' % (opts, dest.IP(update=True)) )
+                        outputs = self._parsePingFull( result )
+                        sent, received, rttmin, rttavg, rttmax, rttdev = outputs
+                        all_outputs.append( (node, dest, outputs) )
+                        output( ( '%s ' % dest.name ) if received else 'X ' )
+                    else:
+                        outputs = (0, 0, 0, 0, 0, 0)
+                        all_outputs.append( (node, dest, outputs) )
+                        output('X ')
             output( '\n' )
         output( "*** Results: \n" )
         for outputs in all_outputs:
@@ -843,7 +847,6 @@ class Mininet( object ):
         cliout = client.cmd( iperfArgs + '-t %d -c ' % seconds +
                              server.IP() + ' ' + bwArgs )
         cvals = self._iperfVals( cliout, serverip )
-        debug( 'iperf client output:', cliout, cvals )
         serverout = ''
         # Wait for output from the client session
         while True:
@@ -853,7 +856,6 @@ class Mininet( object ):
             if ( svals and cvals[ 'sport' ] == svals[ 'sport' ]
                  and int( svals[ 'rate' ] ) > 0 ):
                 break
-        debug( 'iperf server output:', serverout, svals )
         server.sendInt()
         serverout += server.waitOutput()
         result = [ fmtBps( svals[ 'rate'], fmt ),
@@ -926,10 +928,10 @@ class Mininet( object ):
             if len( connections ) == 0:
                 error( 'src and dst not connected: %s %s\n' % ( src, dst) )
             for srcIntf, dstIntf in connections:
-                result = srcIntf.ifconfig( status )
+                result = srcIntf.cmd( 'ip link set dev', srcIntf, status )
                 if result:
                     error( 'link src status change failed: %s\n' % result )
-                result = dstIntf.ifconfig( status )
+                result = dstIntf.cmd( 'ip link set dev', dstIntf, status )
                 if result:
                     error( 'link dst status change failed: %s\n' % result )
 

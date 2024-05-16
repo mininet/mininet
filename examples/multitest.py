@@ -11,11 +11,11 @@ from mininet.net import Mininet
 from mininet.node import OVSKernelSwitch
 from mininet.topolib import TreeTopo
 
-def ifconfigTest( net ):
-    "Run ifconfig on all hosts in net."
+def ip_linkTest( net ):
+    "Run ip link on all hosts in net."
     hosts = net.hosts
     for host in hosts:
-        info( host.cmd( 'ifconfig' ) )
+        info( host.cmd( 'ip link' ) )
 
 
 if __name__ == '__main__':
@@ -29,8 +29,8 @@ if __name__ == '__main__':
     network.start()
     info( "*** Running ping test\n" )
     network.pingAll()
-    info( "*** Running ifconfig test\n" )
-    ifconfigTest( network )
+    info( "*** Running ip link test\n" )
+    ip_linkTest( network )
     info( "*** Starting CLI (type 'exit' to exit)\n" )
     CLI( network )
     info( "*** Stopping network\n" )

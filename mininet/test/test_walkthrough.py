@@ -99,34 +99,34 @@ class testWalkthrough( unittest.TestCase ):
         p.wait()
 
     def testHostCommands( self ):
-        "Test ifconfig and ps on h1 and s1"
+        "Test ip link and ps on h1 and s1"
         p = pexpect.spawn( 'mn -w' )
         p.expect( self.prompt )
         # Third pattern is a local interface beginning with 'eth' or 'en'
-        interfaces = [ r'h1-eth0[:\s]', r's1-eth1[:\s]',
+        interfaces = [ r'h1-eth0[@\s]', r's1-eth1[@\s]',
                        r'[^-](eth|en)\w*\d[:\s]', r'lo[:\s]',
                        self.prompt ]
-        # h1 ifconfig
-        p.sendline( 'h1 ifconfig -a' )
+        # h1 ip link
+        p.sendline( 'h1 ip link' )
         ifcount = 0
         while True:
             index = p.expect( interfaces )
             if index in (0, 3):
                 ifcount += 1
             elif index == 1:
-                self.fail( 's1 interface displayed in "h1 ifconfig"' )
+                self.fail( 's1 interface displayed in "h1 ip link"' )
             elif index == 2:
-                self.fail( 'eth0 displayed in "h1 ifconfig"' )
+                self.fail( 'eth0 displayed in "h1 ip link"' )
             else:
                 break
         self.assertEqual( ifcount, 2, 'Missing interfaces on h1')
-        # s1 ifconfig
-        p.sendline( 's1 ifconfig -a' )
+        # s1 ip link
+        p.sendline( 's1 ip link' )
         ifcount = 0
         while True:
             index = p.expect( interfaces )
             if index == 0:
-                self.fail( 'h1 interface displayed in "s1 ifconfig"' )
+                self.fail( 'h1 interface displayed in "s1 ip link"' )
             elif index in (1, 2, 3):
                 ifcount += 1
             else:
@@ -225,7 +225,7 @@ class testWalkthrough( unittest.TestCase ):
         "Test TCLink bw and delay"
         p = pexpect.spawn( 'mn -w --link tc,bw=10,delay=10ms' )
         p.expect( self.prompt )
-        p.sendline( 'h1 route && ping -c1 h2' )
+        p.sendline( 'h1 ip route && ping -c1 h2' )
         # test bw
         p.expect( self.prompt )
         p.sendline( 'iperf' )
@@ -276,7 +276,7 @@ class testWalkthrough( unittest.TestCase ):
         p = pexpect.spawn( 'mn --mac' )
         p.expect( self.prompt )
         for i in range( 1, 3 ):
-            p.sendline( 'h%d ifconfig' % i )
+            p.sendline( 'h%d ip link' % i )
             p.expect( r'\s00:00:00:00:00:0%d\s' % i )
             p.expect( self.prompt )
         p.sendline( 'exit' )
@@ -303,19 +303,19 @@ class testWalkthrough( unittest.TestCase ):
         "Test running user switch in its own namespace"
         p = pexpect.spawn( 'mn --innamespace --switch user' )
         p.expect( self.prompt )
-        interfaces = [ r'h1-eth0[:\s]', r's1-eth1[:\s]',
+        interfaces = [ r'h1-eth0[@\s]', r's1-eth1[@\s]',
                        r'[^-](eth|en)\w*\d[:\s]', r'lo[:\s]',
                        self.prompt ]
-        p.sendline( 's1 ifconfig -a' )
+        p.sendline( 's1 ip link' )
         ifcount = 0
         while True:
             index = p.expect( interfaces )
             if index in (1, 3):
                 ifcount += 1
             elif index == 0:
-                self.fail( 'h1 interface displayed in "s1 ifconfig"' )
+                self.fail( 'h1 interface displayed in "s1 ip link"' )
             elif index == 2:
-                self.fail( 'eth0 displayed in "s1 ifconfig"' )
+                self.fail( 'eth0 displayed in "s1 ip link"' )
             else:
                 break
         self.assertEqual( ifcount, 2, 'Missing interfaces on s1' )

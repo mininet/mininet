@@ -30,14 +30,14 @@ class testMultiLink( unittest.TestCase ):
         opts = [ 'h(\d)-eth(\d)', self.prompt ]
         p.expect( self.prompt )
 
-        p.sendline( 'h1 ifconfig' )
+        p.sendline( 'h1 ip link' )
         while True:
             p.expect( opts )
             if p.after == self.prompt:
                 break
             sysIntfList.append( p.after )
 
-        p.sendline( 'h2 ifconfig' )
+        p.sendline( 'h2 ip link' )
         while True:
             p.expect( opts )
             if p.after == self.prompt:

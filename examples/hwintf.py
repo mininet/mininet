@@ -20,7 +20,7 @@ from mininet.util import quietRun
 
 def checkIntf( intf ):
     "Make sure intf exists and is not configured."
-    config = quietRun( 'ifconfig %s 2>/dev/null' % intf, shell=True )
+    config = quietRun( 'ip addr show dev %s 2>/dev/null' % intf, shell=True )
     if not config:
         error( 'Error:', intf, 'does not exist!\n' )
         exit( 1 )

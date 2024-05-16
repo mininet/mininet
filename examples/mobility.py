@@ -67,14 +67,14 @@ class MobilitySwitch( OVSSwitch ):
 
     def renameIntf( self, intf, newname='' ):
         "Rename an interface (to its canonical name)"
-        intf.ifconfig( 'down' )
+        intf.cmd( 'ip link set', intf, 'down' )
         if not newname:
             newname = '%s-eth%d' % ( self.name, self.ports[ intf ] )
         intf.cmd( 'ip link set', intf, 'name', newname )
         del self.nameToIntf[ intf.name ]
         intf.name = newname
         self.nameToIntf[ intf.name ] = intf
-        intf.ifconfig( 'up' )
+        intf.cmd( 'ip link set', intf, 'up' )
 
     def moveIntf( self, intf, switch, port=None, rename=True ):
         "Move one of our interfaces to another switch"

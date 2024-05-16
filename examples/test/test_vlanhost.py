@@ -37,7 +37,7 @@ class testVLANHost( unittest.TestCase ):
         percent = int( p.match.group( 1 ) ) if p.match else -1
         p.expect( self.prompt )
 
-        p.sendline( 'h1 ifconfig' )
+        p.sendline( 'h1 ip link' )
         i = p.expect( ['h1-eth0.%d' % vlan, pexpect.TIMEOUT ], timeout=2 )
         p.expect( self.prompt )
 

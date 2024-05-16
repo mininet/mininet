@@ -85,7 +85,7 @@ def run():
                    waitConnected=True )  # controller is used by s1-s3
     net.start()
     info( '*** Routing Table on Router:\n' )
-    info( net[ 'r0' ].cmd( 'route' ) )
+    info( net[ 'r0' ].cmd( 'ip route' ) )
     CLI( net )
     net.stop()
 

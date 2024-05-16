@@ -44,11 +44,12 @@ class VLANHost( Host ):
 
         intf = self.defaultIntf()
         # remove IP from default, "physical" interface
-        self.cmd( 'ifconfig %s inet 0' % intf )
+        self.cmd( 'ip addr del', params['ip'], 'dev', intf )
         # create VLAN interface
-        self.cmd( 'vconfig add %s %d' % ( intf, vlan ) )
+        self.cmd( 'ip link add link', intf, 'name', '%s.%d' % ( intf, vlan ), 'type vlan id', vlan )
         # assign the host's IP to the VLAN interface
-        self.cmd( 'ifconfig %s.%d inet %s' % ( intf, vlan, params['ip'] ) )
+        self.cmd( 'ip addr add', params['ip'], 'dev', '%s.%d' % ( intf, vlan ) )
+        self.cmd( 'ip link set dev', '%s.%d' % ( intf, vlan ), 'up' )
         # update the intf name and host's intf map
         newName = '%s.%d' % ( intf, vlan )
         # update the (Mininet) interface to refer to VLAN interface name
@@ -117,12 +118,6 @@ if __name__ == '__main__':
     from mininet.log import setLogLevel
 
     setLogLevel( 'info' )
-
-    if not quietRun( 'which vconfig' ):
-        error( "Cannot find command 'vconfig'\nThe package",
-               "'vlan' is required in Ubuntu or Debian,",
-               "or 'vconfig' in Fedora\n" )
-        exit()
 
     if len( sys.argv ) >= 2:
         exampleAllHosts( vlan=int( sys.argv[ 1 ] ) )
