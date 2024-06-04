@@ -166,6 +166,21 @@ like to contribute an installation script, we would welcome it!)
     Note that `install.sh -fnv `may not install all dependencies on Fedora,
     and many tests may still fail.
 
+3.3. (Experimental) Native installation from source on Gentoo:
+
+   As root execute the following operations:
+
+    * enable the lemon-lime overlay
+
+        eselect repository enable lemon-lime
+
+    * install mininet
+
+        sudo emerge -av mininet
+
+    Note that this package is not an official Gentoo package. Also note
+    that many tests may still fail.
+
 4. Creating your own Mininet/OpenFlow tutorial VM on Ubuntu/Debian
 
    Creating your own Ubuntu Mininet VM for use with the OpenFlow tutorial
