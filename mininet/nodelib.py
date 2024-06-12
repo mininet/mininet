@@ -42,8 +42,7 @@ class LinuxBridge( Switch ):
             self.cmd( 'brctl setbridgeprio', self.prio )
             self.cmd( 'brctl stp', self, 'on' )
         for i in self.intfList():
-            if self.name in i.name:
-                self.cmd( 'brctl addif', self, i )
+            self.cmd( 'brctl addif', self, i )
         self.cmd( 'ifconfig', self, 'up' )
 
     def stop( self, deleteIntfs=True ):
