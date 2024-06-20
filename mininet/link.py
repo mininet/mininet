@@ -79,13 +79,13 @@ class Intf( object ):
         # mechanism and/or the way we specify IP addresses
         if '/' in ipstr:
             self.ip, self.prefixLen = ipstr.split( '/' )
-            return self.ifconfig( ipstr, 'up' )
+            return self.ifconfig( 'add', ipstr, 'up' )
         else:
             if prefixLen is None:
                 raise Exception( 'No prefix length set for IP address %s'
                                  % ( ipstr, ) )
             self.ip, self.prefixLen = ipstr, prefixLen
-            return self.ifconfig( '%s/%s' % ( ipstr, prefixLen ) )
+            return self.ifconfig( 'add', '%s/%s' % ( ipstr, prefixLen ) )
 
     def setMAC( self, macstr ):
         """Set the MAC address for an interface.
