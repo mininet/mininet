@@ -29,7 +29,7 @@
 #include <dirent.h>
 
 #if !defined(VERSION)
-#define VERSION "(devel)"
+#define VERSION "2.3.0"
 #endif
 
 void usage(char *name)
