@@ -244,7 +244,6 @@ class Mininet( object ):
                         ( self.controllers if node in self.controllers else
                           [] ) ) )
         node.stop( deleteIntfs=True )
-        node.terminate()
         nodes.remove( node )
         del self.nameToNode[ node.name ]
 
