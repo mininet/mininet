@@ -102,26 +102,49 @@ function version_ge {
     [ "$1" == "$latest" ]
 }
 
-# Attempt to detect Python version
-PYTHON=${PYTHON:-python}
-PRINTVERSION='import sys; print(sys.version_info)'
-PYTHON_VERSION=unknown
-for python in $PYTHON python2 python3; do
-    if $python -c "$PRINTVERSION" |& grep 'major=2'; then
-        PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
-        break
-    elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
-        PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
-        break
+# Auto-detect python venv
+if [ -n "$VIRTUAL_ENV" ]; then
+    # We are in a virtual environment; use its Python interpreter
+    PYTHON="${VIRTUAL_ENV}/bin/python"
+    echo "Using virtual environment Python interpreter at $PYTHON"
+
+    # Determine Python version in the virtual environment
+    PRINTVERSION='import sys; print(sys.version_info.major)'
+    PYTHON_VERSION=$($PYTHON -c "$PRINTVERSION")
+
+    if [ "$PYTHON_VERSION" == "2" ]; then
+        PYPKG=python
+    elif [ "$PYTHON_VERSION" == "3" ]; then
+        PYPKG=python3
+    else
+        echo "Unsupported Python version in virtual environment"
+        exit 1
     fi
-done
-if [ "$PYTHON_VERSION" == unknown ]; then
-    echo "Can't find a working python command ('$PYTHON' doesn't work.)"
-    echo "You may wish to export PYTHON or install a working 'python'."
-    exit 1
+else
+    # Fall back to system Python if no virtual environment is detected
+    PYTHON=${PYTHON:-python}
+    echo "No virtual environment detected; using default Python at $(which $PYTHON)"
+    PRINTVERSION='import sys; print(sys.version_info)'
+    PYTHON_VERSION=unknown
+    for python in $PYTHON python2 python3; do
+        if $python -c "$PRINTVERSION" |& grep 'major=2'; then
+            PYTHON=$python; PYTHON_VERSION=2; PYPKG=python
+            break
+        elif $python -c "$PRINTVERSION" |& grep 'major=3'; then
+            PYTHON=$python; PYTHON_VERSION=3; PYPKG=python3
+            break
+        fi
+    done
+    if [ "$PYTHON_VERSION" == unknown ]; then
+        echo "Can't find a working python command ('$PYTHON' doesn't work.)"
+        echo "You may wish to export PYTHON or install a working 'python'."
+        exit 1
+    fi
+
+    echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
 fi
 
-echo "Detected Python (${PYTHON}) version ${PYTHON_VERSION}"
+
 
 # Kernel Deb pkg to be removed:
 KERNEL_IMAGE_OLD=linux-image-2.6.26-33-generic
@@ -203,7 +226,7 @@ function mn_deps {
             sudo ${PYTHON} get-pip.py
             rm get-pip.py
         fi
-       ${python} -m pip install pexpect
+       ${PYTHON} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
         $install cgroupfs-mount
