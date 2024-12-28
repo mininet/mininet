@@ -248,6 +248,9 @@ function of {
     # Patch controller to handle more than 16 switches
     patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
 
+    # Patch openflow to recognize strlcpy if present on the system
+    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/strlcpy.patch
+
     # Resume the install:
     ./boot.sh
     ./configure
@@ -869,7 +872,7 @@ function usage {
     printf -- ' -v: install Open (V)switch\n' >&2
     printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2
-    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2    
+    printf -- ' -x: install NO(X) Classic OpenFlow controller\n' >&2
     printf -- ' -y: install R(y)u Controller\n' >&2
     printf -- ' -0: (default) -0[fx] installs OpenFlow 1.0 versions\n' >&2
     printf -- ' -3: -3[fx] installs OpenFlow 1.3 versions\n' >&2
