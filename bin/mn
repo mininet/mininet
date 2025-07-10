@@ -199,7 +199,7 @@ class MininetRunner( object ):
 
     def setCustom( self, name, value ):
         "Set custom parameters for MininetRunner."
-        if name in ( 'topos', 'switches', 'hosts', 'controllers', 'links'
+        if name in ( 'topos', 'switches', 'hosts', 'controllers', 'links',
                      'testnames', 'tests' ):
             # Update dictionaries
             param = name.upper()
