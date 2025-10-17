@@ -1420,13 +1420,21 @@ class MiniEdit( Frame ):
 
     def convertJsonUnicode(self, text):
         "Some part of Mininet don't like Unicode"
-        unicode = globals().get( 'unicode', str )
+        # On Python 2, convert unicode -> utf-8 bytes to keep compatibility.
+        # On Python 3, leave strings as str (do not encode to bytes).
         if isinstance(text, dict):
-            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value) for key, value in text.items()}
+            return {self.convertJsonUnicode(key): self.convertJsonUnicode(value)
+                for key, value in text.items()}
         if isinstance(text, list):
             return [self.convertJsonUnicode(element) for element in text]
-        if isinstance(text, unicode):  # pylint: disable=undefined-variable
-            return text.encode('utf-8')
+
+        # Python 2: convert unicode to bytes
+        if sys.version_info[0] == 2:
+            unicode_type = globals().get('unicode', str)
+            if isinstance(text, unicode_type):  # pylint: disable=undefined-variable
+                return text.encode('utf-8')
+
+        # Python 3 (or any non-unicode instance on Py2): return as-is
         return text
 
     def loadTopology( self ):
