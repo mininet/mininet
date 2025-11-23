@@ -102,6 +102,14 @@ function version_ge {
     [ "$1" == "$latest" ]
 }
 
+# Fix for #1231: Detect if PEP 668 (externally managed environment) is enforced
+PIP_ARGS=""
+if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 23.04; then
+    PIP_ARGS="--break-system-packages"
+elif [ "$DIST" = "Debian" ] && version_ge $RELEASE 12; then
+    PIP_ARGS="--break-system-packages"
+fi
+
 # Attempt to detect Python version
 PYTHON=${PYTHON:-python}
 PRINTVERSION='import sys; print(sys.version_info)'
@@ -187,6 +195,11 @@ function mn_deps {
                 pf=pyflakes3
                 pep8=python3-pep8
         fi
+        
+        # Fix for #1231: Default to pep8, but use pycodestyle if available (applies to Ubuntu 23.04+ and Debian 12+)
+        if apt-cache show pycodestyle &> /dev/null; then
+            pep8=pycodestyle
+        fi
 
         $install gcc make socat psmisc xterm ssh iperf telnet \
                  ethtool help2man $pf pylint $pep8 \
@@ -203,7 +216,7 @@ function mn_deps {
             sudo ${PYTHON} get-pip.py
             rm get-pip.py
         fi
-       ${python} -m pip install pexpect
+        ${python} -m pip install pexpect $PIP_ARGS
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
         $install cgroupfs-mount
@@ -211,7 +224,8 @@ function mn_deps {
 
     echo "Installing Mininet core"
     pushd $MININET_DIR/mininet
-    sudo PYTHON=${PYTHON} make install
+    # Pass the PIP_ARGS to the Makefile
+    sudo PYTHON=${PYTHON} PIP_OPTIONS="${PIP_ARGS}" make install
     popd
 }
 
@@ -636,7 +650,7 @@ function oftest {
 
     # Install deps:
     $install tcpdump
-    $install ${PYPKG}-scapy || sudo $PYTHON -m pip install scapy
+    $install ${PYPKG}-scapy || sudo $PYTHON -m pip install scapy $PIP_ARGS
 
     # Install oftest:
     cd $BUILD_DIR/
