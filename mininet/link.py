@@ -239,7 +239,7 @@ class TCIntf( Intf ):
 
     def bwCmds( self, bw=None, speedup=0, use_hfsc=False, use_tbf=False,
                 latency_ms=None, enable_ecn=False, enable_red=False ):
-        "Return tc commands to set bandwidth"
+        """Return tc commands to set bandwidth"""
 
         cmds, parent = [], ' root '
 
@@ -247,14 +247,14 @@ class TCIntf( Intf ):
             error( 'Bandwidth limit', bw, 'is outside supported range 0..%d'
                    % self.bwParamMax, '- ignoring\n' )
         elif bw is not None:
+            # Compute burst size as 20 ms of allowed bitrate. This should
+            # provide reasonable balance between accuracy and probability
+            # that an improperly paced packet would get dropped
+            burst = max(int(bw / 8 * 1e6 * 20e-3), 1)
             # BL: this seems a bit brittle...
             if ( speedup > 0 and
                  self.node.name[0:1] == 's' ):
                 bw = speedup
-            # This may not be correct - we should look more closely
-            # at the semantics of burst (and cburst) to make sure we
-            # are specifying the correct sizes. For now I have used
-            # the same settings we had in the mininet-hifi code.
             if use_hfsc:
                 cmds += [ '%s qdisc add dev %s root handle 5:0 hfsc default 1',
                           '%s class add dev %s parent 5:0 classid 5:1 hfsc sc '
@@ -263,12 +263,12 @@ class TCIntf( Intf ):
                 if latency_ms is None:
                     latency_ms = 15.0 * 8 / bw
                 cmds += [ '%s qdisc add dev %s root handle 5: tbf ' +
-                          'rate %fMbit burst 15000 latency %fms' %
-                          ( bw, latency_ms ) ]
+                          'rate %fMbit burst %i latency %fms' %
+                          ( bw, burst, latency_ms ) ]
             else:
                 cmds += [ '%s qdisc add dev %s root handle 5:0 htb default 1',
                           '%s class add dev %s parent 5:0 classid 5:1 htb ' +
-                          'rate %fMbit burst 15k' % bw ]
+                          'rate %fMbit burst %i' % (bw, burst) ]
             parent = ' parent 5:1 '
 
             # ECN or RED
@@ -324,7 +324,7 @@ class TCIntf( Intf ):
                 latency_ms=None, enable_ecn=False, enable_red=False,
                 max_queue_size=None, **params ):
         """Configure the port and set its properties.
-           bw: bandwidth in b/s (e.g. '10m')
+           bw: bandwidth in Mbit/s (e.g. '10')
            delay: transmit delay (e.g. '1ms' )
            jitter: jitter (e.g. '1ms')
            loss: loss (e.g. '1%' )
