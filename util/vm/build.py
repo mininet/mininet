@@ -38,7 +38,6 @@ from subprocess import check_output, call, Popen
 from tempfile import mkdtemp, NamedTemporaryFile
 from time import time, strftime, localtime
 import argparse
-from distutils.spawn import find_executable
 import inspect
 from traceback import print_exc
 
@@ -62,6 +61,15 @@ Chown = ''                  # Build directory owner
 VMImageDir = os.environ[ 'HOME' ] + '/vm-images'
 
 Prompt = '\$ '              # Shell prompt that pexpect will wait for
+
+
+def find_executable( executable ):
+    "Return executable path from PATH or None."
+    for dirname in os.environ.get( 'PATH', '' ).split( os.pathsep ):
+        filename = path.join( dirname, executable )
+        if path.isfile( filename ) and os.access( filename, os.X_OK ):
+            return filename
+    return None
 
 
 # URLs for Ubuntu .iso images
