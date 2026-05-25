@@ -56,11 +56,76 @@ else:
         return NullCodec
 
 try:
-    import packaging.version  # replacement for distutils.version
+    import packaging.version
     StrictVersion = packaging.version.parse
 except ImportError:  # python2.7 lacks ModuleNotFoundError
-    import distutils.version  # pylint: disable=deprecated-module
-    StrictVersion = distutils.version.StrictVersion
+    class StrictVersion( object ):
+        "Small version comparator fallback for simple numeric versions."
+
+        _regex = re.compile( r'^(\d+(?:\.\d+)*)(?:([a-zA-Z]+)(\d+)?)?$' )
+        _preRank = { 'a': 0, 'alpha': 0, 'b': 1, 'beta': 1,
+                     'c': 2, 'pre': 2, 'preview': 2, 'rc': 2 }
+
+        def __init__( self, version ):
+            match = self._regex.match( str( version ) )
+            if not match:
+                raise ValueError( 'invalid version number %s' % version )
+            release, label, number = match.groups()
+            self.release = tuple( int( part ) for part in release.split( '.' ) )
+            if label:
+                self.prerelease = ( label.lower(), int( number or 0 ) )
+            else:
+                self.prerelease = None
+
+        @staticmethod
+        def _pad( left, right ):
+            "Pad release tuples to equal length."
+            length = max( len( left ), len( right ) )
+            return ( left + ( 0, ) * ( length - len( left ) ),
+                     right + ( 0, ) * ( length - len( right ) ) )
+
+        @classmethod
+        def _preKey( cls, prerelease ):
+            "Return a comparable prerelease key."
+            if prerelease is None:
+                return ( 3, 0 )
+            label, number = prerelease
+            return ( cls._preRank.get( label, -1 ), number )
+
+        def _compare( self, other ):
+            "Compare two versions."
+            if not isinstance( other, StrictVersion ):
+                other = StrictVersion( other )
+            left, right = self._pad( self.release, other.release )
+            if left < right:
+                return -1
+            if left > right:
+                return 1
+            leftPre = self._preKey( self.prerelease )
+            rightPre = self._preKey( other.prerelease )
+            if leftPre < rightPre:
+                return -1
+            if leftPre > rightPre:
+                return 1
+            return 0
+
+        def __lt__( self, other ):
+            return self._compare( other ) < 0
+
+        def __le__( self, other ):
+            return self._compare( other ) <= 0
+
+        def __eq__( self, other ):
+            return self._compare( other ) == 0
+
+        def __ne__( self, other ):
+            return self._compare( other ) != 0
+
+        def __gt__( self, other ):
+            return self._compare( other ) > 0
+
+        def __ge__( self, other ):
+            return self._compare( other ) >= 0
 
 try:
     oldpexpect = None
