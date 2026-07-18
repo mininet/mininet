@@ -1563,8 +1563,7 @@ class RemoteController( Controller ):
         "Overridden to do nothing."
         return
 
-    # pylint: disable=arguments-differ
-    def stop( self ):
+    def stop( self, *args, **kwargs ):
         "Overridden to do nothing."
         return
 
