@@ -933,9 +933,15 @@ class Switch( Node ):
     def defaultDpid( self, dpid=None ):
         "Return correctly formatted dpid from dpid or switch name (s1 -> 1)"
         if dpid:
-            # Remove any colons and make sure it's a good hex number
+            # Remove any colons and make sure it's a good hex number.
+            # Accept Python hex() strings such as '0x2' by normalizing
+            # through int(..., 16) so a leading '0x' is not zero-padded
+            # into an invalid value like '00000000000000x2'.
             dpid = dpid.replace( ':', '' )
-            assert len( dpid ) <= self.dpidLen and int( dpid, 16 ) >= 0
+            dpid_val = int( dpid, 16 )
+            assert dpid_val >= 0
+            dpid = format( dpid_val, 'x' )
+            assert len( dpid ) <= self.dpidLen
         else:
             # Use hex of the first number in the switch name
             nums = re.findall( r'\d+', self.name )
