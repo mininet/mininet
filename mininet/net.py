@@ -863,6 +863,18 @@ class Mininet( object ):
         output( '*** Results: %s\n' % result )
         return result
 
+    @staticmethod
+    def _cpuUsage( host ):
+        "Return CPU time (in seconds) used so far by host's cgroup"
+        if getattr( host, 'cgversion', None ) == 'cgroup2':
+            with open( '/sys/fs/cgroup/%s/cpu.stat' % host ) as f:
+                for line in f:
+                    if line.startswith( 'usage_usec ' ):
+                        return int( line.split()[ 1 ] ) / 1e6
+            raise ValueError( 'no usage_usec in cpu.stat for %s' % host )
+        with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' % host ) as f:
+            return float( f.read() ) / 1e9
+
     def runCpuLimitTest( self, cpu, duration=5 ):
         """run CPU limit test with 'while true' processes.
         cpu: desired CPU fraction of each host
@@ -886,17 +898,13 @@ class Mininet( object ):
         # get the initial cpu time for each host
         for host in hosts:
             outputs[ host ] = []
-            with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
-                       host, 'r' ) as f:
-                time[ host ] = float( f.read() )
+            time[ host ] = self._cpuUsage( host )
         for _ in range( duration ):
             sleep( 1 )
             for host in hosts:
-                with open( '/sys/fs/cgroup/cpuacct/%s/cpuacct.usage' %
-                           host, 'r' ) as f:
-                    readTime = float( f.read() )
-                outputs[ host ].append( ( ( readTime - time[ host ] )
-                                        / 1000000000 ) / cores * 100 )
+                readTime = self._cpuUsage( host )
+                outputs[ host ].append( ( readTime - time[ host ] )
+                                        / cores * 100 )
                 time[ host ] = readTime
         for h, pids in pids.items():
             for pid in pids:
