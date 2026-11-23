@@ -261,6 +261,8 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
     if not runCmd:
         runCmd = quietRun if not node1 else node1.cmd
         runCmd2 = quietRun if not node2 else node2.cmd
+    else:
+        runCmd2 = runCmd
     if deleteIntfs:
         # Delete any old interfaces with the same names
         runCmd( 'ip link del ' + intf1 )
