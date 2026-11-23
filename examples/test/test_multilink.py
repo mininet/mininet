@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 Test for multiple links between nodes
@@ -13,7 +13,7 @@ class testMultiLink( unittest.TestCase ):
     prompt = 'mininet>'
 
     def testMultiLink(self):
-        p = pexpect.spawn( 'python -m mininet.examples.multilink' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.multilink' )
         p.expect( self.prompt )
         p.sendline( 'intfs' )
         p.expect( 's(\d): lo' )

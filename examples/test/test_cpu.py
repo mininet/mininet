@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for cpu.py
@@ -25,7 +25,7 @@ class testCPU( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testCPU( self ):
         "Verify that CPU utilization is monotonically decreasing for each scheduler"
-        p = pexpect.spawn( 'python -m mininet.examples.cpu', timeout=300 )
+        p = pexpect.spawn( 'python3 -m mininet.examples.cpu', timeout=300 )
         # matches each line from results( shown above )
         opts = [ '([a-z]+)\t([\d\.]+)%\t([\d\.e\+]+)',
                  pexpect.EOF ]

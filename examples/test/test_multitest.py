@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for multitest.py
@@ -13,7 +13,7 @@ class testMultiTest( unittest.TestCase ):
 
     def testMultiTest( self ):
         "Verify pingall (0% dropped) and hX-eth0 interface for each host (ifconfig)"
-        p = pexpect.spawn( 'python -m mininet.examples.multitest' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.multitest' )
         p.expect( '(\d+)% dropped' )
         dropped = int( p.match.group( 1 ) )
         self.assertEqual( dropped, 0 )

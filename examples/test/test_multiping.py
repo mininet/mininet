@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for multiping.py
@@ -13,7 +13,7 @@ class testMultiPing( unittest.TestCase ):
     def testMultiPing( self ):
         """Verify that each target is pinged at least once, and
            that pings to 'real' targets are successful and unknown targets fail"""
-        p = pexpect.spawn( 'python -m mininet.examples.multiping' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.multiping' )
         opts = [ "Host (h\d+) \(([\d.]+)\) will be pinging ips: ([\d\. ]+)",
                  "(h\d+): ([\d.]+) -> ([\d.]+) \d packets transmitted, (\d) received",
                  pexpect.EOF ]

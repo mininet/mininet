@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Tests for the Mininet Walkthrough
@@ -10,7 +10,7 @@ import os
 import re
 import unittest
 
-from sys import stdout
+from sys import stdout, version_info, executable
 
 from mininet.util import quietRun, pexpect, StrictVersion
 from mininet.clean import cleanup
@@ -165,13 +165,14 @@ class testWalkthrough( unittest.TestCase ):
 
     def testSimpleHTTP( self ):
         "Start an HTTP server on h1 and wget from h2"
-        if 'Python 2' in quietRun( 'python --version' ):
+        if version_info[ 0 ] == 2:
             httpserver = 'SimpleHTTPServer'
         else:
             httpserver = 'http.server'
         p = pexpect.spawn( 'mn -w', logfile=stdout )
         p.expect( self.prompt )
-        p.sendline( 'h1 python -m %s 80 >& /dev/null &' % httpserver )
+        p.sendline( 'h1 %s -m %s 80 >& /dev/null &' %
+                    ( executable, httpserver ) )
         p.expect( self.prompt )
         # The walkthrough doesn't specify a delay here, and
         # we also don't read the output (also a possible problem),

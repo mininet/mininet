@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for simpleperf.py
@@ -20,7 +20,7 @@ class testSimplePerf( unittest.TestCase ):
         BW = 10
         TOLERANCE = .2
         p = pexpect.spawn(
-            'python -m mininet.examples.simpleperf testmode' )
+            'python3 -m mininet.examples.simpleperf testmode' )
         # Log since this seems to be failing intermittently
         p.logfile = sys.stdout
         # check iperf results

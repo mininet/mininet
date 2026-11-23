@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 A simple sanity check test for cluster edition
@@ -12,7 +12,7 @@ class clusterSanityCheck( unittest.TestCase ):
     prompt = 'mininet>'
 
     def testClusterPingAll( self ):
-        p = pexpect.spawn( 'python -m mininet.examples.clusterSanity' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.clusterSanity' )
         p.expect( self.prompt )
         p.sendline( 'py net.waitConnected()' )
         p.expect( self.prompt )

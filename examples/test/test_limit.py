@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for limit.py
@@ -13,7 +13,7 @@ class testLimit( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testLimit( self ):
         "Verify that CPU limits are within a 2% tolerance of limit for each scheduler"
-        p = pexpect.spawn( 'python -m mininet.examples.limit' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.limit' )
         opts = [ '\*\*\* Testing network ([\d\.]+) Mbps',
                  '\*\*\* Results: \[([\d\., ]+)\]',
                  pexpect.EOF ]

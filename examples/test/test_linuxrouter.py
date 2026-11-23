@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for linuxrouter.py
@@ -14,7 +14,7 @@ class testLinuxRouter( unittest.TestCase ):
 
     def testPingall( self ):
         "Test connectivity between hosts"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.linuxrouter' )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )
@@ -26,7 +26,7 @@ class testLinuxRouter( unittest.TestCase ):
 
     def testRouterPing( self ):
         "Test connectivity from h1 to router"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.linuxrouter' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 r0' )
         p.expect ( '(\d+)% packet loss' )
@@ -38,7 +38,7 @@ class testLinuxRouter( unittest.TestCase ):
 
     def testTTL( self ):
         "Verify that the TTL is decremented"
-        p = pexpect.spawn( 'python -m mininet.examples.linuxrouter' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.linuxrouter' )
         p.expect( self.prompt )
         p.sendline( 'h1 ping -c 1 h2' )
         p.expect ( 'ttl=(\d+)' )

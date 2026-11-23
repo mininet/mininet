@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Tests for bind.py
@@ -12,7 +12,7 @@ class testBind( unittest.TestCase ):
     prompt = 'mininet>'
 
     def setUp( self ):
-        self.net = pexpect.spawn( 'python -m mininet.examples.bind' )
+        self.net = pexpect.spawn( 'python3 -m mininet.examples.bind' )
         self.net.expect( "Private Directories: \[([\w\s,'/]+)\]" )
         self.directories = []
         # parse directories from mn output
