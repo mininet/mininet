@@ -704,20 +704,36 @@ class CPULimitedHost( Host ):
         if not CPULimitedHost.inited:
             CPULimitedHost.init()
         # Create a cgroup and move shell into it
-        self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
-        errFail( 'cgcreate -g ' + self.cgroup )
-        # We don't add ourselves to a cpuset because you must
-        # specify the cpu and memory placement first
-        errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % ( self.name, self.pid ) )
+        if self.cgversion == 'cgroup2':
+            self.cgroup = 'cpu,cpuset:/' + self.name
+            cgpath = '/sys/fs/cgroup/' + self.name
+            if not os.path.exists( cgpath ):
+                os.makedirs( cgpath )
+            with open( cgpath + '/cgroup.procs', 'w' ) as f:
+                f.write( '%s\n' % self.pid )
+        else:
+            self.cgroup = 'cpu,cpuacct,cpuset:/' + self.name
+            errFail( 'cgcreate -g ' + self.cgroup )
+            # We don't add ourselves to a cpuset because you must
+            # specify the cpu and memory placement first
+            errFail( 'cgclassify -g cpu,cpuacct:/%s %s' % (
+                     self.name, self.pid ) )
+        self.cgroupsInited = True
         if self.sched == 'rt':
             self.checkRtGroupSched()
             self.rtprio = 20
 
     def cgroupSet( self, param, value, resource='cpu' ):
         "Set a cgroup parameter and return its value"
-        cmd = [ 'cgset', '-r', "%s.%s=%s" % (
-            resource, param, value), '/' + self.name ]
-        errFail( cmd )
+        if self.cgversion == 'cgroup2':
+            cgfile = '/sys/fs/cgroup/%s/%s.%s' % (
+                self.name, resource, param )
+            with open( cgfile, 'w' ) as f:
+                f.write( '%s\n' % value )
+        else:
+            cmd = [ 'cgset', '-r', "%s.%s=%s" % (
+                resource, param, value), '/' + self.name ]
+            errFail( cmd )
         nvalue = self.cgroupGet( param, resource )
         if nvalue != str( value ):
             error( '*** error: cgroupSet: %s set to %s instead of %s\n'
@@ -726,6 +742,11 @@ class CPULimitedHost( Host ):
 
     def cgroupGet( self, param, resource='cpu' ):
         "Return value of cgroup parameter"
+        if self.cgversion == 'cgroup2':
+            cgfile = '/sys/fs/cgroup/%s/%s.%s' % (
+                self.name, resource, param )
+            with open( cgfile ) as f:
+                return f.read().strip()
         pname = '%s.%s' % ( resource, param )
         cmd = 'cgget -n -r %s /%s' % ( pname, self.name )
         return quietRun( cmd )[len(pname)+1:].strip()
@@ -733,6 +754,15 @@ class CPULimitedHost( Host ):
     def cgroupDel( self ):
         "Clean up our cgroup"
         # info( '*** deleting cgroup', self.cgroup, '\n' )
+        if self.cgversion == 'cgroup2':
+            cgpath = '/sys/fs/cgroup/' + self.name
+            if not os.path.exists( cgpath ):
+                return True
+            try:
+                os.rmdir( cgpath )
+                return True
+            except OSError:
+                return False
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         # Sometimes cgdelete returns a resource busy error but still
         # deletes the group; next attempt will give "no such file"
@@ -861,8 +891,9 @@ class CPULimitedHost( Host ):
                         value=mems)
         # We have to do this here after we've specified
         # cpus and mems
-        errFail( 'cgclassify -g cpuset:/%s %s' % (
-                 self.name, self.pid ) )
+        if self.cgversion != 'cgroup2':
+            errFail( 'cgclassify -g cpuset:/%s %s' % (
+                     self.name, self.pid ) )
 
     # pylint: disable=arguments-differ
     def config( self, cpu=-1, cores=None, **params ):

@@ -553,7 +553,18 @@ def mountCgroups( cgcontrol='cpu cpuacct cpuset' ):
     """Mount cgroupfs if needed and return cgroup version
        cgcontrol: cgroup controllers to check ('cpu cpuacct cpuset')
        Returns: 'cgroup' | 'cgroup2' """
-    # Try to read the cgroup controllers in cgcontrol
+    # Check for cgroup v2 unified hierarchy first
+    cg2_controllers = '/sys/fs/cgroup/cgroup.controllers'
+    cg2_subtree = '/sys/fs/cgroup/cgroup.subtree_control'
+    if os.path.exists( cg2_controllers ) and not os.path.exists(
+            '/sys/fs/cgroup/cpu' ):
+        try:
+            with open( cg2_subtree, 'w' ) as f:
+                f.write( '+cpu +cpuset\n' )
+        except IOError:
+            pass
+        return 'cgroup2'
+    # Try to read the cgroup controllers in cgcontrol (cgroup v1)
     cglist = cgcontrol.split()
     paths = ' '.join( '-g ' + c for c in cglist )
     cmd = 'cgget -n %s /' % paths
