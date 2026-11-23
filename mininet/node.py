@@ -703,6 +703,8 @@ class CPULimitedHost( Host ):
         # Initialize class if necessary
         if not CPULimitedHost.inited:
             CPULimitedHost.init()
+        # cgroups v2 has no cpu.rt_* interface files
+        self.sched = self.checkSched( self.sched )
         # Create a cgroup and move shell into it
         if self.cgversion == 'cgroup2':
             self.cgroup = 'cpu,cpuset:/' + self.name
@@ -777,7 +779,7 @@ class CPULimitedHost( Host ):
                                        '-da', str( self.pid ) ] )
         # if our cgroup is not given any cpu time,
         # we cannot assign the RR Scheduler.
-        if self.sched == 'rt':
+        if self.sched == 'rt' and self.cgversion != 'cgroup2':
             if int( self.cgroupGet( 'rt_runtime_us', 'cpu' ) ) <= 0:
                 mncmd += [ '-r', str( self.rtprio ) ]
             else:
@@ -789,6 +791,15 @@ class CPULimitedHost( Host ):
         "Clean up Node, then clean up our cgroup"
         super( CPULimitedHost, self ).cleanup()
         retry( retries=3, delaySecs=.1, fn=self.cgroupDel )
+
+    def checkSched( self, sched ):
+        """Return a scheduler usable with our cgroup version:
+           sched=rt falls back to cfs on cgroups v2"""
+        if sched == 'rt' and self.cgversion == 'cgroup2':
+            warn( '*** warning: %s: sched=rt is not supported with '
+                  'cgroups v2; using sched=cfs\n' % self.name )
+            return 'cfs'
+        return sched
 
     _rtGroupSched = False   # internal class var: Is CONFIG_RT_GROUP_SCHED set?
 
@@ -856,6 +867,7 @@ class CPULimitedHost( Host ):
            and 'rt' requires CONFIG_RT_GROUP_SCHED"""
         if not sched:
             sched = self.sched
+        sched = self.checkSched( sched )
         if sched == 'rt':
             if not f or f < 0:
                 raise Exception( 'Please set a positive CPU fraction'
