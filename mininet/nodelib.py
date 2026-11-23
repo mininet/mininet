@@ -87,6 +87,10 @@ class NAT( Node ):
     def setManualConfig( self, intf ):
         """Prevent network-manager/networkd from messing with our interface
            by specifying manual configuration in /etc/network/interfaces"""
+        if self.inNamespace:
+            # Our interfaces are in a private network namespace,
+            # which the host's network managers do not see
+            return
         cfile = '/etc/network/interfaces'
         line = '\niface %s inet manual\n' % intf
         try:
@@ -99,8 +103,11 @@ class NAT( Node ):
             with open( cfile, 'a' ) as f:
                 f.write( line )
             # Probably need to restart network manager to be safe -
-            # hopefully this won't disconnect you
-            self.cmd( 'service network-manager restart || netplan apply' )
+            # hopefully this won't disconnect you. (netplan and
+            # systemd-networkd ignore this file, and 'netplan apply'
+            # can hang when run from Mininet, so leave them alone.)
+            self.cmd( 'systemctl is-active --quiet NetworkManager && '
+                      'systemctl restart NetworkManager' )
 
     # pylint: disable=arguments-differ
     def config( self, **params ):
