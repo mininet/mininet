@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for linearbandwidth.py
@@ -13,7 +13,7 @@ class testLinearBandwidth( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testLinearBandwidth( self ):
         "Verify that bandwidth is monotonically decreasing as # of hops increases"
-        p = pexpect.spawn( 'python -m mininet.examples.linearbandwidth' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.linearbandwidth' )
         count = 0
         opts = [ '\*\*\* Linear network results',
                  '(\d+)\s+([\d\.]+) (.bits)',

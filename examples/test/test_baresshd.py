@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Tests for baresshd.py
@@ -35,7 +35,7 @@ class testBareSSHD( unittest.TestCase ):
         sh( "ssh-keygen -t rsa -P '' -f /tmp/ssh/test_rsa" )
         sh( 'cat /tmp/ssh/test_rsa.pub >> /tmp/ssh/authorized_keys' )
         # run example with custom sshd args
-        cmd = ( 'python -m mininet.examples.baresshd '
+        cmd = ( 'python3 -m mininet.examples.baresshd '
                 '-o AuthorizedKeysFile=/tmp/ssh/authorized_keys '
                 '-o StrictModes=no' )
         p = pexpect.spawn( cmd )

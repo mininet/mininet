@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for natnet.py
@@ -13,7 +13,7 @@ class testNATNet( unittest.TestCase ):
     prompt = 'mininet>'
 
     def setUp( self ):
-        self.net = pexpect.spawn( 'python -m mininet.examples.natnet' )
+        self.net = pexpect.spawn( 'python3 -m mininet.examples.natnet' )
         self.net.expect( self.prompt )
 
     def testPublicPing( self ):

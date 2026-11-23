@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for popen.py and popenpoll.py
@@ -11,7 +11,7 @@ class testPopen( unittest.TestCase ):
 
     def pingTest( self, name ):
         "Verify that there are no dropped packets for each host"
-        p = pexpect.spawn( 'python -m %s' % name )
+        p = pexpect.spawn( 'python3 -m %s' % name )
         opts = [ "<(h\d+)>: PING ",
                  "<(h\d+)>: (\d+) packets transmitted, (\d+) received",
                  pexpect.EOF ]

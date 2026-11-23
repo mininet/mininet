@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for tree1024.py
@@ -15,7 +15,7 @@ class testTree1024( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testTree1024( self ):
         "Run the example and do a simple ping test from h1 to h1024"
-        p = pexpect.spawn( 'python -m mininet.examples.tree1024' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.tree1024' )
         p.expect( self.prompt, timeout=6000 ) # it takes awhile to set up
         p.sendline( 'h1 ping -c 20 h1024' )
         p.expect ( '(\d+)% packet loss' )

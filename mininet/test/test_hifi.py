@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Package: mininet
    Test creation and pings for topologies with link and/or CPU options."""

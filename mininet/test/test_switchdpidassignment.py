@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Package: mininet
    Regression tests for switch dpid assignment."""

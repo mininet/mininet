@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for multipoll.py
@@ -11,7 +11,7 @@ class testMultiPoll( unittest.TestCase ):
 
     def testMultiPoll( self ):
         "Verify that we receive one ping per second per host"
-        p = pexpect.spawn( 'python -m mininet.examples.multipoll' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.multipoll' )
         opts = [ "\*\*\* (h\d) :" ,
                  "(h\d+): \d+ bytes from",
                  "Monitoring output for (\d+) seconds",

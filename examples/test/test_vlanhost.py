@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for vlanhost.py
@@ -16,7 +16,7 @@ class testVLANHost( unittest.TestCase ):
     @unittest.skipIf( '-quick' in sys.argv, 'long test' )
     def testVLANTopo( self ):
         "Test connectivity (or lack thereof) between hosts in VLANTopo"
-        p = pexpect.spawn( 'python -m mininet.examples.vlanhost' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.vlanhost' )
         p.expect( self.prompt )
         p.sendline( 'pingall 1' ) #ping timeout=1
         p.expect( '(\d+)% dropped', timeout=30  ) # there should be 24 failed pings
@@ -29,7 +29,7 @@ class testVLANHost( unittest.TestCase ):
     def testSpecificVLAN( self ):
         "Test connectivity between hosts on a specific VLAN"
         vlan = 1001
-        p = pexpect.spawn( 'python -m mininet.examples.vlanhost %d' % vlan )
+        p = pexpect.spawn( 'python3 -m mininet.examples.vlanhost %d' % vlan )
         p.expect( self.prompt )
 
         p.sendline( 'h1 ping -c 1 h2' )

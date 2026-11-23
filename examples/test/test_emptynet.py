@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for emptynet.py
@@ -13,7 +13,7 @@ class testEmptyNet( unittest.TestCase ):
 
     def testEmptyNet( self ):
         "Run simple CLI tests: pingall (verify 0% drop) and iperf (sanity)"
-        p = pexpect.spawn( 'python -m mininet.examples.emptynet' )
+        p = pexpect.spawn( 'python3 -m mininet.examples.emptynet' )
         p.expect( self.prompt )
         # pingall test
         p.sendline( 'pingall' )

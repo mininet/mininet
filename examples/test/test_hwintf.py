@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Test for hwintf.py
@@ -26,7 +26,8 @@ class testHwintf( unittest.TestCase ):
 
     def testLocalPing( self ):
         "Verify connectivity between virtual hosts using pingall"
-        p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
+        p = pexpect.spawn( 'python3 -m mininet.examples.hwintf %s'
+                           % self.n0.intf() )
         p.expect( self.prompt )
         p.sendline( 'pingall' )
         p.expect ( '(\d+)% dropped' )
@@ -38,7 +39,8 @@ class testHwintf( unittest.TestCase ):
 
     def testExternalPing( self ):
         "Verify connnectivity between virtual host and virtual-physical 'external' host "
-        p = pexpect.spawn( 'python -m mininet.examples.hwintf %s' % self.n0.intf() )
+        p = pexpect.spawn( 'python3 -m mininet.examples.hwintf %s'
+                           % self.n0.intf() )
         p.expect( self.prompt )
         # test ping external to internal
         expectStr = '(\d+) packets transmitted, (\d+) received'
