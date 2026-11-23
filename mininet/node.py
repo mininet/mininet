@@ -764,6 +764,14 @@ class CPULimitedHost( Host ):
                 os.rmdir( cgpath )
                 return True
             except OSError:
+                # Processes left behind (e.g. a popen()ed server that
+                # ignored SIGTERM) keep the cgroup busy: kill them
+                # (cgroup.kill needs Linux >= 5.14) and let retry() retry
+                try:
+                    with open( cgpath + '/cgroup.kill', 'w' ) as f:
+                        f.write( '1\n' )
+                except OSError:
+                    pass
                 return False
         _out, _err, exitcode = errRun( 'cgdelete -r ' + self.cgroup )
         # Sometimes cgdelete returns a resource busy error but still
