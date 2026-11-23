@@ -206,7 +206,10 @@ function mn_deps {
        ${python} -m pip install pexpect
         $install iproute2 || $install iproute
         $install cgroup-tools || $install cgroup-bin
-        $install cgroupfs-mount
+        # cgroupfs-mount is only needed (and only packaged) for cgroups v1
+        if [ ! -e /sys/fs/cgroup/cgroup.controllers ]; then
+            $install cgroupfs-mount
+        fi
     fi
 
     echo "Installing Mininet core"

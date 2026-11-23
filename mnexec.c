@@ -66,7 +66,7 @@ void validate(char *path)
     }
 }
 
-/* Add our pid to cgroup */
+/* Add our pid to cgroup (supports cgroup v2 unified and cgroup v1) */
 void cgroup(char *gname)
 {
     static char path[PATH_MAX];
@@ -76,9 +76,18 @@ void cgroup(char *gname)
     char **gptr;
     pid_t pid = getpid();
     int count = 0;
+    FILE *f;
     validate(gname);
+    /* Try cgroup v2 unified hierarchy first */
+    snprintf(path, PATH_MAX, "/sys/fs/cgroup/%s/cgroup.procs", gname);
+    f = fopen(path, "w");
+    if (f) {
+        count++;
+        fprintf(f, "%d\n", pid);
+        fclose(f);
+    }
+    /* Try cgroup v1 hierarchies */
     for (gptr = groups; *gptr; gptr++) {
-        FILE *f;
         snprintf(path, PATH_MAX, "/sys/fs/cgroup/%s/%s/tasks",
                  *gptr, gname);
         f = fopen(path, "w");
