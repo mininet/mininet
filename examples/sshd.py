@@ -59,6 +59,9 @@ def sshd( network, cmd='/usr/sbin/sshd', opts='-D',
     if not routes:
         routes = [ '10.0.0.0/24' ]
     connectToRootNS( network, switch, ip, routes )
+    # sshd needs its privilege separation directory, which is only
+    # created when the system ssh service runs (not with ssh.socket)
+    network.hosts[ 0 ].cmd( 'mkdir -p -m 0755 /run/sshd' )
     for host in network.hosts:
         host.cmd( cmd + ' ' + opts + '&' )
     info( "*** Waiting for ssh daemons to start\n" )

@@ -31,6 +31,9 @@ with open( '/tmp/%s.banner' % h1.name, 'w' ) as f:
     f.write( 'Welcome to %s at %s\n' % ( h1.name, h1.IP() ) )
 
 info( "*** Running sshd\n" )
+# sshd needs its privilege separation directory, which is only
+# created when the system ssh service runs (not with ssh.socket)
+h1.cmd( 'mkdir -p -m 0755 /run/sshd' )
 cmd = '/usr/sbin/sshd -o UseDNS=no -u0 -o "Banner /tmp/%s.banner"' % h1.name
 # add arguments from the command line
 if len( sys.argv ) > 1:
